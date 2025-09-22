@@ -58,6 +58,12 @@ export const CoreOpenfortProvider: React.FC<PropsWithChildren<CoreOpenfortProvid
   const { disconnectAsync } = useDisconnect();
   const { walletConfig, setRoute, setConnector, setOpen } = useOpenfort();
 
+  const resetSignedOutUi = useCallback(() => {
+    setRoute(routes.PROVIDERS);
+    setConnector({ id: '' });
+    setOpen(false);
+  }, [setRoute, setConnector, setOpen]);
+
   // ---- Openfort instance ----
   const openfort = useMemo(() => {
     log('Creating Openfort instance.', openfortProps);
@@ -198,6 +204,7 @@ export const CoreOpenfortProvider: React.FC<PropsWithChildren<CoreOpenfortProvid
       case EmbeddedState.CREATING_ACCOUNT:
         break;
       case EmbeddedState.UNAUTHENTICATED:
+        resetSignedOutUi();
         setUser(null);
         break;
 
@@ -226,7 +233,7 @@ export const CoreOpenfortProvider: React.FC<PropsWithChildren<CoreOpenfortProvid
       default:
         throw new Error(`Unknown embedded state: ${embeddedState}`);
     }
-  }, [embeddedState, openfort]);
+  }, [embeddedState, openfort, resetSignedOutUi]);
 
   useEffect(() => {
     // Connect to wagmi with Embedded signer
@@ -252,9 +259,7 @@ export const CoreOpenfortProvider: React.FC<PropsWithChildren<CoreOpenfortProvid
 
     setUser(null);
     setIsConnectedWithEmbeddedSigner(false);
-    setConnector({ id: '' });
-    setRoute(routes.PROVIDERS);
-    setOpen(false);
+    resetSignedOutUi();
     log('Logging out...');
 
     try {
@@ -270,17 +275,7 @@ export const CoreOpenfortProvider: React.FC<PropsWithChildren<CoreOpenfortProvid
       reset();
       startPollingEmbeddedState();
     }
-  }, [openfort, disconnectAsync, queryClient, reset, startPollingEmbeddedState, log, setConnector, setRoute, setOpen]);
-
-  const previousUser = useRef<AuthPlayerResponse | null>(null);
-  useEffect(() => {
-    if (previousUser.current && !user) {
-      setRoute(routes.PROVIDERS);
-      setConnector({ id: '' });
-      setOpen(false);
-    }
-    previousUser.current = user;
-  }, [user, setRoute, setConnector, setOpen]);
+  }, [openfort, disconnectAsync, queryClient, reset, startPollingEmbeddedState, log, resetSignedOutUi]);
 
   const signUpGuest = useCallback(async () => {
     if (!openfort) return;
