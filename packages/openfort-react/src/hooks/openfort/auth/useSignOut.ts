@@ -16,7 +16,7 @@ export function useSignOut(hookOptions: OpenfortHookOptions = {}) {
     });
     try {
 
-      logout();
+      await logout();
       setStatus({
         status: 'success',
       });

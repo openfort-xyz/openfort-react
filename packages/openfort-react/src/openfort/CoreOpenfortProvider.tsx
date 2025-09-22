@@ -3,6 +3,7 @@ import React, { createElement, PropsWithChildren, useCallback, useEffect, useMem
 import { polygonAmoy } from 'viem/chains';
 import { useAccount, useChainId, useDisconnect } from 'wagmi';
 import { useOpenfort } from '../components/Openfort/useOpenfort';
+import { routes } from '../components/Openfort/types';
 import { useConnect } from '../hooks/useConnect';
 import { useConnectCallback, useConnectCallbackProps } from '../hooks/useConnectCallback';
 import { Context } from './context';
@@ -21,7 +22,7 @@ export type ContextValue = {
   embeddedAccounts?: EmbeddedAccount[];
   isLoadingAccounts: boolean;
 
-  logout: () => void;
+  logout: () => Promise<void>;
 
   client: Openfort;
 };
@@ -55,7 +56,7 @@ export const CoreOpenfortProvider: React.FC<PropsWithChildren<CoreOpenfortProvid
   const [user, setUser] = useState<AuthPlayerResponse | null>(null);
 
   const { disconnectAsync } = useDisconnect();
-  const { walletConfig } = useOpenfort();
+  const { walletConfig, setRoute, setConnector, setOpen } = useOpenfort();
 
   // ---- Openfort instance ----
   const openfort = useMemo(() => {
@@ -250,13 +251,36 @@ export const CoreOpenfortProvider: React.FC<PropsWithChildren<CoreOpenfortProvid
     if (!openfort) return;
 
     setUser(null);
+    setIsConnectedWithEmbeddedSigner(false);
+    setConnector({ id: '' });
+    setRoute(routes.PROVIDERS);
+    setOpen(false);
     log('Logging out...');
-    await openfort.auth.logout();
-    await disconnectAsync();
-    queryClient.resetQueries({ queryKey: ['openfortEmbeddedAccountsList'] })
-    reset();
-    startPollingEmbeddedState();
-  }, [openfort]);
+
+    try {
+      await openfort.auth.logout();
+    } finally {
+      try {
+        await disconnectAsync();
+      } catch (error) {
+        log('Failed to disconnect wallet during logout', error);
+      }
+
+      await queryClient.resetQueries({ queryKey: ['openfortEmbeddedAccountsList'] });
+      reset();
+      startPollingEmbeddedState();
+    }
+  }, [openfort, disconnectAsync, queryClient, reset, startPollingEmbeddedState, log, setConnector, setRoute, setOpen]);
+
+  const previousUser = useRef<AuthPlayerResponse | null>(null);
+  useEffect(() => {
+    if (previousUser.current && !user) {
+      setRoute(routes.PROVIDERS);
+      setConnector({ id: '' });
+      setOpen(false);
+    }
+    previousUser.current = user;
+  }, [user, setRoute, setConnector, setOpen]);
 
   const signUpGuest = useCallback(async () => {
     if (!openfort) return;
