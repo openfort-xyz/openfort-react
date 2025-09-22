@@ -547,8 +547,7 @@ export function useWallets(hookOptions: WalletOptions = {}) {
         }
       }
 
-      const errorObj = e instanceof Error ? e : new Error(errorMessage);
-      const error = new OpenfortError(errorMessage, OpenfortErrorType.WALLET_ERROR, { error: errorObj });
+      const error = new OpenfortError(errorMessage, OpenfortErrorType.WALLET_ERROR);
       setStatus({
         status: 'error',
         error,
