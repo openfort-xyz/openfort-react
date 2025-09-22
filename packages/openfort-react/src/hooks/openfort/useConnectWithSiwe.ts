@@ -64,9 +64,14 @@ export function useConnectWithSiwe() {
     catch (err) {
       log("Failed to connect with SIWE", err);
       if (err instanceof AxiosError) {
-        onError && onError("Failed to connect with SIWE", err.request.status);
+        const status = err.response?.status;
+        const errorMessage = err.code === 'ERR_NETWORK' || err.message.includes('CORS')
+          ? "Network error: Please check your connection and CORS configuration"
+          : `Failed to connect with SIWE${status ? ` (${status})` : ''}`;
+        onError && onError(errorMessage, status);
       } else {
-        onError && onError("Failed to connect with SIWE");
+        const errorMessage = err instanceof Error ? err.message : "Failed to connect with SIWE";
+        onError && onError(errorMessage);
       }
     }
   }, [client, user, updateUser, log, address, chainId, config, connector]);

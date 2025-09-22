@@ -221,7 +221,7 @@ const RecoverAutomaticWallet = ({ walletAddress }: { walletAddress: Hex }) => {
 
 const CreateWalletAutomaticRecovery = () => {
   const { embeddedState } = useOpenfortCore();
-  const { createWallet } = useWallets();
+  const { createWallet, error: walletError } = useWallets();
   const [shouldCreateWallet, setShouldCreateWallet] = useState(false);
   const { log } = useOpenfort();
 
@@ -233,6 +233,7 @@ const CreateWalletAutomaticRecovery = () => {
         const response = await createWallet()
         if (response.error) {
           log("Error creating wallet", response.error);
+          setShouldCreateWallet(false);
         }
       })();
     }
@@ -246,7 +247,12 @@ const CreateWalletAutomaticRecovery = () => {
 
   return (
     <PageContent>
-      <Loader header="Creating wallet..." />
+      <Loader
+        header={walletError ? "Wallet creation failed" : "Creating wallet..."}
+        isError={!!walletError}
+        description={walletError ? walletError.message : undefined}
+        onRetry={() => setShouldCreateWallet(true)}
+      />
     </PageContent>
   )
 }
@@ -338,8 +344,8 @@ const CreateWalletPasskeyRecovery = ({ onChangeMethod }: { onChangeMethod: (meth
       <Loader
         icon={<FingerPrintIcon />}
         isError={!!recoveryError}
-        header={recoveryError ? "Invalid passkey." : "Creating wallet with passkey..."}
-        description={recoveryError ? "There was an error creating your passkey. Please try again." : undefined}
+        header={recoveryError ? "Wallet creation failed" : "Creating wallet with passkey..."}
+        description={recoveryError ? recoveryError.message : undefined}
         onRetry={() => setShouldCreateWallet(true)}
       />
     </PageContent>

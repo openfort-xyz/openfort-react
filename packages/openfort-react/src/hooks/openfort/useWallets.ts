@@ -1,5 +1,6 @@
 import { AccountTypeEnum, ChainTypeEnum, EmbeddedAccount, MissingRecoveryPasswordError, RecoveryMethod, RecoveryParams } from "@openfort/openfort-js";
 import { useQueryClient } from "@tanstack/react-query";
+import { AxiosError } from "axios";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Hex } from "viem";
 import { Connector, useAccount, useChainId, useConnect, useDisconnect } from "wagmi";
@@ -527,8 +528,27 @@ export function useWallets(hookOptions: WalletOptions = {}) {
         }
       });
     } catch (e) {
-      const errorObj = e instanceof Error ? e : new Error('Failed to create wallet');
-      const error = new OpenfortError('Failed to create wallet', OpenfortErrorType.WALLET_ERROR, { error: errorObj });
+      log("Error creating wallet", e);
+      let errorMessage = 'Failed to create wallet';
+
+      // Handle network/CORS errors specifically
+      if (e instanceof AxiosError) {
+        if (e.code === 'ERR_NETWORK' || e.message.includes('CORS')) {
+          errorMessage = 'Network error: Please check your connection and CORS configuration';
+        } else {
+          const status = e.response?.status;
+          errorMessage = `Failed to create wallet${status ? ` (${status})` : ''}`;
+        }
+      } else if (e instanceof Error) {
+        if (e.message.includes('CORS') || e.message.includes('Network Error')) {
+          errorMessage = 'Network error: Please check your connection and CORS configuration';
+        } else if (e.message) {
+          errorMessage = `Failed to create wallet: ${e.message}`;
+        }
+      }
+
+      const errorObj = e instanceof Error ? e : new Error(errorMessage);
+      const error = new OpenfortError(errorMessage, OpenfortErrorType.WALLET_ERROR, { error: errorObj });
       setStatus({
         status: 'error',
         error,
