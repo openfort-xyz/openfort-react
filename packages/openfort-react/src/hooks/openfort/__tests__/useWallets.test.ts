@@ -64,9 +64,9 @@ vi.mock('wagmi', () => ({
     isConnected: false,
   }),
   useChainId: () => 1,
-  useConnect: (options: unknown) => {
+  useConnect: (options: any) => {
     // ensure mutation handlers are preserved to avoid undefined access
-    return { connect: mockConnect, ...options };
+    return { connect: mockConnect, ...(options || {}) };
   },
   useDisconnect: () => ({
     disconnect: mockDisconnect,

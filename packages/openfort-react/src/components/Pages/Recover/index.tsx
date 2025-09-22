@@ -240,10 +240,10 @@ const CreateWalletAutomaticRecovery = () => {
   }, [shouldCreateWallet]);
 
   useEffect(() => {
-    if (embeddedState === EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) {
+    if (embeddedState === EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED && !walletError) {
       setShouldCreateWallet(true);
     }
-  }, [embeddedState]);
+  }, [embeddedState, walletError]);
 
   return (
     <PageContent>
@@ -328,10 +328,10 @@ const CreateWalletPasskeyRecovery = ({ onChangeMethod }: { onChangeMethod: (meth
   }, [shouldCreateWallet]);
 
   useEffect(() => {
-    if (embeddedState === EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) {
+    if (embeddedState === EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED && !recoveryError) {
       setShouldCreateWallet(true);
     }
-  }, [embeddedState]);
+  }, [embeddedState, recoveryError]);
 
   useEffect(() => {
     if (recoveryError)
