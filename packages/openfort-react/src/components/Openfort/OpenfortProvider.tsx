@@ -90,6 +90,10 @@ export const OpenfortProvider = ({
   const injectedConnector = useConnector('injected')
   const allowAutomaticRecovery = !!(walletConfig?.createEncryptedSessionEndpoint || walletConfig?.getEncryptionSession)
 
+  // Check if chain is supported, elsewise redirect to switches page
+  const { chain, isConnected } = useAccount()
+  const isChainSupported = useChainIsSupported(chain?.id)
+
   // Default config options
   const defaultUIOptions: OpenfortUIOptionsExtended = {
     theme: 'auto',
@@ -109,7 +113,7 @@ export const OpenfortProvider = ({
     disclaimer: null,
     bufferPolyfill: true,
     customAvatar: undefined,
-    initialChainId: chains?.[0]?.id,
+    initialChainId: chain?.id ?? chains?.[0]?.id,
     enforceSupportedChains: false,
     ethereumOnboardingUrl: undefined,
     walletOnboardingUrl: undefined,
@@ -174,10 +178,6 @@ export const OpenfortProvider = ({
   useEffect(() => setCustomTheme(uiConfig?.customTheme ?? {}), [uiConfig?.customTheme])
   useEffect(() => setLang(safeUiConfig.language || 'en-US'), [safeUiConfig.language])
   useEffect(() => setErrorMessage(null), [route, open])
-
-  // Check if chain is supported, elsewise redirect to switches page
-  const { chain, isConnected } = useAccount()
-  const isChainSupported = useChainIsSupported(chain?.id)
 
   useEffect(() => {
     if (isConnected && safeUiConfig.enforceSupportedChains && !isChainSupported) {
