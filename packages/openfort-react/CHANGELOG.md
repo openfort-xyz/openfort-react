@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2
+
+### Patch Changes
+
+- [#75](https://github.com/openfort-xyz/openfort-react/pull/75) [`c2acaac`](https://github.com/openfort-xyz/openfort-react/commit/c2acaac543f58a9426490b2ae10b559e146b4545) Thanks [@martimayoral](https://github.com/martimayoral)! - granular logging
+
 ## 0.1.1
 
 ### Patch Changes
