@@ -3,15 +3,17 @@ import { switchChain } from '@wagmi/core'
 import { AxiosError } from 'axios'
 import { useCallback } from 'react'
 import { useAccount, useChainId, useConfig, usePublicClient, useSignMessage } from 'wagmi'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
 import { createSIWEMessage } from '../../siwe/create-siwe-message'
+import { useOpenfortStore } from '../../store/useOpenfortStore'
 import { logger } from '../../utils/logger'
 
 // This hook assumes wagmi is already connected to a wallet
 // It will use the connected wallet to sign the SIWE message and authenticate with Openfort
 // If there is a user already, it will link the wallet to the user
 export function useConnectWithSiwe() {
-  const { client, user, updateUser } = useOpenfortCore()
+  const client = useOpenfortStore((s) => s.client)!
+  const user = useOpenfortStore((s) => s.user)
+  const updateUser = useOpenfortStore((s) => s.updateUser)!
   const { address, connector, chainId: accountChainId } = useAccount()
   const chainId = useChainId()
   const config = useConfig()

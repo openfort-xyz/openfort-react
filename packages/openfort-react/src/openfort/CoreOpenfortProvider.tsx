@@ -8,6 +8,8 @@ import type { WalletFlowStatus } from '../hooks/openfort/useWallets'
 import { useConnect } from '../hooks/useConnect'
 import { useConnectCallback, type useConnectCallbackProps } from '../hooks/useConnectCallback'
 import type { UserAccount } from '../openfortCustomTypes'
+import { OpenfortStoreContext } from '../store/OpenfortStoreContext'
+import { createOpenfortStore, type OpenfortStoreApi } from '../store/openfortStore'
 import { logger } from '../utils/logger'
 import { handleOAuthConfigError } from '../utils/oauthErrorHandler'
 import { Context } from './context'
@@ -59,14 +61,46 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
 }) => {
   const { connectors, connect, reset } = useConnect()
   const { address } = useAccount()
-  const [user, setUser] = useState<User | null>(null)
-  const [linkedAccounts, setLinkedAccounts] = useState<UserAccount[]>([])
-  const [walletStatus, setWalletStatus] = useState<WalletFlowStatus>({ status: 'idle' })
+  const [user, setUserLocal] = useState<User | null>(null)
+  const [linkedAccounts, setLinkedAccountsLocal] = useState<UserAccount[]>([])
+  const [walletStatus, setWalletStatusLocal] = useState<WalletFlowStatus>({ status: 'idle' })
 
   const { disconnectAsync } = useDisconnect()
   const { walletConfig } = useOpenfort()
   const wagmiConfig = useConfig()
   const chainId = useChainId()
+
+  // ---- Zustand store (created once) ----
+  const storeRef = useRef<OpenfortStoreApi | null>(null)
+  if (!storeRef.current) {
+    storeRef.current = createOpenfortStore()
+  }
+  const store = storeRef.current
+
+  // Dual-write wrappers: update local state AND Zustand store
+  const setUser = useCallback(
+    (u: User | null) => {
+      setUserLocal(u)
+      store.setState({ user: u })
+    },
+    [store]
+  )
+
+  const setLinkedAccounts = useCallback(
+    (accounts: UserAccount[]) => {
+      setLinkedAccountsLocal(accounts)
+      store.setState({ linkedAccounts: accounts })
+    },
+    [store]
+  )
+
+  const setWalletStatus = useCallback(
+    (status: WalletFlowStatus) => {
+      setWalletStatusLocal(status)
+      store.setState({ walletStatus: status })
+    },
+    [store]
+  )
 
   // ---- Openfort instance ----
   const openfort = useMemo(() => {
@@ -90,13 +124,25 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     const newClient = createOpenfortClient(openfortConfig)
 
     setDefaultClient(newClient)
+
+    // Register client in store
+    store.setState({ client: newClient })
+
     return newClient
   }, [])
 
   // ---- Embedded state ----
-  const [embeddedState, setEmbeddedState] = useState<EmbeddedState>(EmbeddedState.NONE)
+  const [embeddedState, setEmbeddedStateLocal] = useState<EmbeddedState>(EmbeddedState.NONE)
   const pollingRef = useRef<NodeJS.Timeout | null>(null)
   const previousEmbeddedState = useRef<EmbeddedState>(EmbeddedState.NONE)
+
+  const setEmbeddedState = useCallback(
+    (state: EmbeddedState) => {
+      setEmbeddedStateLocal(state)
+      store.setState({ embeddedState: state })
+    },
+    [store]
+  )
 
   const pollEmbeddedState = useCallback(async () => {
     if (!openfort) return
@@ -108,7 +154,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
       logger.error('Error checking embedded state with Openfort:', error)
       if (pollingRef.current) clearInterval(pollingRef.current)
     }
-  }, [openfort])
+  }, [openfort, setEmbeddedState])
 
   // Only log embedded state when it changes
   useEffect(() => {
@@ -193,6 +239,11 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     retry: false,
   })
 
+  // Sync react-query data to Zustand store
+  useEffect(() => {
+    store.setState({ embeddedAccounts, isLoadingAccounts })
+  }, [embeddedAccounts, isLoadingAccounts, store])
+
   // Update ethereum provider when chainId changes
   useEffect(() => {
     if (!openfort || !walletConfig) return
@@ -237,7 +288,15 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     fetchEmbeddedAccounts()
   }, [openfort, walletConfig, chainId])
 
-  const [isConnectedWithEmbeddedSigner, setIsConnectedWithEmbeddedSigner] = useState(false)
+  const [isConnectedWithEmbeddedSigner, setIsConnectedWithEmbeddedSignerLocal] = useState(false)
+
+  const setIsConnectedWithEmbeddedSigner = useCallback(
+    (connected: boolean) => {
+      setIsConnectedWithEmbeddedSignerLocal(connected)
+      store.setState({ isConnectedWithEmbeddedSigner: connected })
+    },
+    [store]
+  )
 
   useEffect(() => {
     if (!openfort) return
@@ -319,6 +378,16 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     }
   }, [openfort])
 
+  // Register imperative refs in store
+  useEffect(() => {
+    store.setState({
+      updateUser,
+      updateEmbeddedAccounts: fetchEmbeddedAccounts,
+      logout,
+      signUpGuest,
+    })
+  }, [updateUser, fetchEmbeddedAccounts, logout, signUpGuest, store])
+
   // ---- Return values ----
 
   const isLoading = useCallback(() => {
@@ -328,7 +397,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
         return true
 
       case EmbeddedState.UNAUTHENTICATED:
-        if (user) return true // If user i<s set in unauthenticated state, it means that the embedded state is not up to date, so we should wait
+        if (user) return true // If user is set in unauthenticated state, it means that the embedded state is not up to date, so we should wait
         return false
 
       case EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED:
@@ -370,11 +439,15 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
   }
 
   return createElement(
-    Context.Provider,
-    { value },
-    <>
-      <ConnectCallback onConnect={onConnect} onDisconnect={onDisconnect} />
-      {children}
-    </>
+    OpenfortStoreContext.Provider,
+    { value: store },
+    createElement(
+      Context.Provider,
+      { value },
+      <>
+        <ConnectCallback onConnect={onConnect} onDisconnect={onDisconnect} />
+        {children}
+      </>
+    )
   )
 }

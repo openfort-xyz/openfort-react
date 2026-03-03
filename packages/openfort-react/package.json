@@ -50,7 +50,8 @@
     "react-transition-state": "^1.1.4",
     "react-use-measure": "^2.1.1",
     "resize-observer-polyfill": "^1.5.1",
-    "styled-components": "^5.3.5"
+    "styled-components": "^5.3.5",
+    "zustand": "^5.0.0"
   },
   "peerDependencies": {
     "@tanstack/react-query": ">=5.0.0",

@@ -1,7 +1,7 @@
 import type { User } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
-import { useOpenfortCore } from '../openfort/useOpenfort'
+import { useOpenfortStore } from '../store/useOpenfortStore'
 import useIsMounted from './useIsMounted'
 
 export type useConnectCallbackProps = {
@@ -10,7 +10,7 @@ export type useConnectCallbackProps = {
 }
 
 export const useConnectCallback = ({ onConnect, onDisconnect }: useConnectCallbackProps) => {
-  const { user } = useOpenfortCore()
+  const user = useOpenfortStore((s) => s.user)
   const { address, connector } = useAccount()
   const hasAddress = !!address
   const [isConnected, setIsConnected] = useState(false)

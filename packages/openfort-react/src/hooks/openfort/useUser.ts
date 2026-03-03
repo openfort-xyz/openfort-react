@@ -1,6 +1,6 @@
 import { EmbeddedState } from '@openfort/openfort-js'
 import { useCallback } from 'react'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../store/useOpenfortStore'
 import { handleOAuthConfigError } from '../../utils/oauthErrorHandler'
 
 /**
@@ -48,7 +48,10 @@ import { handleOAuthConfigError } from '../../utils/oauthErrorHandler'
  * ```
  */
 export function useUser() {
-  const { user, client, embeddedState, linkedAccounts } = useOpenfortCore()
+  const user = useOpenfortStore((s) => s.user)
+  const client = useOpenfortStore((s) => s.client)!
+  const embeddedState = useOpenfortStore((s) => s.embeddedState)
+  const linkedAccounts = useOpenfortStore((s) => s.linkedAccounts)
 
   const getAccessTokenAndUpdate = useCallback(async () => {
     try {

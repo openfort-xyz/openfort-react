@@ -14,7 +14,8 @@ import { type Connector, useAccount, useChainId, useConfig, useDisconnect, useSw
 import { type GetEncryptionSessionParams, routes, UIAuthProvider } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { embeddedWalletId } from '../../constants/openfort'
-import { useOpenfortCore, useWalletStatus } from '../../openfort/useOpenfort'
+import { useWalletStatus } from '../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../store/useOpenfortStore'
 import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../types'
 import { logger } from '../../utils/logger'
 import { useWagmiWallets } from '../../wallets/useWagmiWallets'
@@ -217,7 +218,10 @@ const mapWalletStatus = (status: WalletFlowStatus) => {
  * ```
  */
 export function useWallets(hookOptions: WalletOptions = {}) {
-  const { client, embeddedAccounts, isLoadingAccounts: isLoadingWallets, updateEmbeddedAccounts } = useOpenfortCore()
+  const client = useOpenfortStore((s) => s.client)!
+  const embeddedAccounts = useOpenfortStore((s) => s.embeddedAccounts)
+  const isLoadingWallets = useOpenfortStore((s) => s.isLoadingAccounts)
+  const updateEmbeddedAccounts = useOpenfortStore((s) => s.updateEmbeddedAccounts)!
   const { linkedAccounts, user } = useUser()
   const { walletConfig, setOpen, setRoute, setConnector, uiConfig } = useOpenfort()
   const { connector, isConnected, address } = useAccount()

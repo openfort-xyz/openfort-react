@@ -1,12 +1,13 @@
 import { useEffect, useMemo } from 'react'
 import { socialProviders, UIAuthProvider } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../store/useOpenfortStore'
 import { OpenfortError, OpenfortReactErrorType } from '../../types'
 import { logger } from '../../utils/logger'
 
 export function useProviders() {
-  const { user, linkedAccounts } = useOpenfortCore()
+  const user = useOpenfortStore((s) => s.user)
+  const linkedAccounts = useOpenfortStore((s) => s.linkedAccounts)
   const { uiConfig: options, thirdPartyAuth, setOpen } = useOpenfort()
 
   const allProviders = options?.authProviders || []

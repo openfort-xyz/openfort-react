@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../../store/useOpenfortStore'
 import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../../types'
 import { onError, onSuccess } from '../hookConsistency'
 import { type BaseFlowState, mapStatus } from './status'
@@ -62,7 +62,7 @@ import { type BaseFlowState, mapStatus } from './status'
  * ```
  */
 export function useSignOut(hookOptions: OpenfortHookOptions = {}) {
-  const { logout } = useOpenfortCore()
+  const logout = useOpenfortStore((s) => s.logout)!
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })

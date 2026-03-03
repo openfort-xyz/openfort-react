@@ -1,6 +1,6 @@
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../../store/useOpenfortStore'
 import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../../types'
 import { logger } from '../../../utils/logger'
 import { isValidEmail } from '../../../utils/validation'
@@ -136,7 +136,8 @@ type UseEmailHookOptions = {
  * ```
  */
 export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
-  const { client, updateUser } = useOpenfortCore()
+  const client = useOpenfortStore((s) => s.client)!
+  const updateUser = useOpenfortStore((s) => s.updateUser)!
   const { isOpen } = useUI()
   const [requiresEmailVerification, setRequiresEmailVerification] = useState(false)
   const [status, setStatus] = useState<BaseFlowState>({

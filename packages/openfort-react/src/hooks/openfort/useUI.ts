@@ -1,7 +1,8 @@
 import { useAccount } from 'wagmi'
 import { type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { selectIsLoading, selectNeedsRecovery } from '../../store/selectors'
+import { useOpenfortStore } from '../../store/useOpenfortStore'
 import { logger } from '../../utils/logger'
 
 type ModalRoutes = RoutesWithoutOptions['route'] | RouteOptions
@@ -94,8 +95,10 @@ type ValidRoutes = ModalRoutes
  */
 export function useUI() {
   const { open, setOpen, setRoute } = useOpenfort()
-  const { isLoading, user, needsRecovery } = useOpenfortCore()
-  const { isConnected } = useAccount()
+  const { address, isConnected } = useAccount()
+  const user = useOpenfortStore((s) => s.user)
+  const isLoading = useOpenfortStore((s) => selectIsLoading(s, address))
+  const needsRecovery = useOpenfortStore((s) => selectNeedsRecovery(s, address))
 
   function defaultOpen() {
     setOpen(true)

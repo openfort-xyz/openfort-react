@@ -1,6 +1,6 @@
 import type { OAuthProvider, User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../../store/useOpenfortStore'
 import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../../types'
 import { onError, onSuccess } from '../hookConsistency'
 import { useUI } from '../useUI'
@@ -111,7 +111,8 @@ type AuthHookOptions = {
  * ```
  */
 export const useOAuth = (hookOptions: AuthHookOptions = {}) => {
-  const { client, updateUser } = useOpenfortCore()
+  const client = useOpenfortStore((s) => s.client)!
+  const updateUser = useOpenfortStore((s) => s.updateUser)!
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })

@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import { type AuthorizationRequest, type Hex, parseSignature, type SignedAuthorization } from 'viem'
 import { hashAuthorization } from 'viem/utils'
 
-import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../store/useOpenfortStore'
 import { OpenfortError, OpenfortReactErrorType } from '../../types'
 
 export type SignAuthorizationParameters = AuthorizationRequest
@@ -42,7 +42,7 @@ type SignAuthorizationOptions = {
  */
 export function use7702Authorization() {
   // biome-ignore lint/correctness/useHookAtTopLevel: use7702Authorization is a valid hook name
-  const { client } = useOpenfortCore()
+  const client = useOpenfortStore((s) => s.client)!
 
   // biome-ignore lint/correctness/useHookAtTopLevel: use7702Authorization is a valid hook name
   const signAuthorization = useCallback(

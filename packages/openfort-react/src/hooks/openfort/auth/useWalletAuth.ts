@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { type Connector, useDisconnect } from 'wagmi'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useOpenfortStore } from '../../../store/useOpenfortStore'
 import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../../types'
 import { logger } from '../../../utils/logger'
 import { useWagmiWallets } from '../../../wallets/useWagmiWallets'
@@ -14,7 +14,7 @@ type ConnectWalletOptions = {
 } // onConnect is handled by the hookOptions because useConnect needs to finish the connection process
 
 export const useWalletAuth = (hookOptions: OpenfortHookOptions = {}) => {
-  const { updateUser } = useOpenfortCore()
+  const updateUser = useOpenfortStore((s) => s.updateUser)!
   const siwe = useConnectWithSiwe()
   const availableWallets = useWagmiWallets() // TODO: Use this to get the wallet client type
   const { disconnect } = useDisconnect()
