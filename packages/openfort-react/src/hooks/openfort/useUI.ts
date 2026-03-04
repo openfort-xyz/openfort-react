@@ -29,6 +29,13 @@ const allRoutes: ModalRoutes[] = [...safeRoutes.connected, ...safeRoutes.disconn
 
 type ValidRoutes = ModalRoutes
 
+/** Route can be selected by string (route name) or by object with `route` property */
+function routeMatches(a: ModalRoutes, b: ModalRoutes): boolean {
+  const aRoute = typeof a === 'object' && 'route' in a ? a.route : a
+  const bRoute = typeof b === 'object' && 'route' in b ? b.route : b
+  return aRoute === bRoute
+}
+
 /**
  * Hook for controlling Openfort UI modal and navigation
  *
@@ -110,17 +117,17 @@ export function useUI() {
   const gotoAndOpen = (route: ValidRoutes) => {
     let validRoute: ValidRoutes = route
 
-    if (!allRoutes.includes(route)) {
+    if (!allRoutes.some((r) => routeMatches(r, route))) {
       validRoute = isConnected ? routes.CONNECTED : routes.PROVIDERS
       logger.log(`Route ${route} is not a valid route, navigating to ${validRoute} instead.`)
     } else {
       if (isConnected) {
-        if (!safeRoutes.connected.includes(route)) {
+        if (!safeRoutes.connected.some((r) => routeMatches(r, route))) {
           validRoute = routes.CONNECTED
           logger.log(`Route ${route} is not a valid route when connected, navigating to ${validRoute} instead.`)
         }
       } else {
-        if (!safeRoutes.disconnected.includes(route)) {
+        if (!safeRoutes.disconnected.some((r) => routeMatches(r, route))) {
           validRoute = routes.PROVIDERS
           logger.log(`Route ${route} is not a valid route when disconnected, navigating to ${validRoute} instead.`)
         }
