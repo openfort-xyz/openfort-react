@@ -1,5 +1,6 @@
 import type { Languages as Lang } from './localizations'
 import type { CustomTheme } from './styles/customTheme'
+
 export type { CustomTheme }
 export type Languages = Lang
 
