@@ -165,8 +165,6 @@ const BuySelectProvider = () => {
   }
 
   const handleContinue = () => {
-    // Just navigate to the processing screen
-    // The processing screen will handle session creation and popup
     setRoute(routes.BUY_PROCESSING)
   }
 
