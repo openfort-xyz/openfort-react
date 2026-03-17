@@ -68,4 +68,4 @@ export const isCoinbaseWalletConnector = (connectorId?: string) => connectorId =
 
 export const isInjectedConnector = (connectorId?: string) => connectorId === 'injected'
 
-export { nFormatter, truncateEthAddress, truncateSolanaAddress, isMobile, isAndroid, detectBrowser, flattenChildren }
+export { detectBrowser, flattenChildren, isAndroid, isMobile, nFormatter, truncateEthAddress, truncateSolanaAddress }
