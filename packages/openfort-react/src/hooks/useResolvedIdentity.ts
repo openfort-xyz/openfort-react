@@ -86,7 +86,11 @@ export function useResolvedIdentity(options: UseResolvedIdentityOptions): Resolv
   const { address, chainType = ChainTypeEnum.EVM, ensChainId = 0, enabled = true } = options
 
   const { walletConfig } = useOpenfort()
-  const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[ensChainId] ?? getDefaultEthereumRpcUrl(ensChainId)
+  // Only resolve RPC URL for mainnet (ensChainId === 1) — chainId 0 means "do not resolve"
+  const rpcUrl =
+    ensChainId === 1
+      ? (walletConfig?.ethereum?.rpcUrls?.[ensChainId] ?? getDefaultEthereumRpcUrl(ensChainId))
+      : undefined
 
   const isEnabled = enabled && !!address && address.length > 0 && ensChainId === 1 && !!rpcUrl
 

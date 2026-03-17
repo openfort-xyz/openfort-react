@@ -5,80 +5,13 @@
  * For embedded wallets, external wallet connections are not needed.
  * This component is only used for connecting external wallets via WalletConnect.
  */
-import { useEffect, useState } from 'react'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import useIsMobile from '../../../hooks/useIsMobile'
-import { useWalletConnectModal } from '../../../hooks/useWalletConnectModal'
 import { logger } from '../../../utils/logger'
 import ConnectorList from '../../Common/ConnectorList'
-import Loader from '../../Common/Loading'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 
 let hasWarnedConnectors = false
 
-const ConnectWithMobile = () => {
-  const { open: openWalletConnectModal } = useWalletConnectModal()
-  const [error, setError] = useState<string | undefined>(undefined)
-  const bridge = useEthereumBridge()
-  const connector = bridge?.account?.connector
-  const address = bridge?.account?.address
-  const { setRoute, setConnector } = useOpenfort()
-
-  const openWCModal = async () => {
-    setError(undefined)
-    const { error } = await openWalletConnectModal()
-    if (error) {
-      setError(error)
-    }
-  }
-
-  useEffect(() => {
-    openWCModal()
-  }, [])
-
-  useEffect(() => {
-    if (connector && address) {
-      const walletConnectDeeplinkChoice = localStorage.getItem('WALLETCONNECT_DEEPLINK_CHOICE')
-
-      if (walletConnectDeeplinkChoice) {
-        try {
-          const parsedChoice: unknown = JSON.parse(walletConnectDeeplinkChoice)
-          if (
-            parsedChoice &&
-            typeof parsedChoice === 'object' &&
-            'name' in parsedChoice &&
-            typeof (parsedChoice as { name: unknown }).name === 'string'
-          ) {
-            setConnector({ id: (parsedChoice as { name: string }).name })
-          } else {
-            setConnector({ id: connector.id })
-          }
-        } catch {
-          setConnector({ id: connector.id })
-        }
-      } else {
-        setConnector({ id: connector.id })
-      }
-
-      setRoute(routes.CONNECT_WITH_MOBILE)
-    }
-  }, [address, connector])
-
-  return (
-    <Loader
-      header={error ? 'Error connecting wallet.' : `Connecting...`}
-      isError={!!error}
-      description={error}
-      onRetry={() => openWCModal()}
-    />
-  )
-}
-
 const Connectors = ({ logoutOnBack }: { logoutOnBack?: boolean }) => {
-  const isMobile = useIsMobile()
-
   // Runtime deprecation warning
   if (process.env.NODE_ENV === 'development' && !hasWarnedConnectors) {
     logger.warn(
@@ -91,7 +24,7 @@ const Connectors = ({ logoutOnBack }: { logoutOnBack?: boolean }) => {
 
   return (
     <PageContent logoutOnBack={logoutOnBack} width={312}>
-      {isMobile ? <ConnectWithMobile /> : <ConnectorList />}
+      <ConnectorList />
     </PageContent>
   )
 }

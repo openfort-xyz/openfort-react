@@ -130,7 +130,7 @@ const ConnectWithInjector: React.FC<{
         connectorType: walletItem.connector?.type,
         walletClientType: walletItem.connector?.id,
         onError: (error, _errorType) => {
-          logger.error(error)
+          logger.error('[ConnectWithInjector] SIWE failed:', error)
           disconnect()
           setStatus(states.FAILED)
         },
@@ -233,13 +233,13 @@ const ConnectWithInjector: React.FC<{
       }
       if (!wallet) {
         setStatus(states.FAILED)
-        logger.error('No wallet found')
+        logger.error('[ConnectWithInjector] No wallet found after connect')
         return
       }
-      logger.log('Connect type is:', props.connectType)
+      logger.log('[ConnectWithInjector] Connect type is:', props.connectType)
       await handleConnectSettled(wallet, connectResult)
     } catch (err: unknown) {
-      logger.error(err)
+      logger.error('[ConnectWithInjector] Connection error', err instanceof Error ? err.message : err)
       handleConnectError(
         err && typeof err === 'object' && 'code' in err
           ? (err as { code?: number; message?: string })

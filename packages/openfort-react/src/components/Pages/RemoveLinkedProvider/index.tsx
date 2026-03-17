@@ -38,7 +38,7 @@ const RemoveLinkedProvider: React.FC = () => {
     if (route.route === 'removeLinkedProvider') {
       return route.account
     }
-    throw new Error('No provider found in route')
+    return null
   }, [route])
 
   useEffect(() => {
@@ -66,6 +66,7 @@ const RemoveLinkedProvider: React.FC = () => {
   }, [isSuccess])
 
   const handleRemove = async () => {
+    if (!provider) return
     const errorMsg = 'Failed to remove linked provider. Please try again.'
     if (provider.provider === 'siwe' || provider.provider === 'wallet') {
       try {
@@ -98,6 +99,8 @@ const RemoveLinkedProvider: React.FC = () => {
       }
     }
   }
+
+  if (!provider) return null
 
   return (
     <PageContent>

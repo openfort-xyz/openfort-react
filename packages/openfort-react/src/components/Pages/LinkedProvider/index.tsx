@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import type { Hex } from 'viem'
 
 import { useUser } from '../../../hooks/openfort/useUser'
@@ -94,12 +94,15 @@ const OAuthContent = ({ account }: { account: LinkedAccount }) => {
 
 const LinkedProvider: React.FC = () => {
   const { route } = useOpenfort()
+  const lastAccountRef = useRef<LinkedAccount | null>(null)
 
   const account = useMemo(() => {
     if (route.route === 'linkedProvider') {
+      lastAccountRef.current = route.account
       return route.account
     }
-    throw new Error('No account found in route')
+    // During exit animations or route transitions, return the last known account
+    return lastAccountRef.current
   }, [route])
 
   const getProviderDetails = (account: LinkedAccount) => {
@@ -125,6 +128,8 @@ const LinkedProvider: React.FC = () => {
         )
     }
   }
+
+  if (!account) return null
 
   return (
     <PageContent>

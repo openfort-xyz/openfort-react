@@ -5,6 +5,7 @@ import type { UIAuthProvider } from '../../../components/Openfort/types'
 import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
 import type { OpenfortHookOptions } from '../../../types'
 import { logger } from '../../../utils/logger'
+import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity'
 import type { CreateWalletPostAuthOptions } from './useConnectToWalletPostAuth'
 import { type EmailVerificationResult, useEmailAuth } from './useEmailAuth'
 import { type StoreCredentialsResult, useOAuth } from './useOAuth'
@@ -113,16 +114,19 @@ export const useAuthCallback = ({
     if (callbackProcessedRef.current) return
     callbackProcessedRef.current = true
 
+    // Parse callback URL (fixes OF-1013 duplicate `?` issue)
+    const url = parseCallbackUrl(window.location.href)
+    const openfortAuthProvider = url.searchParams.get('openfortAuthProvider')
+
+    if (!openfortAuthProvider) {
+      return
+    }
+
+    // Suppress Referer SYNCHRONOUSLY — before any async work — so that
+    // subresource requests cannot leak access_token to third parties.
+    const restoreReferrer = suppressReferrer()
+
     ;(async () => {
-      // redirectUrl is not working with query params OF-1013
-      const fixedUrl = window.location.href.replace('?state=', '&state=')
-      const url = new URL(fixedUrl)
-      const openfortAuthProvider = url.searchParams.get('openfortAuthProvider')
-
-      if (!openfortAuthProvider) {
-        return
-      }
-
       setProvider(openfortAuthProvider as UIAuthProvider)
       if (openfortAuthProvider === 'email') {
         // Email verification flow
@@ -136,6 +140,7 @@ export const useAuthCallback = ({
             url.searchParams.delete(key)
           })
           window.history.replaceState({}, document.title, url.toString())
+          restoreReferrer()
         }
 
         if (state && email) {
@@ -164,6 +169,7 @@ export const useAuthCallback = ({
           })
           removeParams()
         } else {
+          restoreReferrer()
           const err = new OpenfortError('No email found in URL', OpenfortReactErrorType.AUTHENTICATION_ERROR)
           logger.error('No email found in URL')
           hookOptions.onError?.(err)
@@ -175,6 +181,7 @@ export const useAuthCallback = ({
         const token = url.searchParams.get('access_token')
 
         if (!userId || !token) {
+          restoreReferrer()
           logger.error(`Missing user id or access token`, {
             hasUserId: !!userId,
             hasToken: !!token,
@@ -194,6 +201,7 @@ export const useAuthCallback = ({
             url.searchParams.delete(key)
           })
           window.history.replaceState({}, document.title, url.toString())
+          restoreReferrer()
         }
 
         logger.log('callback', { userId })

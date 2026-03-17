@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { embeddedWalletId } from '../../constants/openfort'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
 import styled from '../../styles/styled'
 import { isAndroid } from '../../utils'
@@ -41,9 +42,11 @@ const ConnectWithMobile: React.FC = () => {
 
   const wallet = useExternalConnector(connector.id) || (walletId && walletConfigs[walletId]) || {}
   const bridge = useEthereumBridge()
-  const isConnected = bridge?.account?.isConnected ?? false
+  // Only consider external wallets as "connected" — ignore the embedded wallet connector
+  const isExternalConnected =
+    (bridge?.account?.isConnected && bridge?.account?.connector?.id !== embeddedWalletId) ?? false
 
-  const [status, setStatus] = useState(isConnected ? states.INIT : states.CONNECTING)
+  const [status, setStatus] = useState(isExternalConnected ? states.CONNECTING : states.INIT)
   const [description, setDescription] = useState<string | undefined>(undefined)
 
   const [hasReturned, setHasReturned] = useState(false)
@@ -69,14 +72,14 @@ const ConnectWithMobile: React.FC = () => {
   useEffect(() => {
     if (hasReturned) {
       setHasReturned(false)
-      if (isConnected) {
+      if (isExternalConnected) {
         setStatus(states.CONNECTING)
       } else {
         setStatus(states.ERROR)
         setDescription('Connection failed or cancelled')
       }
     }
-  }, [hasReturned, isConnected])
+  }, [hasReturned, isExternalConnected])
 
   useEffect(() => {
     switch (status) {
@@ -104,11 +107,11 @@ const ConnectWithMobile: React.FC = () => {
         isError={status === states.ERROR}
         description={description}
         onRetry={() => {
-          setStatus(isConnected ? states.CONNECTING : states.INIT)
+          setStatus(isExternalConnected ? states.CONNECTING : states.INIT)
           setDescription('')
         }}
       />
-      {isConnected ? (
+      {isExternalConnected ? (
         <Button
           onClick={() => {
             openApp()

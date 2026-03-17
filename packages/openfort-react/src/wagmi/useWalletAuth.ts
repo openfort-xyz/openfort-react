@@ -9,6 +9,7 @@ import { onError, onSuccess } from '../hooks/openfort/hookConsistency'
 import { useOpenfortCore } from '../openfort/useOpenfort'
 import { createSIWEMessage } from '../siwe/create-siwe-message'
 import type { OpenfortHookOptions } from '../types'
+import { logger } from '../utils/logger'
 
 export interface AvailableWallet {
   id: string
@@ -45,10 +46,12 @@ function runConnectWithSiwe(
   const signMessage = bridge.signMessage
 
   if (!address || !connectorType || !walletClientType) {
+    logger.warn('[runConnectWithSiwe] Missing params', { address, connectorType, walletClientType })
     params.onError?.('No address found')
     return Promise.resolve()
   }
   if (!signMessage) {
+    logger.warn('[runConnectWithSiwe] No signMessage on bridge')
     params.onError?.('EVM bridge not available (signMessage)')
     return Promise.resolve()
   }
@@ -91,6 +94,7 @@ function runConnectWithSiwe(
       await updateUser()
       params.onConnect?.()
     } catch (err) {
+      logger.error('[runConnectWithSiwe] SIWE failed', err instanceof Error ? err.message : err)
       if (!params.onError) return
       let message = err instanceof Error ? err.message : String(err)
       if (message.includes('User rejected the request.')) message = 'User rejected the request.'
@@ -126,6 +130,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = {}) {
       const connector = bridge?.connectors?.find((c) => c.id === connectorId)
       if (!connector || !bridge?.connectAsync) {
         const msg = 'Connector not available'
+        logger.warn('[useWalletAuth] Connector not found', { connectorId })
         const err = new OpenfortError(msg, OpenfortReactErrorType.AUTHENTICATION_ERROR)
         setStatus({ status: 'error', error: err })
         onError({ hookOptions, error: err })
@@ -140,6 +145,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = {}) {
         try {
           await bridge.disconnect()
         } catch (e) {
+          logger.error('[useWalletAuth] Failed to disconnect', e)
           setWalletConnectingTo(null)
           const err = new OpenfortError('Failed to disconnect', OpenfortReactErrorType.AUTHENTICATION_ERROR, {
             error: e,
@@ -178,6 +184,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = {}) {
           },
         })
       } catch (err) {
+        logger.error('[useWalletAuth] connectAsync failed', err instanceof Error ? err.message : err)
         setWalletConnectingTo(null)
         const message = err instanceof Error ? err.message : 'Connection failed'
         const openfortErr = new OpenfortError(message, OpenfortReactErrorType.AUTHENTICATION_ERROR, { error: err })
