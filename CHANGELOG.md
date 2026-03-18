@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.4
+
+### Patch Changes
+
+- [#210](https://github.com/openfort-xyz/openfort-react/pull/210) [`84a3961`](https://github.com/openfort-xyz/openfort-react/commit/84a3961d9e465ff5da1a4dfa8ce4e42c1448500b) Thanks [@isardmart](https://github.com/isardmart)! - added multichainassets in useEthereumWalletAssets
+
 ## 1.0.3
 
 ### Patch Changes
