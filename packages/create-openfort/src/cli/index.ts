@@ -334,8 +334,7 @@ export const runCli = async (): Promise<CliResults> => {
         },
         walletConnectProjectId: ({ results }) => {
           // Only needed for EVM templates (not solana-headless)
-          const isSolana =
-            results.template === "headless" && results.chain === "solana";
+          const isSolana = results.chain === "solana";
           if (isSolana) return undefined;
 
           return p.text({
