@@ -2,10 +2,10 @@
 
 import { useCallback, useMemo } from 'react'
 import type { Transport } from 'viem'
-import { createWalletClient, custom, numberToHex } from 'viem'
+import { createWalletClient, custom, formatUnits, numberToHex } from 'viem'
 import { erc7811Actions } from 'viem/experimental'
 import type { getAssets } from 'viem/experimental/erc7811'
-import type { Asset } from '../../components/Openfort/types'
+import type { Asset, MultiChainAsset } from '../../components/Openfort/types'
 import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort'
 import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
 import type { EthereumConfig } from '../../ethereum/types'
@@ -16,25 +16,54 @@ import { useEthereumEmbeddedWallet } from './useEthereumEmbeddedWallet'
 
 type UseEthereumWalletAssetsOptions = {
   assets?: EthereumConfig['assets']
+  /** When true, fetches assets for all configured chains and returns MultiChainAsset[]. */
+  multiChain?: boolean
   staleTime?: number
+}
+
+type WalletAssetsReturnBase = {
+  isLoading: boolean
+  isError: boolean
+  isSuccess: boolean
+  isIdle: boolean
+  error: OpenfortError | undefined
+  refetch: () => Promise<unknown>
+}
+
+type UseEthereumWalletAssetsResult =
+  | (WalletAssetsReturnBase & { multiChain: true; data: readonly MultiChainAsset[] | null })
+  | (WalletAssetsReturnBase & { multiChain: false; data: readonly Asset[] | null })
+
+function getUsdValue(asset: Asset): number {
+  const fiat = asset.metadata?.fiat
+  if (!fiat?.value || asset.balance === undefined) return 0
+  const decimals = asset.metadata?.decimals ?? 18
+  const amount = Number.parseFloat(formatUnits(asset.balance, decimals))
+  return Number.isFinite(amount) ? amount * fiat.value : 0
 }
 
 /**
  * Returns wallet assets (tokens, NFTs) for the connected Ethereum address.
  * Uses ERC-7811 via Openfort's authenticated RPC proxy.
  *
- * @param options - Optional custom assets config and staleTime
+ * When `multiChain` is true, fetches assets across all configured chains
+ * via `wallet_getAssets` and returns `MultiChainAsset[]` (assets tagged with `chainId`).
+ *
+ * @param options - Optional custom assets config, multiChain flag, and staleTime
  * @returns assets, isLoading, error, refetch
  *
  * @example
  * ```tsx
  * const { data: assets, isLoading } = useEthereumWalletAssets()
+ * // Multi-chain:
+ * const { data, multiChain } = useEthereumWalletAssets({ multiChain: true })
  * ```
  */
 export const useEthereumWalletAssets = ({
   assets: hookCustomAssets,
+  multiChain = false,
   staleTime = 30000,
-}: UseEthereumWalletAssetsOptions = {}) => {
+}: UseEthereumWalletAssetsOptions = {}): UseEthereumWalletAssetsResult => {
   const wallet = useEthereumEmbeddedWallet()
   const isConnected = wallet.status === 'connected'
   const address = isConnected ? wallet.address : undefined
@@ -43,6 +72,7 @@ export const useEthereumWalletAssets = ({
   const { walletConfig, publishableKey, overrides, thirdPartyAuth, chains } = useOpenfort()
   const { getAccessToken } = useUser()
   const chain = chains.find((c) => c.id === chainId)
+  const backendUrl = overrides?.backendUrl || 'https://api.openfort.io'
 
   const buildHeaders = useCallback(async () => {
     if (thirdPartyAuth) {
@@ -71,11 +101,24 @@ export const useEthereumWalletAssets = ({
     return headers
   }, [publishableKey, getAccessToken, thirdPartyAuth])
 
+  /** For multiChain: walletConfig.ethereum.assets as backend assetFilter format (hex chainId -> [{ address, type }]). */
+  const customAssetsMultiChain = useMemo(() => {
+    if (!multiChain) return undefined
+    const configAssets = walletConfig?.ethereum?.assets
+    if (!configAssets) return undefined
+    const mapped: Record<string, { address: string; type: string }[]> = {}
+    for (const [cid, addresses] of Object.entries(configAssets)) {
+      const hexChainId = numberToHex(Number(cid))
+      mapped[hexChainId] = addresses.map((addr) => ({ address: addr, type: 'erc20' }))
+    }
+    return Object.keys(mapped).length > 0 ? mapped : undefined
+  }, [multiChain, walletConfig?.ethereum?.assets])
+
   const customTransport = useMemo(
     () => (): Transport => {
       return custom({
         async request({ method, params }) {
-          const res = await fetch(`${overrides?.backendUrl || 'https://api.openfort.io'}/rpc`, {
+          const res = await fetch(`${backendUrl}/rpc`, {
             method: 'POST',
             headers: await buildHeaders(),
             body: JSON.stringify({
@@ -96,7 +139,7 @@ export const useEthereumWalletAssets = ({
         },
       })
     },
-    [buildHeaders, overrides?.backendUrl]
+    [buildHeaders, backendUrl]
   )
 
   const customAssetsToFetch = useMemo(() => {
@@ -108,8 +151,104 @@ export const useEthereumWalletAssets = ({
   }, [walletConfig?.ethereum?.assets, hookCustomAssets, chainId])
 
   const { data, error, isLoading, refetch } = useAsyncData({
-    queryKey: [...openfortKeys.walletAssets(chainId!, customAssetsToFetch, address)],
-    queryFn: async () => {
+    queryKey: multiChain
+      ? ['wallet-assets', 'multi', address, customAssetsMultiChain]
+      : [...openfortKeys.walletAssets(chainId!, customAssetsToFetch, address)],
+    queryFn: async (): Promise<readonly Asset[] | readonly MultiChainAsset[]> => {
+      if (multiChain) {
+        if (!address) {
+          throw new OpenfortError('No wallet address available', OpenfortReactErrorType.UNEXPECTED_ERROR)
+        }
+        const headers = await buildHeaders()
+        const defaultRequest = fetch(`${backendUrl}/rpc`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            method: 'wallet_getAssets',
+            params: { account: address },
+            id: 1,
+            jsonrpc: '2.0',
+          }),
+        })
+        const customRequest = customAssetsMultiChain
+          ? fetch(`${backendUrl}/rpc`, {
+              method: 'POST',
+              headers,
+              body: JSON.stringify({
+                method: 'wallet_getAssets',
+                params: { account: address, assetFilter: customAssetsMultiChain },
+                id: 2,
+                jsonrpc: '2.0',
+              }),
+            })
+          : null
+        const responses = await Promise.all([defaultRequest, customRequest].filter(Boolean) as Promise<Response>[])
+        const [defaultData, customData] = await Promise.all(responses.map((r) => r.json()))
+        const result: Record<string, unknown[]> = { ...(defaultData.result ?? {}) }
+        if (customData?.result && typeof customData.result === 'object') {
+          for (const [chainKey, assets] of Object.entries(customData.result)) {
+            if (!Array.isArray(assets)) continue
+            if (!result[chainKey]) {
+              result[chainKey] = assets
+            } else {
+              const existing = new Map((result[chainKey] as { address?: string }[]).map((a) => [a.address ?? '', a]))
+              for (const asset of assets as { address?: string }[]) {
+                existing.set(asset.address ?? '', asset)
+              }
+              result[chainKey] = Array.from(existing.values())
+            }
+          }
+        }
+        const allAssets: MultiChainAsset[] = []
+        for (const [chainIdKey, assets] of Object.entries(result)) {
+          const cid = Number(chainIdKey)
+          if (!Array.isArray(assets)) continue
+          for (const a of assets as {
+            type: string
+            address?: string
+            balance?: string
+            metadata?: unknown
+          }[]) {
+            if (a.type === 'erc20') {
+              const asset: Asset = {
+                type: 'erc20' as const,
+                address: (a.address ?? '0x0') as `0x${string}`,
+                balance: BigInt(a.balance ?? 0),
+                metadata: {
+                  name: (a.metadata as { name?: string } | undefined)?.name || 'Unknown Token',
+                  symbol: (a.metadata as { symbol?: string } | undefined)?.symbol || 'UNKNOWN',
+                  decimals: (a.metadata as { decimals?: number } | undefined)?.decimals,
+                  fiat: (a.metadata as { fiat?: { value: number; currency: string } } | undefined)?.fiat,
+                },
+                raw: a as unknown as getAssets.Erc20Asset,
+              }
+              allAssets.push({ ...asset, chainId: cid })
+            } else if (a.type === 'native') {
+              const meta = (a.metadata ?? {}) as {
+                symbol?: string
+                decimals?: number
+                fiat?: { value: number; currency: string }
+              }
+              const asset: Asset = {
+                type: 'native' as const,
+                address: 'native',
+                balance: BigInt(a.balance ?? 0),
+                metadata: {
+                  symbol: meta.symbol || 'ETH',
+                  decimals: meta.decimals,
+                  fiat: meta.fiat ?? { value: 0, currency: 'USD' },
+                },
+                raw: a as unknown as getAssets.NativeAsset,
+              }
+              allAssets.push({ ...asset, chainId: cid })
+            }
+          }
+        }
+        allAssets.sort((a, b) => getUsdValue(b) - getUsdValue(a))
+        return allAssets as readonly MultiChainAsset[]
+      }
+
+      // Single-chain path
       if (!address || !chainId || !chain) {
         throw new OpenfortError('Wallet not connected', OpenfortReactErrorType.UNEXPECTED_ERROR, {
           error: new Error('Address, chainId, or chain not available'),
@@ -154,8 +293,6 @@ export const useEthereumWalletAssets = ({
       const defaultAssets = rawChainAssets.map<Asset>((a) => {
         let asset: Asset
         if (a.type === 'erc20') {
-          // The ERC-7811 metadata type does not include `fiat`; it is a non-standard
-          // extension returned by Openfort's RPC proxy.
           type ExtendedMeta = {
             name?: string
             symbol?: string
@@ -176,10 +313,6 @@ export const useEthereumWalletAssets = ({
             raw: a,
           }
         } else if (a.type === 'native') {
-          // The native asset metadata type does not include `fiat` or `name` in the
-          // standard ERC-7811 spec; Openfort's proxy extends it with a `fiat` field.
-          // The Asset type requires fiat to be present when metadata exists, so we
-          // omit metadata entirely when fiat is unavailable.
           type ExtendedNativeMeta = { symbol?: string; decimals?: number; fiat?: { value: number; currency: string } }
           const meta = a.metadata as ExtendedNativeMeta | undefined
           asset = {
@@ -197,7 +330,6 @@ export const useEthereumWalletAssets = ({
 
       const mergedAssets = [...defaultAssets]
       const customAssetsForChain: Asset[] = customChainAssets.flatMap((asset: getAssets.Asset<false>) => {
-        // Custom assets are explicitly requested as erc20; skip if the API returns something unexpected.
         if (asset.type !== 'erc20') return []
         if (!walletConfig?.ethereum?.assets) return [{ ...asset, raw: asset }]
 
@@ -225,7 +357,7 @@ export const useEthereumWalletAssets = ({
 
       return mergedAssets as readonly Asset[]
     },
-    enabled: isConnected && !!chainId && !!chain && !!address,
+    enabled: multiChain ? isConnected && !!address : isConnected && !!chainId && !!chain && !!address,
     staleTime,
   })
 
@@ -241,11 +373,12 @@ export const useEthereumWalletAssets = ({
 
   return {
     data: data ?? null,
+    multiChain,
     isLoading,
     isError: !!error,
     isSuccess: !!data && !error,
-    isIdle: !isConnected || !chainId || !chain,
+    isIdle: multiChain ? !address : !isConnected || !chainId || !chain,
     error: mappedError,
     refetch,
-  }
+  } as UseEthereumWalletAssetsResult
 }

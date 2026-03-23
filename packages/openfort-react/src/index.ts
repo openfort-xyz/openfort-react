@@ -59,7 +59,7 @@ export { default as Avatar } from './components/Common/Avatar'
 export { default as ChainIcon } from './components/Common/Chain'
 export { OpenfortButton } from './components/ConnectButton'
 export { OpenfortProvider } from './components/Openfort/OpenfortProvider'
-export type { CustomizableRoutes } from './components/Openfort/types'
+export type { CustomizableRoutes, MultiChainAsset } from './components/Openfort/types'
 export { LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types'
 export { embeddedWalletId } from './constants/openfort'
 export {

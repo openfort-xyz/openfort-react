@@ -81,7 +81,8 @@ const ConnectWithOAuth: React.FC = () => {
         case states.REDIRECT: {
           if (hasProvider) return
 
-          const cleanURL = win.location.origin + win.location.pathname
+          const baseURL = win.location.origin + win.location.pathname
+          const hash = win.location.hash
 
           const queryParams = Object.fromEntries(
             [...url.searchParams.entries()].filter(([key]) =>
@@ -89,6 +90,9 @@ const ConnectWithOAuth: React.FC = () => {
             )
           )
           queryParams.openfortAuthProviderUI = provider
+
+          // Query params must come before the hash fragment in a valid URL
+          const redirectTo = `${baseURL}?${new URLSearchParams(queryParams).toString()}${hash}`
 
           try {
             if (user) {
@@ -100,14 +104,14 @@ const ConnectWithOAuth: React.FC = () => {
               }
               const linkResponse = await client.auth.initLinkOAuth({
                 provider,
-                redirectTo: `${cleanURL}?${new URLSearchParams(queryParams).toString()}`,
+                redirectTo,
               })
               logger.log(linkResponse)
               win.location.href = linkResponse
             } else {
               const r = await client.auth.initOAuth({
                 provider,
-                redirectTo: `${cleanURL}?${new URLSearchParams(queryParams).toString()}`,
+                redirectTo,
               })
               logger.log(r)
               win.location.href = r

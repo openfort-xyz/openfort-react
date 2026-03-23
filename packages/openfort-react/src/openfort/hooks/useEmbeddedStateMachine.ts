@@ -73,8 +73,11 @@ export function useEmbeddedStateMachine({
 
         // Validate token and fetch accounts. Auto-recovery is handled by the
         // dedicated useAutoRecovery hook (keyed on storeActiveEmbeddedAddress).
+        // Never auto-logout here: during first OAuth sign-in the user isn't in
+        // the store yet and user.get() may briefly 401/404 before the token
+        // propagates — logging out would abort the entire auth flow.
         const doFetch = async () => {
-          updateUserRef.current(undefined, !userRef.current)
+          updateUserRef.current(undefined, false)
           await fetchEmbeddedAccountsRef.current()
         }
         doFetch().catch((err) => {

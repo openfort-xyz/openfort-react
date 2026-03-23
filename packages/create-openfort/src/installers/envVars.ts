@@ -6,6 +6,7 @@ interface FillEnvOptions {
   openfortPublishableKey: string;
   shieldPublishableKey: string;
   apiEndpoint?: string;
+  walletConnectProjectId?: string;
   theme?: string;
 }
 
@@ -14,6 +15,7 @@ export const fillEnvVariables = ({
   openfortPublishableKey,
   shieldPublishableKey,
   apiEndpoint,
+  walletConnectProjectId,
   theme,
 }: FillEnvOptions) => {
   const envExamplePath = path.join(projectDir, ".env.example");
@@ -25,6 +27,7 @@ export const fillEnvVariables = ({
       openfortPublishableKey,
       shieldPublishableKey,
       apiEndpoint,
+      walletConnectProjectId,
       theme,
     });
     fs.writeFileSync(envPath, basicEnv);
@@ -67,6 +70,14 @@ export const fillEnvVariables = ({
       `SHIELD_PUBLISHABLE_KEY=${shieldPublishableKey}`,
     );
 
+  // Replace WalletConnect Project ID if provided
+  if (walletConnectProjectId) {
+    envContent = envContent.replace(
+      /VITE_WALLET_CONNECT_PROJECT_ID=.*/g,
+      `VITE_WALLET_CONNECT_PROJECT_ID=${walletConnectProjectId}`,
+    );
+  }
+
   // Replace API endpoint if provided
   if (apiEndpoint) {
     envContent = envContent
@@ -102,12 +113,17 @@ const createBasicEnv = ({
   openfortPublishableKey,
   shieldPublishableKey,
   apiEndpoint,
+  walletConnectProjectId,
   theme,
 }: Omit<FillEnvOptions, "projectDir">) => {
   let content = `# Openfort Configuration
 VITE_OPENFORT_PUBLISHABLE_KEY=${openfortPublishableKey}
 VITE_SHIELD_PUBLISHABLE_KEY=${shieldPublishableKey}
 `;
+
+  if (walletConnectProjectId) {
+    content += `VITE_WALLET_CONNECT_PROJECT_ID=${walletConnectProjectId}\n`;
+  }
 
   if (apiEndpoint) {
     content += `VITE_CREATE_ENCRYPTED_SESSION_ENDPOINT=${apiEndpoint}\n`;

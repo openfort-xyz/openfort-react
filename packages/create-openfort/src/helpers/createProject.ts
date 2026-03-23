@@ -12,6 +12,7 @@ interface CreateProjectOptions {
   openfortPublishableKey: string;
   shieldPublishableKey: string;
   apiEndpoint?: string;
+  walletConnectProjectId?: string;
   theme?: string;
   createBackendOption: boolean;
   openfortSecretKey?: string;
@@ -25,6 +26,7 @@ export const createProject = async ({
   openfortPublishableKey,
   shieldPublishableKey,
   apiEndpoint,
+  walletConnectProjectId,
   theme,
   createBackendOption,
   openfortSecretKey,
@@ -51,6 +53,7 @@ export const createProject = async ({
     openfortPublishableKey,
     shieldPublishableKey,
     apiEndpoint,
+    walletConnectProjectId,
     theme,
   });
 

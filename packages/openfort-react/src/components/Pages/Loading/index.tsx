@@ -1,6 +1,6 @@
 'use client'
 
-import { ChainTypeEnum } from '@openfort/openfort-js'
+import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import React, { useEffect } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
@@ -12,7 +12,7 @@ import { PageContent } from '../../PageContent'
 
 const Loading: React.FC = () => {
   const { setRoute, walletConfig } = useOpenfort()
-  const { user, isLoadingAccounts, needsRecovery } = useOpenfortCore()
+  const { user, isLoadingAccounts, isLoading, needsRecovery, embeddedState } = useOpenfortCore()
   const { chainType } = useOpenfortCore()
 
   // Use chain-specific hooks
@@ -29,7 +29,12 @@ const Loading: React.FC = () => {
   useEffect(() => {
     if (isFirstFrame) return
 
-    if (isLoadingAccounts) return
+    // Wait for the SDK to settle. After storeCredentials the embedded state
+    // briefly stays UNAUTHENTICATED/NONE while the SDK processes the token.
+    // Routing to PROVIDERS here would abort the auth flow.
+    if (embeddedState === EmbeddedState.NONE || embeddedState === EmbeddedState.UNAUTHENTICATED) return
+    // Also wait while accounts or user are still loading.
+    if (isLoadingAccounts || isLoading) return
     else if (!user) setRoute(routes.PROVIDERS)
     else if (!address) {
       if (!walletConfig) setRoute({ route: routes.CONNECTORS, connectType: 'connect' })
@@ -38,7 +43,7 @@ const Loading: React.FC = () => {
       if (!walletConfig) setRoute({ route: routes.CONNECTORS, connectType: 'connect' })
       else setRoute(routes.LOAD_WALLETS)
     } else setRoute(routes.CONNECTED)
-  }, [isLoadingAccounts, user, address, needsRecovery, isFirstFrame, retryCount])
+  }, [embeddedState, isLoadingAccounts, isLoading, user, address, needsRecovery, isFirstFrame, retryCount])
 
   // Retry every 250ms
   useEffect(() => {

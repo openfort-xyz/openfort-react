@@ -44,6 +44,7 @@ interface CliResults {
   theme?: OpenfortTheme;
   createBackend: boolean;
   apiEndpoint?: string;
+  walletConnectProjectId?: string;
   openfortPublishableKey: string;
   openfortSecretKey?: string;
   shieldPublishableKey: string;
@@ -331,6 +332,17 @@ export const runCli = async (): Promise<CliResults> => {
           }
           return undefined;
         },
+        walletConnectProjectId: ({ results }) => {
+          // Only needed for EVM templates (not solana-headless)
+          const isSolana = results.chain === "solana";
+          if (isSolana) return undefined;
+
+          return p.text({
+            message: "Enter your WalletConnect Project ID (optional):",
+            placeholder: "Get one at https://cloud.walletconnect.com",
+            defaultValue: "",
+          });
+        },
         ...(!cliResults.flags!.noGit && {
           git: () => {
             return p.confirm({
@@ -360,6 +372,8 @@ export const runCli = async (): Promise<CliResults> => {
       theme: project.theme as OpenfortTheme | undefined,
       createBackend: project.createBackend as boolean,
       apiEndpoint: project.apiEndpoint as string | undefined,
+      walletConnectProjectId:
+        (project.walletConnectProjectId as string) || undefined,
       openfortPublishableKey: project.openfortPublishableKey as string,
       openfortSecretKey: project.openfortSecretKey as string | undefined,
       shieldPublishableKey: project.shieldPublishableKey as string,

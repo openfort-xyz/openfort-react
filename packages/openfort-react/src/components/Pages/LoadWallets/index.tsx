@@ -83,10 +83,11 @@ const LoadWallets: React.FC = () => {
     logger.log('User wallets loaded:', wallets.length)
 
     if (wallets.length === 0) {
-      if (walletConfig?.connectOnLogin === false) {
-        setRoute(routes.CONNECTED)
-        return
-      }
+      // Always show the create wallet page when no wallets exist.
+      // connectOnLogin only controls whether creation starts automatically
+      // (handled inside CreateWalletAutomaticRecovery), not whether the
+      // page is shown — routing to CONNECTED with 0 wallets would show a
+      // broken "Connect wallet" button aimed at external wagmi wallets.
       setRoute(createRoute(chainType))
       return
     }

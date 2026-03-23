@@ -86,13 +86,14 @@ const CreateWalletAutomaticRecovery = ({
   onBack: SetOnBackFunction
   logoutOnBack: boolean
 }) => {
-  const { embeddedState } = useOpenfortCore()
+  const { embeddedState, isLoadingAccounts } = useOpenfortCore()
   const { setRoute, triggerResize, walletConfig } = useOpenfort()
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
   const { create } = useEthereumEmbeddedWallet()
   const { isEnabled: isWalletRecoveryOTPEnabled, requestOTP } = useRecoveryOTP()
   const [shouldCreateWallet, setShouldCreateWallet] = useState(false)
   const isCreatingRef = useRef(false)
+  const hasAttemptedCreationRef = useRef(false)
   const [needsOTP, setNeedsOTP] = useState(false)
   const [otpResponse, setOtpResponse] = useState<OTPResponse | null>(null)
   const [otpStatus, setOtpStatus] = useState<'idle' | 'loading' | 'error' | 'success' | 'sending-otp' | 'send-otp'>(
@@ -124,6 +125,9 @@ const CreateWalletAutomaticRecovery = ({
   useEffect(() => {
     if (!shouldCreateWallet) return
     if (isCreatingRef.current) return
+    // Wait for the state machine's fetchEmbeddedAccounts to finish before
+    // calling create() — concurrent SDK operations corrupt shared state.
+    if (isLoadingAccounts) return
     isCreatingRef.current = true
     ;(async () => {
       logger.log('Creating wallet Automatic recover')
@@ -152,11 +156,16 @@ const CreateWalletAutomaticRecovery = ({
       }
       triggerResize()
     })()
-  }, [shouldCreateWallet, create, isWalletRecoveryOTPEnabled, requestOTP, triggerResize])
+  }, [shouldCreateWallet, create, isWalletRecoveryOTPEnabled, requestOTP, triggerResize, isLoadingAccounts])
 
   useEffect(() => {
     if (embeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
     if (walletConfig?.connectOnLogin === false) return
+    // Guard against retry loop: when create() fails the SDK cycles the
+    // embeddedState back to EMBEDDED_SIGNER_NOT_CONFIGURED which re-triggers
+    // this effect.  Only attempt creation once — the user can retry manually.
+    if (hasAttemptedCreationRef.current) return
+    hasAttemptedCreationRef.current = true
     setShouldCreateWallet(true)
   }, [embeddedState, walletConfig?.connectOnLogin])
   const handleResendClick = useCallback(() => {
@@ -224,12 +233,40 @@ const CreateWalletAutomaticRecovery = ({
     )
   }
 
+  // When connectOnLogin is false, auto-creation is skipped — show a manual
+  // trigger instead of an infinite spinner.
+  if (!shouldCreateWallet && !isCreatingRef.current && !recoveryError) {
+    return (
+      <PageContent onBack={onBack} logoutOnBack={logoutOnBack}>
+        <ModalHeading>Create wallet</ModalHeading>
+        <ModalBody style={{ textAlign: 'center' }}>Create an embedded wallet to get started.</ModalBody>
+        <Button
+          onClick={() => {
+            hasAttemptedCreationRef.current = false
+            setShouldCreateWallet(true)
+          }}
+        >
+          Create wallet
+        </Button>
+      </PageContent>
+    )
+  }
+
   return (
     <PageContent onBack={onBack} logoutOnBack={logoutOnBack}>
       <Loader
         isError={!!recoveryError}
         header={recoveryError ? 'Error creating wallet.' : `Creating wallet...`}
         description={recoveryError ? recoveryError.message : undefined}
+        onRetry={
+          recoveryError
+            ? () => {
+                hasAttemptedCreationRef.current = false
+                setRecoveryError(null)
+                setShouldCreateWallet(true)
+              }
+            : undefined
+        }
       />
     </PageContent>
   )
@@ -248,6 +285,7 @@ const CreateWalletPasskeyRecovery = ({
   const { create } = useEthereumEmbeddedWallet()
   const [shouldCreateWallet, setShouldCreateWallet] = useState(false)
   const isCreatingRef = useRef(false)
+  const hasAttemptedCreationRef = useRef(false)
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
   const { embeddedState } = useOpenfortCore()
 
@@ -274,6 +312,8 @@ const CreateWalletPasskeyRecovery = ({
   useEffect(() => {
     if (embeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
     if (walletConfig?.connectOnLogin === false) return
+    if (hasAttemptedCreationRef.current) return
+    hasAttemptedCreationRef.current = true
     setShouldCreateWallet(true)
   }, [embeddedState, walletConfig?.connectOnLogin])
 
