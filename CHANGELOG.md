@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.5
+
+### Patch Changes
+
+- [#212](https://github.com/openfort-xyz/openfort-react/pull/212) [`331f3b6`](https://github.com/openfort-xyz/openfort-react/commit/331f3b6c60f20c8c1c997a00bfeb83c3d467eedc) Thanks [@isardmart](https://github.com/isardmart)! - Social Login race condition, create evm wallet button when session but no wallet
+
 ## 1.0.4
 
 ### Patch Changes
