@@ -438,6 +438,8 @@ export type Asset =
       raw?: getAssets.Erc20Asset
     }
 
+export type MultiChainAsset = Asset & { chainId: number }
+
 export type SendFormState = {
   recipient: string
   amount: string

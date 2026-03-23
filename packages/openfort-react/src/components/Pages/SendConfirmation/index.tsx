@@ -155,6 +155,7 @@ const SendConfirmation = () => {
   const [isPollingBalance, setIsPollingBalance] = useState(false)
   const originalBalanceRef = useRef<bigint | undefined>(undefined)
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+  const submittingRef = useRef(false)
 
   // Inline transaction state management (replaces useEthereumSendTransaction + useEthereumWriteContract)
   const [nativeTxHash, setNativeTxHash] = useState<`0x${string}` | undefined>(undefined)
@@ -311,8 +312,10 @@ const SendConfirmation = () => {
   }, [isPollingBalance, currentBalance])
 
   const handleConfirm = async () => {
+    if (submittingRef.current) return
     if (!recipientAddress || !parsedAmount || parsedAmount <= BigInt(0) || insufficientBalance) return
 
+    submittingRef.current = true
     try {
       if (token.type === 'native') {
         await sendTransactionAsync({
@@ -331,6 +334,8 @@ const SendConfirmation = () => {
       }
     } catch (_error) {
       // Errors are surfaced through mutation hooks
+    } finally {
+      submittingRef.current = false
     }
   }
 
