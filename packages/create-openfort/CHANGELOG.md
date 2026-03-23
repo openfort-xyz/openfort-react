@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.1
+
+### Patch Changes
+
+- [#214](https://github.com/openfort-xyz/openfort-react/pull/214) [`b17d0be`](https://github.com/openfort-xyz/openfort-react/commit/b17d0bef4c6eb3be4dfaaeb6ec95b9feabe76b78) Thanks [@isardmart](https://github.com/isardmart)! - added wallet connect id as an opcional variable
+
 ## 1.0.0
 
 ### Major Changes

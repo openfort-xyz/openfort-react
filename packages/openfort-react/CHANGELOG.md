@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.6
+
+### Patch Changes
+
+- [#208](https://github.com/openfort-xyz/openfort-react/pull/208) [`1033670`](https://github.com/openfort-xyz/openfort-react/commit/10336701d4d68f003b75e273b9791f728c137a48) Thanks [@isardmart](https://github.com/isardmart)! - solved error on processing buy tokens, added check on chainId and address
+
 ## 1.0.5
 
 ### Patch Changes
