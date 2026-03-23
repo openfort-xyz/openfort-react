@@ -1,7 +1,7 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import Logos from '../../../assets/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
@@ -55,10 +55,15 @@ const BuyProcessing = () => {
     return numeric
   }, [buyForm.amount])
 
-  // Create session and open popup on mount
+  // Create session and open popup once wallet is ready
+  const sessionStartedRef = useRef(false)
   useEffect(() => {
+    if (!address || !chainId) return
+    if (sessionStartedRef.current) return
+    sessionStartedRef.current = true
+
     const createSessionAndOpenPopup = async () => {
-      if (!address || !chainId || !fiatAmount || fiatAmount <= 0) {
+      if (!fiatAmount || fiatAmount <= 0) {
         setRoute(routes.BUY_SELECT_PROVIDER)
         return
       }
@@ -143,7 +148,7 @@ const BuyProcessing = () => {
     }
 
     createSessionAndOpenPopup()
-  }, []) // Only run once on mount
+  }, [address, chainId]) // Run when wallet becomes ready
 
   // Trigger resize on mount and when state changes
   useEffect(() => {
