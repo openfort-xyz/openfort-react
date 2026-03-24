@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import type { UIAuthProvider } from '../../../components/Openfort/types'
+import { UIAuthProvider } from '../../../components/Openfort/types'
 import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
 import type { OpenfortHookOptions } from '../../../types'
 import { logger } from '../../../utils/logger'
@@ -116,11 +116,20 @@ export const useAuthCallback = ({
 
     // Parse callback URL (fixes OF-1013 duplicate `?` issue)
     const url = parseCallbackUrl(window.location.href)
-    const openfortAuthProvider = url.searchParams.get('openfortAuthProvider')
+    const rawProvider = url.searchParams.get('openfortAuthProvider')
+    // Allowlist: UIAuthProvider values + callback-only providers set by buildCallbackUrl
+    const validProviders = new Set<string>([
+      ...Object.values(UIAuthProvider),
+      'email', // set by buildCallbackUrl for email verification
+      'password', // set by buildCallbackUrl for password reset
+    ])
 
-    if (!openfortAuthProvider) {
+    if (!rawProvider || !validProviders.has(rawProvider)) {
       return
     }
+
+    // Validated against the allowlist above
+    const openfortAuthProvider = rawProvider
 
     // Suppress Referer SYNCHRONOUSLY — before any async work — so that
     // subresource requests cannot leak access_token to third parties.
@@ -128,7 +137,7 @@ export const useAuthCallback = ({
 
     ;(async () => {
       setProvider(openfortAuthProvider as UIAuthProvider)
-      if (openfortAuthProvider === 'email') {
+      if (openfortAuthProvider === 'email' || openfortAuthProvider === 'password') {
         // Email verification flow
         // The backend verifies the email server-side via /auth/verify-email?token=...
         // and then redirects here. If a `state` token is present we verify client-side
