@@ -210,6 +210,10 @@ export const OpenfortProvider = ({
   const setOpen = useCallback((value: boolean) => {
     if (value) {
       setRouteHistory([])
+      // Reset route and connector to avoid stale state from a previous modal session
+      // (e.g. a failed SIWE attempt leaving route on CONNECT with a stale connector)
+      setRoute({ route: routes.LOADING })
+      setConnector(initialConnector)
     }
     setOpenWithoutHistory(value)
   }, [])

@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { embeddedWalletId } from '../constants/openfort'
 import { useEthereumEmbeddedWallet } from '../ethereum/hooks/useEthereumEmbeddedWallet'
+import { logger } from '../utils/logger'
 import { setEmbeddedWalletProvider } from './embeddedConnector'
 
 /** Null component — rendered inside CoreOpenfortProvider + WagmiProvider to sync embedded wallet into wagmi. */
@@ -21,6 +22,17 @@ function useEmbeddedWalletWagmiSync() {
   const status = wallet.status
   const provider = status === 'connected' ? wallet.provider : null
 
+  // Track whether an external wallet was explicitly connected — don't override it
+  const externalConnectorActiveRef = useRef(false)
+
+  useEffect(() => {
+    if (activeConnector && activeConnector.id !== embeddedWalletId) {
+      externalConnectorActiveRef.current = true
+    } else if (!activeConnector || activeConnector.id === embeddedWalletId) {
+      externalConnectorActiveRef.current = false
+    }
+  }, [activeConnector])
+
   // Keep the module-level provider slot in sync — clear on disconnect
   useEffect(() => {
     if (status === 'connected' && provider) {
@@ -32,14 +44,24 @@ function useEmbeddedWalletWagmiSync() {
   }, [status, provider])
 
   // Connect wagmi once the embedded wallet is ready AND wagmi has settled (not mid-reconnect)
+  // BUT do NOT override an explicitly connected external wallet
   useEffect(() => {
     if (status !== 'connected' || !provider) return
     if (wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting') return
     if (activeConnector?.id === embeddedWalletId) return
 
+    // An external wallet is actively connected — don't override it
+    if (externalConnectorActiveRef.current) {
+      logger.log('[EmbeddedWalletWagmiSync] Skipping auto-connect — external wallet is active', {
+        activeConnector: activeConnector?.id,
+      })
+      return
+    }
+
     const embeddedConnector = connectors.find((c) => c.id === embeddedWalletId)
     if (!embeddedConnector) return
 
+    logger.log('[EmbeddedWalletWagmiSync] Auto-connecting embedded wallet to wagmi')
     connectAsync({ connector: embeddedConnector }).catch(() => {})
   }, [status, provider, wagmiStatus, activeConnector, connectors, connectAsync])
 

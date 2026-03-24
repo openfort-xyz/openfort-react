@@ -1,7 +1,7 @@
 'use client'
 
 import { OpenfortError } from '@openfort/openfort-js'
-import { useCallback } from 'react'
+import { useCallback, useRef } from 'react'
 import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext'
 import { useOpenfortCore } from '../openfort/useOpenfort'
 import { createSIWEMessage } from '../siwe/create-siwe-message'
@@ -21,13 +21,14 @@ import { logger } from '../utils/logger'
 export function useConnectWithSiwe() {
   const { client, user, updateUser } = useOpenfortCore()
   const bridge = useEthereumBridge()
-  const address = bridge?.account?.address
-  const connector = bridge?.account?.connector
-  const chainId = bridge?.chainId ?? 0
-  const accountChainId = bridge?.account?.chain?.id ?? bridge?.chainId
-  const chainName = bridge?.account?.chain?.name
-  const switchChainAsync = bridge?.switchChain?.switchChainAsync
-  const signMessage = bridge?.signMessage
+
+  // Use a ref so the callback always reads the latest bridge state,
+  // not a stale closure from the last render (critical after connectAsync changes the active connector).
+  const bridgeRef = useRef(bridge)
+  bridgeRef.current = bridge
+
+  const userRef = useRef(user)
+  userRef.current = user
 
   const connectWithSiwe = useCallback(
     async ({
@@ -36,7 +37,7 @@ export function useConnectWithSiwe() {
       address: propsAddress,
       connectorType: propsConnectorType,
       walletClientType: propsWalletClientType,
-      link = !!user,
+      link,
     }: {
       address?: `0x${string}`
       connectorType?: string
@@ -45,17 +46,28 @@ export function useConnectWithSiwe() {
       onConnect?: () => void
       link?: boolean
     } = {}) => {
-      const addressToUse = propsAddress ?? address
-      const connectorType = propsConnectorType ?? connector?.type
-      const walletClientType = propsWalletClientType ?? connector?.id
+      // Read fresh values from the bridge ref — NOT from the stale render closure
+      const b = bridgeRef.current
+      const currentUser = userRef.current
+      const shouldLink = link ?? !!currentUser
 
-      if (!addressToUse || !connectorType || !walletClientType) {
-        logger.log('No address found', { address: addressToUse, connectorType, walletClientType })
+      const address = propsAddress ?? b?.account?.address
+      const connectorType = propsConnectorType ?? b?.account?.connector?.type
+      const walletClientType = propsWalletClientType ?? b?.account?.connector?.id
+      const chainId = b?.chainId ?? 0
+      const accountChainId = b?.account?.chain?.id ?? b?.chainId
+      const chainName = b?.account?.chain?.name
+      const switchChainAsync = b?.switchChain?.switchChainAsync
+      const signMessage = b?.signMessage
+
+      if (!address || !connectorType || !walletClientType) {
+        logger.warn('[useConnectWithSiwe] Missing params', { address, connectorType, walletClientType })
         onError?.('No address found')
         return
       }
 
       if (!signMessage) {
+        logger.warn('[useConnectWithSiwe] No signMessage on bridge')
         onError?.('EVM bridge not available (signMessage)')
         return
       }
@@ -66,47 +78,44 @@ export function useConnectWithSiwe() {
         }
 
         let nonce: string
-        if (link) {
-          const resp = await client.auth.initLinkSiwe({ address: addressToUse })
+        if (shouldLink) {
+          const resp = await client.auth.initLinkSiwe({ address })
           nonce = resp.nonce
         } else {
-          const resp = await client.auth.initSiwe({ address: addressToUse })
+          const resp = await client.auth.initSiwe({ address })
           nonce = resp.nonce
         }
 
-        const SIWEMessage = createSIWEMessage(addressToUse, nonce, chainId)
+        const SIWEMessage = createSIWEMessage(address, nonce, chainId)
         if (!SIWEMessage) throw new Error('SIWE message creation failed (window not available)')
 
         const signature = await signMessage({ message: SIWEMessage })
 
-        if (link) {
-          logger.log('Linking wallet to user')
+        if (shouldLink) {
           await client.auth.linkWithSiwe({
             signature,
             message: SIWEMessage,
             connectorType,
             walletClientType,
-            address: addressToUse,
+            address,
             chainId,
           })
         } else {
-          logger.log('Authenticating with SIWE')
           await client.auth.loginWithSiwe({
             signature,
             message: SIWEMessage,
             connectorType,
             walletClientType,
-            address: addressToUse,
+            address,
           })
         }
 
         await updateUser()
-
         await Promise.resolve(onConnect?.())
       } catch (err) {
-        logger.log('Failed to connect with SIWE', {
-          error: err,
-          status: (err as { response?: { status?: number } })?.response?.status ?? 'unknown',
+        logger.error('[useConnectWithSiwe] SIWE failed', {
+          message: err instanceof Error ? err.message : String(err),
+          status: (err as { response?: { status?: number } })?.response?.status,
         })
         if (!onError) return
 
@@ -127,7 +136,7 @@ export function useConnectWithSiwe() {
         onError(message, err instanceof OpenfortError ? err : undefined)
       }
     },
-    [client, user, updateUser, address, chainId, connector, accountChainId, chainName, switchChainAsync, signMessage]
+    [client, updateUser]
   )
 
   return { connectWithSiwe }

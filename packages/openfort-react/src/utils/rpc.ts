@@ -35,13 +35,18 @@ const DEFAULT_SOLANA_RPC_URLS: Partial<Record<SolanaCluster, string>> = {
  * Get default Ethereum RPC URL for a chain ID.
  * Returns the viem/chains default RPC when known, falls back to Sepolia.
  */
+const warnedChainIds = new Set<number>()
+
 export function getDefaultEthereumRpcUrl(chainId: number): string {
   const chain = KNOWN_CHAINS[chainId]
   const rpcUrl = chain?.rpcUrls.default.http[0]
   if (!rpcUrl) {
-    logger.warn(
-      `No default Ethereum RPC URL found for chain ${chainId}. Configure rpcUrls in OpenfortProvider for better reliability and rate limits.`
-    )
+    if (!warnedChainIds.has(chainId)) {
+      warnedChainIds.add(chainId)
+      logger.warn(
+        `No default Ethereum RPC URL found for chain ${chainId}. Configure rpcUrls in OpenfortProvider for better reliability and rate limits.`
+      )
+    }
     return sepolia.rpcUrls.default.http[0]
   }
   return rpcUrl
