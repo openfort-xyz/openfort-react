@@ -7,16 +7,49 @@ import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types'
+import styled from '../../../styles/styled'
 import { truncateEthAddress } from '../../../utils'
 import { walletConfigs } from '../../../wallets/walletConfigs'
 import Button from '../../Common/Button'
 import { ModalHeading } from '../../Common/Modal/styles'
-import { WalletRecoveryIcon } from '../../Common/WalletRecoveryIcon'
+import { RECOVERY_METHOD_LABEL, WalletRecoveryIcon } from '../../Common/WalletRecoveryIcon'
 import { recoverRoute } from '../../Openfort/routeHelpers'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ProviderIcon, ProviderLabel, ProvidersButton } from '../Providers/styles'
+
+const RecoveryTag = styled.span`
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  white-space: nowrap;
+  background: var(--ck-body-background-secondary, #f0f0f0);
+  color: var(--ck-body-color-muted, #999);
+`
+
+const WalletListScroll = styled.div`
+  max-height: min(400px, 50vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: var(--ck-body-color-muted, #c47a2a);
+    border-radius: 4px;
+  }
+  scrollbar-width: thin;
+  scrollbar-color: var(--ck-body-color-muted, #c47a2a) transparent;
+`
 
 function WalletRow({
   chainType,
@@ -60,10 +93,15 @@ function WalletRow({
     setRoute(recoverRoute(chainType, wallet as ConnectedEmbeddedEthereumWallet))
   }
 
+  const tag = wallet.recoveryMethod != null ? RECOVERY_METHOD_LABEL[wallet.recoveryMethod] : undefined
+
   return (
     <ProvidersButton>
       <Button onClick={handleClick}>
-        <ProviderLabel>{display}</ProviderLabel>
+        <ProviderLabel>
+          {display}
+          {tag && <RecoveryTag>{tag}</RecoveryTag>}
+        </ProviderLabel>
         <ProviderIcon>{walletIcon()}</ProviderIcon>
       </Button>
     </ProvidersButton>
@@ -83,7 +121,7 @@ export default function SelectWalletToRecover() {
   return (
     <PageContent onBack={routes.PROVIDERS} logoutOnBack>
       <ModalHeading>Select a wallet to recover</ModalHeading>
-      {list}
+      <WalletListScroll>{list}</WalletListScroll>
     </PageContent>
   )
 }

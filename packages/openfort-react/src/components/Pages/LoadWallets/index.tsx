@@ -1,6 +1,6 @@
 'use client'
 
-import { ChainTypeEnum } from '@openfort/openfort-js'
+import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
@@ -15,21 +15,27 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 
-type SingleWalletHandler = (
-  w: ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet,
-  chainType: ChainTypeEnum,
-  setRoute: (opts: ReturnType<typeof recoverRoute>) => void,
-  setConnector: (c: { id: string }) => void
-) => void
+/** Pick the best wallet to auto-recover: automatic > passkey > first available */
+function pickBestWallet(
+  wallets: ReadonlyArray<ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet>
+): ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet {
+  return (
+    wallets.find((w) => w.recoveryMethod === RecoveryMethod.AUTOMATIC) ??
+    wallets.find((w) => w.recoveryMethod === RecoveryMethod.PASSKEY) ??
+    wallets[0]
+  )
+}
 
-const handleSingleWalletRegistry: Record<ChainTypeEnum.EVM | ChainTypeEnum.SVM, SingleWalletHandler> = {
-  [ChainTypeEnum.SVM]: (w, chainType, setRoute) => {
-    const walletForRoute = toSolanaUserWallet(w as ConnectedEmbeddedSolanaWallet)
-    setRoute(recoverRoute(chainType, walletForRoute))
-  },
-  [ChainTypeEnum.EVM]: (w, chainType, setRoute) => {
-    setRoute(recoverRoute(chainType, w as ConnectedEmbeddedEthereumWallet))
-  },
+function routeToRecover(
+  wallet: ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet,
+  chainType: ChainTypeEnum,
+  setRoute: (opts: ReturnType<typeof recoverRoute>) => void
+) {
+  if (chainType === ChainTypeEnum.SVM) {
+    setRoute(recoverRoute(chainType, toSolanaUserWallet(wallet as ConnectedEmbeddedSolanaWallet)))
+  } else {
+    setRoute(recoverRoute(chainType, wallet as ConnectedEmbeddedEthereumWallet))
+  }
 }
 
 const errorForChainRegistry: Record<
@@ -49,6 +55,7 @@ const LoadWallets: React.FC = () => {
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+  const connectOnLogin = walletConfig?.connectOnLogin ?? true
 
   const [loadingUX, setLoadingUX] = useState(true)
 
@@ -82,34 +89,35 @@ const LoadWallets: React.FC = () => {
     }
     logger.log('User wallets loaded:', wallets.length)
 
+    // No wallets → create one
     if (wallets.length === 0) {
-      // Always show the create wallet page when no wallets exist.
-      // connectOnLogin only controls whether creation starts automatically
-      // (handled inside CreateWalletAutomaticRecovery), not whether the
-      // page is shown — routing to CONNECTED with 0 wallets would show a
-      // broken "Connect wallet" button aimed at external wagmi wallets.
       setRoute(createRoute(chainType))
       return
     }
 
-    if (wallets.length === 1) {
-      const single = wallets[0]
-      const alreadyActive =
-        embeddedWallet.status === 'connected' &&
-        embeddedWallet.address &&
-        (chainType === ChainTypeEnum.SVM
-          ? embeddedWallet.address === single.address
-          : (embeddedWallet.address as string).toLowerCase() === (single.address as string).toLowerCase())
-      if (alreadyActive) {
+    // If a wallet is already active and connected, go to connected (triggers auto-close)
+    if (embeddedWallet.status === 'connected' && embeddedWallet.address) {
+      const activeAddr = embeddedWallet.address
+      const isActiveInList = wallets.some((w) =>
+        chainType === ChainTypeEnum.SVM
+          ? w.address === activeAddr
+          : (w.address as string).toLowerCase() === (activeAddr as string).toLowerCase()
+      )
+      if (isActiveInList) {
         setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_CONNECTED : routes.ETH_CONNECTED)
         return
       }
-      handleSingleWalletRegistry[chainType](single, chainType, setRoute, setConnector)
-      return
     }
 
-    setRoute(routes.SELECT_WALLET_TO_RECOVER)
-  }, [loadingUX, isLoadingWallets, wallets, user, chainType, setRoute, setConnector, walletConfig])
+    if (connectOnLogin) {
+      // Auto-connect: pick the best wallet (automatic > passkey > password) and recover it
+      const best = pickBestWallet(wallets)
+      routeToRecover(best, chainType, setRoute)
+    } else {
+      // Not auto-connecting: close modal (go to connected page which triggers auto-close)
+      setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_CONNECTED : routes.ETH_CONNECTED)
+    }
+  }, [loadingUX, isLoadingWallets, wallets, user, chainType, setRoute, setConnector, walletConfig, connectOnLogin])
 
   const { isError: isErrorFromChain, message: errorMessageFromChain } = errorForChainRegistry[chainType](errorWallets)
   const isError = !user || isErrorFromChain
