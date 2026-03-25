@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.7
+
+### Patch Changes
+
+- [#217](https://github.com/openfort-xyz/openfort-react/pull/217) [`707b47b`](https://github.com/openfort-xyz/openfort-react/commit/707b47b80ec80f296c2d6fc38d3e6d8243cf0ff2) Thanks [@isardmart](https://github.com/isardmart)! - wallet recover page improved, better autoconnect choosing
+
+- [#209](https://github.com/openfort-xyz/openfort-react/pull/209) [`4976218`](https://github.com/openfort-xyz/openfort-react/commit/4976218660cb9e6a19f7572bb5efe81dbd166c48) Thanks [@isardmart](https://github.com/isardmart)! - fixed external connector error on already connected account and delete account + oauth callback url improved
+
 ## 1.0.6
 
 ### Patch Changes
