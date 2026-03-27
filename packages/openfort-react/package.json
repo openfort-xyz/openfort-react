@@ -106,7 +106,6 @@
     "jsdom": "^28.1.0",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-typescript2": "^0.36.0",
-    "styled-components": "^5.3.5",
     "typescript": "^5.0.4",
     "typescript-plugin-styled-components": "^2.0.0",
     "vitest": "^2.0.0",

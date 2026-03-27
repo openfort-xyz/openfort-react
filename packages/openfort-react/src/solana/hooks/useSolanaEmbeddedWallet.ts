@@ -167,6 +167,7 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
           recoveryParams,
         })
 
+        setActiveEmbeddedAddress(account.address)
         await updateEmbeddedAccounts({ silent: true })
 
         const provider = createProviderForAccount(account)
@@ -185,7 +186,6 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
           provider,
           error: null,
         })
-        setActiveEmbeddedAddress(account.address)
 
         createOptions?.onSuccess?.({ account })
         return account

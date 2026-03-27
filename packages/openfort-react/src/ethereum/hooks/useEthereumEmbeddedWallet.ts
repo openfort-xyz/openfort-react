@@ -183,6 +183,11 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
           recoveryParams,
         })
 
+        // Set the address before fetching accounts or setting connected state.
+        // This prevents a race where the sync effect sees status='connected' but
+        // no activeEmbeddedAddress and disconnects (especially for the first wallet
+        // when embeddedAccounts is still empty).
+        setActiveEmbeddedAddress(account.address)
         await updateEmbeddedAccounts({ silent: true })
 
         const provider = await getEmbeddedEthereumProvider()
@@ -197,7 +202,6 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
           provider,
           error: null,
         })
-        setActiveEmbeddedAddress(account.address)
 
         createOptions?.onSuccess?.({ account })
         return account
