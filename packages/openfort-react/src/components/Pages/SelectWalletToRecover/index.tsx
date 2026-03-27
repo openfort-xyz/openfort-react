@@ -108,8 +108,12 @@ function WalletRow({
   )
 }
 
+/** Connected-page routes that indicate the user navigated here from "Manage wallets" */
+const CONNECTED_ROUTES = new Set<string>([routes.CONNECTED, routes.ETH_CONNECTED, routes.SOL_CONNECTED])
+
 export default function SelectWalletToRecover() {
   const { chainType } = useOpenfortCore()
+  const { previousRoute } = useOpenfort()
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
@@ -118,9 +122,13 @@ export default function SelectWalletToRecover() {
 
   const list = wallets.map((wallet) => <WalletRow key={wallet.id} chainType={chainType} wallet={wallet} />)
 
+  // When arriving from a connected page (Manage wallets), go back there without logging out.
+  // When arriving from the login flow, go back to providers and log out.
+  const fromConnected = previousRoute != null && CONNECTED_ROUTES.has(previousRoute.route)
+
   return (
-    <PageContent onBack={routes.PROVIDERS} logoutOnBack>
-      <ModalHeading>Select a wallet to recover</ModalHeading>
+    <PageContent onBack={fromConnected ? 'back' : routes.PROVIDERS} logoutOnBack={!fromConnected}>
+      <ModalHeading>Select a wallet</ModalHeading>
       <WalletListScroll>{list}</WalletListScroll>
     </PageContent>
   )

@@ -141,7 +141,7 @@ const SolanaConnected: React.FC = () => {
         isAddressLoading={isAddressLoading}
         noWalletFallback={
           hasSolanaWallets ? (
-            <Button onClick={() => setRoute(routes.SOL_WALLETS)}>Manage wallets</Button>
+            <Button onClick={() => setRoute(routes.SELECT_WALLET_TO_RECOVER)}>Manage wallets</Button>
           ) : (
             <Button onClick={() => setRoute(routes.SOL_CREATE_WALLET)}>Create Solana Wallet</Button>
           )

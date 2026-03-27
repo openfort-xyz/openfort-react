@@ -20,6 +20,7 @@ export default {
     peerDepsExternal(),
     typescript({
       useTsconfigDeclarationDir: true,
+      include: ['**/*.ts', '**/*.tsx'],
       exclude: 'node_modules/**',
       transformers: [
         () => ({

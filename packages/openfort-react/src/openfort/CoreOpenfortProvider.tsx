@@ -275,6 +275,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     storeActiveEmbeddedAddress,
     chainType,
     store,
+    walletConfig,
   })
 
   // Current chain for EVM provider reconfiguration

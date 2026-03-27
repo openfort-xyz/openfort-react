@@ -168,7 +168,7 @@ const EthereumConnected: React.FC = () => {
     ) : null
 
   const noWalletFallback = hasEthereumWallets ? (
-    <Button onClick={() => context.setRoute(routes.LOAD_WALLETS)}>Manage wallets</Button>
+    <Button onClick={() => context.setRoute(routes.SELECT_WALLET_TO_RECOVER)}>Manage wallets</Button>
   ) : (
     <Button
       onClick={() => context.setRoute({ route: routes.CONNECTORS, connectType: 'link' })}

@@ -11,11 +11,13 @@ import { ChainTypeEnum, RecoveryMethod, useOpenfort, useUser } from '@openfort/r
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { useEffect, useRef } from 'react'
+import { useAppStore } from '@/lib/useAppStore'
 import type { OpenfortPlaygroundMode } from '@/providers'
 
 export function useAutoConnectOnModeSwitch(mode: OpenfortPlaygroundMode) {
   const { user } = useUser()
   const { embeddedAccounts, isLoadingAccounts } = useOpenfort()
+  const connectOnLogin = useAppStore((s) => s.providerOptions.walletConfig?.connectOnLogin ?? true)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
 
@@ -50,6 +52,7 @@ export function useAutoConnectOnModeSwitch(mode: OpenfortPlaygroundMode) {
   useEffect(() => {
     if (!user) return
     if (isLoadingAccounts) return
+    if (!connectOnLogin) return
 
     const targetChain = mode === 'svm' ? ChainTypeEnum.SVM : ChainTypeEnum.EVM
     const chainAccounts = (embeddedAccounts ?? []).filter((a) => a.chainType === targetChain)
@@ -76,10 +79,10 @@ export function useAutoConnectOnModeSwitch(mode: OpenfortPlaygroundMode) {
     if (!target) return
 
     handledModeRef.current = mode
-    setActive({ address: target.address }).catch(() => {
+    setActive({ address: target.address as string }).catch(() => {
       // Allow retry on next render cycle
       handledModeRef.current = null
     })
     // wallet.create() intentionally omitted — autoCreateWalletAfterAuth:false in config.
-  }, [mode, user, isLoadingAccounts, embeddedAccounts])
+  }, [mode, user, isLoadingAccounts, embeddedAccounts, connectOnLogin])
 }
