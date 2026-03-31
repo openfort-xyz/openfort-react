@@ -10,20 +10,21 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { AnimatePresence, motion } from 'framer-motion'
 import type React from 'react'
-import { useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
 import { BuyIcon, ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import useLocales from '../../../hooks/useLocales'
 import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { nFormatter, truncateEthAddress } from '../../../utils'
 import { logger } from '../../../utils/logger'
-import ChainSelector from '../../../wagmi/components/ChainSelect'
 import Avatar from '../../Common/Avatar'
 import Button from '../../Common/Button'
 import { TextLinkButton } from '../../Common/Button/styles'
+import Chain from '../../Common/Chain'
 import { CopyText } from '../../Common/CopyToClipboard/CopyText'
 import { ModalBody } from '../../Common/Modal/styles'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
@@ -33,6 +34,8 @@ import { PageContent } from '../../PageContent'
 import { getAssetDecimals } from '../Send/utils'
 import { ConnectedPageLayout } from './ConnectedPageLayout'
 import { ActionButton, Balance, ChainSelectorContainer, LinkedProvidersToggle, Unsupported } from './styles'
+
+const LazyChainSelector = lazy(() => import('../../../wagmi/components/ChainSelect'))
 
 function getFirstBalanceAsset(
   assets: Awaited<ReturnType<typeof useEthereumWalletAssets>>['data']
@@ -46,6 +49,7 @@ const EthereumConnected: React.FC = () => {
   const context = useOpenfort()
   const { setHeaderLeftSlot, setRoute, chains } = context
   const themeContext = useThemeContext()
+  const bridge = useEthereumBridge()
 
   const wallet = useEthereumEmbeddedWallet()
   const { embeddedAccounts } = useOpenfortCore()
@@ -209,7 +213,13 @@ const EthereumConnected: React.FC = () => {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
           >
-            <ChainSelector />
+            {bridge ? (
+              <Suspense fallback={<Chain id={chainId} />}>
+                <LazyChainSelector />
+              </Suspense>
+            ) : (
+              <Chain id={chainId} />
+            )}
           </ChainSelectorContainer>
         }
         balance={balanceNode}

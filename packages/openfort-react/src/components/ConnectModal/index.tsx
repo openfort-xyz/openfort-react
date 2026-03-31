@@ -1,7 +1,7 @@
 'use client'
 
 import { ChainTypeEnum, OAuthProvider } from '@openfort/openfort-js'
-import { useEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef } from 'react'
 
 type ValueOf<T> = T[keyof T]
 
@@ -9,7 +9,9 @@ import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
 import type { CustomTheme, Languages, Mode, Theme } from '../../types'
 import { logger } from '../../utils/logger'
-import SwitchNetworks from '../../wagmi/components/SwitchNetworks'
+
+const LazySwitchNetworks = lazy(() => import('../../wagmi/components/SwitchNetworks'))
+
 import Modal from '../Common/Modal'
 import { ConnectKitThemeProvider } from '../ConnectKitThemeProvider/ConnectKitThemeProvider'
 import { routes, type SetRouteOptions } from '../Openfort/types'
@@ -107,7 +109,11 @@ const CHAIN_PREFIXED_PAGES: Record<ChainTypeEnum, RoutePages> = {
     'eth:connected': <Connected />,
     'eth:createWallet': <CreateWallet />,
     'eth:recoverWallet': <RecoverPage />,
-    'eth:switchNetworks': <SwitchNetworks />,
+    'eth:switchNetworks': (
+      <Suspense fallback={null}>
+        <LazySwitchNetworks />
+      </Suspense>
+    ),
     'eth:send': <Send />,
     'eth:receive': <Receive />,
     'eth:buy': <Buy />,
