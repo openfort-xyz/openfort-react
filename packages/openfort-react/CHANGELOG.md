@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.8
+
+### Patch Changes
+
+- [#218](https://github.com/openfort-xyz/openfort-react/pull/218) [`a887d13`](https://github.com/openfort-xyz/openfort-react/commit/a887d13f04f09abbced010765af5b648eb9c8410) Thanks [@isardmart](https://github.com/isardmart)! - Respect connectOnLogin flag in manage wallets flow
+
+- [#223](https://github.com/openfort-xyz/openfort-react/pull/223) [`b14401c`](https://github.com/openfort-xyz/openfort-react/commit/b14401c0318206701203dd6e70b9697c2c25631f) Thanks [@isardmart](https://github.com/isardmart)! - fixed bug on chainselector import depending on wagmi
+
 ## 1.0.7
 
 ### Patch Changes
