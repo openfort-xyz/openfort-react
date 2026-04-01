@@ -90,7 +90,7 @@ class Telemetry {
         res.on("data", () => {
           logger.debug(
             "Telemetry request response received",
-            res.statusMessage,
+            String(res.statusMessage).replace(/\n|\r/g, ""),
           );
         });
         res.on("end", () => {
@@ -100,7 +100,12 @@ class Telemetry {
 
       req.on("error", (e) => {
         // Silently fail telemetry errors
-        logger.debug("Telemetry request error", e);
+        logger.debug(
+          "Telemetry request error",
+          e instanceof Error
+            ? e.message.replace(/\n|\r/g, "")
+            : "unknown error",
+        );
         resolve();
       });
 
