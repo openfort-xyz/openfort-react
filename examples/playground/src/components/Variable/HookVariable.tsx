@@ -47,7 +47,7 @@ export const HookVariable = <TOptions extends object, TResult extends object>({
     base = base.replace(/"/g, '')
     base = base.replace(/,/g, '')
     base = base.replace(
-      '[',
+      /\[/,
       `import { ${name} } from "${importPath}"
 
 function SampleComponent() {
