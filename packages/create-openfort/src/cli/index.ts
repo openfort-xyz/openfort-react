@@ -100,7 +100,8 @@ export const runCli = async (): Promise<CliResults> => {
     )
     .parse(process.argv);
 
-  const cliProvidedName = program.args[0];
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional sanitization of control chars to prevent log injection
+  const cliProvidedName = program.args[0]?.replace(/[\r\n\x00-\x1f]/g, "");
   const opts = program.opts();
 
   // Disable debug logging
