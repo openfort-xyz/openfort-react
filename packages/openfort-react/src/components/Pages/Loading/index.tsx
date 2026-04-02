@@ -3,6 +3,7 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import React, { useEffect } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Loader from '../../Common/Loading'
@@ -14,14 +15,17 @@ const Loading: React.FC = () => {
   const { setRoute, walletConfig } = useOpenfort()
   const { user, isLoadingAccounts, isLoading, needsRecovery, embeddedState } = useOpenfortCore()
   const { chainType } = useOpenfortCore()
+  const bridge = useEthereumBridge()
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
 
-  const isConnected = wallet.status === 'connected'
-  const address = isConnected ? wallet.address : undefined
+  // Check embedded wallet or bridge (external wallet) connection
+  const embeddedConnected = wallet.status === 'connected'
+  const bridgeConnected = chainType === ChainTypeEnum.EVM && !!(bridge?.account.isConnected && bridge?.account.address)
+  const address = embeddedConnected ? wallet.address : bridgeConnected ? bridge?.account.address : undefined
 
   const [isFirstFrame, setIsFirstFrame] = React.useState(true)
   const [retryCount, setRetryCount] = React.useState(0)
@@ -32,7 +36,9 @@ const Loading: React.FC = () => {
     // Wait for the SDK to settle. After storeCredentials the embedded state
     // briefly stays UNAUTHENTICATED/NONE while the SDK processes the token.
     // Routing to PROVIDERS here would abort the auth flow.
-    if (embeddedState === EmbeddedState.NONE || embeddedState === EmbeddedState.UNAUTHENTICATED) return
+    // However, if bridge (external wallet) is already connected, don't block routing.
+    if ((embeddedState === EmbeddedState.NONE || embeddedState === EmbeddedState.UNAUTHENTICATED) && !bridgeConnected)
+      return
     // Also wait while accounts or user are still loading.
     if (isLoadingAccounts || isLoading) return
     else if (!user) setRoute(routes.PROVIDERS)
