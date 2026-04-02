@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.9
+
+### Patch Changes
+
+- [#229](https://github.com/openfort-xyz/openfort-react/pull/229) [`a526020`](https://github.com/openfort-xyz/openfort-react/commit/a526020d5bf1b0a46a0fbd3bd020489a167dc872) Thanks [@isardmart](https://github.com/isardmart)! - fixed wallet connect bug when no walletconnect env var set
+
 ## 1.0.8
 
 ### Patch Changes
