@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.10
+
+### Patch Changes
+
+- [#232](https://github.com/openfort-xyz/openfort-react/pull/232) [`a691016`](https://github.com/openfort-xyz/openfort-react/commit/a6910161a7b363dec4d156bb44e3ee39a5d0ece2) Thanks [@isardmart](https://github.com/isardmart)! - sync external wallet when no embedded in openfort button
+
 ## 1.0.9
 
 ### Patch Changes
