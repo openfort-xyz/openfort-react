@@ -4,6 +4,7 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect } from 'react'
 import Logos from '../../../assets/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton'
@@ -27,11 +28,20 @@ const Receive = () => {
   const { chainType } = useOpenfortCore()
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
+  const bridge = useEthereumBridge()
   const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
 
-  const isConnected = wallet.status === 'connected'
-  const address = isConnected ? wallet.address : undefined
-  const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
+  // Use embedded wallet if available, otherwise fall back to bridge (external wallet)
+  const embeddedConnected = wallet.status === 'connected'
+  const bridgeConnected = chainType === ChainTypeEnum.EVM && !!(bridge?.account.isConnected && bridge?.account.address)
+  const isConnected = embeddedConnected || bridgeConnected
+  const address = embeddedConnected ? wallet.address : bridgeConnected ? bridge?.account.address : undefined
+  const chainId =
+    embeddedConnected && chainType === ChainTypeEnum.EVM
+      ? (wallet as typeof ethereumWallet).chainId
+      : bridgeConnected
+        ? bridge?.chainId
+        : undefined
   const chain = chains.find((c) => c.id === chainId)
 
   const qrValue = address || ''
