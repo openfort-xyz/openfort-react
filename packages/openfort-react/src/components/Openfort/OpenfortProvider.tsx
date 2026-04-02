@@ -88,6 +88,7 @@ export const OpenfortProvider = ({
 }: OpenfortProviderProps) => {
   const bridge = useContext(OpenfortEthereumBridgeContext)
   const hasWagmi = !!bridge
+  const hasExternalWallets = bridge?.connectors?.some((c) => c.id === 'walletConnect') ?? false
   const hasSolana = !!walletConfig?.solana
 
   // Only allow for mounting OpenfortProvider once, so we avoid weird global
@@ -151,22 +152,22 @@ export const OpenfortProvider = ({
         allowedMethods: [RecoveryMethod.PASSWORD, ...(allowAutomaticRecovery ? [RecoveryMethod.AUTOMATIC] : [])],
         defaultMethod: allowAutomaticRecovery ? RecoveryMethod.AUTOMATIC : RecoveryMethod.PASSWORD,
       },
-      authProviders: hasWagmi
+      authProviders: hasExternalWallets
         ? [UIAuthProvider.GUEST, UIAuthProvider.EMAIL_OTP, UIAuthProvider.WALLET, UIAuthProvider.GOOGLE]
         : [UIAuthProvider.GUEST, UIAuthProvider.EMAIL_OTP, UIAuthProvider.GOOGLE],
     }),
-    [allowAutomaticRecovery, hasWagmi]
+    [allowAutomaticRecovery, hasExternalWallets]
   )
 
   const safeUiConfig = useMemo<OpenfortUIOptionsExtended>(() => {
     const merged = { ...defaultUIOptions, ...uiConfig } as OpenfortUIOptionsExtended
     let authProviders = merged.authProviders ?? defaultUIOptions.authProviders
-    if (!hasWagmi && authProviders.includes(UIAuthProvider.WALLET)) {
+    if (!hasExternalWallets && authProviders.includes(UIAuthProvider.WALLET)) {
       authProviders = authProviders.filter((p) => p !== UIAuthProvider.WALLET)
       if (process.env.NODE_ENV === 'development' && !openfortProviderWarnedNoWagmi) {
         openfortProviderWarnedNoWagmi = true
         logger.warn(
-          '[@openfort/react] UIAuthProvider.WALLET was removed from authProviders because no Wagmi bridge is present. Add OpenfortWagmiBridge to enable external wallet sign-in.'
+          '[@openfort/react] UIAuthProvider.WALLET was removed from authProviders because no WalletConnect connector is present. Pass walletConnectProjectId to getDefaultConfig/getDefaultConnectors to enable external wallet sign-in.'
         )
       }
     }
@@ -181,7 +182,7 @@ export const OpenfortProvider = ({
       )
     }
     return { ...merged, authProviders, walletRecovery }
-  }, [defaultUIOptions, uiConfig, hasWagmi, allowAutomaticRecovery])
+  }, [defaultUIOptions, uiConfig, hasExternalWallets, allowAutomaticRecovery])
 
   useEffect(() => {
     if (typeof window !== 'undefined' && safeUiConfig.bufferPolyfill && !window.Buffer) {

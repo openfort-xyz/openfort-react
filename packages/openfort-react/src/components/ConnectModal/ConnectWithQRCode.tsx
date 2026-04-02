@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
 import { useWalletConnectModal } from '../../hooks/useWalletConnectModal'
 import { truncateEthAddress } from '../../utils'
@@ -62,6 +62,7 @@ const ConnectWithWalletConnect = () => {
   const wallet = useExternalConnector(connector.id)
   const { open: openWalletConnectModal } = useWalletConnectModal()
   const [error, setError] = useState<string | undefined>(undefined)
+  const hasOpenedRef = useRef(false)
 
   const openModal = useCallback(async () => {
     setError(undefined)
@@ -70,6 +71,8 @@ const ConnectWithWalletConnect = () => {
   }, [openWalletConnectModal])
 
   useEffect(() => {
+    if (hasOpenedRef.current) return
+    hasOpenedRef.current = true
     openModal()
   }, [openModal])
 
