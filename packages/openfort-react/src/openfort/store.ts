@@ -48,7 +48,10 @@ function computeIsLoading(
   embeddedState: EmbeddedState,
   user: User | null,
   hasBridge: boolean,
-  bridgeAddress: string | undefined
+  bridgeAddress: string | undefined,
+  embeddedAccounts: EmbeddedAccount[] | undefined,
+  activeEmbeddedAddress: string | undefined,
+  connectOnLogin: boolean
 ): boolean {
   switch (embeddedState) {
     case EmbeddedState.NONE:
@@ -61,6 +64,10 @@ function computeIsLoading(
     case EmbeddedState.READY:
       if (!user) return true
       if (hasBridge && !bridgeAddress) return true
+      // Embedded accounts exist but active address not yet synced.
+      // Only when connectOnLogin is true — when false, address is intentionally
+      // not auto-set and the user must pick a wallet via the UI.
+      if (connectOnLogin && embeddedAccounts?.length && !activeEmbeddedAddress) return true
       return false
     default:
       return true
@@ -74,7 +81,8 @@ function computeNeedsRecovery(embeddedState: EmbeddedState, embeddedAccounts: Em
 export function createOpenfortStore(
   initialChainType: ChainTypeEnum,
   client: Openfort,
-  getBridgeInfo?: () => { hasBridge: boolean; address: string | undefined }
+  getBridgeInfo?: () => { hasBridge: boolean; address: string | undefined },
+  connectOnLogin = true
 ): StoreApi<OpenfortStore> {
   const store = createStore<OpenfortStore>((set) => ({
     user: null,
@@ -119,7 +127,15 @@ export function createOpenfortStore(
     recomputeIsLoading: () => {
       const state = store.getState()
       const info = getBridgeInfo?.() ?? { hasBridge: false, address: undefined }
-      const loading = computeIsLoading(state.embeddedState, state.user, info.hasBridge, info.address)
+      const loading = computeIsLoading(
+        state.embeddedState,
+        state.user,
+        info.hasBridge,
+        info.address,
+        state.embeddedAccounts,
+        state.activeEmbeddedAddress,
+        connectOnLogin
+      )
       if (loading !== state.isLoading) {
         set({ isLoading: loading })
       }
@@ -138,10 +154,19 @@ export function createOpenfortStore(
     const embeddedStateChanged = state.embeddedState !== prev.embeddedState
     const userChanged = state.user !== prev.user
     const embeddedAccountsChanged = state.embeddedAccounts !== prev.embeddedAccounts
+    const activeAddressChanged = state.activeEmbeddedAddress !== prev.activeEmbeddedAddress
 
-    if (embeddedStateChanged || userChanged) {
+    if (embeddedStateChanged || userChanged || embeddedAccountsChanged || activeAddressChanged) {
       const info = getBridgeInfo?.() ?? { hasBridge: false, address: undefined }
-      const isLoading = computeIsLoading(state.embeddedState, state.user, info.hasBridge, info.address)
+      const isLoading = computeIsLoading(
+        state.embeddedState,
+        state.user,
+        info.hasBridge,
+        info.address,
+        state.embeddedAccounts,
+        state.activeEmbeddedAddress,
+        connectOnLogin
+      )
       if (isLoading !== state.isLoading) {
         store.setState({ isLoading })
       }

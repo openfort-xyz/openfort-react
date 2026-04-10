@@ -24,6 +24,7 @@ function useEmbeddedWalletWagmiSync() {
 
   // Track whether an external wallet was explicitly connected — don't override it
   const externalConnectorActiveRef = useRef(false)
+  const connectFailedRef = useRef(false)
 
   useEffect(() => {
     if (activeConnector && activeConnector.id !== embeddedWalletId) {
@@ -32,6 +33,11 @@ function useEmbeddedWalletWagmiSync() {
       externalConnectorActiveRef.current = false
     }
   }, [activeConnector])
+
+  // Reset failure flag when provider changes (new session = fresh attempt)
+  useEffect(() => {
+    connectFailedRef.current = false
+  }, [provider])
 
   // Keep the module-level provider slot in sync — clear on disconnect
   useEffect(() => {
@@ -50,6 +56,9 @@ function useEmbeddedWalletWagmiSync() {
     if (wagmiStatus === 'connecting' || wagmiStatus === 'reconnecting') return
     if (activeConnector?.id === embeddedWalletId) return
 
+    // Already failed for this provider — don't retry
+    if (connectFailedRef.current) return
+
     // An external wallet is actively connected — don't override it
     if (externalConnectorActiveRef.current) {
       logger.log('[EmbeddedWalletWagmiSync] Skipping auto-connect — external wallet is active', {
@@ -62,7 +71,10 @@ function useEmbeddedWalletWagmiSync() {
     if (!embeddedConnector) return
 
     logger.log('[EmbeddedWalletWagmiSync] Auto-connecting embedded wallet to wagmi')
-    connectAsync({ connector: embeddedConnector }).catch(() => {})
+    connectAsync({ connector: embeddedConnector }).catch((error) => {
+      connectFailedRef.current = true
+      logger.error('[EmbeddedWalletWagmiSync] Failed to connect embedded wallet to wagmi', error)
+    })
   }, [status, provider, wagmiStatus, activeConnector, connectors, connectAsync])
 
   // Disconnect embedded connector from wagmi when the embedded wallet logs out

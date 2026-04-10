@@ -133,10 +133,15 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
   }, [])
 
   const store = useMemo(() => {
-    return createOpenfortStore(chainType, openfort, () => ({
-      hasBridge: !!bridgeRef.current,
-      address: bridgeRef.current?.account.address,
-    }))
+    return createOpenfortStore(
+      chainType,
+      openfort,
+      () => ({
+        hasBridge: !!bridgeRef.current,
+        address: bridgeRef.current?.account.address,
+      }),
+      walletConfig?.connectOnLogin ?? true
+    )
   }, [])
 
   // Sync chainType from UI context into the store — useLayoutEffect so the store
