@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.12
+
+### Patch Changes
+
+- [#237](https://github.com/openfort-xyz/openfort-react/pull/237) [`54fc075`](https://github.com/openfort-xyz/openfort-react/commit/54fc075b13e13688260d72b1ef750739bb60b202) Thanks [@isardmart](https://github.com/isardmart)! - Fixes provider not re-initializing when fee sponsorship policy changes, causing stale sponsorship state.
+
 ## 1.0.11
 
 ### Patch Changes
