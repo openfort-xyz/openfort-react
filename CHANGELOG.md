@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.11
+
+### Patch Changes
+
+- [#235](https://github.com/openfort-xyz/openfort-react/pull/235) [`cf02ea9`](https://github.com/openfort-xyz/openfort-react/commit/cf02ea95aa80eff8fb6d970000b0b8df6ca68a7a) Thanks [@isardmart](https://github.com/isardmart)! - race condition on openfort button loading state
+
 ## 1.0.10
 
 ### Patch Changes
