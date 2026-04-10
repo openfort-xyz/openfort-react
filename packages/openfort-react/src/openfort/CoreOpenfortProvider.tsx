@@ -20,9 +20,9 @@ import { useOpenfort } from '../components/Openfort/useOpenfort'
 import { embeddedWalletId } from '../constants/openfort'
 import type { ConnectionStrategy } from '../core/ConnectionStrategy'
 import { ConnectionStrategyProvider, useConnectionStrategy } from '../core/ConnectionStrategyContext'
+import { resolveEthereumFeeSponsorship } from '../core/strategyUtils'
 import { OpenfortEthereumBridgeContext } from '../ethereum/OpenfortEthereumBridgeContext'
 import { useConnectLifecycle } from '../hooks/useConnectLifecycle'
-
 import { showInitBanner } from '../utils/banner'
 import { logger } from '../utils/logger'
 import { handleOAuthConfigError } from '../utils/oauthErrorHandler'
@@ -289,7 +289,12 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
 
   // Track what we last initialized to avoid redundant initProvider calls when
   // the strategy object is recreated but nothing meaningful changed.
-  const lastInitRef = useRef<{ kind: string; chainType: ChainTypeEnum; evmChainId: number | undefined } | null>(null)
+  const lastInitRef = useRef<{
+    kind: string
+    chainType: ChainTypeEnum
+    evmChainId: number | undefined
+    feeSponsorshipPolicy: string | undefined
+  } | null>(null)
   const initInProgressRef = useRef(false)
 
   // Init provider; only fetch accounts when READY (prevents list() before auth is stored)
@@ -308,13 +313,16 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     }
 
     // Skip if we already initialized with the same parameters
-    const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId }
+    const feeSponsorshipPolicy =
+      evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId)?.policy : undefined
+    const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId, feeSponsorshipPolicy }
     const prev = lastInitRef.current
     if (
       prev &&
       prev.kind === initKey.kind &&
       prev.chainType === initKey.chainType &&
-      prev.evmChainId === initKey.evmChainId
+      prev.evmChainId === initKey.evmChainId &&
+      prev.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy
     ) {
       return
     }
