@@ -6,6 +6,7 @@ import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import useIsMounted from '../../../hooks/useIsMounted'
 import { ResetContainer } from '../../../styles'
+import { safeImageSrc } from '../../../utils/urlSecurity'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { EnsAvatar, ImageContainer } from './styles'
 
@@ -114,7 +115,11 @@ const Avatar: React.FC<{
       </div>
     )
 
-  if (!ens.name || !ens.avatar)
+  // Validate the ENS avatar URL scheme. Malicious ENS records can point to
+  // `javascript:` / non-image `data:` URIs; `safeImageSrc` whitelists
+  // `http(s):` and `data:image/*;base64` sources only.
+  const safeAvatar = safeImageSrc(ens.avatar)
+  if (!ens.name || !safeAvatar)
     return (
       <ResetContainer style={{ pointerEvents: 'none' }}>
         <EnsAvatar $size={size} $seed={ens.address} $radius={radius} />
@@ -125,7 +130,7 @@ const Avatar: React.FC<{
       <EnsAvatar $size={size} $seed={ens.address} $radius={radius}>
         <ImageContainer
           ref={imageRef}
-          src={ens.avatar}
+          src={safeAvatar}
           alt={ens.name}
           onLoad={() => setLoaded(true)}
           $loaded={loaded}

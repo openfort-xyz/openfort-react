@@ -91,34 +91,78 @@ async function getEncryptionSession(params: {
   }
 
   if (walletConfig.createEncryptedSessionEndpoint) {
-    const response = await fetch(walletConfig.createEncryptedSessionEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId, otp_code: otpCode }),
-    })
+    // Reject non-http(s) endpoints up front. A misconfigured
+    // `createEncryptedSessionEndpoint` (e.g. a stringified object or a
+    // `javascript:` URL) should fail loudly rather than become a network
+    // request to the current origin.
+    let endpointUrl: URL
+    try {
+      endpointUrl = new URL(walletConfig.createEncryptedSessionEndpoint)
+    } catch {
+      throw new OpenfortError(
+        'createEncryptedSessionEndpoint is not a valid URL',
+        OpenfortReactErrorType.CONFIGURATION_ERROR
+      )
+    }
+    if (endpointUrl.protocol !== 'https:' && endpointUrl.protocol !== 'http:') {
+      throw new OpenfortError(
+        'createEncryptedSessionEndpoint must use http(s)',
+        OpenfortReactErrorType.CONFIGURATION_ERROR
+      )
+    }
+
+    // Bound the request so a stalled server cannot hang recovery UI.
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 30_000)
+
+    let response: Response
+    try {
+      response = await fetch(endpointUrl.toString(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, otp_code: otpCode }),
+        signal: controller.signal,
+        credentials: 'omit',
+      })
+    } catch (err) {
+      throw new OpenfortError('Failed to reach encryption session endpoint', OpenfortReactErrorType.WALLET_ERROR, {
+        cause: err instanceof Error ? err : new Error(String(err)),
+      })
+    } finally {
+      clearTimeout(timeout)
+    }
 
     type SessionResponse = { error?: string; message?: string; session?: string }
-    let data: SessionResponse
-    try {
-      data = (await response.json()) as SessionResponse
-    } catch {
-      data = {}
+    const contentType = response.headers.get('content-type') ?? ''
+    // Reject explicit non-JSON content types (e.g. text/html) to avoid
+    // swallowing a captured-portal / misrouted response, but stay permissive
+    // when the header is missing since many dev servers omit it.
+    let data: SessionResponse = {}
+    const isJsonish =
+      contentType === '' || contentType.includes('application/json') || contentType.includes('text/plain')
+    if (isJsonish) {
+      try {
+        data = (await response.json()) as SessionResponse
+      } catch {
+        data = {}
+      }
     }
     if (!response.ok) {
       if (data.error === 'OTP_REQUIRED') {
         throw new OpenfortError('OTP verification required', OpenfortReactErrorType.AUTHENTICATION_ERROR)
       }
-      const errMsg =
-        typeof (data.error ?? data.message) === 'string'
-          ? `Failed to create encryption session: ${data.error ?? data.message}`
-          : 'Failed to create encryption session'
-      throw new OpenfortError(errMsg, OpenfortReactErrorType.WALLET_ERROR, {
-        error: data.error != null ? new Error(String(data.error)) : undefined,
+      // Never interpolate server-returned strings into the user-visible
+      // message — keep them in `cause` for diagnostics only. Prevents a
+      // compromised or misbehaving backend from shaping the SDK's error
+      // surface with arbitrary text.
+      throw new OpenfortError('Failed to create encryption session', OpenfortReactErrorType.WALLET_ERROR, {
+        status: response.status,
+        cause: (data.error ?? data.message) ? new Error(String(data.error ?? data.message)) : undefined,
       })
     }
 
     const session = data.session
-    if (typeof session !== 'string' || session.length === 0) {
+    if (typeof session !== 'string' || session.length === 0 || session.length > 8192) {
       throw new OpenfortError('Invalid encryption session response', OpenfortReactErrorType.WALLET_ERROR)
     }
     return session

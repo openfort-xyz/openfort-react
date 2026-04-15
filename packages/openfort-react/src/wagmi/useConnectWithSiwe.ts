@@ -54,7 +54,7 @@ export function useConnectWithSiwe() {
       const address = propsAddress ?? b?.account?.address
       const connectorType = propsConnectorType ?? b?.account?.connector?.type
       const walletClientType = propsWalletClientType ?? b?.account?.connector?.id
-      const chainId = b?.chainId ?? 0
+      const chainId = b?.chainId
       const accountChainId = b?.account?.chain?.id ?? b?.chainId
       const chainName = b?.account?.chain?.name
       const switchChainAsync = b?.switchChain?.switchChainAsync
@@ -66,6 +66,16 @@ export function useConnectWithSiwe() {
         return
       }
 
+      // Reject SIWE when chainId is not a positive integer — signing with
+      // chainId=0 / undefined produces a message that can be replayed across
+      // chains that don't enforce the field.
+      if (chainId === undefined || !Number.isInteger(chainId) || chainId <= 0) {
+        logger.warn('[useConnectWithSiwe] Invalid chainId', { chainId })
+        onError?.('No active chain. Connect your wallet to a supported network and try again.')
+        return
+      }
+      const validChainId: number = chainId
+
       if (!signMessage) {
         logger.warn('[useConnectWithSiwe] No signMessage on bridge')
         onError?.('EVM bridge not available (signMessage)')
@@ -73,8 +83,8 @@ export function useConnectWithSiwe() {
       }
 
       try {
-        if (accountChainId !== chainId && switchChainAsync) {
-          await switchChainAsync({ chainId })
+        if (accountChainId !== validChainId && switchChainAsync) {
+          await switchChainAsync({ chainId: validChainId })
         }
 
         let nonce: string
@@ -86,7 +96,7 @@ export function useConnectWithSiwe() {
           nonce = resp.nonce
         }
 
-        const SIWEMessage = createSIWEMessage(address, nonce, chainId)
+        const SIWEMessage = createSIWEMessage(address, nonce, validChainId)
         if (!SIWEMessage) throw new Error('SIWE message creation failed (window not available)')
 
         const signature = await signMessage({ message: SIWEMessage })
@@ -98,7 +108,7 @@ export function useConnectWithSiwe() {
             connectorType,
             walletClientType,
             address,
-            chainId,
+            chainId: validChainId,
           })
         } else {
           await client.auth.loginWithSiwe({

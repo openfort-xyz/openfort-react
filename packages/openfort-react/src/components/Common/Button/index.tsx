@@ -1,6 +1,7 @@
 import { AnimatePresence } from 'framer-motion'
 import type React from 'react'
 import { flattenChildren } from '../../../utils'
+import { safeExternalHref } from '../../../utils/urlSecurity'
 import FitText from '../FitText'
 import { Spinner } from '../Spinner'
 import {
@@ -44,18 +45,22 @@ const Button: React.FC<ButtonProps> = ({
   const key = typeof children === 'string' ? children : flattenChildren(children).join('') // Need to generate a string for the key so we can automatically animate between content
 
   const hrefUrl = href && (typeof href === 'string' ? href : flattenChildren(href).join('')) // Need to have a flat string for the href
+  // Reject `javascript:`, `data:`, and other script-bearing schemes so that
+  // a mis-configured SDK option or connector metadata entry cannot escalate
+  // to XSS through an anchor `href`.
+  const safeHref = safeExternalHref(hrefUrl || undefined)
 
   return (
     <ButtonContainer
       className={className}
-      as={href ? 'a' : type ? 'button' : undefined}
+      as={safeHref ? 'a' : type ? 'button' : undefined}
       type={type}
       onClick={(event: any) => {
         if (!disabled && onClick) onClick(event)
       }}
-      href={href && hrefUrl}
-      target={href && '_blank'}
-      rel={href && 'noopener noreferrer'}
+      href={safeHref}
+      target={safeHref && '_blank'}
+      rel={safeHref && 'noopener noreferrer'}
       disabled={disabled}
       $variant={variant}
       style={style}

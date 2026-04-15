@@ -35,6 +35,55 @@ export function suppressReferrer(): () => void {
   }
 }
 
+const SAFE_PROTOCOLS = new Set(['http:', 'https:', 'mailto:'])
+
+/**
+ * Returns the URL if it uses a safe protocol (`http:`, `https:`, `mailto:`),
+ * otherwise returns `undefined`.
+ *
+ * Use for any `href`/`src` attribute that takes a URL from untrusted
+ * sources (SDK config, connector metadata, ENS records, server responses).
+ * Blocks `javascript:`, `data:`, `vbscript:`, `file:` and other
+ * script-bearing schemes that can escalate to XSS.
+ *
+ * Relative URLs are resolved against `window.location.origin` and
+ * allowed as `http(s):`.
+ *
+ * @example
+ * ```tsx
+ * <a href={safeExternalHref(userProvidedUrl)} target="_blank" rel="noopener noreferrer" />
+ * ```
+ */
+export function safeExternalHref(url: string | null | undefined): string | undefined {
+  if (!url || typeof url !== 'string') return undefined
+  try {
+    const base = typeof window !== 'undefined' ? window.location.origin : 'https://localhost'
+    const u = new URL(url, base)
+    return SAFE_PROTOCOLS.has(u.protocol) ? u.toString() : undefined
+  } catch {
+    return undefined
+  }
+}
+
+const IMG_DATA_URL_RE = /^data:image\/(?:png|jpeg|jpg|gif|webp|svg\+xml);base64,/i
+
+/**
+ * Returns the URL if it is a safe image source.
+ *
+ * Accepts `http(s):` and narrowly whitelisted `data:image/...;base64` URLs.
+ * Rejects `javascript:`, raw `data:`, and other schemes. SVG data URLs are
+ * allowed but callers rendering them as `<img>` are safe because the
+ * browser blocks script execution inside `<img src>`.
+ *
+ * Primarily intended for ENS avatars and other user-influenced image
+ * sources where a malicious record could attempt XSS via the `src`.
+ */
+export function safeImageSrc(url: string | null | undefined): string | undefined {
+  if (!url || typeof url !== 'string') return undefined
+  if (IMG_DATA_URL_RE.test(url)) return url
+  return safeExternalHref(url)
+}
+
 /**
  * Parses the current `window.location.href`, fixing the OF-1013 issue
  * where the server redirect produces a URL with a duplicate `?`, e.g.
