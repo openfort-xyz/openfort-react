@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.14
+
+### Patch Changes
+
+- [`919b5b2`](https://github.com/openfort-xyz/openfort-react/commit/919b5b240242e6c6ddde64c781c9b30dd453c49c) Thanks [@isardmart](https://github.com/isardmart)! - Fixes `POST /v2/accounts/switch-chain` 422 errors logged in console on signup and page reload with embedded wallets.
+
 ## 1.0.13
 
 ### Patch Changes
