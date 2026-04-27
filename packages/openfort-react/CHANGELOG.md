@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.13
+
+### Patch Changes
+
+- [#242](https://github.com/openfort-xyz/openfort-react/pull/242) [`7351b1a`](https://github.com/openfort-xyz/openfort-react/commit/7351b1a8051a77f508321616afbbdc756434a556) Thanks [@isardmart](https://github.com/isardmart)! - Fixes repeated `POST /v2/accounts/switch-chain` 422 errors during initial mount with an external (wagmi) wallet.
+
 ## 1.0.12
 
 ### Patch Changes
