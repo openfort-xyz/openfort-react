@@ -3,7 +3,7 @@ import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { numberToHex } from 'viem'
-import { useAccount, useChainId, useWalletClient } from 'wagmi'
+import { useAccount, useChainId, useSwitchChain } from 'wagmi'
 import { Button } from '@/components/Showcase/ui/Button'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -16,7 +16,7 @@ export const SwitchChainCardEVM = ({ tooltip }: { tooltip?: { hook: string; body
   const core = useOpenfort()
   const { isConnected: wagmiConnected, connector } = useAccount()
   const wagmiChainId = useChainId()
-  const { data: walletClient } = useWalletClient()
+  const { switchChainAsync } = useSwitchChain()
   const [isPending, setIsPending] = useState(false)
   const [error, setError] = useState<Error | null>(null)
   const [data, setData] = useState<{ id: number; name: string } | null>(null)
@@ -41,8 +41,7 @@ export const SwitchChainCardEVM = ({ tooltip }: { tooltip?: { hook: string; body
 
     try {
       if (isExternalWallet) {
-        if (!walletClient) throw new Error('Wallet client not ready')
-        await walletClient.switchChain({ id: targetChainId })
+        await switchChainAsync({ chainId: targetChainId })
       } else {
         const provider =
           embedded.status === 'connected' && embedded.activeWallet

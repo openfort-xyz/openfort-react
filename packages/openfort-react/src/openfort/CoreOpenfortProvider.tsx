@@ -354,9 +354,11 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
         initInProgressRef.current = false
       })
     return () => {
+      // Don't reset lastInitRef/initInProgressRef here. Bridge churn during wagmi
+      // hydration (walletClient/ENS resolving) recreates the strategy and re-runs
+      // this effect with the same initKey; resetting would defeat the dedup and
+      // re-fire initProvider → repeated /v2/accounts/switch-chain 422s.
       cancelled = true
-      lastInitRef.current = null
-      initInProgressRef.current = false
     }
   }, [openfort, walletConfig, strategy, evmChainId, storeEmbeddedState])
 
