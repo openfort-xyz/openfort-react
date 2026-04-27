@@ -33,7 +33,16 @@ export interface ConnectionStrategy {
   /** External wallet connectors; only when wagmi/bridge exists. Otherwise []. */
   getConnectors(): ExternalConnectorProps[]
 
-  /** @param chainId - Current chain for EVM; when provided, uses this for fee sponsorship/rpc instead of config default. */
-  initProvider(openfort: Openfort, walletConfig: OpenfortWalletConfig, chainId?: number): Promise<void>
+  /**
+   * @param chainId - Current chain for EVM; when provided, uses this for fee sponsorship/rpc instead of config default.
+   * @param activeEmbeddedAddress - Active embedded account address. When undefined, EVM strategies skip
+   *   `wallet_switchEthereumChain` to avoid sending `account: null` to /v2/accounts/switch-chain (422).
+   */
+  initProvider(
+    openfort: Openfort,
+    walletConfig: OpenfortWalletConfig,
+    chainId?: number,
+    activeEmbeddedAddress?: string
+  ): Promise<void>
   disconnect(openfort: Openfort): Promise<void>
 }

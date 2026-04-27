@@ -164,13 +164,13 @@ describe('CoreOpenfortProvider — bridge churn dedup', () => {
     })
 
     await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(1))
-    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 1)
+    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 1, undefined)
 
     await act(async () => {
       rerenderWithBridge(result, makeBridgeValue({ chainId: 137 }))
     })
 
     await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(2))
-    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 137)
+    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 137, undefined)
   })
 })
