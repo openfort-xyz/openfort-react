@@ -294,6 +294,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     chainType: ChainTypeEnum
     evmChainId: number | undefined
     feeSponsorshipPolicy: string | undefined
+    hasActiveEmbeddedAddress: boolean
   } | null>(null)
   const initInProgressRef = useRef(false)
 
@@ -315,14 +316,25 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     // Skip if we already initialized with the same parameters
     const feeSponsorshipPolicy =
       evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId)?.policy : undefined
-    const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId, feeSponsorshipPolicy }
+    // Track whether we had an active embedded address at init time. When it transitions
+    // from absent → present, we re-init so wallet_switchEthereumChain can finally fire
+    // (openfort-js needs the active account set, otherwise it sends `account: null` → 422).
+    const hasActiveEmbeddedAddress = !!storeActiveEmbeddedAddress
+    const initKey = {
+      kind: strategy.kind,
+      chainType: strategy.chainType,
+      evmChainId,
+      feeSponsorshipPolicy,
+      hasActiveEmbeddedAddress,
+    }
     const prev = lastInitRef.current
     if (
       prev &&
       prev.kind === initKey.kind &&
       prev.chainType === initKey.chainType &&
       prev.evmChainId === initKey.evmChainId &&
-      prev.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy
+      prev.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy &&
+      prev.hasActiveEmbeddedAddress === initKey.hasActiveEmbeddedAddress
     ) {
       return
     }
@@ -335,7 +347,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     initInProgressRef.current = true
     let cancelled = false
     strategy
-      .initProvider(openfort, walletConfig, evmChainId)
+      .initProvider(openfort, walletConfig, evmChainId, storeActiveEmbeddedAddress ?? undefined)
       .then(() => {
         if (cancelled) return
         lastInitRef.current = initKey
@@ -360,7 +372,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
       // re-fire initProvider → repeated /v2/accounts/switch-chain 422s.
       cancelled = true
     }
-  }, [openfort, walletConfig, strategy, evmChainId, storeEmbeddedState])
+  }, [openfort, walletConfig, strategy, evmChainId, storeEmbeddedState, storeActiveEmbeddedAddress])
 
   // On refresh, embeddedState reaches READY before the user is loaded, so
   // fetchEmbeddedAccounts (called inside initProvider) returns empty. Re-fetch
