@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.15
+
+### Patch Changes
+
+- [#246](https://github.com/openfort-xyz/openfort-react/pull/246) [`d3508ad`](https://github.com/openfort-xyz/openfort-react/commit/d3508ad0fb71acb9f362269305acf841101f135c) Thanks [@isardmart](https://github.com/isardmart)! - Stops `POST /v2/accounts/switch-chain` 4xx errors logging in console on signup and reload
+
 ## 1.0.14
 
 ### Patch Changes
