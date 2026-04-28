@@ -294,7 +294,6 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     chainType: ChainTypeEnum
     evmChainId: number | undefined
     feeSponsorshipPolicy: string | undefined
-    hasActiveEmbeddedAddress: boolean
   } | null>(null)
   const initInProgressRef = useRef(false)
 
@@ -316,25 +315,14 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     // Skip if we already initialized with the same parameters
     const feeSponsorshipPolicy =
       evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId)?.policy : undefined
-    // Track whether we had an active embedded address at init time. When it transitions
-    // from absent → present, we re-init so wallet_switchEthereumChain can finally fire
-    // (openfort-js needs the active account set, otherwise it sends `account: null` → 422).
-    const hasActiveEmbeddedAddress = !!storeActiveEmbeddedAddress
-    const initKey = {
-      kind: strategy.kind,
-      chainType: strategy.chainType,
-      evmChainId,
-      feeSponsorshipPolicy,
-      hasActiveEmbeddedAddress,
-    }
+    const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId, feeSponsorshipPolicy }
     const prev = lastInitRef.current
     if (
       prev &&
       prev.kind === initKey.kind &&
       prev.chainType === initKey.chainType &&
       prev.evmChainId === initKey.evmChainId &&
-      prev.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy &&
-      prev.hasActiveEmbeddedAddress === initKey.hasActiveEmbeddedAddress
+      prev.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy
     ) {
       return
     }
@@ -347,7 +335,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     initInProgressRef.current = true
     let cancelled = false
     strategy
-      .initProvider(openfort, walletConfig, evmChainId, storeActiveEmbeddedAddress ?? undefined)
+      .initProvider(openfort, walletConfig, evmChainId)
       .then(() => {
         if (cancelled) return
         lastInitRef.current = initKey

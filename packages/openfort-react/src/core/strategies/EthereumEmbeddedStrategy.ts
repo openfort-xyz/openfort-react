@@ -59,12 +59,7 @@ export function createEthereumEmbeddedStrategy(walletConfig: OpenfortWalletConfi
       return []
     },
 
-    async initProvider(
-      openfort: Openfort,
-      config: OpenfortWalletConfig,
-      chainIdOverride?: number,
-      activeEmbeddedAddress?: string
-    ) {
+    async initProvider(openfort: Openfort, config: OpenfortWalletConfig, chainIdOverride?: number) {
       const ethereum = config?.ethereum
       const chainId = chainIdOverride ?? ethereum?.chainId ?? DEFAULT_DEV_CHAIN_ID
       const rpcUrls = ethereum?.rpcUrls ?? {}
@@ -76,20 +71,20 @@ export function createEthereumEmbeddedStrategy(walletConfig: OpenfortWalletConfi
       })
       // Tell the provider which chain is active (EIP-1193). Without this, the provider
       // stays on its initial chain (e.g. 80002) while fee sponsorship resolution is per-chain.
-      // Skip if the chain hasn't changed since last init to avoid spurious 422s.
-      // Skip if no active embedded account: openfort-js sends `account: null` to
-      // /v2/accounts/switch-chain → 422. eth_accounts isn't a reliable proxy here —
-      // it returns the signer address even when the active account isn't set yet.
-      if (chainId !== lastInitChainId && activeEmbeddedAddress) {
-        try {
-          await provider.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: `0x${chainId.toString(16)}` }],
-          })
-          lastInitChainId = chainId
-        } catch (switchErr) {
-          logger.warn('[@openfort/react] wallet_switchEthereumChain failed — provider may be on wrong chain', switchErr)
-        }
+      // Real iframe-state check: throws when Account.fromStorage is empty (signer not yet
+      // configured by configure/create/recover). Avoids spurious /v2/accounts/switch-chain
+      // calls (422 with account=null) and redundant calls when already on target chain.
+      if (chainId === lastInitChainId) return
+      const wallet = await openfort.embeddedWallet.get().catch(() => null)
+      if (!wallet?.address || wallet.chainId === chainId) return
+      try {
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${chainId.toString(16)}` }],
+        })
+        lastInitChainId = chainId
+      } catch (switchErr) {
+        logger.warn('[@openfort/react] wallet_switchEthereumChain failed — provider may be on wrong chain', switchErr)
       }
     },
 
