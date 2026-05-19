@@ -8,7 +8,12 @@ import { DEFAULT_ACCOUNT_TYPE } from '../../constants/openfort'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
 import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
-import type { CreateEmbeddedWalletOptions, SetRecoveryOptions, WalletStatus } from '../../shared/types'
+import type {
+  CreateEmbeddedWalletOptions,
+  ImportEmbeddedWalletOptions,
+  SetRecoveryOptions,
+  WalletStatus,
+} from '../../shared/types'
 import { buildEmbeddedWalletStatusResult } from '../../shared/utils/embeddedWalletStatusMapper'
 import { buildRecoveryParams } from '../../shared/utils/recovery'
 import { toConnectedStateProperties } from '../../shared/utils/walletStatusProps'
@@ -231,6 +236,86 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
     ]
   )
 
+  const importWallet = useCallback(
+    async (importOptions: ImportEmbeddedWalletOptions): Promise<EmbeddedAccount> => {
+      setState((s) => ({ ...s, status: 'creating', error: null }))
+
+      try {
+        if (!walletConfig) {
+          throw new OpenfortError('Wallet config not found', OpenfortReactErrorType.CONFIGURATION_ERROR)
+        }
+
+        const recoveryParams = await buildRecoveryParams(
+          {
+            recoveryMethod: importOptions.recoveryMethod,
+            passkeyId: importOptions.passkeyId,
+            password: importOptions.password,
+            otpCode: importOptions.otpCode,
+          },
+          {
+            walletConfig,
+            getAccessToken: () => client.getAccessToken(),
+            getUserId: async () => {
+              const user = await client.user.get()
+              return user?.id
+            },
+          }
+        )
+
+        const accountType = importOptions.accountType ?? walletConfig?.ethereum?.accountType ?? DEFAULT_ACCOUNT_TYPE
+
+        const account = await client.embeddedWallet.import({
+          privateKey: importOptions.privateKey,
+          chainType: ChainTypeEnum.EVM,
+          accountType,
+          ...(accountType !== DEFAULT_ACCOUNT_TYPE && { chainId: importOptions.chainId ?? creationChainId }),
+          recoveryParams,
+        })
+
+        setActiveEmbeddedAddress(account.address)
+        await updateEmbeddedAccounts({ silent: true })
+
+        const provider = await getEmbeddedEthereumProvider()
+        const connectedWallet = buildConnectedWallet(account, 0, async () => provider, {
+          isActive: true,
+          isConnecting: false,
+        })
+
+        setState({
+          status: 'connected',
+          activeWallet: connectedWallet,
+          provider,
+          error: null,
+        })
+
+        importOptions.onSuccess?.({ account })
+        return account
+      } catch (err) {
+        const error =
+          err instanceof OpenfortError
+            ? err
+            : new OpenfortError('Failed to import Ethereum wallet', OpenfortReactErrorType.WALLET_ERROR, { error: err })
+
+        setState((s) => ({
+          ...s,
+          status: 'error',
+          error: error.message,
+        }))
+
+        importOptions.onError?.(error)
+        throw error
+      }
+    },
+    [
+      client,
+      walletConfig,
+      creationChainId,
+      getEmbeddedEthereumProvider,
+      updateEmbeddedAccounts,
+      setActiveEmbeddedAddress,
+    ]
+  )
+
   const setActive = useCallback(
     async (activeOptions: SetActiveEthereumWalletOptions): Promise<void> => {
       const run = async (): Promise<void> => {
@@ -375,12 +460,13 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
   const actions = useMemo(
     () => ({
       create,
+      import: importWallet,
       wallets,
       setActive,
       setRecovery,
       exportPrivateKey,
     }),
-    [create, wallets, setActive, setRecovery, exportPrivateKey]
+    [create, importWallet, wallets, setActive, setRecovery, exportPrivateKey]
   )
 
   // Use refs for values that should NOT re-trigger the sync effect.

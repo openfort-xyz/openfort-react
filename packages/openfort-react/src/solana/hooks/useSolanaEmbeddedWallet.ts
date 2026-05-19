@@ -5,7 +5,12 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'r
 import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort'
 import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
-import type { CreateEmbeddedWalletOptions, SetRecoveryOptions, WalletStatus } from '../../shared/types'
+import type {
+  CreateEmbeddedWalletOptions,
+  ImportEmbeddedWalletOptions,
+  SetRecoveryOptions,
+  WalletStatus,
+} from '../../shared/types'
 import { buildEmbeddedWalletStatusResult } from '../../shared/utils/embeddedWalletStatusMapper'
 import { type BuildRecoveryParamsConfig, buildRecoveryParams } from '../../shared/utils/recovery'
 import { toConnectedStateProperties } from '../../shared/utils/walletStatusProps'
@@ -208,6 +213,77 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
     [client, walletConfig, createProviderForAccount, updateEmbeddedAccounts, setActiveEmbeddedAddress]
   )
 
+  const importWallet = useCallback(
+    async (importOptions: ImportEmbeddedWalletOptions): Promise<EmbeddedAccount> => {
+      setState((s) => ({ ...s, status: 'creating', error: null }))
+
+      try {
+        if (!walletConfig) {
+          throw new OpenfortError('Wallet config not found', OpenfortReactErrorType.CONFIGURATION_ERROR)
+        }
+
+        const recoveryParams = await buildRecoveryParams(
+          {
+            recoveryMethod: importOptions.recoveryMethod,
+            passkeyId: importOptions.passkeyId,
+            password: importOptions.password,
+            otpCode: importOptions.otpCode,
+          },
+          {
+            walletConfig,
+            getAccessToken: () => client.getAccessToken(),
+            getUserId: () => client.user.get().then((u) => u?.id),
+          }
+        )
+
+        const account = await client.embeddedWallet.import({
+          privateKey: importOptions.privateKey,
+          chainType: ChainTypeEnum.SVM,
+          accountType: AccountTypeEnum.EOA,
+          recoveryParams,
+        })
+
+        setActiveEmbeddedAddress(account.address)
+        await updateEmbeddedAccounts({ silent: true })
+
+        const provider = createProviderForAccount(account)
+        const connectedWallet: ConnectedEmbeddedSolanaWallet = {
+          id: account.id,
+          address: account.address,
+          chainType: ChainTypeEnum.SVM,
+          walletIndex: 0,
+          recoveryMethod: account.recoveryMethod,
+          getProvider: async () => provider,
+        }
+
+        setState({
+          status: 'connected',
+          activeWallet: connectedWallet,
+          provider,
+          error: null,
+        })
+
+        importOptions.onSuccess?.({ account })
+        return account
+      } catch (err) {
+        const error =
+          err instanceof OpenfortError
+            ? err
+            : new OpenfortError('Failed to import Solana wallet', OpenfortReactErrorType.WALLET_ERROR, { error: err })
+
+        setState((s) => ({
+          ...s,
+          status: 'error',
+          error: error.message,
+        }))
+
+        importOptions.onError?.(error)
+        throw error
+      }
+    },
+    [client, walletConfig, createProviderForAccount, updateEmbeddedAccounts, setActiveEmbeddedAddress]
+  )
+
   const setActive = useCallback(
     async (activeOptions: SetActiveSolanaWalletOptions): Promise<void> => {
       const run = async (): Promise<void> => {
@@ -329,12 +405,13 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
   const actions = useMemo(
     () => ({
       create,
+      import: importWallet,
       wallets,
       setActive,
       setRecovery,
       exportPrivateKey,
     }),
-    [create, wallets, setActive, setRecovery, exportPrivateKey]
+    [create, importWallet, wallets, setActive, setRecovery, exportPrivateKey]
   )
 
   // Clear local state when core clears activeEmbeddedAddress (e.g. logout).

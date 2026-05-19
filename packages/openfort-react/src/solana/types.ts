@@ -9,6 +9,7 @@ import type React from 'react'
 import type {
   ConnectedWalletState,
   CreateEmbeddedWalletOptions,
+  ImportEmbeddedWalletOptions,
   SetActiveEmbeddedWalletOptionsBase,
   SetRecoveryOptions as SetRecoveryOptionsBase,
   WalletDerived,
@@ -186,6 +187,8 @@ export type SetActiveSolanaWalletOptions = SetActiveEmbeddedWalletOptionsBase & 
 export interface SolanaWalletActions {
   /** Create a new Solana embedded wallet */
   create(options?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount>
+  /** Import a Solana embedded wallet from a base58-encoded secret key */
+  import(options: ImportEmbeddedWalletOptions): Promise<EmbeddedAccount>
   /** List of available Solana wallets */
   wallets: ConnectedEmbeddedSolanaWallet[]
   /** Set the active wallet */
