@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.16
+
+### Patch Changes
+
+- [#248](https://github.com/openfort-xyz/openfort-react/pull/248) [`7a0b70c`](https://github.com/openfort-xyz/openfort-react/commit/7a0b70c5986a1f1d1dbb5956b24a4bc45f608c56) Thanks [@n00m4d](https://github.com/n00m4d)! - Import wallet feature
+
 ## 1.0.15
 
 ### Patch Changes
