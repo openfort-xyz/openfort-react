@@ -15,6 +15,7 @@ import type { Hex } from 'viem'
 import type {
   ConnectedWalletState,
   CreateEmbeddedWalletOptions,
+  ImportEmbeddedWalletOptions,
   SetActiveEmbeddedWalletOptionsBase,
   SetRecoveryOptions as SharedSetRecoveryOptions,
   WalletDerived,
@@ -93,6 +94,8 @@ export type SetActiveEthereumWalletOptions = SetActiveEmbeddedWalletOptionsBase 
 export interface EthereumWalletActions {
   /** Create a new Ethereum embedded wallet */
   create(options?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount>
+  /** Import an Ethereum embedded wallet from a hex-encoded private key */
+  import(options: ImportEmbeddedWalletOptions): Promise<EmbeddedAccount>
   /** List of available Ethereum wallets */
   wallets: ConnectedEmbeddedEthereumWallet[]
   /** Set the active wallet */

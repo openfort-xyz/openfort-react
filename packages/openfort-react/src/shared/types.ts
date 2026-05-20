@@ -77,3 +77,12 @@ export type CreateEmbeddedWalletOptions = {
   /** Fee sponsorship ID for gas sponsorship */
   feeSponsorshipId?: string
 } & OpenfortHookOptions<CreateEmbeddedWalletResult>
+
+/**
+ * Options for importing an embedded wallet from a raw private key.
+ * EVM expects a hex-encoded private key; Solana expects a base58-encoded secret key.
+ */
+export type ImportEmbeddedWalletOptions = CreateEmbeddedWalletOptions & {
+  /** Raw private key (hex for EVM, base58 for Solana). */
+  privateKey: string
+}
