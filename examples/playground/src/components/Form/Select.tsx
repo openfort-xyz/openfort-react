@@ -8,7 +8,14 @@ export const Select = ({ options, ...props }: SelectProps) => {
   const opts = options?.length ? options : [{ label: '— No options —', value: '' }]
 
   return (
-    <select {...props} className={cn('w-full', props.className, props.value === 'undefined' && 'text-blue-500')}>
+    <select
+      {...props}
+      className={cn(
+        'w-full rounded-md border border-input bg-background px-2 py-1 text-sm',
+        props.className,
+        props.value === 'undefined' && 'text-blue-500'
+      )}
+    >
       {opts.map((option) =>
         typeof option === 'object' ? (
           <option key={option.value} value={option.value}>

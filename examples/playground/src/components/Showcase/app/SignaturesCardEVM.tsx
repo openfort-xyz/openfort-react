@@ -1,13 +1,12 @@
 import { useOpenfort } from '@openfort/react'
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
-import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { createWalletClient, custom } from 'viem'
 import { useDisplayEthereumAddress } from '@/hooks/useConnectedEthereumAccount'
 import { toError } from '@/lib/errors'
 import { SignaturesLayout } from './signatures-shared'
 
-export const SignaturesCardEVM = ({ tooltip }: { tooltip?: { hook: string; body: ReactNode } }) => {
+export const SignaturesCardEVM = ({ hook }: { hook?: string }) => {
   const core = useOpenfort()
   const address = useDisplayEthereumAddress()
   const { status, activeWallet } = useEthereumEmbeddedWallet()
@@ -51,7 +50,7 @@ export const SignaturesCardEVM = ({ tooltip }: { tooltip?: { hook: string; body:
 
   return (
     <SignaturesLayout
-      tooltip={tooltip}
+      hook={hook}
       isPending={isPending}
       canSign={!!address}
       signature={data ?? undefined}

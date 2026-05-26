@@ -1,7 +1,8 @@
 import { CircleX, TrashIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Button } from '@/components/Showcase/ui/Button'
+import { HookBadge } from '@/components/HookBadge'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/cn'
@@ -37,9 +38,11 @@ export function SessionKeyListItem({
           </div>
           <Tooltip>
             <TooltipTrigger asChild>
-              <button
+              <Button
                 type="button"
-                className="btn btn-sm btn-ghost text-error! p-0 ml-2"
+                variant="ghost"
+                size="icon-sm"
+                className="ml-2 text-destructive"
                 onClick={async () => {
                   if (!active) {
                     onRemove(sessionKeyId)
@@ -52,7 +55,7 @@ export function SessionKeyListItem({
                 }}
               >
                 {active ? <CircleX size={16} /> : <TrashIcon size={16} />}
-              </button>
+              </Button>
             </TooltipTrigger>
             <TooltipContent>{active ? 'Revoke permissions' : 'Remove session key from list'}</TooltipContent>
           </Tooltip>
@@ -63,7 +66,7 @@ export function SessionKeyListItem({
         <div>Private key: {privateKey}</div>
         <div>Session key ID: {sessionKeyId}</div>
         <div>
-          Status: <span className={active ? '' : 'text-error'}>{active ? 'Active' : 'PERMISSIONS REVOKED'}</span>
+          Status: <span className={active ? '' : 'text-destructive'}>{active ? 'Active' : 'PERMISSIONS REVOKED'}</span>
         </div>
       </TooltipContent>
     </Tooltip>
@@ -103,7 +106,6 @@ export function SessionKeyMessages({ error, revokeError, isRevoking, signedData 
 }
 
 interface SessionKeysCreateButtonProps {
-  tooltip?: { hook: string; body: ReactNode }
   isCreating: boolean
   disabled: boolean
   isSessionKeySupported: boolean
@@ -111,57 +113,28 @@ interface SessionKeysCreateButtonProps {
 }
 
 export function SessionKeysCreateButton({
-  tooltip,
   isCreating,
   disabled,
   isSessionKeySupported,
   isExternalWallet,
 }: SessionKeysCreateButtonProps) {
-  const getTooltipBody = () => {
-    if (isExternalWallet) {
-      return <>Session keys require Openfort embedded wallet. Switch from external wallet to use session keys.</>
-    }
-    if (!isSessionKeySupported) {
-      return <>Session keys are only available for Smart Accounts. EOA wallets cannot use session keys.</>
-    }
-    return tooltip?.body ?? 'Grant session keys with specific permissions.'
-  }
-
-  if (tooltip) {
-    return (
-      <Tooltip delayDuration={500}>
-        <TooltipTrigger asChild>
-          <div className="w-full">
-            <Button className="btn btn-accent w-full" type="submit" disabled={disabled}>
-              {isCreating ? 'Creating...' : 'Create session key'}
-            </Button>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <h3 className="text-base mb-1">{tooltip.hook}</h3>
-          {getTooltipBody()}
-        </TooltipContent>
-      </Tooltip>
-    )
-  }
+  const disabledReason = isExternalWallet
+    ? 'Session keys require the Openfort embedded wallet. Switch from your external wallet to use session keys.'
+    : !isSessionKeySupported
+      ? 'Session keys are only available for Smart Accounts. EOA wallets cannot use session keys.'
+      : ''
 
   return (
-    <Tooltip delayDuration={500}>
-      <TooltipTrigger asChild>
-        <div className="w-full">
-          <Button className="btn btn-accent w-full" type="submit" disabled={disabled}>
-            {isCreating ? 'Creating...' : 'Create session key'}
-          </Button>
-        </div>
-      </TooltipTrigger>
-      <TooltipContent side="top">
-        {typeof getTooltipBody() === 'string' ? getTooltipBody() : getTooltipBody()}
-      </TooltipContent>
-    </Tooltip>
+    <>
+      <Button type="submit" className="w-full" disabled={disabled}>
+        {isCreating ? 'Creating...' : 'Create session key'}
+      </Button>
+      <InputMessage message={disabledReason} show={!!disabledReason && disabled} variant="default" />
+    </>
   )
 }
 
-export function SessionKeysCardShell({ children }: { children: ReactNode }) {
+export function SessionKeysCardShell({ hook, children }: { hook?: string; children: ReactNode }) {
   return (
     <Card>
       <CardHeader>
@@ -169,6 +142,7 @@ export function SessionKeysCardShell({ children }: { children: ReactNode }) {
         <CardDescription>
           Grant session keys with specific permissions to enhance security and control over wallet actions.
         </CardDescription>
+        {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
       <CardContent>{children}</CardContent>
     </Card>

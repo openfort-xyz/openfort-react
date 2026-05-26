@@ -64,7 +64,7 @@ const SimpleWalletButton = ({
     disabled={disabled}
     className={cn(
       'w-full flex items-center justify-start gap-3 py-2 px-3 rounded-md text-sm transition-colors',
-      isActive ? 'bg-base-300/80 text-foreground' : 'hover:bg-base-300/50 text-muted-foreground hover:text-foreground',
+      isActive ? 'bg-muted text-foreground' : 'hover:bg-muted/50 text-muted-foreground hover:text-foreground',
       disabled && 'opacity-60 cursor-not-allowed'
     )}
   >
@@ -152,7 +152,7 @@ export const ConnectExternalWalletCard = () => {
                           {iconNode}
                         </span>
                       ) : (
-                        <span className="h-5 w-5 rounded bg-base-300 flex items-center justify-center text-[10px] font-medium">
+                        <span className="h-5 w-5 rounded bg-muted flex items-center justify-center text-[10px] font-medium">
                           {c.name?.[0] ?? c.id?.[0] ?? '?'}
                         </span>
                       )}

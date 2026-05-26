@@ -1,5 +1,4 @@
 import { useGrantPermissions, useRevokePermissions } from '@openfort/react'
-import type { ReactNode } from 'react'
 import { useEffect, useMemo, useState } from 'react'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { getAddress } from 'viem/utils'
@@ -14,7 +13,7 @@ import {
   SessionKeysCreateButton,
 } from './session-keys-shared'
 
-export const SessionKeysCardEVM = ({ tooltip }: { tooltip?: { hook: string; body: ReactNode } }) => {
+export const SessionKeysCardEVM = ({ hook }: { hook?: string }) => {
   const { grantPermissions, isLoading, error } = useGrantPermissions()
   const { revokePermissions, isLoading: isRevoking, error: revokeError } = useRevokePermissions()
   const [sessionKeys, setSessionKeys] = useState<StoredData[]>([])
@@ -43,7 +42,7 @@ export const SessionKeysCardEVM = ({ tooltip }: { tooltip?: { hook: string; body
   }, [key])
 
   return (
-    <SessionKeysCardShell>
+    <SessionKeysCardShell hook={hook}>
       <form
         className="space-y-2"
         onSubmit={async (e) => {
@@ -90,7 +89,6 @@ export const SessionKeysCardEVM = ({ tooltip }: { tooltip?: { hook: string; body
         }}
       >
         <SessionKeysCreateButton
-          tooltip={tooltip}
           isCreating={isCreating}
           disabled={grantDisabled}
           isSessionKeySupported={isSessionKeySupported}

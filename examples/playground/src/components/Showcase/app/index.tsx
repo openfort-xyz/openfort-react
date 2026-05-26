@@ -1,7 +1,6 @@
 import { ChainTypeEnum, useOpenfort, useSignOut, useUser } from '@openfort/react'
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
-import { Link } from '@tanstack/react-router'
 import { ConnectExternalWalletCard } from '@/components/Showcase/app/ConnectExternalWalletCard'
 import { SendTransactionCardSolana } from '@/components/Showcase/app/SendTransactionCardSolana'
 import { SessionKeysCard } from '@/components/Showcase/app/SessionKeys'
@@ -15,9 +14,8 @@ import { SwitchChainCardEVM } from '@/components/Showcase/app/SwitchChainCardEVM
 import { TransactionHistoryCardSolana } from '@/components/Showcase/app/TransactionHistoryCardSolana'
 import { WriteContractCard } from '@/components/Showcase/app/WriteContract'
 import { WriteContractCardEVM } from '@/components/Showcase/app/WriteContractCardEVM'
-import { SampleTooltipLink } from '@/components/Showcase/auth/SampleTooltipLink'
-import { Button } from '@/components/Showcase/ui/Button'
 import { TruncatedText } from '@/components/TruncatedText'
+import { Button } from '@/components/ui/button'
 import { useDisplayEthereumAddress } from '@/hooks/useConnectedEthereumAccount'
 import { usePlaygroundMode } from '@/providers'
 
@@ -48,76 +46,26 @@ export const App = () => {
           <p className="text-muted-foreground">Connected with {address ? <TruncatedText text={address} /> : '...'}</p>
         </div>
 
-        <SampleTooltipLink href="/auth/useSignOut" hook="useSignOut" fn="signOut">
-          <Button
-            className="btn btn-accent btn-sm"
-            onClick={() => {
-              signOut()
-            }}
-          >
-            Sign out
-          </Button>
-        </SampleTooltipLink>
+        <Button variant="outline" size="sm" onClick={() => signOut()}>
+          Sign out
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {isSVM ? (
           <>
-            <SignaturesCardSolana
-              tooltip={{
-                hook: 'useSolanaMessageSigner',
-                body: <>Signs messages using @solana/kit MessagePartialSigner from @openfort/react/solana.</>,
-              }}
-            />
-            <SendTransactionCardSolana
-              tooltip={{
-                hook: 'sendSolTransaction',
-                body: <>Sends SOL via @solana/kit pipe API or gasless via Kora fee payer.</>,
-              }}
-            />
-            <TransactionHistoryCardSolana
-              tooltip={{
-                hook: 'getTransactionHistory',
-                body: <>Fetches recent transactions via getSignaturesForAddress.</>,
-              }}
-            />
+            <SignaturesCardSolana hook="useSolanaMessageSigner" />
+            <SendTransactionCardSolana hook="sendSolTransaction" />
+            <TransactionHistoryCardSolana hook="getTransactionHistory" />
             <SetActiveWalletsCardSolana />
           </>
         ) : hasWagmi ? (
           <>
-            <SignaturesCard
-              tooltip={{
-                hook: 'useSignMessage',
-                body: <>Uses useSignMessage (wagmi) for signing messages.</>,
-              }}
-            />
-            <WriteContractCard
-              tooltip={{
-                hook: 'useWriteContract',
-                body: <>Uses useWriteContract (wagmi) for minting tokens.</>,
-              }}
-            />
-            <SwitchChainCardEVM
-              tooltip={{
-                hook: 'useSwitchChain',
-                body: (
-                  <>
-                    Uses{' '}
-                    <Link to="/wagmi/useSwitchChain" className="px-1 group">
-                      useChainId
-                    </Link>
-                    , useSwitchChain (wagmi).
-                  </>
-                ),
-              }}
-            />
+            <SignaturesCard hook="useSignMessage" />
+            <WriteContractCard hook="useWriteContract" />
+            <SwitchChainCardEVM hook="useSwitchChain" />
             <div className="lg:col-span-2 xl:col-span-3 flex flex-col lg:flex-row gap-4">
-              <SessionKeysCard
-                tooltip={{
-                  hook: 'useGrantPermissions',
-                  body: <>Uses useGrantPermissions to create session keys.</>,
-                }}
-              />
+              <SessionKeysCard hook="useGrantPermissions" />
               <div className="min-w-[40%]">
                 <ConnectExternalWalletCard />
               </div>
@@ -125,30 +73,10 @@ export const App = () => {
           </>
         ) : (
           <>
-            <SignaturesCardEVM
-              tooltip={{
-                hook: 'viem signMessage',
-                body: <>Signs messages using viem WalletClient with the embedded provider.</>,
-              }}
-            />
-            <WriteContractCardEVM
-              tooltip={{
-                hook: 'viem readContract / writeContract',
-                body: <>Reads and writes contracts using viem with the embedded provider.</>,
-              }}
-            />
-            <SwitchChainCardEVM
-              tooltip={{
-                hook: 'wallet_switchEthereumChain',
-                body: <>Switches EVM chain using the embedded wallet provider RPC call.</>,
-              }}
-            />
-            <SessionKeysCardEVM
-              tooltip={{
-                hook: 'useGrantPermissions',
-                body: <>Uses useGrantPermissions to create session keys.</>,
-              }}
-            />
+            <SignaturesCardEVM hook="viem signMessage" />
+            <WriteContractCardEVM hook="viem readContract / writeContract" />
+            <SwitchChainCardEVM hook="wallet_switchEthereumChain" />
+            <SessionKeysCardEVM hook="useGrantPermissions" />
           </>
         )}
         {!isSVM && !hasWagmi && <SetActiveWalletsCardEthereum />}

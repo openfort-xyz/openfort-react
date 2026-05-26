@@ -1,5 +1,4 @@
 import { embeddedWalletId, useGrantPermissions, useRevokePermissions } from '@openfort/react'
-import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { getAddress } from 'viem/utils'
@@ -15,7 +14,7 @@ import {
   SessionKeysCreateButton,
 } from './session-keys-shared'
 
-export const SessionKeysCard = ({ tooltip }: { tooltip?: { hook: string; body: ReactNode } }) => {
+export const SessionKeysCard = ({ hook }: { hook?: string }) => {
   const { address, chainId } = useConnectedEthereumAccount()
   const { connector } = useAccount()
   const isSessionKeySupported = useIsSessionKeySupported()
@@ -45,7 +44,7 @@ export const SessionKeysCard = ({ tooltip }: { tooltip?: { hook: string; body: R
   }, [key])
 
   return (
-    <SessionKeysCardShell>
+    <SessionKeysCardShell hook={hook}>
       <form
         className="space-y-2"
         onSubmit={async (e) => {
@@ -87,7 +86,6 @@ export const SessionKeysCard = ({ tooltip }: { tooltip?: { hook: string; body: R
         }}
       >
         <SessionKeysCreateButton
-          tooltip={tooltip}
           isCreating={isLoading}
           disabled={grantDisabled}
           isSessionKeySupported={isSessionKeySupported}

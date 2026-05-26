@@ -1,6 +1,7 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
 import { CheckIcon, Code2Icon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { commonVariables, onSettledInputs } from '@/components/Variable/commonVariables'
 import { BaseVariable, type HookInput } from '@/components/Variable/Variable'
@@ -80,7 +81,7 @@ function SampleComponent() {
       navigate({
         to: '.',
         search: (prev) => {
-          const { focus, ...rest } = prev
+          const { focus: _focus, ...rest } = prev
           return rest
         },
         replace: true,
@@ -92,98 +93,114 @@ function SampleComponent() {
   const [copied, setCopied] = useState(false)
 
   return (
-    <div className="flex flex-col gap-2 font-mono text-sm">
-      <h2 className="text-gray-700 dark:text-gray-300 font-medium text-xl">
-        {name}
-        <Tooltip delayDuration={500}>
-          <TooltipTrigger asChild>
-            <button
-              className="btn btn-accent btn-sm btn-circle ml-2 size-7 relative"
-              type="button"
-              onClick={() => {
-                navigator.clipboard.writeText(sample)
-                setCopied(true)
-                setTimeout(() => {
-                  setCopied(false)
-                }, 1500)
-              }}
+    <div className="flex flex-col gap-3 text-sm">
+      {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      <div className="overflow-hidden rounded-lg border bg-card">
+        <div className="flex items-center justify-between gap-2 border-b bg-muted/50 px-3 py-2">
+          <div className="flex items-center gap-2 font-mono text-sm font-medium">
+            <span className="text-muted-foreground">{'›'}</span>
+            {name}
+          </div>
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                'text-xs text-muted-foreground transition-opacity duration-300',
+                copied ? 'opacity-100' : 'opacity-0'
+              )}
             >
-              <CheckIcon
-                className={cn(
-                  'absolute size-4.5 inline-block transition-opacity duration-300',
-                  copied ? 'opacity-100' : 'opacity-0'
-                )}
-              />
-              <Code2Icon
-                className={cn(
-                  'absolute size-4.5 inline-block transition-opacity duration-300',
-                  copied ? 'opacity-0' : 'opacity-100'
-                )}
-              />
-            </button>
-          </TooltipTrigger>
-          <TooltipContent>Copy sample code</TooltipContent>
-        </Tooltip>
-        <span className={cn('text-xs ml-1 transition-opacity duration-300', copied ? 'opacity-100' : 'opacity-0')}>
-          Copied
-        </span>
-      </h2>
-      {description && <p className="text-sm text-gray-500 dark:text-gray-400">{description}</p>}
-      <div className="flex flex-col gap-2 mb-4">
-        <span className="text-gray-700 dark:text-gray-300 font-medium text-lg">Options</span>
-        {Object.keys(opts).length === 0 ? (
-          <span className="text-gray-500">No options</span>
-        ) : (
-          <div className="flex flex-col gap-2 group">
-            {Object.entries(opts ?? {}).map(([key, value], i) => (
-              <BaseVariable
-                focusedVariable={params.focus}
-                // biome-ignore lint/suspicious/noArrayIndexKey: allowed for simplicity
-                key={key + i}
-                name={key}
-                value={value}
-                depth={0}
-                maxDepth={maxDepth}
-                variables={{
-                  [key]: {
-                    ...(optionsVariables?.[key] ?? onSettledInputs[key] ?? {}),
-                    onEdit: (newValue: Record<string, unknown>) => {
-                      setOpts((prev) => ({
-                        ...prev,
-                        [key]: newValue,
-                      }))
-                    },
-                  },
-                }}
-                defaultExpanded={defaultExpanded}
-              />
-            ))}
+              Copied
+            </span>
+            <Tooltip delayDuration={500}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative size-7"
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(sample)
+                    setCopied(true)
+                    setTimeout(() => {
+                      setCopied(false)
+                    }, 1500)
+                  }}
+                >
+                  <CheckIcon
+                    className={cn(
+                      'absolute size-4 transition-opacity duration-300',
+                      copied ? 'opacity-100' : 'opacity-0'
+                    )}
+                  />
+                  <Code2Icon
+                    className={cn(
+                      'absolute size-4 transition-opacity duration-300',
+                      copied ? 'opacity-0' : 'opacity-100'
+                    )}
+                  />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy sample code</TooltipContent>
+            </Tooltip>
           </div>
-        )}
-      </div>
-      <div className="flex flex-col gap-2">
-        <span className="text-gray-700 dark:text-gray-300 font-medium text-lg">Values</span>
-        {Object.keys(values).length === 0 ? (
-          <span className="text-gray-500">No values</span>
-        ) : (
-          <div className="flex flex-col gap-2 group">
-            {Object.entries(values)
-              .sort()
-              .map(([key, value], i) => (
-                <BaseVariable
-                  // biome-ignore lint/suspicious/noArrayIndexKey: allowed for simplicity
-                  key={key + i}
-                  name={key}
-                  value={value}
-                  depth={0}
-                  maxDepth={maxDepth}
-                  variables={resolvedVariables}
-                  defaultExpanded={defaultExpanded}
-                  focusedVariable={params.focus}
-                />
-              ))}
+        </div>
+        <div className="flex flex-col gap-4 p-4 font-mono text-sm">
+          <div className="flex flex-col gap-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Options</span>
+            {Object.keys(opts).length === 0 ? (
+              <span className="text-muted-foreground">No options</span>
+            ) : (
+              <div className="group flex flex-col gap-2">
+                {Object.entries(opts ?? {}).map(([key, value], i) => (
+                  <BaseVariable
+                    focusedVariable={params.focus}
+                    // biome-ignore lint/suspicious/noArrayIndexKey: allowed for simplicity
+                    key={key + i}
+                    name={key}
+                    value={value}
+                    depth={0}
+                    maxDepth={maxDepth}
+                    variables={{
+                      [key]: {
+                        ...(optionsVariables?.[key] ?? onSettledInputs[key] ?? {}),
+                        onEdit: (newValue: Record<string, unknown>) => {
+                          setOpts((prev) => ({
+                            ...prev,
+                            [key]: newValue,
+                          }))
+                        },
+                      },
+                    }}
+                    defaultExpanded={defaultExpanded}
+                  />
+                ))}
+              </div>
+            )}
           </div>
-        )}
+          <div className="flex flex-col gap-2">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">Values</span>
+            {Object.keys(values).length === 0 ? (
+              <span className="text-muted-foreground">No values</span>
+            ) : (
+              <div className="group flex flex-col gap-2">
+                {Object.entries(values)
+                  .sort()
+                  .map(([key, value], i) => (
+                    <BaseVariable
+                      // biome-ignore lint/suspicious/noArrayIndexKey: allowed for simplicity
+                      key={key + i}
+                      name={key}
+                      value={value}
+                      depth={0}
+                      maxDepth={maxDepth}
+                      variables={resolvedVariables}
+                      defaultExpanded={defaultExpanded}
+                      focusedVariable={params.focus}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

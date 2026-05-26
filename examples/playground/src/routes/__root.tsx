@@ -1,8 +1,10 @@
-import { ChainTypeEnum, type Theme, useOpenfort, useUser } from '@openfort/react'
-import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
+import { ChainTypeEnum, type Theme, useOpenfort } from '@openfort/react'
+import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { useEffect, useLayoutEffect } from 'react'
 import z from 'zod'
-import { Nav } from '@/components/Nav'
+import { AppSidebar } from '@/components/AppSidebar'
+import { TopBar } from '@/components/TopBar'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 import { useAppStore } from '@/lib/useAppStore'
 import { usePlaygroundMode } from '@/providers'
 
@@ -25,7 +27,6 @@ let themeIndex = 0
 function RootComponent() {
   const { mode } = usePlaygroundMode()
   const { chainType, setChainType } = useOpenfort()
-  const { isConnected } = useUser()
 
   // Sync chainType from stored playground mode on load and when mode changes.
   useLayoutEffect(() => {
@@ -34,7 +35,6 @@ function RootComponent() {
       setChainType(targetChain)
     }
   }, [mode, chainType, setChainType])
-  const location = useLocation()
 
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -58,9 +58,14 @@ function RootComponent() {
   }, [])
 
   return (
-    <div className="flex flex-col min-h-screen w-screen">
-      <Nav showLogo={location.pathname !== '/showcase/auth' || isConnected} />
-      <Outlet />
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <TopBar />
+        <div className="flex flex-1 flex-col">
+          <Outlet />
+        </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
