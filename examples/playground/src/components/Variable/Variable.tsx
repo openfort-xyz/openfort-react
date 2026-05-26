@@ -101,6 +101,14 @@ const formatValue = (val: any, valueType: string, _name: string) => {
   }
 }
 
+/** Short TS type label shown after a top-level value. Uses the explicit
+ * typescriptType when provided, otherwise infers it for primitives only. */
+const getTypeLabel = (variable: HookInput | undefined, valueType: string): string | undefined => {
+  if (variable?.typescriptType) return variable.typescriptType
+  if (valueType === 'boolean' || valueType === 'string' || valueType === 'number') return valueType
+  return undefined
+}
+
 const EditableVariable = ({
   variable,
   value,
@@ -235,6 +243,7 @@ export const BaseVariable = ({
   const isEditable = hasVariable && !!variable.onEdit
 
   const actualType = getValueType(value)
+  const typeLabel = depth === 0 ? getTypeLabel(variable, actualType) : undefined
   const isExpandable =
     (actualType === 'object' || actualType === 'array' || (actualType === 'function' && hasVariable)) &&
     value !== null &&
@@ -333,6 +342,7 @@ export const BaseVariable = ({
             formatValue(value, actualType, name)
           )}
         </span>
+        {typeLabel && <span className="text-xs text-muted-foreground/70">: {typeLabel}</span>}
       </div>
     )
   }
@@ -368,6 +378,7 @@ export const BaseVariable = ({
         <span className={cn('font-mono text-sm', getValueColor(actualType, 'text'))}>
           {formatValue(value, actualType, name)}
         </span>
+        {typeLabel && <span className="text-xs text-muted-foreground/70">: {typeLabel}</span>}
       </button>
       {renderExpandedContent()}
     </div>

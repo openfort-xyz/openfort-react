@@ -1,5 +1,5 @@
 import { useNavigate, useSearch } from '@tanstack/react-router'
-import { CheckIcon, Code2Icon } from 'lucide-react'
+import { Braces, CheckIcon, Code2Icon, ExternalLink } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
@@ -19,6 +19,7 @@ export const HookVariable = <TOptions extends object, TResult extends object>({
   defaultOptions = EMPTY_OPTIONS as TOptions,
   optionsVariables,
   importPath = '@openfort/react',
+  docsUrl = 'https://www.openfort.io/docs',
 }: {
   hook: (opts?: TOptions) => TResult
   name: string
@@ -30,6 +31,8 @@ export const HookVariable = <TOptions extends object, TResult extends object>({
   optionsVariables?: Record<string, HookInput>
   /** Import path for sample code (default: @openfort/react). Use e.g. @openfort/react/wagmi for wagmi hooks. */
   importPath?: string
+  /** Link to this hook's documentation. Defaults to the Openfort docs home. */
+  docsUrl?: string
 }) => {
   const [opts, setOpts] = useState<TOptions>(defaultOptions)
 
@@ -91,25 +94,54 @@ function SampleComponent() {
   }, [params.focus, navigate])
 
   const [copied, setCopied] = useState(false)
+  const [showCode, setShowCode] = useState(false)
 
   return (
     <div className="flex flex-col gap-3 text-sm">
       {description && <p className="text-sm text-muted-foreground">{description}</p>}
       <div className="overflow-hidden rounded-lg border bg-card">
         <div className="flex items-center justify-between gap-2 border-b bg-muted/50 px-3 py-2">
-          <div className="flex items-center gap-2 font-mono text-sm font-medium">
+          <div className="flex min-w-0 items-center gap-2 font-mono text-sm">
             <span className="text-muted-foreground">{'›'}</span>
-            {name}
+            <span className="font-medium">{name}</span>
+            <span className="hidden truncate text-xs text-muted-foreground md:inline">
+              import {'{'} {name} {'}'} from '{importPath}'
+            </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-1">
             <span
               className={cn(
-                'text-xs text-muted-foreground transition-opacity duration-300',
+                'mr-1 text-xs text-muted-foreground transition-opacity duration-300',
                 copied ? 'opacity-100' : 'opacity-0'
               )}
             >
               Copied
             </span>
+            <Tooltip delayDuration={500}>
+              <TooltipTrigger asChild>
+                <Button asChild variant="ghost" size="icon" className="size-7">
+                  <a href={docsUrl} target="_blank" rel="noopener noreferrer" aria-label="Open documentation">
+                    <ExternalLink className="size-4" />
+                  </a>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Docs</TooltipContent>
+            </Tooltip>
+            <Tooltip delayDuration={500}>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  type="button"
+                  className={cn('size-7', showCode && 'bg-accent text-foreground')}
+                  aria-pressed={showCode}
+                  onClick={() => setShowCode((v) => !v)}
+                >
+                  <Braces className="size-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{showCode ? 'Hide' : 'Show'} sample code</TooltipContent>
+            </Tooltip>
             <Tooltip delayDuration={500}>
               <TooltipTrigger asChild>
                 <Button
@@ -143,6 +175,11 @@ function SampleComponent() {
             </Tooltip>
           </div>
         </div>
+        {showCode && (
+          <pre className="overflow-x-auto border-b bg-background/60 px-4 py-3 font-mono text-xs leading-relaxed text-muted-foreground">
+            {sample}
+          </pre>
+        )}
         <div className="flex flex-col gap-4 p-4 font-mono text-sm">
           <div className="flex flex-col gap-2">
             <span className="text-xs uppercase tracking-wide text-muted-foreground">Options</span>
