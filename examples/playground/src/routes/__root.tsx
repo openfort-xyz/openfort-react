@@ -2,9 +2,13 @@ import { ChainTypeEnum, type Theme, useOpenfort, useUser } from '@openfort/react
 import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
 import { useEffect, useLayoutEffect } from 'react'
 import z from 'zod'
+import { Analytics } from '@/components/Analytics'
 import { Nav } from '@/components/Nav'
+import { initializeAnalytics } from '@/lib/analytics'
 import { useAppStore } from '@/lib/useAppStore'
 import { usePlaygroundMode } from '@/providers'
+
+initializeAnalytics()
 
 const MODE_TO_CHAIN: Record<'evm' | 'svm', ChainTypeEnum> = {
   evm: ChainTypeEnum.EVM,
@@ -61,6 +65,7 @@ function RootComponent() {
     <div className="flex flex-col min-h-screen w-screen">
       <Nav showLogo={location.pathname !== '/showcase/auth' || isConnected} />
       <Outlet />
+      <Analytics />
     </div>
   )
 }
