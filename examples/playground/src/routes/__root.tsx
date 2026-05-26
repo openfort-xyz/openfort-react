@@ -2,11 +2,15 @@ import { ChainTypeEnum, type Theme, useOpenfort } from '@openfort/react'
 import { createRootRoute, Outlet } from '@tanstack/react-router'
 import { useEffect, useLayoutEffect } from 'react'
 import z from 'zod'
+import { Analytics } from '@/components/Analytics'
 import { AppSidebar } from '@/components/AppSidebar'
 import { TopBar } from '@/components/TopBar'
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { initializeAnalytics } from '@/lib/analytics'
 import { useAppStore } from '@/lib/useAppStore'
 import { usePlaygroundMode } from '@/providers'
+
+initializeAnalytics()
 
 const MODE_TO_CHAIN: Record<'evm' | 'svm', ChainTypeEnum> = {
   evm: ChainTypeEnum.EVM,
@@ -66,6 +70,7 @@ function RootComponent() {
           <Outlet />
         </div>
       </SidebarInset>
+      <Analytics />
     </SidebarProvider>
   )
 }

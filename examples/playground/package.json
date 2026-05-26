@@ -32,6 +32,7 @@
     "framer-motion": "^12.23.12",
     "lucide-react": "^0.535.0",
     "ox": "^0.6.10",
+    "posthog-js": "^1.257.0",
     "radix-ui": "^1.4.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
