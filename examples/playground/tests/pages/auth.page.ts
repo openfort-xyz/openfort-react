@@ -20,25 +20,29 @@ export class AuthPage {
   }
 
   /**
-   * Click "Continue as guest" on the showcase auth page, then create a wallet on the dashboard.
+   * Sign up as a guest via the Openfort widget, then create a wallet on the dashboard.
    *
    * Flow:
-   *  1. Click the page-level "Continue as guest" button (no modal)
+   *  1. The onboarding screen auto-opens the widget; click "Guest" inside the modal
    *  2. Auth redirects to / (dashboard) — no wallet yet (connectOnLogin=false)
-   *  3. In the Wallets card: Create new wallet → Smart Account (EVM only) → Automatic
-   *  4. Wait for "Connected with <address>"
+   *  3. Dismiss the widget if it lingers on a create-wallet step
+   *  4. In the Wallets card: Create new wallet → Smart Account (EVM only) → Automatic
+   *  5. Wait for "Connected with <address>"
    */
   async continueAsGuest(mode: PlaygroundMode) {
-    const guestBtn = this.page.getByRole('button', { name: /^continue as guest$/i })
-    await expect(guestBtn).toBeEnabled({ timeout: 30_000 })
-    await guestBtn.click()
+    // Onboarding auto-opens the Openfort widget modal; sign up via the "Guest" option.
+    await expect(this.page.getByPlaceholder('Enter your email')).toBeVisible({ timeout: 30_000 })
+    await this.page.getByRole('button', { name: /^guest$/i }).click()
 
-    // Find the Wallets card on the dashboard (auth redirects to / once isAuthenticated=true)
+    // Guest auth redirects to the dashboard. With connectOnLogin=false there is no wallet yet,
+    // and the widget can linger on a create-wallet step — dismiss it, then create the wallet
+    // from the Wallets card so the flow exercises the embedded-wallet create hook.
     const walletsTitle = this.page
       .locator('[data-slot="card-title"]')
       .filter({ hasText: /^wallets$/i })
       .first()
-    await expect(walletsTitle).toBeVisible({ timeout: 30_000 })
+    await expect(walletsTitle).toBeVisible({ timeout: 60_000 })
+    await this.page.keyboard.press('Escape')
     const walletsCard = walletsTitle.locator('xpath=ancestor::*[@data-slot="card"][1]')
 
     // Step 1: open wallet creation
