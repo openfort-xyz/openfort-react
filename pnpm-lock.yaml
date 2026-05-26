@@ -93,9 +93,6 @@ importers:
 
   examples/playground:
     dependencies:
-      '@hookform/resolvers':
-        specifier: ^5.2.1
-        version: 5.2.2(react-hook-form@7.71.2(react@18.3.1))
       '@openfort/react':
         specifier: workspace:*
         version: link:../../packages/openfort-react
@@ -156,9 +153,6 @@ importers:
       react-dom:
         specifier: 18.3.1
         version: 18.3.1(react@18.3.1)
-      react-hook-form:
-        specifier: ^7.62.0
-        version: 7.71.2(react@18.3.1)
       tailwind-merge:
         specifier: ^3.3.1
         version: 3.5.0
@@ -2015,11 +2009,6 @@ packages:
     peerDependencies:
       hono: '>=4.12.18'
 
-  '@hookform/resolvers@5.2.2':
-    resolution: {integrity: sha512-A/IxlMLShx3KjV/HeTcTfaMxdwy690+L/ZADoeaTltLx+CVuzkeVIPuybK3jrRfw7YZnmdKsVVHAlEPIAEUNlA==}
-    peerDependencies:
-      react-hook-form: ^7.55.0
-
   '@inquirer/external-editor@1.0.3':
     resolution: {integrity: sha512-RWbSrDiYmO4LbejWY7ttpxczuwQyZLBUyygsA9Nsv95hpzUWwnNTVQmAq3xuh7vNwCp07UTmE5i11XAEExx4RA==}
     engines: {node: '>=18'}
@@ -3813,9 +3802,6 @@ packages:
 
   '@standard-schema/spec@1.1.0':
     resolution: {integrity: sha512-l2aFy5jALhniG5HgqrD6jXLi/rUWrKvqN/qJx6yoJsgKhblVd+iqqU4RCXavm/jPityDo5TCvKMnpjKnOriy0w==}
-
-  '@standard-schema/utils@0.3.0':
-    resolution: {integrity: sha512-e7Mew686owMaPJVNNLs55PUvgz371nKgwsc4vxE49zsODpJEnxgxRo2y/OKrqueavXgZNMDVj3DdHFlaSAeU8g==}
 
   '@supabase/auth-js@2.98.0':
     resolution: {integrity: sha512-GBH361T0peHU91AQNzOlIrjUZw9TZbB9YDRiyFgk/3Kvr3/Z1NWUZ2athWTfHhwNNi8IrW00foyFxQD9IO/Trg==}
@@ -6788,12 +6774,6 @@ packages:
     peerDependencies:
       react: 18.3.1
 
-  react-hook-form@7.71.2:
-    resolution: {integrity: sha512-1CHvcDYzuRUNOflt4MOq3ZM46AronNJtQ1S7tnX6YN4y72qhgiUItpacZUAQ0TyWYci3yz1X+rXaSxiuEm86PA==}
-    engines: {node: '>=18.0.0'}
-    peerDependencies:
-      react: 18.3.1
-
   react-international-phone@4.8.0:
     resolution: {integrity: sha512-PoyXx8t0OZNZXLupZN5UtmLb8nO6PQ6f6jQvYCAtg7VzxonuBcDs/4YA4+flqZZj5QOVqN4DLY1p39mEtJAwzw==}
     peerDependencies:
@@ -9288,11 +9268,6 @@ snapshots:
     dependencies:
       hono: 4.12.21
     optional: true
-
-  '@hookform/resolvers@5.2.2(react-hook-form@7.71.2(react@18.3.1))':
-    dependencies:
-      '@standard-schema/utils': 0.3.0
-      react-hook-form: 7.71.2(react@18.3.1)
 
   '@inquirer/external-editor@1.0.3(@types/node@25.3.5)':
     dependencies:
@@ -11828,8 +11803,6 @@ snapshots:
       - utf-8-validate
 
   '@standard-schema/spec@1.1.0': {}
-
-  '@standard-schema/utils@0.3.0': {}
 
   '@supabase/auth-js@2.98.0':
     dependencies:
@@ -15549,10 +15522,6 @@ snapshots:
   react-error-boundary@3.1.4(react@18.3.1):
     dependencies:
       '@babel/runtime': 7.28.6
-      react: 18.3.1
-
-  react-hook-form@7.71.2(react@18.3.1):
-    dependencies:
       react: 18.3.1
 
   react-international-phone@4.8.0(react@18.3.1):
