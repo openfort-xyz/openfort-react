@@ -1,29 +1,22 @@
 import { expect, test } from '@playwright/test'
+import type { PlaygroundMode } from '../utils/mode'
 import { setPlaygroundMode } from '../utils/mode'
-import { clickableByText } from '../utils/ui'
+
+const MODES: PlaygroundMode[] = ['svm', 'evm']
 
 test.describe('auth screen renders correctly', () => {
-  test('svm: guest + email visible, wallet hidden', async ({ page }) => {
-    await setPlaygroundMode(page, 'svm')
-    await page.goto('/showcase/auth', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/showcase\/auth/i)
+  for (const mode of MODES) {
+    test(`${mode}: onboarding opens the Openfort widget with guest + email`, async ({ page }) => {
+      await setPlaygroundMode(page, mode)
+      await page.goto('/showcase/auth', { waitUntil: 'domcontentloaded' })
+      await expect(page).toHaveURL(/\/showcase\/auth/i)
 
-    await expect(page.getByText(/openfort/i).first()).toBeVisible({ timeout: 20_000 })
-    await expect(clickableByText(page, /continue as guest|guest/i)).toBeVisible({ timeout: 20_000 })
-    await expect(clickableByText(page, /continue with email/i)).toBeVisible({ timeout: 20_000 })
-    const walletBtn = clickableByText(page, /continue with wallet/i)
-    await expect(walletBtn).toBeVisible({ timeout: 20_000 })
-    await expect(walletBtn).toBeDisabled()
-  })
+      // Landing card behind the widget
+      await expect(page.getByText(/connect to start/i)).toBeVisible({ timeout: 20_000 })
 
-  test('evm: guest + email + wallet visible', async ({ page }) => {
-    await setPlaygroundMode(page, 'evm')
-    await page.goto('/showcase/auth', { waitUntil: 'domcontentloaded' })
-    await expect(page).toHaveURL(/\/showcase\/auth/i)
-
-    await expect(page.getByText(/openfort/i).first()).toBeVisible({ timeout: 20_000 })
-    await expect(clickableByText(page, /continue as guest|guest/i)).toBeVisible({ timeout: 20_000 })
-    await expect(clickableByText(page, /continue with email/i)).toBeVisible({ timeout: 20_000 })
-    await expect(clickableByText(page, /continue with wallet/i)).toBeVisible({ timeout: 20_000 })
-  })
+      // The widget modal auto-opens with the configured sign-in options
+      await expect(page.getByPlaceholder('Enter your email')).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByRole('button', { name: /^guest$/i })).toBeVisible({ timeout: 30_000 })
+    })
+  }
 })

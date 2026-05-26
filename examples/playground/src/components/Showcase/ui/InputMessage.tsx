@@ -28,8 +28,8 @@ export const InputMessage = ({
             <span
               className={cn(
                 'text-sm whitespace-normal break-words',
-                variant === 'success' && 'text-success',
-                variant === 'error' && 'text-error',
+                variant === 'success' && 'text-green-600 dark:text-green-500',
+                variant === 'error' && 'text-destructive',
                 variant === 'default' && 'text-muted-foreground',
                 className
               )}

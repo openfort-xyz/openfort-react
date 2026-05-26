@@ -1,17 +1,16 @@
 import { ChainTypeEnum } from '@openfort/react'
-import type { ReactNode } from 'react'
 import { formatUnits } from 'viem'
-import { Button } from '@/components/Showcase/ui/Button'
+import { HookBadge } from '@/components/HookBadge'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { TruncatedText } from '@/components/TruncatedText'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/cn'
+import { Input } from '@/components/ui/input'
 import type { MintContractConfig } from '@/lib/contracts'
 import { getExplorerUrl } from '@/lib/explorer'
 
 interface WriteContractLayoutProps {
-  tooltip?: { hook: string; body: ReactNode }
+  hook?: string
   config: MintContractConfig | undefined
   address: `0x${string}` | undefined
   chainId: number | undefined
@@ -25,7 +24,7 @@ interface WriteContractLayoutProps {
 }
 
 export function WriteContractLayout({
-  tooltip,
+  hook,
   config,
   address,
   chainId,
@@ -47,6 +46,7 @@ export function WriteContractLayout({
           Contract Address: <TruncatedText text={config?.address ?? ''} />
         </CardDescription>
         <CardDescription>Balance: {balanceError ? '-' : formatUnits(balance ?? 0n, 18) || 0}</CardDescription>
+        {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
       <CardContent>
         <form
@@ -57,33 +57,10 @@ export function WriteContractLayout({
             onSubmit(amount)
           }}
         >
-          <label className={cn('input w-full')}>
-            <input
-              type="number"
-              placeholder="Enter amount to mint"
-              className="grow peer placeholder:text-muted-foreground"
-              name="amount"
-            />
-          </label>
-          {tooltip ? (
-            <Tooltip delayDuration={500}>
-              <TooltipTrigger asChild>
-                <div className="w-full">
-                  <Button className="btn btn-accent w-full" disabled={isDisabled}>
-                    {isPending ? 'Minting...' : 'Mint Tokens'}
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent side="top">
-                <h3 className="text-base mb-1">{tooltip.hook}</h3>
-                {tooltip.body}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button className="btn btn-accent w-full" disabled={isDisabled}>
-              {isPending ? 'Minting...' : 'Mint Tokens'}
-            </Button>
-          )}
+          <Input type="number" placeholder="Enter amount to mint" name="amount" />
+          <Button type="submit" className="w-full" disabled={isDisabled}>
+            {isPending ? 'Minting...' : 'Mint Tokens'}
+          </Button>
           <InputMessage message={disabledReason ?? ''} show={!!disabledReason} variant="default" />
           <InputMessage message={`Transaction hash: ${hash}`} show={!!hash} variant="success" />
           {hash && chainId && (

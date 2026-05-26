@@ -141,6 +141,7 @@
       "packages/openfort-react/rollup.config.dev.js",
       "packages/openfort-react/rollup.config.prod.js",
       "packages/create-openfort/template/**",
+      "examples/playground/src/components/ui/**",
       "examples/playground/tests/auth/auth.setup.solana.ts",
       "examples/playground/tests/auth/auth.setup.evm.ts"
     ],

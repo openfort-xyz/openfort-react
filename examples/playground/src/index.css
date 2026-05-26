@@ -3,17 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@plugin "daisyui";
-
 @layer base {
   button,
   a {
-    @apply text-blue-500 hover:text-blue-700 cursor-pointer;
-  }
-
-  input,
-  select {
-    @apply border border-zinc-600 px-1;
+    @apply cursor-pointer;
   }
 
   select:has(option:checked[value="undefined"]) {
@@ -24,32 +17,6 @@
 body {
   interpolate-size: allow-keywords;
 }
-
-@plugin "daisyui/theme" {
-  name: "corporate";
-  default: true;
-  prefersdark: true;
-  background: var(--background);
-  --color-base-100: var(--background-200);
-  --color-base-content: var(--foreground);
-  --color-primary: var(--primary);
-
-  --color-accent: var(--accent);
-  --color-accent-content: var(--secondary-foreground);
-}
-
-.input-error {
-  @apply border-error
-}
-
-.input {
-  @apply focus-within:outline-0
-}
-
-.btn-ghost {
-  @apply !bg-transparent border-none !shadow-none hover:bg-transparent
-}
-
 
 /* Default (light mode) */
 ::-webkit-scrollbar {
@@ -126,7 +93,6 @@ body {
   --color-sidebar-ring: var(--sidebar-ring);
   --color-tooltip: var(--tooltip);
   --color-tooltip-foreground: var(--tooltip-foreground);
-
 
   --animate-focus: focus 2s ease-in-out forwards;
 
@@ -249,7 +215,6 @@ body {
     @apply bg-background text-foreground;
   } */
 }
-
 
 @keyframes FadeIn {
   0% {

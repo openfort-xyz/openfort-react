@@ -25,6 +25,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { MP } from '@/components/motion/motion'
 import { WalletRecoveryIcon } from '@/components/Showcase/app/WalletRecoveryIcon'
 import { TruncatedText } from '@/components/TruncatedText'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/cn'
 
@@ -104,25 +106,25 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
         <TooltipTrigger asChild>
           <div className="flex w-full flex-col gap-2">
             {step === 'idle' && (
-              <button
+              <Button
                 type="button"
-                className="btn btn-accent w-full flex create-wallet-button"
+                className="w-full create-wallet-button"
                 onClick={() => setStep('choose-account-type')}
                 disabled={isCreating}
               >
                 {isCreating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <span className="mr-2">+</span>}
                 {isCreating ? `Creating${creatingMethod ? ` (${creatingMethod})` : ''}…` : 'Create new wallet'}
-              </button>
+              </Button>
             )}
             {step === 'choose-account-type' && (
               <div className="flex flex-col gap-1 create-wallet-button">
                 <span className="text-xs opacity-70 px-1">Account type:</span>
                 <div className="flex w-full gap-2">
                   {Object.values(AccountTypeEnum).map((accountType) => (
-                    <button
+                    <Button
                       key={accountType}
                       type="button"
-                      className="btn btn-accent flex flex-1 create-wallet-button"
+                      className="flex-1 create-wallet-button"
                       onClick={() => {
                         setSelectedAccountType(accountType)
                         setStep('choose-recovery-method')
@@ -131,7 +133,7 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
                     >
                       <WalletIcon className="h-4 w-4" />
                       {ACCOUNT_TYPE_LABELS[accountType]}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               </div>
@@ -151,33 +153,33 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
                   </span>
                 </div>
                 <div className="flex w-full gap-2">
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-accent flex flex-1 create-wallet-button"
+                    className="flex-1 create-wallet-button"
                     onClick={() => handleCreateWallet(RecoveryMethod.AUTOMATIC)}
                     disabled={isCreating}
                   >
                     <WalletRecoveryIcon recovery={RecoveryMethod.AUTOMATIC} />
                     Automatic
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-accent flex flex-1 create-wallet-button"
+                    className="flex-1 create-wallet-button"
                     onClick={() => handleCreateWallet(RecoveryMethod.PASSWORD)}
                     disabled={isCreating}
                   >
                     <WalletRecoveryIcon recovery={RecoveryMethod.PASSWORD} />
                     Password
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="btn btn-accent flex flex-1 create-wallet-button"
+                    className="flex-1 create-wallet-button"
                     onClick={() => handleCreateWallet(RecoveryMethod.PASSKEY)}
                     disabled={isCreating}
                   >
                     <WalletRecoveryIcon recovery={RecoveryMethod.PASSKEY} />
                     Passkey
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -252,18 +254,20 @@ const WalletButton = ({
 
   if (showPasswordInput) {
     return (
-      <form className={cn('input w-full password-input', nested && 'ml-5')}>
-        <input
+      <form className={cn('flex w-full gap-2 password-input', nested && 'ml-5')}>
+        <Input
           type={showPassword ? 'text' : 'password'}
           placeholder="Enter password"
-          className="grow peer placeholder:text-muted-foreground"
+          className="password-input"
           value={password}
           autoFocus
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm ml-2 px-2 password-input"
+          variant="ghost"
+          size="icon-sm"
+          className="password-input"
           onClick={() => setShowPassword(!showPassword)}
         >
           {showPassword ? (
@@ -271,17 +275,18 @@ const WalletButton = ({
           ) : (
             <EyeIcon className="h-4 w-4 password-input" />
           )}
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className="btn btn-accent btn-sm password-input"
+          size="sm"
+          className="password-input"
           onClick={() => {
             handleSetActive()
             setShowPasswordInput(false)
           }}
         >
           Set Active
-        </button>
+        </Button>
       </form>
     )
   }
@@ -289,12 +294,13 @@ const WalletButton = ({
   return (
     <div className={cn('flex items-center gap-1', nested && 'ml-5')}>
       {nested && <CornerDownRightIcon className="h-3 w-3 shrink-0 opacity-40" />}
-      <button
+      <Button
         type="button"
+        variant="outline"
         onClick={() => !wallet.isActive && handleClickWallet()}
         disabled={!wallet.isAvailable}
-        className={cn('btn btn-accent w-full flex justify-between password-input', {
-          'text-primary': wallet.isActive,
+        className={cn('w-full justify-between password-input', {
+          'border-primary bg-primary/10 text-primary hover:bg-primary/15': wallet.isActive,
           'animate-pulse': wallet.isConnecting,
         })}
       >
@@ -317,7 +323,7 @@ const WalletButton = ({
           )}
           <WalletRecoveryIcon recovery={wallet.recoveryMethod} />
         </div>
-      </button>
+      </Button>
     </div>
   )
 }
@@ -404,7 +410,20 @@ export function EmbeddedWalletsList({
     }
   }
 
-  const wallets = ethereum.wallets
+  // Smart Accounts and Delegated Accounts are deployed per EVM chain, so they
+  // should only appear on the chain they were created on. EOAs exist on every
+  // EVM chain and always remain visible. Solana is unaffected (separate list).
+  const currentChainId = ethereum.status === 'connected' && 'chainId' in ethereum ? ethereum.chainId : undefined
+  const wallets = useMemo(() => {
+    if (currentChainId == null) return ethereum.wallets
+    return ethereum.wallets.filter((w) => {
+      if (w.accountType === AccountTypeEnum.EOA) return true
+      const chainScopedAccounts = w.accounts?.filter((a) => a.chainId != null) ?? []
+      if (chainScopedAccounts.length === 0) return true
+      return chainScopedAccounts.some((a) => a.chainId === currentChainId)
+    })
+  }, [ethereum.wallets, currentChainId])
+
   const { topLevel, childrenByOwner } = useMemo(() => {
     const ownerAddresses = new Set(wallets.map((w) => w.address.toLowerCase()))
     const childrenByOwner = new Map<string, ConnectedEmbeddedEthereumWallet[]>()
@@ -465,14 +484,16 @@ export function EmbeddedWalletsList({
         </div>
         <Tooltip delayDuration={200}>
           <TooltipTrigger asChild>
-            <button
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm px-2 self-start"
+              variant="ghost"
+              size="icon-sm"
+              className="self-start"
               onClick={handleRefresh}
               disabled={isRefreshing}
             >
               <RefreshCwIcon className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
-            </button>
+            </Button>
           </TooltipTrigger>
           <TooltipContent>Refresh wallets</TooltipContent>
         </Tooltip>

@@ -1,3 +1,5 @@
+export { cn } from '@/lib/cn'
+
 export const alertFn = (alert: any) => {
   if (typeof alert !== 'string') {
     // result = `${key}: ${JSON.stringify(result, null, 2)}`;

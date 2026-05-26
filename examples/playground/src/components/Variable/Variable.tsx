@@ -185,7 +185,12 @@ const EditableVariable = ({
         />
       </button>
       {isEditing && (
-        <div className={cn(actualType === 'select' ? '-left-3' : 'left-0', 'absolute -top-2 max-w-full w-lg z-10')}>
+        <div
+          className={cn(
+            actualType === 'select' ? '-left-3' : 'left-0',
+            'absolute -top-2 z-10 w-max min-w-[12rem] max-w-[20rem]'
+          )}
+        >
           <InputAny
             className="bg-background p-2 rounded-lg"
             type={variable.type || 'text'}

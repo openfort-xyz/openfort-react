@@ -2,19 +2,19 @@ import { ChainTypeEnum, invalidateBalance } from '@openfort/react'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import type { Address } from '@solana/kit'
 import { Check, Copy } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { useState } from 'react'
-import { Button } from '@/components/Showcase/ui/Button'
+import { HookBadge } from '@/components/HookBadge'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { TruncatedText } from '@/components/TruncatedText'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { cn } from '@/lib/cn'
 import { getExplorerUrl } from '@/lib/explorer'
 import { fetchSolanaBalance, sendGaslessSolTransaction, sendSolTransaction } from '@/lib/solana'
 
-export const SendTransactionCardSolana = ({ tooltip }: { tooltip?: { hook: string; body: ReactNode } }) => {
+export const SendTransactionCardSolana = ({ hook }: { hook?: string }) => {
   const solana = useSolanaEmbeddedWallet()
   const { address, cluster, rpcUrl } = solana
   const [isPending, setIsPending] = useState(false)
@@ -134,58 +134,19 @@ export const SendTransactionCardSolana = ({ tooltip }: { tooltip?: { hook: strin
             </span>
           </CardDescription>
         )}
+        {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
       <CardContent>
         <form id="send-sol-form" className="space-y-2" onSubmit={(e) => e.preventDefault()}>
-          <label className={cn('input w-full')}>
-            <input
-              type="text"
-              placeholder="Recipient address"
-              className="grow peer placeholder:text-muted-foreground"
-              name="recipient"
-            />
-          </label>
-          <label className={cn('input w-full')}>
-            <input
-              type="number"
-              placeholder="Amount (SOL)"
-              className="grow peer placeholder:text-muted-foreground"
-              name="amount"
-              step="0.001"
-              min="0.001"
-              defaultValue="0.001"
-            />
-          </label>
+          <Input type="text" placeholder="Recipient address" name="recipient" />
+          <Input type="number" placeholder="Amount (SOL)" name="amount" step="0.001" min="0.001" defaultValue="0.001" />
           <div className="flex gap-2">
-            {tooltip ? (
-              <Tooltip delayDuration={500}>
-                <TooltipTrigger asChild>
-                  <div className="flex-1">
-                    <Button
-                      className="btn btn-accent w-full"
-                      disabled={isPending || !isConnected}
-                      onClick={() => handleSend(false)}
-                    >
-                      {isPending ? 'Sending...' : 'Send SOL'}
-                    </Button>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <h3 className="text-base mb-1">{tooltip.hook}</h3>
-                  {tooltip.body}
-                </TooltipContent>
-              </Tooltip>
-            ) : (
-              <Button
-                className="btn btn-accent flex-1"
-                disabled={isPending || !isConnected}
-                onClick={() => handleSend(false)}
-              >
-                {isPending ? 'Sending...' : 'Send SOL'}
-              </Button>
-            )}
+            <Button className="flex-1" disabled={isPending || !isConnected} onClick={() => handleSend(false)}>
+              {isPending ? 'Sending...' : 'Send SOL'}
+            </Button>
             <Button
-              className="btn btn-secondary flex-1"
+              variant="secondary"
+              className="flex-1"
               disabled={isPending || !isConnected}
               onClick={() => handleSend(true)}
             >

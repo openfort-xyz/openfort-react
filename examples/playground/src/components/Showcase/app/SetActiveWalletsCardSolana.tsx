@@ -7,7 +7,9 @@ import { useEffect, useState } from 'react'
 import { MP } from '@/components/motion/motion'
 import { WalletRecoveryIcon } from '@/components/Showcase/app/WalletRecoveryIcon'
 import { TruncatedText } from '@/components/TruncatedText'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/cn'
 
@@ -41,9 +43,9 @@ const CreateWalletButton = ({ solana }: { solana: ReturnType<typeof useSolanaEmb
           <div className="flex w-full gap-2">
             {chooseCreateMethodOpen ? (
               <>
-                <button
+                <Button
                   type="button"
-                  className="btn btn-accent flex flex-1 create-wallet-button"
+                  className="flex-1 create-wallet-button"
                   onClick={() => {
                     create()
                     setCreatingMethod(RecoveryMethod.AUTOMATIC)
@@ -52,10 +54,10 @@ const CreateWalletButton = ({ solana }: { solana: ReturnType<typeof useSolanaEmb
                 >
                   <WalletRecoveryIcon recovery={RecoveryMethod.AUTOMATIC} />
                   Automatic
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-accent flex flex-1 create-wallet-button"
+                  className="flex-1 create-wallet-button"
                   onClick={() => {
                     setCreatingMethod(RecoveryMethod.PASSWORD)
                     create({
@@ -67,10 +69,10 @@ const CreateWalletButton = ({ solana }: { solana: ReturnType<typeof useSolanaEmb
                 >
                   <WalletRecoveryIcon recovery={RecoveryMethod.PASSWORD} />
                   Password
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-accent flex flex-1 create-wallet-button"
+                  className="flex-1 create-wallet-button"
                   onClick={() => {
                     setCreatingMethod(RecoveryMethod.PASSKEY)
                     create({
@@ -81,12 +83,12 @@ const CreateWalletButton = ({ solana }: { solana: ReturnType<typeof useSolanaEmb
                 >
                   <WalletRecoveryIcon recovery={RecoveryMethod.PASSKEY} />
                   Passkey
-                </button>
+                </Button>
               </>
             ) : (
-              <button
+              <Button
                 type="button"
-                className="btn btn-accent w-full flex"
+                className="w-full create-wallet-button"
                 onClick={() => {
                   if (!isCreating) setChooseCreateMethodOpen(true)
                 }}
@@ -94,7 +96,7 @@ const CreateWalletButton = ({ solana }: { solana: ReturnType<typeof useSolanaEmb
               >
                 {isCreating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <span className="mr-2">+</span>}
                 {isCreating ? `Creating${creatingMethod ? ` (${creatingMethod})` : ''}…` : 'Create new wallet'}
-              </button>
+              </Button>
             )}
           </div>
         </TooltipTrigger>
@@ -181,17 +183,19 @@ const WalletButton = ({
 
   if (showPasswordInput) {
     return (
-      <form className={cn('input w-full password-input')}>
-        <input
+      <form className="flex w-full gap-2 password-input">
+        <Input
           type={showPassword ? 'text' : 'password'}
           placeholder="Enter password"
-          className="grow peer placeholder:text-muted-foreground"
+          className="password-input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
         />
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm ml-2 px-2 password-input"
+          variant="ghost"
+          size="icon-sm"
+          className="password-input"
           onClick={() => setShowPassword(!showPassword)}
         >
           {showPassword ? (
@@ -199,27 +203,29 @@ const WalletButton = ({
           ) : (
             <EyeIcon className="h-4 w-4 password-input" />
           )}
-        </button>
-        <button
+        </Button>
+        <Button
           type="submit"
-          className="btn btn-accent btn-sm password-input"
+          size="sm"
+          className="password-input"
           onClick={() => {
             handleSetActive()
             setShowPasswordInput(false)
           }}
         >
           Set Active
-        </button>
+        </Button>
       </form>
     )
   }
 
   return (
-    <button
+    <Button
       type="button"
+      variant="outline"
       onClick={() => !isActive && handleClickWallet()}
-      className={cn('btn btn-accent w-full flex justify-between password-input', {
-        'text-primary': isActive,
+      className={cn('w-full justify-between password-input', {
+        'border-primary bg-primary/10 text-primary hover:bg-primary/15': isActive,
         'animate-pulse': isConnecting,
       })}
     >
@@ -247,7 +253,7 @@ const WalletButton = ({
         )}
         <WalletRecoveryIcon recovery={wallet.recoveryMethod} />
       </div>
-    </button>
+    </Button>
   )
 }
 

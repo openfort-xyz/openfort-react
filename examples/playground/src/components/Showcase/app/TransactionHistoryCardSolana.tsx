@@ -1,10 +1,9 @@
 import { ChainTypeEnum } from '@openfort/react'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { RefreshCw } from 'lucide-react'
-import type { ReactNode } from 'react'
 import { useState } from 'react'
+import { HookBadge } from '@/components/HookBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { useAsyncData } from '@/hooks/useAsyncData'
 import { cn } from '@/lib/cn'
 import { getExplorerUrl } from '@/lib/explorer'
@@ -12,7 +11,7 @@ import { getTransactionHistory } from '@/lib/solana'
 
 const COLLAPSED_COUNT = 4
 
-export const TransactionHistoryCardSolana = ({ tooltip }: { tooltip?: { hook: string; body: ReactNode } }) => {
+export const TransactionHistoryCardSolana = ({ hook }: { hook?: string }) => {
   const { address, cluster, rpcUrl } = useSolanaEmbeddedWallet()
   const [showAll, setShowAll] = useState(false)
   const rpc = rpcUrl ?? 'https://api.devnet.solana.com'
@@ -32,7 +31,7 @@ export const TransactionHistoryCardSolana = ({ tooltip }: { tooltip?: { hook: st
     return new Date(blockTime * 1000).toLocaleString()
   }
 
-  const cardContent = (
+  return (
     <Card>
       <CardHeader>
         <div className="flex items-center justify-between">
@@ -49,6 +48,7 @@ export const TransactionHistoryCardSolana = ({ tooltip }: { tooltip?: { hook: st
             <RefreshCw className={cn('size-4 text-muted-foreground', historyResult.isLoading && 'animate-spin')} />
           </button>
         </div>
+        {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
       <CardContent>
         {historyResult.isLoading ? (
@@ -104,20 +104,4 @@ export const TransactionHistoryCardSolana = ({ tooltip }: { tooltip?: { hook: st
       </CardContent>
     </Card>
   )
-
-  if (tooltip) {
-    return (
-      <Tooltip delayDuration={500}>
-        <TooltipTrigger asChild>
-          <div>{cardContent}</div>
-        </TooltipTrigger>
-        <TooltipContent side="top">
-          <h3 className="text-base mb-1">{tooltip.hook}</h3>
-          {tooltip.body}
-        </TooltipContent>
-      </Tooltip>
-    )
-  }
-
-  return cardContent
 }

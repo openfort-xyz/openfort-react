@@ -1,17 +1,16 @@
 import { embeddedWalletId, useOpenfort } from '@openfort/react'
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
-import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { numberToHex } from 'viem'
 import { useAccount, useChainId, useSwitchChain } from 'wagmi'
-import { Button } from '@/components/Showcase/ui/Button'
+import { HookBadge } from '@/components/HookBadge'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
 import { toError } from '@/lib/errors'
 
-export const SwitchChainCardEVM = ({ tooltip }: { tooltip?: { hook: string; body: ReactNode } }) => {
+export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
   const embedded = useEthereumEmbeddedWallet()
   const core = useOpenfort()
   const { isConnected: wagmiConnected, connector } = useAccount()
@@ -76,38 +75,18 @@ export const SwitchChainCardEVM = ({ tooltip }: { tooltip?: { hook: string; body
           Current chain: {chainName}
           {currentChainId != null && ` (${currentChainId})`}
         </p>
+        {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
           {PLAYGROUND_EVM_CHAINS.map((chain) => (
             <div key={chain.id}>
-              {tooltip ? (
-                <Tooltip delayDuration={500}>
-                  <TooltipTrigger asChild>
-                    <div>
-                      <Button
-                        className="btn btn-accent"
-                        onClick={() => switchChain(chain.id)}
-                        disabled={currentChainId === chain.id || isPending || !canSwitch}
-                      >
-                        Switch to {chain.name}
-                      </Button>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">
-                    <h3 className="text-base mb-1">{tooltip.hook}</h3>
-                    {tooltip.body}
-                  </TooltipContent>
-                </Tooltip>
-              ) : (
-                <Button
-                  className="btn btn-accent"
-                  onClick={() => switchChain(chain.id)}
-                  disabled={currentChainId === chain.id || isPending || !canSwitch}
-                >
-                  Switch to {chain.name}
-                </Button>
-              )}
+              <Button
+                onClick={() => switchChain(chain.id)}
+                disabled={currentChainId === chain.id || isPending || !canSwitch}
+              >
+                Switch to {chain.name}
+              </Button>
             </div>
           ))}
 

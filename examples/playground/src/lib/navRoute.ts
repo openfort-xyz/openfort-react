@@ -1,4 +1,14 @@
-import type { NavRoute } from '@/components/Nav'
+import type { OpenfortPlaygroundMode } from '@/providers'
+import type { FileRoutesByTo } from '@/routeTree.gen'
+
+export type NavRoute = {
+  href?: keyof FileRoutesByTo
+  label: string
+  exact?: boolean
+  children?: NavRoute[]
+  /** Chains this route applies to. Omitted = shown in every chain mode. */
+  modes?: OpenfortPlaygroundMode[]
+}
 
 export const navRoutes: NavRoute[] = [
   {
@@ -23,12 +33,12 @@ export const navRoutes: NavRoute[] = [
       {
         href: '/auth/useConnectWithSiwe',
         label: 'useConnectWithSiwe',
-        evmOnly: true,
+        modes: ['evm'],
       },
       {
         href: '/auth/useWalletAuth',
         label: 'useWalletAuth',
-        evmOnly: true,
+        modes: ['evm'],
       },
       {
         href: '/auth/useSignOut',
@@ -46,14 +56,17 @@ export const navRoutes: NavRoute[] = [
       {
         href: '/wallet/useSolanaEmbeddedWallet',
         label: 'useSolanaEmbeddedWallet',
+        modes: ['svm'],
       },
       {
         href: '/wallet/useEthereumEmbeddedWallet',
         label: 'useEthereumEmbeddedWallet',
+        modes: ['evm'],
       },
       {
         href: '/wallet/useEthereumWalletAssets',
         label: 'useEthereumWalletAssets',
+        modes: ['evm'],
       },
     ],
   },
@@ -67,6 +80,7 @@ export const navRoutes: NavRoute[] = [
       {
         href: '/wagmi',
         label: 'wagmi',
+        modes: ['evm'],
       },
     ],
   },

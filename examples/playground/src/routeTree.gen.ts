@@ -33,12 +33,6 @@ import { Route as HooksAuthUseEmailAuthRouteImport } from './routes/_hooks/auth/
 import { Route as HooksAuthUseConnectWithSiweRouteImport } from './routes/_hooks/auth/useConnectWithSiwe'
 import { Route as HooksAuthUseAuthCallbackRouteImport } from './routes/_hooks/auth/useAuthCallback'
 import { Route as ShowcaseShowcaseAuthIndexRouteImport } from './routes/_showcase/showcase/auth/index'
-import { Route as ShowcaseShowcaseAuthSignupRouteImport } from './routes/_showcase/showcase/auth/signup'
-import { Route as ShowcaseShowcaseAuthPasswordCallbackRouteImport } from './routes/_showcase/showcase/auth/password-callback'
-import { Route as ShowcaseShowcaseAuthLoginRouteImport } from './routes/_showcase/showcase/auth/login'
-import { Route as ShowcaseShowcaseAuthForgotPasswordRouteImport } from './routes/_showcase/showcase/auth/forgot-password'
-import { Route as ShowcaseShowcaseAuthConnectWalletRouteImport } from './routes/_showcase/showcase/auth/connect-wallet'
-import { Route as ShowcaseShowcaseAuthCallbackRouteImport } from './routes/_showcase/showcase/auth/callback'
 
 const ShowcaseRoute = ShowcaseRouteImport.update({
   id: '/_showcase',
@@ -165,42 +159,6 @@ const ShowcaseShowcaseAuthIndexRoute =
     path: '/',
     getParentRoute: () => ShowcaseShowcaseAuthRoute,
   } as any)
-const ShowcaseShowcaseAuthSignupRoute =
-  ShowcaseShowcaseAuthSignupRouteImport.update({
-    id: '/signup',
-    path: '/signup',
-    getParentRoute: () => ShowcaseShowcaseAuthRoute,
-  } as any)
-const ShowcaseShowcaseAuthPasswordCallbackRoute =
-  ShowcaseShowcaseAuthPasswordCallbackRouteImport.update({
-    id: '/password-callback',
-    path: '/password-callback',
-    getParentRoute: () => ShowcaseShowcaseAuthRoute,
-  } as any)
-const ShowcaseShowcaseAuthLoginRoute =
-  ShowcaseShowcaseAuthLoginRouteImport.update({
-    id: '/login',
-    path: '/login',
-    getParentRoute: () => ShowcaseShowcaseAuthRoute,
-  } as any)
-const ShowcaseShowcaseAuthForgotPasswordRoute =
-  ShowcaseShowcaseAuthForgotPasswordRouteImport.update({
-    id: '/forgot-password',
-    path: '/forgot-password',
-    getParentRoute: () => ShowcaseShowcaseAuthRoute,
-  } as any)
-const ShowcaseShowcaseAuthConnectWalletRoute =
-  ShowcaseShowcaseAuthConnectWalletRouteImport.update({
-    id: '/connect-wallet',
-    path: '/connect-wallet',
-    getParentRoute: () => ShowcaseShowcaseAuthRoute,
-  } as any)
-const ShowcaseShowcaseAuthCallbackRoute =
-  ShowcaseShowcaseAuthCallbackRouteImport.update({
-    id: '/callback',
-    path: '/callback',
-    getParentRoute: () => ShowcaseShowcaseAuthRoute,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof ShowcaseIndexRoute
@@ -224,12 +182,6 @@ export interface FileRoutesByFullPath {
   '/wallet/useEthereumWalletAssets': typeof HooksWalletUseEthereumWalletAssetsRoute
   '/wallet/useSolanaEmbeddedWallet': typeof HooksWalletUseSolanaEmbeddedWalletRoute
   '/showcase/auth': typeof ShowcaseShowcaseAuthRouteWithChildren
-  '/showcase/auth/callback': typeof ShowcaseShowcaseAuthCallbackRoute
-  '/showcase/auth/connect-wallet': typeof ShowcaseShowcaseAuthConnectWalletRoute
-  '/showcase/auth/forgot-password': typeof ShowcaseShowcaseAuthForgotPasswordRoute
-  '/showcase/auth/login': typeof ShowcaseShowcaseAuthLoginRoute
-  '/showcase/auth/password-callback': typeof ShowcaseShowcaseAuthPasswordCallbackRoute
-  '/showcase/auth/signup': typeof ShowcaseShowcaseAuthSignupRoute
   '/showcase/auth/': typeof ShowcaseShowcaseAuthIndexRoute
 }
 export interface FileRoutesByTo {
@@ -253,12 +205,6 @@ export interface FileRoutesByTo {
   '/wallet/useEthereumEmbeddedWallet': typeof HooksWalletUseEthereumEmbeddedWalletRoute
   '/wallet/useEthereumWalletAssets': typeof HooksWalletUseEthereumWalletAssetsRoute
   '/wallet/useSolanaEmbeddedWallet': typeof HooksWalletUseSolanaEmbeddedWalletRoute
-  '/showcase/auth/callback': typeof ShowcaseShowcaseAuthCallbackRoute
-  '/showcase/auth/connect-wallet': typeof ShowcaseShowcaseAuthConnectWalletRoute
-  '/showcase/auth/forgot-password': typeof ShowcaseShowcaseAuthForgotPasswordRoute
-  '/showcase/auth/login': typeof ShowcaseShowcaseAuthLoginRoute
-  '/showcase/auth/password-callback': typeof ShowcaseShowcaseAuthPasswordCallbackRoute
-  '/showcase/auth/signup': typeof ShowcaseShowcaseAuthSignupRoute
   '/showcase/auth': typeof ShowcaseShowcaseAuthIndexRoute
 }
 export interface FileRoutesById {
@@ -286,12 +232,6 @@ export interface FileRoutesById {
   '/_hooks/wallet/useEthereumWalletAssets': typeof HooksWalletUseEthereumWalletAssetsRoute
   '/_hooks/wallet/useSolanaEmbeddedWallet': typeof HooksWalletUseSolanaEmbeddedWalletRoute
   '/_showcase/showcase/auth': typeof ShowcaseShowcaseAuthRouteWithChildren
-  '/_showcase/showcase/auth/callback': typeof ShowcaseShowcaseAuthCallbackRoute
-  '/_showcase/showcase/auth/connect-wallet': typeof ShowcaseShowcaseAuthConnectWalletRoute
-  '/_showcase/showcase/auth/forgot-password': typeof ShowcaseShowcaseAuthForgotPasswordRoute
-  '/_showcase/showcase/auth/login': typeof ShowcaseShowcaseAuthLoginRoute
-  '/_showcase/showcase/auth/password-callback': typeof ShowcaseShowcaseAuthPasswordCallbackRoute
-  '/_showcase/showcase/auth/signup': typeof ShowcaseShowcaseAuthSignupRoute
   '/_showcase/showcase/auth/': typeof ShowcaseShowcaseAuthIndexRoute
 }
 export interface FileRouteTypes {
@@ -318,12 +258,6 @@ export interface FileRouteTypes {
     | '/wallet/useEthereumWalletAssets'
     | '/wallet/useSolanaEmbeddedWallet'
     | '/showcase/auth'
-    | '/showcase/auth/callback'
-    | '/showcase/auth/connect-wallet'
-    | '/showcase/auth/forgot-password'
-    | '/showcase/auth/login'
-    | '/showcase/auth/password-callback'
-    | '/showcase/auth/signup'
     | '/showcase/auth/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -347,12 +281,6 @@ export interface FileRouteTypes {
     | '/wallet/useEthereumEmbeddedWallet'
     | '/wallet/useEthereumWalletAssets'
     | '/wallet/useSolanaEmbeddedWallet'
-    | '/showcase/auth/callback'
-    | '/showcase/auth/connect-wallet'
-    | '/showcase/auth/forgot-password'
-    | '/showcase/auth/login'
-    | '/showcase/auth/password-callback'
-    | '/showcase/auth/signup'
     | '/showcase/auth'
   id:
     | '__root__'
@@ -379,12 +307,6 @@ export interface FileRouteTypes {
     | '/_hooks/wallet/useEthereumWalletAssets'
     | '/_hooks/wallet/useSolanaEmbeddedWallet'
     | '/_showcase/showcase/auth'
-    | '/_showcase/showcase/auth/callback'
-    | '/_showcase/showcase/auth/connect-wallet'
-    | '/_showcase/showcase/auth/forgot-password'
-    | '/_showcase/showcase/auth/login'
-    | '/_showcase/showcase/auth/password-callback'
-    | '/_showcase/showcase/auth/signup'
     | '/_showcase/showcase/auth/'
   fileRoutesById: FileRoutesById
 }
@@ -563,48 +485,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ShowcaseShowcaseAuthIndexRouteImport
       parentRoute: typeof ShowcaseShowcaseAuthRoute
     }
-    '/_showcase/showcase/auth/signup': {
-      id: '/_showcase/showcase/auth/signup'
-      path: '/signup'
-      fullPath: '/showcase/auth/signup'
-      preLoaderRoute: typeof ShowcaseShowcaseAuthSignupRouteImport
-      parentRoute: typeof ShowcaseShowcaseAuthRoute
-    }
-    '/_showcase/showcase/auth/password-callback': {
-      id: '/_showcase/showcase/auth/password-callback'
-      path: '/password-callback'
-      fullPath: '/showcase/auth/password-callback'
-      preLoaderRoute: typeof ShowcaseShowcaseAuthPasswordCallbackRouteImport
-      parentRoute: typeof ShowcaseShowcaseAuthRoute
-    }
-    '/_showcase/showcase/auth/login': {
-      id: '/_showcase/showcase/auth/login'
-      path: '/login'
-      fullPath: '/showcase/auth/login'
-      preLoaderRoute: typeof ShowcaseShowcaseAuthLoginRouteImport
-      parentRoute: typeof ShowcaseShowcaseAuthRoute
-    }
-    '/_showcase/showcase/auth/forgot-password': {
-      id: '/_showcase/showcase/auth/forgot-password'
-      path: '/forgot-password'
-      fullPath: '/showcase/auth/forgot-password'
-      preLoaderRoute: typeof ShowcaseShowcaseAuthForgotPasswordRouteImport
-      parentRoute: typeof ShowcaseShowcaseAuthRoute
-    }
-    '/_showcase/showcase/auth/connect-wallet': {
-      id: '/_showcase/showcase/auth/connect-wallet'
-      path: '/connect-wallet'
-      fullPath: '/showcase/auth/connect-wallet'
-      preLoaderRoute: typeof ShowcaseShowcaseAuthConnectWalletRouteImport
-      parentRoute: typeof ShowcaseShowcaseAuthRoute
-    }
-    '/_showcase/showcase/auth/callback': {
-      id: '/_showcase/showcase/auth/callback'
-      path: '/callback'
-      fullPath: '/showcase/auth/callback'
-      preLoaderRoute: typeof ShowcaseShowcaseAuthCallbackRouteImport
-      parentRoute: typeof ShowcaseShowcaseAuthRoute
-    }
   }
 }
 
@@ -668,25 +548,10 @@ const HooksRouteChildren: HooksRouteChildren = {
 const HooksRouteWithChildren = HooksRoute._addFileChildren(HooksRouteChildren)
 
 interface ShowcaseShowcaseAuthRouteChildren {
-  ShowcaseShowcaseAuthCallbackRoute: typeof ShowcaseShowcaseAuthCallbackRoute
-  ShowcaseShowcaseAuthConnectWalletRoute: typeof ShowcaseShowcaseAuthConnectWalletRoute
-  ShowcaseShowcaseAuthForgotPasswordRoute: typeof ShowcaseShowcaseAuthForgotPasswordRoute
-  ShowcaseShowcaseAuthLoginRoute: typeof ShowcaseShowcaseAuthLoginRoute
-  ShowcaseShowcaseAuthPasswordCallbackRoute: typeof ShowcaseShowcaseAuthPasswordCallbackRoute
-  ShowcaseShowcaseAuthSignupRoute: typeof ShowcaseShowcaseAuthSignupRoute
   ShowcaseShowcaseAuthIndexRoute: typeof ShowcaseShowcaseAuthIndexRoute
 }
 
 const ShowcaseShowcaseAuthRouteChildren: ShowcaseShowcaseAuthRouteChildren = {
-  ShowcaseShowcaseAuthCallbackRoute: ShowcaseShowcaseAuthCallbackRoute,
-  ShowcaseShowcaseAuthConnectWalletRoute:
-    ShowcaseShowcaseAuthConnectWalletRoute,
-  ShowcaseShowcaseAuthForgotPasswordRoute:
-    ShowcaseShowcaseAuthForgotPasswordRoute,
-  ShowcaseShowcaseAuthLoginRoute: ShowcaseShowcaseAuthLoginRoute,
-  ShowcaseShowcaseAuthPasswordCallbackRoute:
-    ShowcaseShowcaseAuthPasswordCallbackRoute,
-  ShowcaseShowcaseAuthSignupRoute: ShowcaseShowcaseAuthSignupRoute,
   ShowcaseShowcaseAuthIndexRoute: ShowcaseShowcaseAuthIndexRoute,
 }
 
