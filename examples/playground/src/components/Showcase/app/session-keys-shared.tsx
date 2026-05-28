@@ -121,7 +121,7 @@ export function SessionKeysCreateButton({
   const disabledReason = isExternalWallet
     ? 'Session keys require the Openfort embedded wallet. Switch from your external wallet to use session keys.'
     : !isSessionKeySupported
-      ? 'Session keys today only work for Smart Accounts — Delegated Account support is coming soon.'
+      ? 'Session keys are only available for Smart Accounts. EOA wallets cannot use session keys.'
       : ''
 
   return (

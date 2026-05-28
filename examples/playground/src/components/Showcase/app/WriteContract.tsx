@@ -46,10 +46,8 @@ export const WriteContractCard = ({ hook }: { hook?: string }) => {
   })
 
   const isExternalWallet = !!connector && connector.id !== embeddedWalletId
-  const embeddedAccountType =
-    !isExternalWallet && embedded.status === 'connected' ? embedded.activeWallet?.accountType : undefined
-  const requiresSmartAccount =
-    embeddedAccountType === AccountTypeEnum.EOA || embeddedAccountType === AccountTypeEnum.DELEGATED_ACCOUNT
+  const isEoa =
+    !isExternalWallet && embedded.status === 'connected' && embedded.activeWallet?.accountType === AccountTypeEnum.EOA
   const useWagmiWrite = isConnected && connector?.id !== embeddedWalletId
   const hash = useWagmiWrite ? wagmiHash : (localHash ?? undefined)
   const isPending = useWagmiWrite ? wagmiPending : localPending
@@ -123,13 +121,7 @@ export const WriteContractCard = ({ hook }: { hook?: string }) => {
       isPending={isPending}
       error={error}
       onSubmit={submit}
-      disabledReason={
-        requiresSmartAccount
-          ? embeddedAccountType === AccountTypeEnum.DELEGATED_ACCOUNT
-            ? 'Minting from Delegated Accounts is coming soon — switch to a Smart Account to mint today.'
-            : 'Minting requires a Smart Account (gas sponsorship). Delegated support coming soon.'
-          : undefined
-      }
+      disabledReason={isEoa ? 'Minting requires a Smart Account or Delegated Account (gas sponsorship)' : undefined}
     />
   )
 }

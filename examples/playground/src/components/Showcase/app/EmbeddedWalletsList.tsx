@@ -31,8 +31,8 @@ import { cn } from '@/lib/cn'
 
 const ACCOUNT_TYPE_BADGE: Record<AccountTypeEnum, string> = {
   [AccountTypeEnum.EOA]: 'EOA',
-  [AccountTypeEnum.SMART_ACCOUNT]: 'SM',
-  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'DE',
+  [AccountTypeEnum.SMART_ACCOUNT]: 'SA',
+  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'DELEGATED',
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountTypeEnum, string> = {
@@ -57,6 +57,18 @@ const AccountTypeBadge = ({ accountType }: { accountType: AccountTypeEnum | unde
         </span>
       </TooltipTrigger>
       <TooltipContent>{ACCOUNT_TYPE_LABELS[accountType]}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+const ChainBadge = ({ chainId }: { chainId: number }) => {
+  const chainName = EVM_CHAIN_BY_ID[chainId]?.name ?? `chain ${chainId}`
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <span className="text-[10px] font-medium leading-none border rounded px-1 py-0.5 opacity-70">{chainName}</span>
+      </TooltipTrigger>
+      <TooltipContent>Deployed on chain id {chainId}</TooltipContent>
     </Tooltip>
   )
 }
@@ -317,6 +329,11 @@ const WalletButton = ({
         )}
         <div className="flex items-center gap-2">
           <AccountTypeBadge accountType={wallet.accountType} />
+          {wallet.accountType !== AccountTypeEnum.EOA &&
+            (() => {
+              const chainId = wallet.accounts?.find((a) => a.chainId != null)?.chainId
+              return chainId != null ? <ChainBadge chainId={chainId} /> : null
+            })()}
           {wallet.address && (
             <TruncatedText
               text={wallet.address}
