@@ -1,6 +1,12 @@
 /**
  * Shared embedded wallets list for evm (wagmi) and svm.
- * Renders all wallets at the top level (EOA, Smart Account, Delegated Account).
+ *
+ * Rendering rules for EVM:
+ * - EOAs are chain-agnostic and always rendered.
+ * - Smart Accounts are deployed per chain and only render on the active chain.
+ * - Delegated Accounts share an address with their underlying EOA (EIP-7702),
+ *   are scoped to a chain, and render as a sub-row nested under the EOA when
+ *   the active chain matches the delegation chain.
  */
 
 import {
@@ -12,7 +18,7 @@ import {
 } from '@openfort/react'
 import { Link } from '@tanstack/react-router'
 import { AnimatePresence } from 'framer-motion'
-import { ChevronLeftIcon, EyeIcon, EyeOffIcon, Loader2, RefreshCwIcon, WalletIcon } from 'lucide-react'
+import { ChevronLeftIcon, EyeIcon, EyeOffIcon, Link2Icon, Loader2, RefreshCwIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MP } from '@/components/motion/motion'
 import { WalletRecoveryIcon } from '@/components/Showcase/app/WalletRecoveryIcon'
@@ -20,18 +26,25 @@ import { TruncatedText } from '@/components/TruncatedText'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { EVM_CHAIN_BY_ID } from '@/lib/chains'
 import { cn } from '@/lib/cn'
 
 const ACCOUNT_TYPE_BADGE: Record<AccountTypeEnum, string> = {
   [AccountTypeEnum.EOA]: 'EOA',
-  [AccountTypeEnum.SMART_ACCOUNT]: 'SM',
-  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'DE',
+  [AccountTypeEnum.SMART_ACCOUNT]: 'SA',
+  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'DELEGATED',
 }
 
 const ACCOUNT_TYPE_LABELS: Record<AccountTypeEnum, string> = {
   [AccountTypeEnum.EOA]: 'EOA',
   [AccountTypeEnum.SMART_ACCOUNT]: 'Smart Account',
   [AccountTypeEnum.DELEGATED_ACCOUNT]: 'Delegated Account',
+}
+
+const ACCOUNT_TYPE_DESCRIPTIONS: Record<AccountTypeEnum, string> = {
+  [AccountTypeEnum.EOA]: 'One signing key, one address — no contract code.',
+  [AccountTypeEnum.SMART_ACCOUNT]: 'Creates a new EOA + deploys a smart-contract wallet at a separate address.',
+  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'Creates a new EOA and attaches contract code to its same address via EIP-7702.',
 }
 
 const AccountTypeBadge = ({ accountType }: { accountType: AccountTypeEnum | undefined }) => {
@@ -44,6 +57,18 @@ const AccountTypeBadge = ({ accountType }: { accountType: AccountTypeEnum | unde
         </span>
       </TooltipTrigger>
       <TooltipContent>{ACCOUNT_TYPE_LABELS[accountType]}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+const ChainBadge = ({ chainId }: { chainId: number }) => {
+  const chainName = EVM_CHAIN_BY_ID[chainId]?.name ?? `chain ${chainId}`
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <span className="text-[10px] font-medium leading-none border rounded px-1 py-0.5 opacity-70">{chainName}</span>
+      </TooltipTrigger>
+      <TooltipContent>Deployed on chain id {chainId}</TooltipContent>
     </Tooltip>
   )
 }
@@ -110,22 +135,25 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
             )}
             {step === 'choose-account-type' && (
               <div className="flex flex-col gap-1 create-wallet-button">
-                <span className="text-xs opacity-70 px-1">Account type:</span>
-                <div className="flex w-full gap-2">
+                <span className="text-xs opacity-70 px-1">Pick an account type:</span>
+                <div className="flex w-full flex-col gap-1">
                   {Object.values(AccountTypeEnum).map((accountType) => (
-                    <Button
+                    <button
                       key={accountType}
                       type="button"
-                      className="flex-1 create-wallet-button"
+                      className="create-wallet-button text-left rounded border px-3 py-2 hover:bg-muted transition disabled:opacity-50"
                       onClick={() => {
                         setSelectedAccountType(accountType)
                         setStep('choose-recovery-method')
                       }}
                       disabled={isCreating}
                     >
-                      <WalletIcon className="h-4 w-4" />
-                      {ACCOUNT_TYPE_LABELS[accountType]}
-                    </Button>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{ACCOUNT_TYPE_LABELS[accountType]}</span>
+                        <AccountTypeBadge accountType={accountType} />
+                      </div>
+                      <p className="mt-0.5 text-xs opacity-70">{ACCOUNT_TYPE_DESCRIPTIONS[accountType]}</p>
+                    </button>
                   ))}
                 </div>
               </div>
@@ -301,6 +329,11 @@ const WalletButton = ({
         )}
         <div className="flex items-center gap-2">
           <AccountTypeBadge accountType={wallet.accountType} />
+          {wallet.accountType !== AccountTypeEnum.EOA &&
+            (() => {
+              const chainId = wallet.accounts?.find((a) => a.chainId != null)?.chainId
+              return chainId != null ? <ChainBadge chainId={chainId} /> : null
+            })()}
           {wallet.address && (
             <TruncatedText
               text={wallet.address}
@@ -371,6 +404,26 @@ const WalletTooltipItem = ({
   </Tooltip>
 )
 
+const DelegationSubRow = ({ chainId }: { chainId: number }) => {
+  const chainName = EVM_CHAIN_BY_ID[chainId]?.name ?? `chain ${chainId}`
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <div className="ml-6 mt-1 flex items-center gap-2 text-xs rounded border border-dashed px-2 py-1 opacity-80">
+          <Link2Icon className="h-3 w-3 shrink-0" />
+          <span>
+            Delegated on <span className="font-medium">{chainName}</span> — shares this EOA address
+          </span>
+          <AccountTypeBadge accountType={AccountTypeEnum.DELEGATED_ACCOUNT} />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        EIP-7702 attaches contract code to the EOA's address on the active chain. The EOA stays usable on other chains.
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
 type EmbeddedWalletsListProps = {
   ethereum: EthereumWalletState
   activeWallet: ConnectedEmbeddedEthereumWallet | null
@@ -386,7 +439,7 @@ export function EmbeddedWalletsList({
   setActive,
   isExternalActive,
 }: EmbeddedWalletsListProps) {
-  const { updateEmbeddedAccounts } = useOpenfort()
+  const { updateEmbeddedAccounts, embeddedAccounts } = useOpenfort()
   const [isRefreshing, setIsRefreshing] = useState(false)
   const handleRefresh = async () => {
     setIsRefreshing(true)
@@ -397,10 +450,23 @@ export function EmbeddedWalletsList({
     }
   }
 
-  // Smart Accounts and Delegated Accounts are deployed per EVM chain, so they
-  // should only appear on the chain they were created on. EOAs exist on every
-  // EVM chain and always remain visible. Solana is unaffected (separate list).
   const currentChainId = ethereum.status === 'connected' && 'chainId' in ethereum ? ethereum.chainId : undefined
+
+  // Compute which EOA addresses are delegated on the active chain by looking at
+  // raw embeddedAccounts (the deduped `ethereum.wallets` list collapses entries
+  // sharing an address, so it can hide a Delegated record paired with an EOA).
+  const delegatedAddressesOnChain = useMemo(() => {
+    if (currentChainId == null || !embeddedAccounts) return new Set<string>()
+    return new Set(
+      embeddedAccounts
+        .filter((a) => a.accountType === AccountTypeEnum.DELEGATED_ACCOUNT && a.chainId === currentChainId)
+        .map((a) => a.address.toLowerCase())
+    )
+  }, [embeddedAccounts, currentChainId])
+
+  // Chain filter for the deduped wallet list:
+  // - EOAs are chain-agnostic and always render.
+  // - Smart Accounts/Delegated entries only render on their deployment chain.
   const wallets = useMemo(() => {
     if (currentChainId == null) return ethereum.wallets
     return ethereum.wallets.filter((w) => {
@@ -418,15 +484,20 @@ export function EmbeddedWalletsList({
     <div className="space-y-2">
       {wallets.map((wallet, walletIndex) => {
         const displayWallet = isExternalActive ? { ...wallet, isActive: false } : wallet
+        const isEoa = wallet.accountType === AccountTypeEnum.EOA
+        const isDelegatedHere =
+          isEoa && currentChainId != null && delegatedAddressesOnChain.has(wallet.address.toLowerCase())
         return (
-          <WalletTooltipItem
-            key={wallet.id}
-            wallet={displayWallet}
-            index={walletIndex}
-            activeWallet={effectiveActiveWallet}
-            connectingAddress={connectingAddress}
-            setActive={setActive}
-          />
+          <div key={wallet.id}>
+            <WalletTooltipItem
+              wallet={displayWallet}
+              index={walletIndex}
+              activeWallet={effectiveActiveWallet}
+              connectingAddress={connectingAddress}
+              setActive={setActive}
+            />
+            {isDelegatedHere && currentChainId != null && <DelegationSubRow chainId={currentChainId} />}
+          </div>
         )
       })}
       <div className="flex gap-2">
