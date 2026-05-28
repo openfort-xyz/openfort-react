@@ -30,7 +30,7 @@ export const BALANCE_ABI = [
 export function getMintContractAddress(chainId: number | undefined): string | undefined {
   if (chainId == null) return undefined
   if (SUPPORTED_CHAIN_IDS.has(chainId)) {
-    return import.meta.env.VITE_POLYGON_MINT_CONTRACT ?? DEFAULT_POLYGON_MINT
+    return import.meta.env.VITE_POLYGON_MINT_CONTRACT || DEFAULT_POLYGON_MINT
   }
   return undefined
 }
