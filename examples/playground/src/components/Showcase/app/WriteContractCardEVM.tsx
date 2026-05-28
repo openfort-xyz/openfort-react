@@ -12,8 +12,10 @@ export const WriteContractCardEVM = ({ hook }: { hook?: string }) => {
   const { connector } = useAccount()
   const ethereum = useEthereumEmbeddedWallet()
   const isExternalWallet = !!connector && connector.id !== embeddedWalletId
-  const isEoa =
-    !isExternalWallet && ethereum.status === 'connected' && ethereum.activeWallet?.accountType === AccountTypeEnum.EOA
+  const embeddedAccountType =
+    !isExternalWallet && ethereum.status === 'connected' ? ethereum.activeWallet?.accountType : undefined
+  const requiresSmartAccount =
+    embeddedAccountType === AccountTypeEnum.EOA || embeddedAccountType === AccountTypeEnum.DELEGATED_ACCOUNT
   const { data: hash, writeContract, isPending, error } = useEthereumWriteContractLocal()
   const config = getMintContractConfig(chainId ?? undefined)
 
@@ -62,7 +64,13 @@ export const WriteContractCardEVM = ({ hook }: { hook?: string }) => {
       isPending={isPending}
       error={error}
       onSubmit={submit}
-      disabledReason={isEoa ? 'Minting requires a Smart Account or Delegated Account (gas sponsorship)' : undefined}
+      disabledReason={
+        requiresSmartAccount
+          ? embeddedAccountType === AccountTypeEnum.DELEGATED_ACCOUNT
+            ? 'Minting from Delegated Accounts is coming soon — switch to a Smart Account to mint today.'
+            : 'Minting requires a Smart Account (gas sponsorship). Delegated support coming soon.'
+          : undefined
+      }
     />
   )
 }
