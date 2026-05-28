@@ -41,3 +41,4 @@ examples/playground/tests/.auth/
 
 docs/
 semgrep-results-001/
+.gstack/

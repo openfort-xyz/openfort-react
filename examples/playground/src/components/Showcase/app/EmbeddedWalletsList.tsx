@@ -1,6 +1,6 @@
 /**
  * Shared embedded wallets list for evm (wagmi) and svm.
- * Renders parent/child hierarchy (EOA → Smart Account) with CornerDownRightIcon.
+ * Renders all wallets at the top level (EOA, Smart Account, Delegated Account).
  */
 
 import {
@@ -12,15 +12,7 @@ import {
 } from '@openfort/react'
 import { Link } from '@tanstack/react-router'
 import { AnimatePresence } from 'framer-motion'
-import {
-  ChevronLeftIcon,
-  CornerDownRightIcon,
-  EyeIcon,
-  EyeOffIcon,
-  Loader2,
-  RefreshCwIcon,
-  WalletIcon,
-} from 'lucide-react'
+import { ChevronLeftIcon, EyeIcon, EyeOffIcon, Loader2, RefreshCwIcon, WalletIcon } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { MP } from '@/components/motion/motion'
 import { WalletRecoveryIcon } from '@/components/Showcase/app/WalletRecoveryIcon'
@@ -216,11 +208,9 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
 const WalletButton = ({
   wallet,
   setActive,
-  nested,
 }: {
   wallet: ConnectedEmbeddedEthereumWallet
   setActive: (opts: { address: `0x${string}`; password?: string; recoveryMethod?: RecoveryMethod }) => Promise<void>
-  nested?: boolean
 }) => {
   const [password, setPassword] = useState('example-password')
   const [showPasswordInput, setShowPasswordInput] = useState(false)
@@ -254,7 +244,7 @@ const WalletButton = ({
 
   if (showPasswordInput) {
     return (
-      <form className={cn('flex w-full gap-2 password-input', nested && 'ml-5')}>
+      <form className="flex w-full gap-2 password-input">
         <Input
           type={showPassword ? 'text' : 'password'}
           placeholder="Enter password"
@@ -292,8 +282,7 @@ const WalletButton = ({
   }
 
   return (
-    <div className={cn('flex items-center gap-1', nested && 'ml-5')}>
-      {nested && <CornerDownRightIcon className="h-3 w-3 shrink-0 opacity-40" />}
+    <div className="flex items-center gap-1">
       <Button
         type="button"
         variant="outline"
@@ -332,19 +321,17 @@ const WalletTooltipItem = ({
   wallet,
   index,
   setActive,
-  nested,
 }: {
   wallet: ConnectedEmbeddedEthereumWallet
   index: number
   activeWallet: ConnectedEmbeddedEthereumWallet | null
   connectingAddress: string | undefined
   setActive: (opts: { address: `0x${string}`; password?: string; recoveryMethod?: RecoveryMethod }) => Promise<void>
-  nested?: boolean
 }) => (
   <Tooltip delayDuration={500}>
     <TooltipTrigger asChild>
       <div>
-        <WalletButton wallet={wallet} setActive={setActive} nested={nested} />
+        <WalletButton wallet={wallet} setActive={setActive} />
       </div>
     </TooltipTrigger>
     <TooltipContent>
@@ -424,58 +411,22 @@ export function EmbeddedWalletsList({
     })
   }, [ethereum.wallets, currentChainId])
 
-  const { topLevel, childrenByOwner } = useMemo(() => {
-    const ownerAddresses = new Set(wallets.map((w) => w.address.toLowerCase()))
-    const childrenByOwner = new Map<string, ConnectedEmbeddedEthereumWallet[]>()
-    const topLevel: ConnectedEmbeddedEthereumWallet[] = []
-
-    for (const wallet of wallets) {
-      const owner = wallet.ownerAddress?.toLowerCase()
-      if (owner && ownerAddresses.has(owner) && owner !== wallet.address.toLowerCase()) {
-        const existing = childrenByOwner.get(owner) ?? []
-        existing.push(wallet)
-        childrenByOwner.set(owner, existing)
-      } else {
-        topLevel.push(wallet)
-      }
-    }
-
-    return { topLevel, childrenByOwner }
-  }, [wallets])
-
   // When an external wallet is active, suppress embedded active indicators
   const effectiveActiveWallet = isExternalActive ? null : activeWallet
 
   return (
     <div className="space-y-2">
-      {topLevel.map((wallet) => {
-        const children = childrenByOwner.get(wallet.address.toLowerCase())
-        const walletIndex = wallets.indexOf(wallet)
+      {wallets.map((wallet, walletIndex) => {
         const displayWallet = isExternalActive ? { ...wallet, isActive: false } : wallet
         return (
-          <div key={wallet.id} className="space-y-1">
-            <WalletTooltipItem
-              wallet={displayWallet}
-              index={walletIndex}
-              activeWallet={effectiveActiveWallet}
-              connectingAddress={connectingAddress}
-              setActive={setActive}
-            />
-            {children?.map((child) => {
-              const displayChild = isExternalActive ? { ...child, isActive: false } : child
-              return (
-                <WalletTooltipItem
-                  key={child.id}
-                  wallet={displayChild}
-                  index={wallets.indexOf(child)}
-                  activeWallet={effectiveActiveWallet}
-                  connectingAddress={connectingAddress}
-                  setActive={setActive}
-                  nested
-                />
-              )
-            })}
-          </div>
+          <WalletTooltipItem
+            key={wallet.id}
+            wallet={displayWallet}
+            index={walletIndex}
+            activeWallet={effectiveActiveWallet}
+            connectingAddress={connectingAddress}
+            setActive={setActive}
+          />
         )
       })}
       <div className="flex gap-2">
