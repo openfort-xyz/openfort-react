@@ -11,10 +11,11 @@ test.describe('auth screen renders correctly', () => {
       await page.goto('/showcase/auth', { waitUntil: 'domcontentloaded' })
       await expect(page).toHaveURL(/\/showcase\/auth/i)
 
-      // Landing card behind the widget
+      // Landing card with the Connect Wallet button
       await expect(page.getByText(/connect to start/i)).toBeVisible({ timeout: 20_000 })
+      await page.getByRole('button', { name: /^connect wallet$/i }).click()
 
-      // The widget modal auto-opens with the configured sign-in options
+      // The widget modal opens with the configured sign-in options
       await expect(page.getByPlaceholder('Enter your email')).toBeVisible({ timeout: 30_000 })
       await expect(page.getByRole('button', { name: /^guest$/i })).toBeVisible({ timeout: 30_000 })
     })

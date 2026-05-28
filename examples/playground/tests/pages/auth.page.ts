@@ -23,14 +23,15 @@ export class AuthPage {
    * Sign up as a guest via the Openfort widget, then create a wallet on the dashboard.
    *
    * Flow:
-   *  1. The onboarding screen auto-opens the widget; click "Guest" inside the modal
+   *  1. Click "Connect Wallet" on the onboarding screen to open the widget, then "Guest"
    *  2. Auth redirects to / (dashboard) — no wallet yet (connectOnLogin=false)
    *  3. Dismiss the widget if it lingers on a create-wallet step
    *  4. In the Wallets card: Create new wallet → Smart Account (EVM only) → Automatic
    *  5. Wait for "Connected with <address>"
    */
   async continueAsGuest(mode: PlaygroundMode) {
-    // Onboarding auto-opens the Openfort widget modal; sign up via the "Guest" option.
+    // Open the Openfort widget modal from the onboarding screen, then sign up via "Guest".
+    await safeClick(this.page, /^connect wallet$/i, 30_000)
     await expect(this.page.getByPlaceholder('Enter your email')).toBeVisible({ timeout: 30_000 })
     await this.page.getByRole('button', { name: /^guest$/i }).click()
 

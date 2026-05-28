@@ -1,7 +1,6 @@
 import { useUI } from '@openfort/react'
 import { createFileRoute } from '@tanstack/react-router'
 import { ArrowRight } from 'lucide-react'
-import { useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Logo } from '@/components/ui/logo'
@@ -12,11 +11,6 @@ export const Route = createFileRoute('/_showcase/showcase/auth/')({
 
 function RouteComponent() {
   const ui = useUI()
-
-  // Open the Openfort widget automatically when the onboarding screen mounts.
-  useEffect(() => {
-    ui.open()
-  }, [])
 
   return (
     <div className="flex flex-1 items-center justify-center p-4">
