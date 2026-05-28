@@ -94,6 +94,12 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
     return () => document.removeEventListener('click', handleClickOutsideCreateWallet)
   }, [])
 
+  // The SDK falls back to the config's default chain when no chainId is passed,
+  // which can deploy a Smart Account / Delegated on the wrong chain when the
+  // user is browsing a different active chain. Always pin creation to the
+  // currently-active chain so Polygon Amoy creates land on Amoy, not Base.
+  const activeChainId = ethereum.status === 'connected' ? ethereum.chainId : undefined
+
   const handleCreateWallet = async (recoveryMethod: RecoveryMethod) => {
     if (!selectedAccountType) return
     const accountType = selectedAccountType
@@ -103,6 +109,7 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
     try {
       const options = {
         accountType,
+        ...(accountType !== AccountTypeEnum.EOA && activeChainId != null && { chainId: activeChainId }),
         ...(recoveryMethod === RecoveryMethod.PASSWORD && {
           recoveryMethod: RecoveryMethod.PASSWORD,
           password: 'example-password',
@@ -477,16 +484,44 @@ export function EmbeddedWalletsList({
     })
   }, [ethereum.wallets, currentChainId])
 
+  // Smart Accounts are owned by an EOA at a different address. Group SAs under
+  // their owner EOA when present in the list. SAs whose owner is missing from
+  // the list (e.g. owner EOA not loaded yet) render at the top level.
+  const eoaAddressesInList = useMemo(
+    () => new Set(wallets.filter((w) => w.accountType === AccountTypeEnum.EOA).map((w) => w.address.toLowerCase())),
+    [wallets]
+  )
+  const ownedSmartAccountsByOwner = useMemo(() => {
+    const map = new Map<string, ConnectedEmbeddedEthereumWallet[]>()
+    for (const w of wallets) {
+      if (w.accountType !== AccountTypeEnum.SMART_ACCOUNT) continue
+      const owner = w.ownerAddress?.toLowerCase()
+      if (!owner || !eoaAddressesInList.has(owner)) continue
+      const list = map.get(owner) ?? []
+      list.push(w)
+      map.set(owner, list)
+    }
+    return map
+  }, [wallets, eoaAddressesInList])
+  const topLevelWallets = useMemo(() => {
+    return wallets.filter((w) => {
+      if (w.accountType !== AccountTypeEnum.SMART_ACCOUNT) return true
+      const owner = w.ownerAddress?.toLowerCase()
+      return !owner || !eoaAddressesInList.has(owner)
+    })
+  }, [wallets, eoaAddressesInList])
+
   // When an external wallet is active, suppress embedded active indicators
   const effectiveActiveWallet = isExternalActive ? null : activeWallet
 
   return (
     <div className="space-y-2">
-      {wallets.map((wallet, walletIndex) => {
+      {topLevelWallets.map((wallet, walletIndex) => {
         const displayWallet = isExternalActive ? { ...wallet, isActive: false } : wallet
         const isEoa = wallet.accountType === AccountTypeEnum.EOA
         const isDelegatedHere =
           isEoa && currentChainId != null && delegatedAddressesOnChain.has(wallet.address.toLowerCase())
+        const ownedSmartAccounts = isEoa ? (ownedSmartAccountsByOwner.get(wallet.address.toLowerCase()) ?? []) : []
         return (
           <div key={wallet.id}>
             <WalletTooltipItem
@@ -497,6 +532,20 @@ export function EmbeddedWalletsList({
               setActive={setActive}
             />
             {isDelegatedHere && currentChainId != null && <DelegationSubRow chainId={currentChainId} />}
+            {ownedSmartAccounts.map((sa) => {
+              const saDisplay = isExternalActive ? { ...sa, isActive: false } : sa
+              return (
+                <div key={sa.id} className="ml-6 mt-1">
+                  <WalletTooltipItem
+                    wallet={saDisplay}
+                    index={walletIndex}
+                    activeWallet={effectiveActiveWallet}
+                    connectingAddress={connectingAddress}
+                    setActive={setActive}
+                  />
+                </div>
+              )
+            })}
           </div>
         )
       })}
