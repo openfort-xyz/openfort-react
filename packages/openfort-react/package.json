@@ -112,7 +112,7 @@
     "rollup-plugin-typescript2": "^0.36.0",
     "typescript": "^5.0.4",
     "typescript-plugin-styled-components": "^2.0.0",
-    "vitest": "^2.0.0",
+    "vitest": "^4.1.0",
     "wagmi": "^2.18.2"
   },
   "peerDependenciesMeta": {
