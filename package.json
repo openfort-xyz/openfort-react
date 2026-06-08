@@ -56,7 +56,7 @@
     "@biomejs/biome": "^2.2.4",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.7",
-    "@playwright/test": "^1.57.0",
+    "@playwright/test": "^1.60.0",
     "knip": "^5.64.0",
     "rollup": "^2.80.0",
     "simple-git-hooks": "^2.13.1",
