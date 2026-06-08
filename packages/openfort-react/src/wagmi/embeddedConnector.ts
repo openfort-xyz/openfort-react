@@ -72,6 +72,19 @@ export function embeddedWalletConnector(): CreateConnectorFn<OpenfortEmbeddedEth
         return _provider ?? undefined
       },
 
+      async switchChain({ chainId }) {
+        const provider = _provider
+        if (!provider) throw new Error('Embedded wallet provider not ready')
+        const chain = config.chains.find((c) => c.id === chainId)
+        if (!chain) throw new Error(`Chain ${chainId} is not configured`)
+        await provider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: `0x${chainId.toString(16)}` }],
+        })
+        config.emitter.emit('change', { chainId })
+        return chain
+      },
+
       async isAuthorized() {
         if (!_provider) return false
         const accounts = (await _provider.request({ method: 'eth_accounts' })) as string[]
