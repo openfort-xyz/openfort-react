@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.0
+
+### Minor Changes
+
+- [#259](https://github.com/openfort-xyz/openfort-react/pull/259) [`cb65c6f`](https://github.com/openfort-xyz/openfort-react/commit/cb65c6f1fcbdff882059472a19b9e4db5fff0b93) Thanks [@isardmart](https://github.com/isardmart)! - feat: upgrade wagmi to v3
+
+  Also fixes `useSwitchChain` for the embedded wallet (connector now implements `switchChain`).
+
 ## 1.0.16
 
 ### Patch Changes
