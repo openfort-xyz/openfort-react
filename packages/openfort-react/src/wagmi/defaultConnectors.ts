@@ -35,7 +35,6 @@ const defaultConnectors = ({
     coinbaseWallet({
       appName: app.name,
       appLogoUrl: app.icon,
-      overrideIsMetaMask: false,
       preference: coinbaseWalletPreference,
     })
   )
