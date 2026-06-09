@@ -21,6 +21,8 @@ interface WriteContractLayoutProps {
   error: Error | null | undefined
   onSubmit: (amount: string) => void
   disabledReason?: string
+  /** Non-blocking notice shown above the button — informs without disabling the action. */
+  warning?: string
 }
 
 export function WriteContractLayout({
@@ -35,6 +37,7 @@ export function WriteContractLayout({
   error,
   onSubmit,
   disabledReason,
+  warning,
 }: WriteContractLayoutProps) {
   const isDisabled = isPending || !address || !config || !!disabledReason
   return (
@@ -62,6 +65,7 @@ export function WriteContractLayout({
             {isPending ? 'Minting...' : 'Mint Tokens'}
           </Button>
           <InputMessage message={disabledReason ?? ''} show={!!disabledReason} variant="default" />
+          <InputMessage message={warning ?? ''} show={!!warning} variant="warning" />
           <InputMessage message={`Transaction hash: ${hash}`} show={!!hash} variant="success" />
           {hash && chainId && (
             <a

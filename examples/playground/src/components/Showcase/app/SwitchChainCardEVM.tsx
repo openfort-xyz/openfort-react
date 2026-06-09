@@ -8,6 +8,7 @@ import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
+import { delegatedImplLabel, isDelegatedAccountUsableOnChain } from '@/lib/delegation'
 import { toError } from '@/lib/errors'
 
 export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
@@ -27,6 +28,12 @@ export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
       ? embedded.chainId
       : undefined
   const canSwitch = isExternalWallet || embedded.status === 'connected' || !!core.activeEmbeddedAddress
+
+  // Implementation type of the active embedded (delegated) account, if any. Used to inform
+  // — never block — when the current wallet can't transact on a target chain (e.g. a legacy
+  // Calibur V8 wallet on Polygon Amoy). External wallets are always considered portable here.
+  const activeImplType =
+    !isExternalWallet && embedded.status === 'connected' ? embedded.activeWallet?.implementationType : undefined
 
   const switchChain = async (targetChainId: number) => {
     if (!canSwitch) {
@@ -79,16 +86,24 @@ export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {PLAYGROUND_EVM_CHAINS.map((chain) => (
-            <div key={chain.id}>
-              <Button
-                onClick={() => switchChain(chain.id)}
-                disabled={currentChainId === chain.id || isPending || !canSwitch}
-              >
-                Switch to {chain.name}
-              </Button>
-            </div>
-          ))}
+          {PLAYGROUND_EVM_CHAINS.map((chain) => {
+            const usableOnChain = isDelegatedAccountUsableOnChain(activeImplType, chain.id)
+            return (
+              <div key={chain.id}>
+                <Button
+                  onClick={() => switchChain(chain.id)}
+                  disabled={currentChainId === chain.id || isPending || !canSwitch}
+                >
+                  Switch to {chain.name}
+                </Button>
+                <InputMessage
+                  message={`Heads up: this wallet (${delegatedImplLabel(activeImplType)}) can't transact on ${chain.name}. You can still switch, but to mint here create a new wallet — new wallets work on every chain.`}
+                  show={!usableOnChain}
+                  variant="warning"
+                />
+              </div>
+            )
+          })}
 
           <InputMessage message={`Switched to chain ${data?.name}`} show={!!data} variant="success" />
           <InputMessage
