@@ -11,7 +11,7 @@ export const InputMessage = ({
   message: string
   show: boolean
   className?: string
-  variant: 'success' | 'error' | 'default'
+  variant: 'success' | 'error' | 'warning' | 'default'
 }) => {
   return (
     <AnimatePresence>
@@ -30,6 +30,7 @@ export const InputMessage = ({
                 'text-sm whitespace-normal break-words',
                 variant === 'success' && 'text-green-600 dark:text-green-500',
                 variant === 'error' && 'text-destructive',
+                variant === 'warning' && 'text-amber-600 dark:text-amber-500',
                 variant === 'default' && 'text-muted-foreground',
                 className
               )}
