@@ -37,17 +37,22 @@ import {
   UIAuthProvider,
 } from './types'
 
+// These chunks are lazy-loaded with static specifiers so every bundler (Vite, Rollup, webpack)
+// can resolve and code-split them. Do NOT add a vite-ignore hint to these imports: it makes
+// Vite's dependency pre-bundler keep the import external, so the relative path resolves against
+// node_modules/.vite/deps instead of the package and the provider fails to load in dev
+// ("Failed to resolve import ../../solana/SolanaContext.js"), blanking any Vite app.
 const SolanaContextProvider = lazy(() =>
-  import(/* @vite-ignore */ '../../solana/SolanaContext').then((m) => ({ default: m.SolanaContextProvider }))
+  import('../../solana/SolanaContext').then((m) => ({ default: m.SolanaContextProvider }))
 )
 
 const LazyEmbeddedWalletWagmiSync = lazy(() =>
-  import(/* @vite-ignore */ '../../wagmi/useEmbeddedWalletWagmiSync').then((m) => ({
+  import('../../wagmi/useEmbeddedWalletWagmiSync').then((m) => ({
     default: m.EmbeddedWalletWagmiSync,
   }))
 )
 
-const LazyConnectKitModal = lazy(() => import(/* @vite-ignore */ '../ConnectModal'))
+const LazyConnectKitModal = lazy(() => import('../ConnectModal'))
 
 /** {@link OpenfortProvider} props. */
 type OpenfortProviderProps = {
