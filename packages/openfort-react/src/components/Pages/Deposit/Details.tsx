@@ -16,7 +16,7 @@ function Row({ label, value }: { label: string; value: string }) {
 }
 
 /** Collapsible details: minimum, Relay fee, processing time, max deposit. */
-export function DepositDetails({ pm, token }: { pm: PaymentMethod; token: string }) {
+export function DepositDetails({ pm }: { pm: PaymentMethod }) {
   const [open, setOpen] = useState(false)
   const { triggerResize } = useOpenfort()
   // Grow/shrink the modal to fit the expanded rows.
@@ -34,7 +34,7 @@ export function DepositDetails({ pm, token }: { pm: PaymentMethod; token: string
       </button>
       {open && (
         <div>
-          <Row label="Minimum" value={relayFee ? `above ${formatUnits6(relayFee.amount)} ${token}` : '~0.10'} />
+          <Row label="Minimum transfer" value="$0.25" />
           <Row label="Relay fee" value={feeText} />
           <Row label="Processing time" value="< 1 min" />
           <Row label="Max deposit" value="Unlimited" />

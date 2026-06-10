@@ -41,6 +41,25 @@ export const codeStyle: CSSProperties = { fontSize: 12, wordBreak: 'break-all' }
 
 export const rowCenter: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
 
+/** Shadow card around the deposit address + copy button. */
+export const addressBox: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  marginTop: 12,
+  padding: '12px 14px',
+  borderRadius: 12,
+  background: 'var(--ck-body-background, #fff)',
+  border: '1px solid var(--ck-body-divider, #ededed)',
+  boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
+}
+
+/** "──  or  ──" separator between the scan/copy path and the open-wallet path. */
+export const orRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 4px' }
+export const orLine: CSSProperties = { flex: 1, height: 1, background: 'var(--ck-body-divider, #ededed)' }
+export const orText: CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--ck-body-color-muted, #6b7280)' }
+
 /** Chain + token selectors side by side. */
 export const twoCol: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }
 
@@ -80,8 +99,6 @@ export const walletListBtn: CSSProperties = {
 /** Collapsible "Details" panel (min / fee / processing / max). */
 export const detailsBox: CSSProperties = {
   marginTop: 14,
-  borderTop: '1px solid var(--ck-body-divider, #ededed)',
-  paddingTop: 6,
 }
 
 export const detailsToggle: CSSProperties = {

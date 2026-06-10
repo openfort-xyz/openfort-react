@@ -13,17 +13,18 @@ import { PageContent } from '../../PageContent'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { DepositDetails } from '../Deposit/Details'
 import {
+  addressBox,
   bareSelect,
   codeStyle,
   deeplinkBtn,
   deeplinkRow,
   field,
   logoImg,
-  rowCenter,
   selectWrap,
   twoCol,
   walletListBtn,
 } from '../Deposit/formStyles'
+import { OrDivider } from '../Deposit/OrDivider'
 import {
   addressFor,
   chainLogo,
@@ -147,17 +148,20 @@ const DepositCrypto = () => {
               imageBackground="#fff"
             />
           </QRWrapper>
-          <div style={rowCenter}>
+          <div style={addressBox}>
             <code style={codeStyle}>{receiverAddress}</code>
             <CopyIconButton value={receiverAddress} />
           </div>
-          {!sameChain && pm && <DepositDetails pm={pm} token={activeToken} />}
+          {!sameChain && pm && <DepositDetails pm={pm} />}
           {!sameChain && pm && pm.deeplinks.length > 0 && (
-            <div style={deeplinkRow}>
-              <button type="button" style={deeplinkBtn} onClick={() => setWalletsOpen(true)}>
-                Transfer crypto from wallet ›
-              </button>
-            </div>
+            <>
+              <OrDivider />
+              <div style={deeplinkRow}>
+                <button type="button" style={deeplinkBtn} onClick={() => setWalletsOpen(true)}>
+                  Transfer crypto from wallet ›
+                </button>
+              </div>
+            </>
           )}
         </>
       )}

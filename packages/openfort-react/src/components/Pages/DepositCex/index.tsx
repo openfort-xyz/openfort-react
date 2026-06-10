@@ -13,16 +13,17 @@ import { PageContent } from '../../PageContent'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { DepositDetails } from '../Deposit/Details'
 import {
+  addressBox,
   bareSelect,
   codeStyle,
   deeplinkBtn,
   deeplinkRow,
   field,
   logoImg,
-  rowCenter,
   selectWrap,
   twoCol,
 } from '../Deposit/formStyles'
+import { OrDivider } from '../Deposit/OrDivider'
 import {
   addressFor,
   chainLogo,
@@ -147,15 +148,16 @@ const DepositCex = () => {
               imageBackground="#fff"
             />
           </QRWrapper>
-          <div style={rowCenter}>
+          <div style={addressBox}>
             <code style={codeStyle}>{receiverAddress}</code>
             <CopyIconButton value={receiverAddress} />
           </div>
-          {!sameChain && pm && <DepositDetails pm={pm} token={activeToken} />}
+          {!sameChain && pm && <DepositDetails pm={pm} />}
+          <OrDivider />
           <div style={deeplinkRow}>
             {PAY_EXCHANGES.map((ex) => (
               <button key={ex} type="button" style={deeplinkBtn} onClick={() => openPay(ex)}>
-                Open on {titleCase(ex)} ↗
+                Open {titleCase(ex)} ↗
               </button>
             ))}
           </div>
