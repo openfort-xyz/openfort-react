@@ -16,7 +16,6 @@ import Input from '../../Common/Input'
 import Loader from '../../Common/Loading'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { OtpInputStandalone } from '../../Common/OTPInput'
-import TickList from '../../Common/TickList'
 import { FloatingGraphic } from '../../FloatingGraphic'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -310,7 +309,9 @@ const SolanaCreatePassword = ({
       />
       <ModalHeading>Secure your wallet</ModalHeading>
       <ModalBody style={{ textAlign: 'center' }}>
-        <FitText>Set a password for your wallet.</FitText>
+        <span style={{ display: 'block', marginBottom: 16 }}>
+          You will use this password to access your wallet, so keep it safe.
+        </span>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -330,9 +331,6 @@ const SolanaCreatePassword = ({
           <PasswordStrengthIndicator
             password={recoveryPhrase}
             showPasswordIsTooWeakError={showPasswordIsTooWeakError}
-          />
-          <TickList
-            items={['You will use this password to access your wallet', "Make sure it's strong and memorable"]}
           />
           {recoveryError && (
             <motion.div key={recoveryError} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>

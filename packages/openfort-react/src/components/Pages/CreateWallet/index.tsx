@@ -20,7 +20,6 @@ import Input from '../../Common/Input'
 import Loader from '../../Common/Loading'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { OtpInputStandalone } from '../../Common/OTPInput'
-import TickList from '../../Common/TickList'
 import { FloatingGraphic } from '../../FloatingGraphic'
 import { LinkWalletOnSignUpOption, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -394,7 +393,9 @@ const CreateWalletPasswordRecovery = ({
       />
       <ModalHeading>Secure your wallet</ModalHeading>
       <ModalBody style={{ textAlign: 'center' }}>
-        <FitText>Set a password for your wallet.</FitText>
+        <span style={{ display: 'block', marginBottom: 16 }}>
+          You will use this password to access your wallet, so keep it safe.
+        </span>
 
         <form
           onSubmit={(e) => {
@@ -416,9 +417,6 @@ const CreateWalletPasswordRecovery = ({
           <PasswordStrengthIndicator
             password={recoveryPhrase}
             showPasswordIsTooWeakError={showPasswordIsTooWeakError}
-          />
-          <TickList
-            items={['You will use this password to access your wallet', "Make sure it's strong and memorable"]}
           />
 
           {recoveryError && (
