@@ -49,8 +49,8 @@ export const createBackend = async ({
           `SHIELD_SECRET_KEY=${shieldSecretKey}`,
         )
         .replace(
-          /SHIELD_PUBLISHABLE_KEY=.*/g,
-          `SHIELD_PUBLISHABLE_KEY=${shieldPublishableKey}`,
+          /SHIELD_API_KEY=.*/g,
+          `SHIELD_API_KEY=${shieldPublishableKey}`,
         )
         .replace(
           /SHIELD_ENCRYPTION_SHARE=.*/g,
