@@ -87,6 +87,14 @@ export {
   type SignAuthorizationReturnType,
   use7702Authorization,
 } from './hooks/openfort/use7702Authorization'
+export type {
+  FundingSession,
+  FundingTarget,
+  PaymentMethod,
+  PaymentMethodInput,
+  UseFunding,
+} from './hooks/openfort/useFunding'
+export { useFunding } from './hooks/openfort/useFunding'
 export { useGrantPermissions } from './hooks/openfort/useGrantPermissions'
 export { useRevokePermissions } from './hooks/openfort/useRevokePermissions'
 export { useUI } from './hooks/openfort/useUI'

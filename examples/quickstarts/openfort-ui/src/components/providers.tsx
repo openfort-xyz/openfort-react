@@ -1,13 +1,13 @@
 import { OpenfortProvider, type Theme } from '@openfort/react'
 import { getDefaultConfig, OpenfortWagmiBridge } from '@openfort/react/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { beamTestnet, polygonAmoy } from 'viem/chains'
+import { baseSepolia, polygonAmoy } from 'viem/chains'
 import { createConfig, WagmiProvider } from 'wagmi'
 
 const config = createConfig(
   getDefaultConfig({
     appName: 'Openfort React demo',
-    chains: [beamTestnet, polygonAmoy], // The chains you want to support
+    chains: [polygonAmoy, baseSepolia], // The chains you want to support
     walletConnectProjectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID, // The WalletConnect Project ID
   }),
 )
@@ -28,6 +28,8 @@ const walletConfig = {
 
 const uiConfig = {
   theme: import.meta.env.VITE_OPENFORT_THEME as Theme,
+  // Point the Deposit hub's crypto/CEX rails at the local funding backend.
+  fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL ?? 'http://localhost:8787',
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {
