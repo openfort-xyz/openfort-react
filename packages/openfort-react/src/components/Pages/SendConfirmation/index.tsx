@@ -53,6 +53,89 @@ function isTestnetChain(chainId: number): boolean {
   return testnets.has(chainId)
 }
 
+/**
+ * Defensive timeout for `provider.request` calls. The underlying SDK's
+ * `iframeManager.sign` already enforces a 90s timeout, so this 120s upper
+ * bound exists to make sure the SDK's typed timeout wins on the wire —
+ * if the React layer fired first we'd surface a generic "timeout" instead
+ * of the SDK's `IframeSignTimeoutError`. The gap also covers RPC submission
+ * after the signature is produced.
+ */
+const PROVIDER_REQUEST_TIMEOUT_MS = 120_000
+
+/**
+ * sessionStorage key for the in-flight send context. Persisting this
+ * survives an F5 mid-confirmation, so the user does not re-click Confirm
+ * and create a second `TransactionIntent` on the server.
+ */
+const SEND_CONFIRMATION_STORAGE_KEY = 'openfort:send-confirmation:tx'
+const SEND_CONFIRMATION_STORAGE_TTL_MS = 30 * 60 * 1000
+
+type StoredSendTx = {
+  fromAddress: string
+  chainId: number
+  recipient: string
+  amount: string
+  tokenKey: string
+  nativeTxHash?: `0x${string}`
+  erc20TxHash?: `0x${string}`
+  timestamp: number
+}
+
+function readStoredSendTx(): StoredSendTx | null {
+  if (typeof window === 'undefined' || !window.sessionStorage) return null
+  try {
+    const raw = window.sessionStorage.getItem(SEND_CONFIRMATION_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as StoredSendTx
+    if (Date.now() - parsed.timestamp > SEND_CONFIRMATION_STORAGE_TTL_MS) {
+      window.sessionStorage.removeItem(SEND_CONFIRMATION_STORAGE_KEY)
+      return null
+    }
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+function writeStoredSendTx(entry: StoredSendTx): void {
+  if (typeof window === 'undefined' || !window.sessionStorage) return
+  try {
+    window.sessionStorage.setItem(SEND_CONFIRMATION_STORAGE_KEY, JSON.stringify(entry))
+  } catch {
+    // sessionStorage may be unavailable (private mode, quota) — non-fatal.
+  }
+}
+
+function clearStoredSendTx(): void {
+  if (typeof window === 'undefined' || !window.sessionStorage) return
+  try {
+    window.sessionStorage.removeItem(SEND_CONFIRMATION_STORAGE_KEY)
+  } catch {
+    // ignore
+  }
+}
+
+async function withProviderTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let handle: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        handle = setTimeout(() => {
+          reject(
+            new Error(
+              `Wallet did not respond within ${Math.round(timeoutMs / 1000)}s. The signing prompt may have been dismissed or the wallet is unresponsive.`
+            )
+          )
+        }, timeoutMs)
+      }),
+    ])
+  } finally {
+    if (handle !== undefined) clearTimeout(handle)
+  }
+}
+
 const SendConfirmation = () => {
   const wallet = useEthereumEmbeddedWallet()
   const { chainType } = useOpenfortCore()
@@ -166,7 +249,58 @@ const SendConfirmation = () => {
   const [isTokenPending, setIsTokenPending] = useState(false)
   const [erc20Error, setErc20Error] = useState<Error | null>(null)
 
+  // Captures anything thrown out of `handleConfirm` that wasn't already
+  // surfaced via `nativeError`/`erc20Error` (defense in depth — see the
+  // comment in `handleConfirm` for the failure mode this guards against).
+  const [submitError, setSubmitError] = useState<Error | null>(null)
+
   const transactionHash = nativeTxHash ?? erc20TxHash
+
+  // Stable key identifying the current send context. Used as the
+  // sessionStorage matching key so a rehydrated tx hash is only restored
+  // when the user lands back on the exact same recipient + amount + token
+  // + chain after an F5.
+  const tokenKey = token.type === 'native' ? `native:${chainId ?? 0}` : `erc20:${token.address.toLowerCase()}`
+
+  // ----- F5-safe persistence of the in-flight tx hash -----
+  // Without this, a refresh during receipt-waiting wipes the state and the
+  // user is forced to click Confirm again, creating a SECOND
+  // TransactionIntent on the server (the duplicated-intent symptom). We
+  // persist the hash + a context fingerprint so rehydration only fires for
+  // the same send.
+  const rehydratedRef = useRef(false)
+  useEffect(() => {
+    if (rehydratedRef.current) return
+    if (!address || !chainId || !recipientAddress || !normalisedAmount) return
+    const stored = readStoredSendTx()
+    if (!stored) return
+    if (
+      stored.fromAddress.toLowerCase() === address.toLowerCase() &&
+      stored.chainId === chainId &&
+      stored.recipient.toLowerCase() === recipientAddress.toLowerCase() &&
+      stored.amount === normalisedAmount &&
+      stored.tokenKey === tokenKey
+    ) {
+      if (stored.nativeTxHash) setNativeTxHash(stored.nativeTxHash)
+      if (stored.erc20TxHash) setErc20TxHash(stored.erc20TxHash)
+    }
+    rehydratedRef.current = true
+  }, [address, chainId, recipientAddress, normalisedAmount, tokenKey])
+
+  useEffect(() => {
+    if (!address || !chainId || !recipientAddress || !normalisedAmount) return
+    if (!nativeTxHash && !erc20TxHash) return
+    writeStoredSendTx({
+      fromAddress: address,
+      chainId,
+      recipient: recipientAddress,
+      amount: normalisedAmount,
+      tokenKey,
+      nativeTxHash,
+      erc20TxHash,
+      timestamp: Date.now(),
+    })
+  }, [address, chainId, recipientAddress, normalisedAmount, tokenKey, nativeTxHash, erc20TxHash])
 
   const sendTransactionAsync = async (params: { to: `0x${string}`; value: bigint; chainId?: number }) => {
     setIsNativePending(true)
@@ -174,16 +308,22 @@ const SendConfirmation = () => {
     try {
       if (!wallet.activeWallet) throw new Error('Wallet not available')
       const provider = await wallet.activeWallet.getProvider()
-      const hash = (await provider.request({
-        method: 'eth_sendTransaction',
-        params: [
-          {
-            from: address,
-            to: params.to,
-            value: `0x${params.value.toString(16)}`,
-          },
-        ],
-      })) as `0x${string}`
+      // Defensive timeout: if the SDK / signer iframe hangs, our `finally`
+      // block (which clears the pending flag) would otherwise never run,
+      // and the spinner would spin forever.
+      const hash = (await withProviderTimeout(
+        provider.request({
+          method: 'eth_sendTransaction',
+          params: [
+            {
+              from: address,
+              to: params.to,
+              value: `0x${params.value.toString(16)}`,
+            },
+          ],
+        }),
+        PROVIDER_REQUEST_TIMEOUT_MS
+      )) as `0x${string}`
       setNativeTxHash(hash)
       return hash
     } catch (error) {
@@ -212,10 +352,14 @@ const SendConfirmation = () => {
         functionName: params.functionName,
         args: params.args,
       })
-      const hash = (await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: address, to: params.address, data }],
-      })) as `0x${string}`
+      // Defensive timeout: see `sendTransactionAsync` above for rationale.
+      const hash = (await withProviderTimeout(
+        provider.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: address, to: params.address, data }],
+        }),
+        PROVIDER_REQUEST_TIMEOUT_MS
+      )) as `0x${string}`
       setErc20TxHash(hash)
       return hash
     } catch (error) {
@@ -264,7 +408,7 @@ const SendConfirmation = () => {
   const isSubmitting = isNativePending || isTokenPending
   const isLoading = isSubmitting || isWaitingForReceipt
 
-  const firstError = nativeError || erc20Error || waitError
+  const firstError = nativeError || erc20Error || waitError || submitError
 
   // Store original balance when transaction starts
   useEffect(() => {
@@ -311,11 +455,21 @@ const SendConfirmation = () => {
     }
   }, [isPollingBalance, currentBalance])
 
+  // Once the receipt is confirmed, drop the persisted entry — there is no
+  // longer any duplicate-intent risk and we don't want a stale entry to
+  // leak into the next confirmation flow.
+  useEffect(() => {
+    if (isSuccess) {
+      clearStoredSendTx()
+    }
+  }, [isSuccess])
+
   const handleConfirm = async () => {
     if (submittingRef.current) return
     if (!recipientAddress || !parsedAmount || parsedAmount <= BigInt(0) || insufficientBalance) return
 
     submittingRef.current = true
+    setSubmitError(null)
     try {
       if (token.type === 'native') {
         await sendTransactionAsync({
@@ -332,8 +486,18 @@ const SendConfirmation = () => {
           chainId,
         })
       }
-    } catch (_error) {
-      // Errors are surfaced through mutation hooks
+    } catch (error) {
+      // `sendTransactionAsync` / `writeContractAsync` already wire the
+      // error into `nativeError` / `erc20Error` before re-throwing, but we
+      // also stash it here so any path that bypasses those setters (e.g. a
+      // pre-flight throw before the inner try) still surfaces in the UI
+      // instead of being silently swallowed. The previous handler caught
+      // the error with an `_error` placeholder and a comment claiming it
+      // was "surfaced through mutation hooks" — there are no mutation
+      // hooks in this component, so a slip in the inner setters would have
+      // left the spinner running forever.
+      const err = error instanceof Error ? error : new Error(String(error))
+      setSubmitError(err)
     } finally {
       submittingRef.current = false
     }
@@ -351,9 +515,23 @@ const SendConfirmation = () => {
       pollingIntervalRef.current = null
     }
     setIsPollingBalance(false)
+    // Finished — drop the persisted in-flight tx context so the next send
+    // starts clean.
+    clearStoredSendTx()
 
     // Don't reset the form - keep amount, token, and recipient for easier repeat transactions
     setRoute(routes.CONNECTED)
+  }
+
+  // Reset error state for a retry attempt. Used by the error UI's Retry
+  // action so the user can re-trigger Confirm without leaving the page.
+  const handleRetry = () => {
+    setNativeError(null)
+    setErc20Error(null)
+    setSubmitError(null)
+    setNativeTxHash(undefined)
+    setErc20TxHash(undefined)
+    clearStoredSendTx()
   }
 
   const status: 'idle' | 'success' | 'error' = isSuccess ? 'success' : firstError ? 'error' : 'idle'
@@ -485,14 +663,23 @@ const SendConfirmation = () => {
       <ButtonRow>
         <Button
           variant="primary"
-          onClick={isSuccess ? handleOpenBlockExplorer : handleConfirm}
+          onClick={
+            isSuccess
+              ? handleOpenBlockExplorer
+              : errorDetails
+                ? () => {
+                    handleRetry()
+                    void handleConfirm()
+                  }
+                : handleConfirm
+          }
           disabled={
             isSuccess ? false : !recipientAddress || !parsedAmount || parsedAmount <= BigInt(0) || insufficientBalance
           }
           waiting={isLoading}
           icon={isSuccess ? <TickIcon style={{ width: 18, height: 18 }} /> : undefined}
         >
-          {isSuccess ? 'Confirmed' : isLoading ? 'Confirming...' : 'Confirm'}
+          {isSuccess ? 'Confirmed' : isLoading ? 'Confirming...' : errorDetails ? 'Try again' : 'Confirm'}
         </Button>
         {isSuccess ? (
           <Button variant="secondary" onClick={handleFinish}>
