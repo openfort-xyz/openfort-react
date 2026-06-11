@@ -39,7 +39,8 @@ function routeMatches(a: ModalRoutes, b: ModalRoutes): boolean {
   const aRoute = typeof a === 'object' && 'route' in a ? a.route : a
   const bRoute = typeof b === 'object' && 'route' in b ? b.route : b
   return aRoute === bRoute
-  
+}
+
 /** Connector id must be a connector (e.g. injected, walletConnect), not an Openfort account id. */
 function isAccountId(id: string): boolean {
   return id.startsWith('acc_')
