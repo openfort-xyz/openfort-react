@@ -67,7 +67,6 @@
   "packageManager": "pnpm@10.30.3",
   "pnpm": {
     "overrides": {
-      "@grpc/grpc-js@<1.9.16": ">=1.9.16",
       "bn.js": ">=5.2.3",
       "axios": ">=1.15.1",
       "react": "18.3.1",
@@ -116,7 +115,8 @@
       "postcss@<8.5.10": ">=8.5.10",
       "ws": ">=8.20.1",
       "vitest@<4.1.0": ">=4.1.0",
-      "shell-quote@<1.8.4": ">=1.8.4"
+      "shell-quote@>=1.1.0 <=1.8.3": ">=1.8.4",
+      "@grpc/grpc-js@<1.9.16": ">=1.9.16"
     },
     "auditConfig": {
       "ignoreCves": [

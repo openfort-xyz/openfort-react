@@ -1,8 +1,9 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import styled from '../../styles/styled'
+import { useOpenfort } from '../Openfort/useOpenfort'
 import { getPasswordStrength, getPasswordStrengthLabel } from './password-utility'
 
 const Container = styled.div`
@@ -67,6 +68,15 @@ export const PasswordStrengthIndicator = ({
         return '#d1d5db' // gray-300
     }
   }, [label])
+
+  const { triggerResize } = useOpenfort()
+  // Grow/shrink the modal as the meter appears/disappears so it isn't clipped.
+  useEffect(() => {
+    triggerResize()
+  }, [!!password, showPasswordIsTooWeakError, triggerResize])
+
+  // Only surface strength once the user starts typing (or on the too-weak error).
+  if (!password && !showPasswordIsTooWeakError) return null
 
   return (
     <Container>
