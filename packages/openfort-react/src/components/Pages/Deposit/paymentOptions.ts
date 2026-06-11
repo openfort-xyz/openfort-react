@@ -1,7 +1,7 @@
 import type { BuyProviderId } from '../../Openfort/types'
 
 /** The deposit methods surfaced in the hub. */
-export type DepositMethodId = 'applePay' | 'card' | 'crypto' | 'cex'
+type DepositMethodId = 'applePay' | 'card' | 'crypto' | 'cex'
 
 /**
  * What a row routes into:
@@ -10,7 +10,7 @@ export type DepositMethodId = 'applePay' | 'card' | 'crypto' | 'cex'
  */
 export type DepositMethodTarget = { kind: 'buy'; providerId: BuyProviderId } | { kind: 'crypto' } | { kind: 'cex' }
 
-export type DepositMethod = {
+type DepositMethod = {
   id: DepositMethodId
   title: string
   /** Speed/fee hint, e.g. "instant, ~4% fee". */
@@ -21,7 +21,7 @@ export type DepositMethod = {
 }
 
 /** Context used to order/filter the rows for the current device + region. */
-export type PaymentOptionsContext = {
+type PaymentOptionsContext = {
   isMobile: boolean
   /** When the funding backend is unavailable, crypto/CEX rows are disabled. */
   fundingAvailable: boolean
@@ -34,7 +34,7 @@ export type PaymentOptionsContext = {
 }
 
 /** A row ready to render: resolved order, plus disabled state + reason. */
-export type ResolvedDepositOption = DepositMethod & {
+type ResolvedDepositOption = DepositMethod & {
   disabled: boolean
   disabledReason?: string
 }

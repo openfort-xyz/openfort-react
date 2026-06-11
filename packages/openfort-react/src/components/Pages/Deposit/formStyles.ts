@@ -4,15 +4,6 @@ import type { CSSProperties } from 'react'
 
 export const field: CSSProperties = { display: 'grid', gap: 6, fontSize: 13, textAlign: 'left' }
 
-export const control: CSSProperties = {
-  padding: '8px 10px',
-  borderRadius: 8,
-  fontSize: 14,
-  border: '1px solid var(--ck-body-divider, #e4e4e7)',
-  background: 'var(--ck-body-background-secondary, #fafafa)',
-  color: 'inherit',
-}
-
 /** A control-styled box holding a logo + a borderless select. */
 export const selectWrap: CSSProperties = {
   display: 'flex',
@@ -38,8 +29,6 @@ export const bareSelect: CSSProperties = {
 export const logoImg: CSSProperties = { width: 20, height: 20, borderRadius: '50%', flexShrink: 0 }
 
 export const codeStyle: CSSProperties = { fontSize: 12, wordBreak: 'break-all' }
-
-export const rowCenter: CSSProperties = { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }
 
 /** Shadow card around the deposit address + copy button. */
 export const addressBox: CSSProperties = {

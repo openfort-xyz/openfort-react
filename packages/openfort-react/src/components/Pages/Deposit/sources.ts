@@ -4,9 +4,9 @@
  * would source these from a server-provided token registry.
  */
 
-export const SOLANA_CHAIN = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'
+const SOLANA_CHAIN = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'
 
-export type SourceChain = { id: string; name: string; logo: string }
+type SourceChain = { id: string; name: string; logo: string }
 
 export const SOURCE_CHAINS: SourceChain[] = [
   { id: 'eip155:137', name: 'Polygon', logo: 'https://icons.llamao.fi/icons/chains/rsz_polygon.jpg' },
@@ -19,13 +19,13 @@ export const SOURCE_CHAINS: SourceChain[] = [
 const USDC_LOGO = 'https://assets.coingecko.com/coins/images/6319/small/usdc.png'
 const USDT_LOGO = 'https://assets.coingecko.com/coins/images/325/small/Tether.png'
 
-export type TokenInfo = { symbol: string; address: string; logo: string }
+type TokenInfo = { symbol: string; address: string; logo: string }
 
 const usdc = (address: string): TokenInfo => ({ symbol: 'USDC', address, logo: USDC_LOGO })
 const usdt = (address: string): TokenInfo => ({ symbol: 'USDT', address, logo: USDT_LOGO })
 
 /** Mainnet USDC/USDT contracts per supported source chain. */
-export const TOKENS_BY_CHAIN: Record<string, TokenInfo[]> = {
+const TOKENS_BY_CHAIN: Record<string, TokenInfo[]> = {
   'eip155:137': [
     usdc('0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'),
     usdt('0xc2132D05D31c914a87C6611C10748AEb04B58e8F'),
@@ -45,9 +45,6 @@ export const TOKENS_BY_CHAIN: Record<string, TokenInfo[]> = {
   ],
 }
 
-/** Exchanges offered in the "transfer from an exchange" flow. */
-export const EXCHANGES = ['binance', 'coinbase'] as const
-
 /** Destination for the demo: USDC on Base. */
 export const DEST_CHAIN = 'eip155:8453'
 export const DEST_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
@@ -62,7 +59,7 @@ export function tokensFor(chain: string): TokenInfo[] {
   return TOKENS_BY_CHAIN[chain] ?? []
 }
 
-export function tokenInfo(chain: string, symbol: string): TokenInfo | undefined {
+function tokenInfo(chain: string, symbol: string): TokenInfo | undefined {
   return tokensFor(chain).find((t) => t.symbol === symbol)
 }
 
@@ -76,10 +73,6 @@ export function chainLogo(id: string): string {
 
 export function tokenLogo(chain: string, symbol: string): string {
   return tokenInfo(chain, symbol)?.logo ?? USDC_LOGO
-}
-
-export function chainName(id: string): string {
-  return SOURCE_CHAINS.find((c) => c.id === id)?.name ?? id
 }
 
 export function isSolana(chain: string): boolean {
