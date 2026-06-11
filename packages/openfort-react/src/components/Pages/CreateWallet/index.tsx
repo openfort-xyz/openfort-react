@@ -20,6 +20,7 @@ import Input from '../../Common/Input'
 import Loader from '../../Common/Loading'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { OtpInputStandalone } from '../../Common/OTPInput'
+import TickList from '../../Common/TickList'
 import { FloatingGraphic } from '../../FloatingGraphic'
 import { LinkWalletOnSignUpOption, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -418,6 +419,14 @@ const CreateWalletPasswordRecovery = ({
             password={recoveryPhrase}
             showPasswordIsTooWeakError={showPasswordIsTooWeakError}
           />
+
+          {recoveryPhrase && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <TickList
+                items={["Make sure it's strong and memorable", 'If you lose it, no one can recover it for you']}
+              />
+            </motion.div>
+          )}
 
           {recoveryError && (
             <motion.div key={recoveryError} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
