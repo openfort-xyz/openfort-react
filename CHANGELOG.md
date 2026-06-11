@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2
+
+### Patch Changes
+
+- [#265](https://github.com/openfort-xyz/openfort-react/pull/265) [`f593ad5`](https://github.com/openfort-xyz/openfort-react/commit/f593ad5967667e8335753bafa7618cac530e1cbc) Thanks [@joalavedra](https://github.com/joalavedra)! - Update @openfort/openfort-js to 1.3.6
+
 ## 1.1.1
 
 ### Patch Changes
