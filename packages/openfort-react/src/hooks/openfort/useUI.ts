@@ -30,14 +30,12 @@ const safeRoutes: {
   ],
 }
 
-const allRoutes: ModalRoutes[] = [...safeRoutes.connected, ...safeRoutes.disconnected]
-
 type ValidRoutes = ModalRoutes
 
 /** Route can be selected by string (route name) or by object with `route` property */
 function routeMatches(a: ModalRoutes, b: ModalRoutes): boolean {
-  const aRoute = typeof a === 'object' && 'route' in a ? a.route : a
-  const bRoute = typeof b === 'object' && 'route' in b ? b.route : b
+  const aRoute = typeof a === 'object' && a !== null && 'route' in a ? a.route : a
+  const bRoute = typeof b === 'object' && b !== null && 'route' in b ? b.route : b
   return aRoute === bRoute
 }
 
@@ -105,27 +103,23 @@ export function useUI() {
   }
 
   const gotoAndOpen = (route: ValidRoutes) => {
-    let validRoute: ValidRoutes = route
+    const safeList = isConnected ? safeRoutes.connected : safeRoutes.disconnected
+    const fallback = isConnected ? routes.CONNECTED : routes.PROVIDERS
 
-    if (!allRoutes.some((r) => routeMatches(r, route))) {
-      validRoute = isConnected ? routes.CONNECTED : routes.PROVIDERS
-      logger.log(`Route ${route} is not a valid route, navigating to ${validRoute} instead.`)
-    } else {
-      if (isConnected) {
-        if (!safeRoutes.connected.some((r) => routeMatches(r, route))) {
-          validRoute = routes.CONNECTED
-          logger.log(`Route ${route} is not a valid route when connected, navigating to ${validRoute} instead.`)
-        }
-      } else {
-        if (!safeRoutes.disconnected.some((r) => routeMatches(r, route))) {
-          validRoute = routes.PROVIDERS
-          logger.log(`Route ${route} is not a valid route when disconnected, navigating to ${validRoute} instead.`)
-        }
-      }
+    // Navigate using the allowlisted spec so vetted options (e.g. connectType) are enforced,
+    // not whatever the caller passed alongside a matching route name.
+    const match = safeList.find((r) => routeMatches(r, route))
+
+    if (!match) {
+      logger.log(
+        `Route ${JSON.stringify(route)} is not valid when ${isConnected ? 'connected' : 'disconnected'}, navigating to ${fallback} instead.`
+      )
     }
 
-    setRoute(validRoute)
+    // setOpen(true) resets route/history/connector for a clean session, so it MUST run
+    // before setRoute — otherwise it clobbers the requested route back to LOADING.
     setOpen(true)
+    setRoute(match ?? fallback)
   }
 
   return {
