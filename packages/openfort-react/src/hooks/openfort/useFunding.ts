@@ -1,7 +1,8 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { createFetchFundingClient, type FundingClient } from './fundingClient'
 
 /**
  * Funding session client — adapted from the openfort-funding prototype.
@@ -12,15 +13,10 @@ import { useOpenfort } from '../../components/Openfort/useOpenfort'
  * everything the UI (or an agent) needs: a receiver address, a scannable URI,
  * prefilled wallet deeplinks, and CEX guidance.
  *
- * The network layer is stubbed: it compiles and drives the UI state machine,
- * but does not talk to a live backend yet.
- *
- * TODO(openfort-funding-backend): replace the stubbed `createSession`,
- * `setPaymentMethod`, and `getSession` calls with real `fetch` requests against
- * `${fundingBaseUrl}/v1/funding/sessions...`. The prototype flow is:
- *   POST /v1/funding/sessions               { target }              -> FundingSession
- *   POST /v1/funding/sessions/:id/paymentMethods { clientSecret, paymentMethod } -> FundingSession
- *   GET  /v1/funding/sessions/:id?clientSecret=...                  -> FundingSession (poll)
+ * The hook depends on a {@link FundingClient}, not on `fetch` directly. Today the
+ * default client is the fetch adapter over `uiConfig.fundingBaseUrl`; once
+ * `@openfort/openfort-js` ships the `funding` namespace, the resolution below
+ * swaps to `coreClient.funding` with no change to this hook.
  */
 
 /** Where funds should land. CAIP-2 chain + token contract (or native) + wallet. */
@@ -123,7 +119,7 @@ export type UseFunding = {
   error: Error | null
   /** True while a session is being created and its deposit address fetched. */
   loading: boolean
-  /** True when the funding backend is configured (uiConfig.fundingBaseUrl set). */
+  /** True when a funding client is resolved (injected, or uiConfig.fundingBaseUrl set). */
   isAvailable: boolean
   /** Create a session, set a payment method, and poll until terminal. */
   fund: (target: FundingTarget, paymentMethod: PaymentMethodInput) => Promise<FundingSession>
@@ -142,43 +138,11 @@ export type PayLinkParams = {
   amount?: string
 }
 
-// --- Network layer ---------------------------------------------------------
-// The three calls against the openfort-funding backend. The hook's state
-// machine below drives create → set payment method → poll until terminal.
-
-async function readJson<T>(res: Response): Promise<T> {
-  if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new Error(body.error ?? `Funding request failed (${res.status})`)
-  }
-  return res.json() as Promise<T>
-}
-
-async function createSession(baseUrl: string, target: FundingTarget): Promise<FundingSession> {
-  const res = await fetch(`${baseUrl}/v1/funding/sessions`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ target }),
-  })
-  return readJson<FundingSession>(res)
-}
-
-async function setPaymentMethod(
-  baseUrl: string,
-  session: FundingSession,
-  paymentMethod: PaymentMethodInput
-): Promise<FundingSession> {
-  const res = await fetch(`${baseUrl}/v1/funding/sessions/${session.id}/paymentMethods`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ clientSecret: session.clientSecret, paymentMethod }),
-  })
-  return readJson<FundingSession>(res)
-}
-
-async function getSession(baseUrl: string, session: FundingSession): Promise<FundingSession> {
-  const url = `${baseUrl}/v1/funding/sessions/${session.id}?clientSecret=${encodeURIComponent(session.clientSecret)}`
-  return readJson<FundingSession>(await fetch(url))
+/** Options for {@link useFunding}. */
+export type UseFundingOptions = {
+  /** Inject a funding client (tests, or a custom backend). Defaults to the
+   * fetch adapter over `uiConfig.fundingBaseUrl`. */
+  client?: FundingClient
 }
 
 /**
@@ -186,10 +150,17 @@ async function getSession(baseUrl: string, session: FundingSession): Promise<Fun
  *
  * @returns Session state plus `fund` (run the deposit flow) and `reset`.
  */
-export function useFunding(): UseFunding {
+export function useFunding(options?: UseFundingOptions): UseFunding {
   const { uiConfig } = useOpenfort()
   const baseUrl = uiConfig.fundingBaseUrl ?? ''
-  const isAvailable = baseUrl.length > 0
+  const injected = options?.client
+  // Resolve the client: an injected one wins; otherwise the fetch adapter when a
+  // base URL is configured. When openfort-js ships `funding`, prefer that here.
+  const client = useMemo<FundingClient | null>(
+    () => injected ?? (baseUrl ? createFetchFundingClient(baseUrl) : null),
+    [injected, baseUrl]
+  )
+  const isAvailable = client != null
 
   const [session, setSession] = useState<FundingSession | null>(null)
   const [error, setError] = useState<Error | null>(null)
@@ -213,11 +184,14 @@ export function useFunding(): UseFunding {
       setError(null)
       setLoading(true)
       try {
-        if (!isAvailable) {
-          throw new Error('Funding backend not configured (set uiConfig.fundingBaseUrl)')
+        if (!client) {
+          throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
         }
-        const created = await createSession(baseUrl, target)
-        let current = await setPaymentMethod(baseUrl, created, paymentMethod)
+        const created = await client.sessions.create({ target })
+        let current = await client.sessions.setPaymentMethod(created.id, {
+          clientSecret: created.clientSecret,
+          paymentMethod,
+        })
         if (!isCurrent()) return current
         setSession(current)
         setLoading(false)
@@ -225,7 +199,7 @@ export function useFunding(): UseFunding {
         while (!TERMINAL.includes(current.status)) {
           await new Promise((resolve) => setTimeout(resolve, POLL_MS))
           if (!isCurrent()) return current
-          current = await getSession(baseUrl, current)
+          current = await client.sessions.get(current.id, { clientSecret: current.clientSecret })
           if (!isCurrent()) return current
           setSession(current)
         }
@@ -239,20 +213,15 @@ export function useFunding(): UseFunding {
         throw err
       }
     },
-    [baseUrl, isAvailable]
+    [client]
   )
 
   const payLink = useCallback(
     async (params: PayLinkParams): Promise<string> => {
-      const res = await fetch(`${baseUrl}/v1/funding/pay-link`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(params),
-      })
-      const data = (await res.json()) as { url: string }
-      return data.url
+      if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
+      return client.payLink(params)
     },
-    [baseUrl]
+    [client]
   )
 
   return { session, status: session?.status ?? 'idle', error, loading, isAvailable, fund, payLink, reset }
