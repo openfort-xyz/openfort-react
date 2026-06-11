@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useRef } from 'react'
 import { useGuestAuth } from '../../../hooks/openfort/auth/useGuestAuth'
 import { logger } from '../../../utils/logger'

@@ -17,18 +17,12 @@ export const onSettledInputs: Record<string, HookInput | FunctionInputType> = {
     typescriptType: '(error: OpenfortError) => void',
     description: 'Callback function to execute on error.',
   },
-  onSettled: {
-    type: 'function',
-    typescriptType: '(data: any, error: OpenfortError) => void',
-    description: 'Callback function to execute when the operation is settled (either success or error).',
-  },
 }
 
 export const onSettledOptions = {
   throwOnError: false,
   onSuccess: undefined,
   onError: undefined,
-  onSettled: undefined,
 }
 
 export const commonVariables = {

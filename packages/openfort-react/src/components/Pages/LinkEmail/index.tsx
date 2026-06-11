@@ -1,3 +1,5 @@
+'use client'
+
 import { AnimatePresence, type Variants } from 'framer-motion'
 import React from 'react'
 import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth'
@@ -35,10 +37,8 @@ const textVariants: Variants = {
 }
 
 const LinkEmail: React.FC = () => {
-  // const [password, setPassword] = React.useState('')
-
   const { setRoute, triggerResize, emailInput: email, setEmailInput: setEmail } = useOpenfort()
-  const { client, updateUser } = useOpenfortCore()
+  const { client } = useOpenfortCore()
 
   const [loginLoading, setLoginLoading] = React.useState(false)
   const [loginError, setLoginError] = React.useState<false | string>(false)
@@ -49,22 +49,12 @@ const LinkEmail: React.FC = () => {
 
     await client.validateAndRefreshToken()
     try {
-      await linkEmail({
-        email,
-        // emailVerificationRedirectTo: window.location.origin,
-      })
+      await linkEmail({ email })
 
-      await updateUser()
-
-      setEmail('')
-      setRoute(routes.CONNECTED)
+      setRoute(routes.EMAIL_VERIFICATION)
     } catch (e) {
       logger.log('Link error:', e)
-      if (e instanceof Error) {
-        setLoginError(e.message)
-      } else {
-        setLoginError('Could not link email.')
-      }
+      setLoginError('Could not link email. Please try again.')
       setLoginLoading(false)
       triggerResize()
     }
@@ -87,14 +77,6 @@ const LinkEmail: React.FC = () => {
           placeholder="Enter your email"
           disabled={loginLoading}
         />
-        {/* <Input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          placeholder="Enter your password"
-          disabled={loginLoading}
-        /> */}
-
         {loginError && (
           <ModalBody style={{ height: 24, marginTop: 12 }} $error>
             {loginError}

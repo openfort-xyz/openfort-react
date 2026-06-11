@@ -1,5 +1,7 @@
+'use client'
+
 import { useEffect, useMemo, useState } from 'react'
-import { useWalletAssets } from '../../../hooks/openfort/useWalletAssets'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import useLocales from '../../../hooks/useLocales'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
@@ -30,7 +32,7 @@ const amountPresets = [10, 20, 50]
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
   const locales = useLocales()
-  const { data: assets } = useWalletAssets()
+  const { data: assets } = useEthereumWalletAssets()
 
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 

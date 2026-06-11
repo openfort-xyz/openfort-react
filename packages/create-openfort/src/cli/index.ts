@@ -44,6 +44,7 @@ interface CliResults {
   theme?: OpenfortTheme;
   createBackend: boolean;
   apiEndpoint?: string;
+  walletConnectProjectId?: string;
   openfortPublishableKey: string;
   openfortSecretKey?: string;
   shieldPublishableKey: string;
@@ -99,7 +100,8 @@ export const runCli = async (): Promise<CliResults> => {
     )
     .parse(process.argv);
 
-  const cliProvidedName = program.args[0];
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional sanitization of control chars to prevent log injection
+  const cliProvidedName = program.args[0]?.replace(/[\r\n\x00-\x1f]/g, "");
   const opts = program.opts();
 
   // Disable debug logging
@@ -171,14 +173,39 @@ export const runCli = async (): Promise<CliResults> => {
         template: () => {
           return p.select({
             message: "Select an Openfort template:",
-            options: availableTemplates.map((template) => ({
-              value: template,
-              label:
-                template === "openfort-ui" ? "Openfort UI (default)" : template,
-              hint: getTemplateHint(template),
-            })),
+            options: availableTemplates
+              .filter((t) => t !== "solana-headless")
+              .map((template) => ({
+                value: template,
+                label:
+                  template === "openfort-ui"
+                    ? "Openfort UI (default)"
+                    : template,
+                hint: getTemplateHint(template),
+              })),
             initialValue: "openfort-ui",
           });
+        },
+        chain: ({ results }) => {
+          if (results.template === "headless") {
+            return p.select({
+              message: "Select blockchain:",
+              options: [
+                {
+                  value: "ethereum",
+                  label: "Ethereum (EVM)",
+                  hint: "Polygon Amoy, Beam testnet, etc.",
+                },
+                {
+                  value: "solana",
+                  label: "Solana (SVM)",
+                  hint: "Devnet / Mainnet-Beta",
+                },
+              ],
+              initialValue: "ethereum",
+            });
+          }
+          return undefined;
         },
         createBackend: () => {
           return p.confirm({
@@ -306,6 +333,17 @@ export const runCli = async (): Promise<CliResults> => {
           }
           return undefined;
         },
+        walletConnectProjectId: ({ results }) => {
+          // Only needed for EVM templates (not solana-headless)
+          const isSolana = results.chain === "solana";
+          if (isSolana) return undefined;
+
+          return p.text({
+            message: "Enter your WalletConnect Project ID (optional):",
+            placeholder: "Get one at https://cloud.walletconnect.com",
+            defaultValue: "",
+          });
+        },
         ...(!cliResults.flags!.noGit && {
           git: () => {
             return p.confirm({
@@ -329,10 +367,14 @@ export const runCli = async (): Promise<CliResults> => {
 
     return {
       appName: (project.name as string) || cliResults.appName!,
-      template: project.template as OpenfortTemplate,
+      template: (project.chain === "solana" && project.template === "headless"
+        ? "solana-headless"
+        : project.template) as OpenfortTemplate,
       theme: project.theme as OpenfortTheme | undefined,
       createBackend: project.createBackend as boolean,
       apiEndpoint: project.apiEndpoint as string | undefined,
+      walletConnectProjectId:
+        (project.walletConnectProjectId as string) || undefined,
       openfortPublishableKey: project.openfortPublishableKey as string,
       openfortSecretKey: project.openfortSecretKey as string | undefined,
       shieldPublishableKey: project.shieldPublishableKey as string,
@@ -381,7 +423,7 @@ function getTemplateHint(template: OpenfortTemplate): string {
     case "openfort-ui":
       return "Pre-built UI components";
     case "headless":
-      return "Custom, unstyled components";
+      return "Custom, unstyled — Ethereum or Solana";
     case "firebase":
       return "With Firebase authentication";
     default:

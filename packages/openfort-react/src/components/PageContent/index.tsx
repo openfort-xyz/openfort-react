@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect } from 'react'
 import { useSignOut } from '../../hooks/openfort/auth/useSignOut'
 import { ModalHeading } from '../Common/Modal/styles'

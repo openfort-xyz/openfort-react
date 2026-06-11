@@ -8,7 +8,8 @@
     "packages": [
       "packages/**",
       "examples/**",
-      "!packages/create-openfort/template/**"
+      "packages/create-openfort/template/openfort-templates/*",
+      "!packages/create-openfort/template/backend"
     ]
   },
   "scripts": {
@@ -38,10 +39,15 @@
     "build:firebase": "cd examples/quickstarts/firebase && pnpm build",
     "build:headless": "cd examples/quickstarts/headless && pnpm build",
     "build:openfort-ui": "cd examples/quickstarts/openfort-ui && pnpm build",
+    "build:supabase": "cd examples/quickstarts/supabase && pnpm build",
+    "build:betterauth": "cd examples/quickstarts/betterauth && pnpm build",
     "build:playground": "pnpm build && pnpm --filter playground build",
+    "build:examples": "pnpm build && pnpm build:headless && pnpm build:openfort-ui && pnpm build:firebase && pnpm build:supabase && pnpm build:betterauth && pnpm --filter playground build",
     "build:ci": "pnpm -r run build",
     "start:cli": "pnpm --filter create-openfort start",
-    "test": "pnpm --filter playground test",
+    "test": "pnpm --filter @openfort/react test && pnpm --filter playground test",
+    "test:unit": "pnpm --filter @openfort/react test",
+    "test:e2e": "pnpm --filter playground test",
     "test:ui": "pnpm --filter playground test:ui",
     "test:debug": "pnpm --filter playground test:debug"
   },
@@ -50,82 +56,106 @@
     "@biomejs/biome": "^2.2.4",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.7",
-    "@playwright/test": "^1.57.0",
-    "@wagmi/connectors": "^6.1.0",
-    "@wagmi/core": "^2.22.1",
+    "@playwright/test": "^1.60.0",
     "knip": "^5.64.0",
-    "rollup": "^2.67.1",
+    "rollup": "^2.80.0",
     "simple-git-hooks": "^2.13.1",
     "typescript": "^5.0.4",
     "typescript-plugin-styled-components": "^2.0.0",
-    "viem": "^2.38.4",
-    "wagmi": "^2.18.2"
+    "wagmi": "^3.6.16"
   },
-  "packageManager": "pnpm@10.16.1",
+  "packageManager": "pnpm@10.30.3",
   "pnpm": {
     "overrides": {
+      "bn.js": ">=5.2.3",
+      "axios": ">=1.15.1",
       "react": "18.3.1",
       "react-dom": "18.3.1",
       "@types/react": "18.3.1",
       "@types/react-dom": "18.3.1",
-      "viem": "^2.38.4",
-      "wagmi": "^2.18.2",
+      "viem": "^2.52.2",
+      "wagmi": "^3.6.16",
+      "@tanstack/react-query": "^5.99.2",
+      "@tanstack/query-core": "^5.99.2",
+      "use-sync-external-store": "^1.6.0",
       "typescript": "^5.0.4",
-      "hono": ">=4.11.10",
+      "hono": ">=4.12.18",
+      "protobufjs": ">=8.2.0",
+      "follow-redirects": ">=1.16.0",
+      "@hono/node-server": ">=1.19.13",
       "cross-spawn": ">=6.0.6",
       "got": ">=11.8.5",
       "esbuild": ">=0.25.0",
       "glob@>=10.3.7 <=11.0.3": ">=11.1.0",
       "body-parser@>=2.2.0 <2.2.1": ">=2.2.1",
-      "@modelcontextprotocol/sdk@<1.24.0": ">=1.24.0",
-      "qs@<6.14.1": ">=6.14.1",
       "@modelcontextprotocol/sdk@<1.25.2": "1.25.2",
+      "qs@<6.15.2": ">=6.15.2",
       "preact@>=10.28.0 <10.28.2": ">=10.28.2",
       "diff@<8.0.3": ">=8.0.3",
-      "h3@<=1.15.4": ">=1.15.5",
-      "lodash@>=4.0.0 <=4.17.22": ">=4.17.23",
-      "axios@<=1.13.4": ">=1.13.5",
-      "qs@>=6.7.0 <=6.14.1": ">=6.14.2",
+      "h3@<1.15.9": ">=1.15.9",
+      "kysely": ">=0.28.17",
+      "effect@<3.20.0": ">=3.20.0",
+      "lodash@>=4.0.0 <=4.17.23": ">=4.18.0",
       "markdown-it@>=13.0.0 <14.1.1": ">=14.1.1",
-      "minimatch": ">=10.2.1",
-      "bn.js@>=5.0.0 <5.2.3": ">=5.2.3",
+      "minimatch": ">=10.2.3",
       "bn.js@<4.12.3": ">=4.12.3",
-      "hono@>=4.12.0 <4.12.2": ">=4.12.2",
       "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
       "rollup@<2.80.0": ">=2.80.0",
-      "minimatch@>=10.0.0 <10.2.3": ">=10.2.3"
+      "undici@>=7.0.0 <7.24.0": ">=7.24.0",
+      "socket.io-parser@>=4.0.0 <4.2.6": ">=4.2.6",
+      "picomatch@<2.3.2": ">=2.3.2 <3.0.0",
+      "picomatch@>=4.0.0 <4.0.4": ">=4.0.4",
+      "yaml@>=2.0.0 <2.8.3": ">=2.8.3",
+      "smol-toml@<1.6.1": ">=1.6.1",
+      "brace-expansion@<5.0.5": ">=5.0.6",
+      "path-to-regexp@<0.1.13": ">=0.1.13",
+      "drizzle-orm": ">=0.45.2",
+      "defu": ">=6.1.5",
+      "uuid@<14.0.0": ">=14.0.0",
+      "postcss@<8.5.10": ">=8.5.10",
+      "ws": ">=8.20.1",
+      "vitest@<4.1.0": ">=4.1.0",
+      "shell-quote@<1.8.4": ">=1.8.4"
     },
     "auditConfig": {
       "ignoreCves": [
         "CVE-2024-53384",
         "CVE-2025-57319",
-        "CVE-2025-14505"
+        "CVE-2025-14505",
+        "CVE-2026-39356",
+        "CVE-2026-39365"
       ]
     }
   },
   "knip": {
+    "workspaces": {
+      "examples/playground": {
+        "ignoreDependencies": [
+          "typedoc"
+        ],
+        "ignoreBinaries": [
+          "vite",
+          "typedoc"
+        ]
+      }
+    },
     "ignore": [
-      ".github/**",
-      "**/build/**",
-      "**/dist/**",
-      "**/.next/**",
-      "**/coverage/**",
-      "**/node_modules/**",
       "packages/openfort-react/rollup.config.dev.js",
       "packages/openfort-react/rollup.config.prod.js",
-      "**/*.gen.ts",
-      "examples/playground/src/api/**",
-      "packages/create-openfort/.github/**",
       "packages/create-openfort/template/**",
-      "examples/playground/tests/auth/auth.setup.ts"
+      "examples/playground/src/components/ui/**",
+      "examples/playground/tests/auth/auth.setup.solana.ts",
+      "examples/playground/tests/auth/auth.setup.evm.ts"
     ],
     "ignoreDependencies": [
+      "@solana/kit",
       "rollup-plugin-peer-deps-external",
       "rollup-plugin-typescript2",
       "typescript-plugin-styled-components",
       "buffer",
       "wagmi",
-      "@babel/core"
+      "@babel/core",
+      "@testing-library/react-hooks"
     ]
   },
   "simple-git-hooks": {

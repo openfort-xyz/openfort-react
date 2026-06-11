@@ -1,7 +1,7 @@
 import type React from 'react'
 import useLocales from '../../../hooks/useLocales'
 import { useWalletConnectModal } from '../../../hooks/useWalletConnectModal'
-import { useWagmiWallets } from '../../../wallets/useWagmiWallets'
+import { useExternalConnectors } from '../../../wallets/useExternalConnectors'
 import { walletConfigs } from '../../../wallets/walletConfigs'
 import { CopyButton } from '../../Common/CopyToClipboard/CopyButton'
 import { ModalContent } from '../../Common/Modal/styles'
@@ -24,7 +24,7 @@ const MobileConnectors: React.FC = () => {
   const locales = useLocales()
 
   const { open: openW3M, isOpen: isOpenW3M } = useWalletConnectModal()
-  const wallets = useWagmiWallets()
+  const wallets = useExternalConnectors()
 
   // filter out installed wallets
   const walletsIdsToDisplay =

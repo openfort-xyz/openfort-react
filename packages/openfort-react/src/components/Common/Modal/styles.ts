@@ -4,7 +4,7 @@ import defaultTheme from '../../../constants/defaultTheme'
 import styled from '../../../styles/styled'
 import { PageContentStyle } from '../../PageContent/styles'
 
-export const ErrorMessage = styled(motion.div)`
+const _ErrorMessage = styled(motion.div)`
   z-index: -1;
   pointer-events: auto;
   position: absolute;

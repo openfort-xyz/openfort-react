@@ -1,16 +1,20 @@
-import type { AccountTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
+import type { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
 import type React from 'react'
 import type { ReactNode } from 'react'
 import type { CountryData, CountryIso2, CountrySelectorProps } from 'react-international-phone'
 import type { Hex } from 'viem'
-import type { getAssets } from 'viem/_types/experimental/erc7811/actions/getAssets'
-import type { UserWallet } from '../../hooks/openfort/useWallets'
-import type { UserAccount } from '../../openfortCustomTypes'
+import type { getAssets } from 'viem/experimental/erc7811'
+import type { EthereumConfig } from '../../ethereum/types'
+import type { EthereumUserWallet, SolanaUserWallet } from '../../hooks/openfort/walletTypes'
+import type { SolanaConfig } from '../../solana/types'
+
 import type { CustomAvatarProps, CustomTheme, Languages, Mode, Theme } from '../../types'
 
 export const routes = {
   PROVIDERS: 'providers',
   SOCIAL_PROVIDERS: 'socialProviders',
+  PROFILE: 'profile',
+  EXPORT_KEY: 'exportKey',
 
   LOADING: 'loading',
   LOAD_WALLETS: 'loadWallets',
@@ -37,12 +41,10 @@ export const routes = {
   CONNECT: 'connect',
   DOWNLOAD: 'download',
   CONNECTED: 'connected',
-  PROFILE: 'profile',
   SWITCHNETWORKS: 'switchNetworks',
   LINKED_PROVIDER: 'linkedProvider',
   LINKED_PROVIDERS: 'linkedProviders',
   REMOVE_LINKED_PROVIDER: 'removeLinkedProvider',
-  EXPORT_KEY: 'exportKey',
 
   NO_ASSETS_AVAILABLE: 'noAssetsAvailable',
   ASSET_INVENTORY: 'assetInventory',
@@ -57,6 +59,26 @@ export const routes = {
   BUY_PROCESSING: 'buyProcessing',
   BUY_COMPLETE: 'buyComplete',
   BUY_PROVIDER_SELECT: 'buyProviderSelect',
+
+  ETH_CONNECTED: 'eth:connected',
+  ETH_CREATE_WALLET: 'eth:createWallet',
+  ETH_RECOVER_WALLET: 'eth:recoverWallet',
+  ETH_SWITCH_NETWORK: 'eth:switchNetworks',
+  ETH_SEND: 'eth:send',
+  ETH_RECEIVE: 'eth:receive',
+  ETH_BUY: 'eth:buy',
+  ETH_CONNECTORS: 'eth:connectors',
+
+  SOL_CONNECTED: 'sol:connected',
+  SOL_CREATE_WALLET: 'sol:createWallet',
+  SOL_RECOVER_WALLET: 'sol:recoverWallet',
+  SOL_SEND: 'sol:send',
+  SOL_SEND_CONFIRMATION: 'sol:sendConfirmation',
+  SOL_RECEIVE: 'sol:receive',
+  SOL_ASSET_INVENTORY: 'sol:assetInventory',
+  SOL_WALLETS: 'sol:wallets',
+
+  WALLET_OVERVIEW: 'walletOverview',
 } as const
 
 type AllRoutes = (typeof routes)[keyof typeof routes]
@@ -76,17 +98,23 @@ type ConnectOptions =
     }
   | {
       connectType: 'recover'
-      wallet: UserWallet
+      wallet: EthereumUserWallet | SolanaUserWallet
     }
 
-// export type ConnectType = ConnectOptions['connectType']
+export type LinkedAccount = {
+  provider: string
+  accountId?: string
+  chainId?: number | string
+  walletClientType?: string
+}
 
 type RoutesWithOptions =
   | ({ route: typeof routes.CONNECTORS } & ConnectOptions)
   | ({ route: typeof routes.CONNECT } & ConnectOptions)
-  | { route: typeof routes.RECOVER_WALLET; wallet: UserWallet }
-  | { route: typeof routes.LINKED_PROVIDER; provider: UserAccount }
-  | { route: typeof routes.REMOVE_LINKED_PROVIDER; provider: UserAccount }
+  | { route: typeof routes.RECOVER_WALLET; wallet: EthereumUserWallet }
+  | { route: typeof routes.SOL_RECOVER_WALLET; wallet: SolanaUserWallet }
+  | { route: typeof routes.LINKED_PROVIDER; account: LinkedAccount }
+  | { route: typeof routes.REMOVE_LINKED_PROVIDER; account: LinkedAccount }
 
 export type RoutesWithoutOptions = {
   route: Exclude<AllRoutes, RoutesWithOptions['route']>
@@ -118,8 +146,6 @@ export enum UIAuthProvider {
   GUEST = 'guest',
 }
 
-export type ErrorMessage = string | React.ReactNode | null
-
 export const socialProviders = [
   UIAuthProvider.GOOGLE,
   UIAuthProvider.TWITTER,
@@ -134,20 +160,18 @@ export enum LinkWalletOnSignUpOption {
   DISABLED = 'disabled',
 }
 
-type PolicyConfig = string | Record<number, string>
-
 type CommonWalletConfig = {
   /** Publishable key for the Shield API. */
   shieldPublishableKey: string
-  /** Policy ID (pol_...) for the embedded signer. */
-  ethereumProviderPolicyId?: PolicyConfig
-  accountType?: AccountTypeEnum
-  /** @deprecated Use `debugMode` prop instead. */
-  debug?: boolean
-  recoverWalletAutomaticallyAfterAuth?: boolean
-  assets?: {
-    [chainId: number]: Hex[]
-  }
+  /**
+   * Whether to automatically recover or create an embedded wallet after authentication.
+   *
+   * - `true` (default): recover an existing wallet and create a new one if none exists.
+   * - `false`: do nothing after auth — call `wallet.create()` / `wallet.setActive()` explicitly.
+   *
+   * @defaultValue true
+   */
+  connectOnLogin?: boolean
   /**
    * The display name shown next to the passkey credential in the browser's passkey dialog
    * (e.g. "My Wallet" or "Trading Account"). Defaults to "Openfort - Embedded Wallet".
@@ -155,7 +179,7 @@ type CommonWalletConfig = {
   passkeyDisplayName?: string
 }
 
-export type GetEncryptionSessionParams = {
+type GetEncryptionSessionParams = {
   accessToken: string
   otpCode?: string
   userId: string
@@ -199,6 +223,7 @@ export type DebugModeOptions = {
   openfortReactDebugMode?: boolean
   openfortCoreDebugMode?: boolean
   shieldDebugMode?: boolean
+  debugRoutes?: boolean
 }
 
 /**
@@ -209,7 +234,14 @@ export type DebugModeOptions = {
  * the `createEncryptedSessionEndpoint` endpoint or the `getEncryptionSession` callback.
  * Password-based and passkey-based recovery methods do not require encryption sessions.
  */
-export type OpenfortWalletConfig = CommonWalletConfig & EncryptionSession & RecoverWithOTP
+export type OpenfortWalletConfig = CommonWalletConfig &
+  EncryptionSession &
+  RecoverWithOTP & {
+    /** Which chain type to activate on first mount. Defaults to EVM. */
+    chainType?: ChainTypeEnum
+    ethereum?: EthereumConfig
+    solana?: SolanaConfig
+  }
 
 type OpenfortUIOptions = {
   linkWalletOnSignUp?: LinkWalletOnSignUpOption
@@ -294,6 +326,8 @@ export type PhoneConfig = {
 }
 
 export type ConnectUIOptions = {
+  /** App name (e.g. for WalletConnect og:title). When using getDefaultConfig from @openfort/react/wagmi, pass the same appName here for consistency. */
+  appName?: string
   theme?: Theme
   mode?: Mode
   customTheme?: CustomTheme
@@ -333,6 +367,7 @@ type WalletRecoveryOptionsExtended = {
 export type CustomizableRoutes = typeof routes.CONNECTED
 
 export type OpenfortUIOptionsExtended = {
+  appName?: string
   theme: Theme
   mode: Mode
   customTheme?: CustomTheme
@@ -371,7 +406,6 @@ export type OpenfortUIOptionsExtended = {
   }
 } & OpenfortUIOptions
 
-// export type Asset = getAssets.Asset<false>
 export type Asset =
   | {
       type: 'native'
@@ -403,6 +437,8 @@ export type Asset =
       }
       raw?: getAssets.Erc20Asset
     }
+
+export type MultiChainAsset = Asset & { chainId: number }
 
 export type SendFormState = {
   recipient: string

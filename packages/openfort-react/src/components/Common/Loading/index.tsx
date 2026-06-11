@@ -1,3 +1,5 @@
+'use client'
+
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect } from 'react'
 import { css, keyframes } from 'styled-components'

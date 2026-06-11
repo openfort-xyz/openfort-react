@@ -1,16 +1,18 @@
-import { type Connector, useConnectors as useWagmiConnectors } from 'wagmi'
+import type { OpenfortEthereumBridgeConnector } from '../ethereum/OpenfortEthereumBridgeContext'
+import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext'
 
-export function useConnectors() {
-  const connectors = useWagmiConnectors()
-  return connectors ?? []
+function useConnectors(): OpenfortEthereumBridgeConnector[] {
+  const bridge = useEthereumBridge()
+  return bridge?.connectors ?? []
 }
 
-export function useConnector(id: string, uuid?: string) {
+function useConnector(id: string, uuid?: string): OpenfortEthereumBridgeConnector | undefined {
   const connectors = useConnectors()
   if (id === 'injected' && uuid) {
-    return connectors.find((c) => c.id === id && c.name === uuid) as Connector
-  } else if (id === 'injected') {
-    return connectors.find((c) => c.id === id && c.name.includes('Injected')) as Connector
+    return connectors.find((c) => c.id === id && c.name === uuid)
+  }
+  if (id === 'injected') {
+    return connectors.find((c) => c.id === id && c.name?.includes('Injected'))
   }
   return connectors.find((c) => c.id === id)
 }

@@ -1,4 +1,7 @@
-import { createContext } from 'react'
-import type { ContextValue } from './CoreOpenfortProvider'
+'use client'
 
-export const Context = createContext<ContextValue | null>(null)
+import { createContext } from 'react'
+import type { StoreApi } from 'zustand'
+import type { OpenfortStore } from './store'
+
+export const StoreContext = createContext<StoreApi<OpenfortStore> | null>(null)

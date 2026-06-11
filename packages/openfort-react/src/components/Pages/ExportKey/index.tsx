@@ -1,7 +1,9 @@
+'use client'
+
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { KeyIcon } from '../../../assets/icons'
-import { useWallets } from '../../../hooks/openfort/useWallets'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import Button from '../../Common/Button'
 import { CopyText } from '../../Common/CopyToClipboard/CopyText'
 import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
@@ -11,7 +13,7 @@ import { PageContent } from '../../PageContent'
 // TODO: Localize
 
 const ExportKey: React.FC = () => {
-  const { exportPrivateKey } = useWallets()
+  const { exportPrivateKey } = useEthereumEmbeddedWallet()
 
   const [exportedKey, setExportedKey] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -28,7 +30,7 @@ const ExportKey: React.FC = () => {
       }
     }
     asyncExportKey()
-  }, [])
+  }, [exportPrivateKey])
 
   return (
     <PageContent>

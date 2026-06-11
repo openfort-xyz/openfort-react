@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useEffect } from 'react'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { logger } from '../../../utils/logger'

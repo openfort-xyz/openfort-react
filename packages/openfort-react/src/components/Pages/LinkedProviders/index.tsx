@@ -1,11 +1,13 @@
+'use client'
+
 import { useEffect } from 'react'
 import { useProviders } from '../../../hooks/openfort/useProviders'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import type { UserAccount } from '../../../openfortCustomTypes'
 import Button from '../../Common/Button'
 import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
 import { ProviderHeader } from '../../Common/Providers/ProviderHeader'
 import { ProviderIcon } from '../../Common/Providers/ProviderIcon'
+import type { LinkedAccount } from '../../Openfort/types'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -16,20 +18,16 @@ import {
   ProviderIconWrapper,
 } from './styles'
 
-type LinkedProvidersProps = {
-  showHeader?: boolean
-}
-
-const LinkedProvider: React.FC<{ provider: UserAccount }> = ({ provider }) => {
+const LinkedProvider: React.FC<{ account: LinkedAccount }> = ({ account }) => {
   const { setRoute } = useOpenfort()
   return (
     <LinkedProviderButtonContainer>
-      <Button onClick={() => setRoute({ route: routes.LINKED_PROVIDER, provider })} fitText={false}>
+      <Button onClick={() => setRoute({ route: routes.LINKED_PROVIDER, account })} fitText={false}>
         <LinkedProviderButtonWrapper>
           <ProviderIconWrapper>
-            <ProviderIcon provider={provider} />
+            <ProviderIcon account={account} />
           </ProviderIconWrapper>
-          <ProviderHeader provider={provider} />
+          <ProviderHeader account={account} />
         </LinkedProviderButtonWrapper>
       </Button>
     </LinkedProviderButtonContainer>
@@ -47,9 +45,9 @@ const AddLinkedProviderButton: React.FC = () => {
   )
 }
 
-const LinkedProvidersGroup: React.FC<LinkedProvidersProps> = () => {
+const LinkedProvidersGroup: React.FC = () => {
   const { linkedAccounts, user, isLoading } = useOpenfortCore()
-  const { triggerResize } = useOpenfort()
+  const { triggerResize, emailInput: pendingEmail } = useOpenfort()
 
   useEffect(() => {
     if (!isLoading) triggerResize()
@@ -85,20 +83,30 @@ const LinkedProvidersGroup: React.FC<LinkedProvidersProps> = () => {
         {!linkedAccounts.find((a) => a.provider === 'credential') && user.email && (
           <LinkedProvider
             key={`credential-${user.email}`}
-            provider={{ provider: 'credential', accountId: user.email }}
+            account={{ provider: 'credential', accountId: user.email }}
           />
         )}
-        {linkedAccounts.map((provider) => (
-          <LinkedProvider key={`${provider.provider}-${provider.accountId}`} provider={provider} />
+        {linkedAccounts.map((account) => (
+          <LinkedProvider key={`${account.provider}-${account.accountId}`} account={account} />
         ))}
         {user.phoneNumber && (
           <LinkedProvider
             key={`phone-${user.phoneNumber}`}
-            provider={{
-              provider: 'phone',
-              accountId: user.phoneNumber,
-            }}
+            account={{ provider: 'phone', accountId: user.phoneNumber }}
           />
+        )}
+        {pendingEmail && (
+          <LinkedProviderButtonContainer>
+            <LinkedProviderButtonWrapper style={{ padding: '12px 20px', opacity: 0.6 }}>
+              <ProviderIconWrapper>
+                <ProviderIcon account={{ provider: 'credential', accountId: pendingEmail }} />
+              </ProviderIconWrapper>
+              <ProviderHeader account={{ provider: 'credential', accountId: pendingEmail }} />
+              <ModalBody style={{ fontSize: 11, marginLeft: 'auto', whiteSpace: 'nowrap' }}>
+                Awaiting validation
+              </ModalBody>
+            </LinkedProviderButtonWrapper>
+          </LinkedProviderButtonContainer>
         )}
       </LinkedProvidersGroupWrapper>
       <AddLinkedProviderButton />

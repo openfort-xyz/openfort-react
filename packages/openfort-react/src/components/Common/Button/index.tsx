@@ -27,6 +27,7 @@ const Button: React.FC<ButtonProps> = ({
   children,
   variant = 'secondary', // unique aspect to how we're handling buttons
   disabled,
+  type,
   icon,
   iconPosition = 'left',
   roundedIcon,
@@ -47,7 +48,8 @@ const Button: React.FC<ButtonProps> = ({
   return (
     <ButtonContainer
       className={className}
-      as={href ? 'a' : undefined}
+      as={href ? 'a' : type ? 'button' : undefined}
+      type={type}
       onClick={(event: any) => {
         if (!disabled && onClick) onClick(event)
       }}

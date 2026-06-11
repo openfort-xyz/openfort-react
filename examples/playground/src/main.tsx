@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import { createRouter, RouterProvider } from '@tanstack/react-router'
-import { Providers } from '@/providers'
+import { PlaygroundModeProvider, Providers } from '@/providers'
 import { routeTree } from './routeTree.gen'
 
 // Set up a Router instance
@@ -25,8 +25,10 @@ declare module '@tanstack/react-router' {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Providers>
-      <RouterProvider router={router} />
-    </Providers>
+    <PlaygroundModeProvider>
+      <Providers>
+        <RouterProvider router={router} />
+      </Providers>
+    </PlaygroundModeProvider>
   </StrictMode>
 )

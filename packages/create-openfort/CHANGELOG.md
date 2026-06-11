@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.0.1
+
+### Patch Changes
+
+- [#214](https://github.com/openfort-xyz/openfort-react/pull/214) [`b17d0be`](https://github.com/openfort-xyz/openfort-react/commit/b17d0bef4c6eb3be4dfaaeb6ec95b9feabe76b78) Thanks [@isardmart](https://github.com/isardmart)! - added wallet connect id as an opcional variable
+
+## 1.0.0
+
+### Major Changes
+
+- [#201](https://github.com/openfort-xyz/openfort-react/pull/201) [`2c23537`](https://github.com/openfort-xyz/openfort-react/commit/2c235373b7879584c26e70951d3839b3157bd4b0) Thanks [@isardmart](https://github.com/isardmart)! - solana, wagmi subpath, tree shakeable
+
+### Minor Changes
+
+- [#205](https://github.com/openfort-xyz/openfort-react/pull/205) [`9c442df`](https://github.com/openfort-xyz/openfort-react/commit/9c442df5080ea5f16ed1d2905da36d338105e722) Thanks [@isardmart](https://github.com/isardmart)! - added solana-headless template to the cli
+
 ## 0.1.10
 
 ### Patch Changes

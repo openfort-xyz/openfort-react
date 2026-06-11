@@ -5,13 +5,18 @@ type SelectProps = {
 } & React.PropsWithChildren<React.HTMLProps<HTMLSelectElement>>
 
 export const Select = ({ options, ...props }: SelectProps) => {
-  if (!options || options.length === 0) {
-    return null // or handle the case where no options are provided
-  }
+  const opts = options?.length ? options : [{ label: '— No options —', value: '' }]
 
   return (
-    <select {...props} className={cn('w-full', props.className, props.value === 'undefined' && 'text-blue-500')}>
-      {options?.map((option) =>
+    <select
+      {...props}
+      className={cn(
+        'w-full rounded-md border border-input bg-background px-2 py-1 text-sm',
+        props.className,
+        props.value === 'undefined' && 'text-blue-500'
+      )}
+    >
+      {opts.map((option) =>
         typeof option === 'object' ? (
           <option key={option.value} value={option.value}>
             {option.label}

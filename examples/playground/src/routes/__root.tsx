@@ -1,10 +1,21 @@
-import type { Theme } from '@openfort/react'
-import { createRootRoute, Outlet, useLocation } from '@tanstack/react-router'
-import { useEffect } from 'react'
-import { useAccount } from 'wagmi'
+import { ChainTypeEnum, type Theme, useOpenfort } from '@openfort/react'
+import { createRootRoute, Outlet } from '@tanstack/react-router'
+import { useEffect, useLayoutEffect } from 'react'
 import z from 'zod'
-import { Nav } from '@/components/Nav'
+import { Analytics } from '@/components/Analytics'
+import { AppSidebar } from '@/components/AppSidebar'
+import { TopBar } from '@/components/TopBar'
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
+import { initializeAnalytics } from '@/lib/analytics'
 import { useAppStore } from '@/lib/useAppStore'
+import { usePlaygroundMode } from '@/providers'
+
+initializeAnalytics()
+
+const MODE_TO_CHAIN: Record<'evm' | 'svm', ChainTypeEnum> = {
+  evm: ChainTypeEnum.EVM,
+  svm: ChainTypeEnum.SVM,
+}
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -18,10 +29,16 @@ const themes: Theme[] = ['auto', 'midnight', 'nouns', 'retro', 'rounded', 'soft'
 let themeIndex = 0
 
 function RootComponent() {
-  const { isConnected } = useAccount()
-  const location = useLocation()
+  const { mode } = usePlaygroundMode()
+  const { chainType, setChainType } = useOpenfort()
 
-  const { setProviderOptions, providerOptions } = useAppStore()
+  // Sync chainType from stored playground mode on load and when mode changes.
+  useLayoutEffect(() => {
+    const targetChain = MODE_TO_CHAIN[mode]
+    if (chainType !== targetChain) {
+      setChainType(targetChain)
+    }
+  }, [mode, chainType, setChainType])
 
   useEffect(() => {
     const handleKeydown = (e: KeyboardEvent) => {
@@ -29,6 +46,7 @@ function RootComponent() {
         const delta = e.key === 'ArrowRight' ? 1 : -1
         themeIndex = (themeIndex + delta + themes.length) % themes.length
 
+        const { providerOptions, setProviderOptions } = useAppStore.getState()
         setProviderOptions({
           ...providerOptions,
           uiConfig: {
@@ -41,12 +59,18 @@ function RootComponent() {
 
     document.addEventListener('keydown', handleKeydown)
     return () => document.removeEventListener('keydown', handleKeydown)
-  }, [setProviderOptions])
+  }, [])
 
   return (
-    <div className="flex flex-col min-h-screen w-screen">
-      <Nav showLogo={location.pathname !== '/showcase/auth' || isConnected} />
-      <Outlet />
-    </div>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <TopBar />
+        <div className="flex flex-1 flex-col">
+          <Outlet />
+        </div>
+      </SidebarInset>
+      <Analytics />
+    </SidebarProvider>
   )
 }

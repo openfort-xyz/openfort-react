@@ -1,6 +1,11 @@
+'use client'
+
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
-import { useAccount, useChainId } from 'wagmi'
-import { useWalletAssets } from '../../../hooks/openfort/useWalletAssets'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
@@ -29,8 +34,17 @@ import { getAssetSymbol, isSameToken } from '../Send/utils'
 
 const BuySelectProvider = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
-  const { address } = useAccount()
-  const chainId = useChainId()
+  const { chainType } = useOpenfortCore()
+
+  // Use chain-specific hooks
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+
+  const isConnected = wallet.status === 'connected'
+  const address = isConnected ? wallet.address : undefined
+  const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
+
   const [quotes, setQuotes] = useState<Record<string, OnrampQuote>>({})
   const [isLoadingQuote, setIsLoadingQuote] = useState(false)
   const [coinbaseError, setCoinbaseError] = useState<boolean>(false)
@@ -46,7 +60,7 @@ const BuySelectProvider = () => {
     return numeric
   }, [buyForm.amount])
 
-  const { data: assets } = useWalletAssets()
+  const { data: assets } = useEthereumWalletAssets()
 
   const matchedToken = useMemo(
     () => assets?.find((asset) => isSameToken(asset, buyForm.asset)),
@@ -91,7 +105,7 @@ const BuySelectProvider = () => {
   // Fetch quotes from all providers
   useEffect(() => {
     const fetchQuotes = async () => {
-      if (!address || !fiatAmount || fiatAmount <= 0) {
+      if (!address || !chainId || !fiatAmount || fiatAmount <= 0) {
         setQuotes({})
         setCoinbaseError(false)
         setStripeError(false)
@@ -151,8 +165,6 @@ const BuySelectProvider = () => {
   }
 
   const handleContinue = () => {
-    // Just navigate to the processing screen
-    // The processing screen will handle session creation and popup
     setRoute(routes.BUY_PROCESSING)
   }
 

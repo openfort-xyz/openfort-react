@@ -10,9 +10,7 @@ export const onSuccess = <T>({
   data: T
 }) => {
   hookOptions?.onSuccess?.(data)
-  hookOptions?.onSettled?.(data, null)
   options?.onSuccess?.(data)
-  options?.onSettled?.(data, null)
 
   return data
 }
@@ -27,9 +25,7 @@ export const onError = <T>({
   error: OpenfortError
 }) => {
   hookOptions?.onError?.(error)
-  hookOptions?.onSettled?.(null, error)
   options?.onError?.(error)
-  options?.onSettled?.(null, error)
 
   if (hookOptions?.throwOnError || options?.throwOnError) throw error
 

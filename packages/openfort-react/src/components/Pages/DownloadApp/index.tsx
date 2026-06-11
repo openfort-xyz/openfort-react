@@ -1,5 +1,5 @@
 import useLocales from '../../../hooks/useLocales'
-import { useWallet } from '../../../wallets/useWagmiWallets'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors'
 import CustomQRCode from '../../Common/CustomQRCode'
 import { ModalBody, ModalContent } from '../../Common/Modal/styles'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -7,10 +7,10 @@ import { PageContent } from '../../PageContent'
 
 const DownloadApp = () => {
   const context = useOpenfort()
-  const wallet = useWallet(context.connector.id)
+  const wallet = useExternalConnector(context.connector.id)
 
   const locales = useLocales({
-    CONNECTORNAME: wallet?.name,
+    CONNECTORNAME: wallet?.name ?? 'UNKNOWN CONNECTOR',
   })
 
   if (!wallet) return <>Wallet not found</>

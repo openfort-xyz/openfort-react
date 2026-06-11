@@ -5,6 +5,7 @@ export type ButtonProps = {
   children?: React.ReactNode
   variant?: 'primary' | 'secondary' | 'tertiary'
   disabled?: boolean
+  type?: 'button' | 'submit' | 'reset'
   icon?: React.ReactNode
   iconPosition?: 'left' | 'right'
   roundedIcon?: boolean

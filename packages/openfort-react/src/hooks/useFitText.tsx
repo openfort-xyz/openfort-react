@@ -1,3 +1,5 @@
+'use client'
+
 // https://github.com/saltycrane/use-fit-text
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'

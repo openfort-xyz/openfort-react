@@ -1,14 +1,15 @@
 import { expect, test } from '../fixtures/test'
+import { EVM_ADDRESS_REGEX, SOLANA_ADDRESS_DISPLAY_REGEX } from '../utils/mode'
 
 test.describe('Wallets - create new wallet', () => {
   test('shows existing wallet, offers 3 creation methods, shows creating text, and creates a new wallet via Password', async ({
     page,
     dashboardPage,
+    mode,
   }) => {
-    // Ensure session and dashboard are ready
-    await dashboardPage.ensureReady()
+    const m = mode
+    await dashboardPage.ensureReady(m)
 
-    // "Wallets" card title
     const walletsTitle = page
       .locator('[data-slot="card-title"]')
       .filter({ hasText: /^wallets$/i })
@@ -16,17 +17,17 @@ test.describe('Wallets - create new wallet', () => {
 
     await expect(walletsTitle).toBeVisible({ timeout: 60_000 })
 
-    // Card container
     const walletsCard = walletsTitle.locator('xpath=ancestor::*[@data-slot="card"][1]')
     await expect(walletsCard).toBeVisible({ timeout: 60_000 })
 
-    // Existing wallets
+    const addressRegex = m === 'svm' ? SOLANA_ADDRESS_DISPLAY_REGEX : EVM_ADDRESS_REGEX
     const walletRowLocator = walletsCard.locator('button').filter({
-      hasText: /0x[a-f0-9]{4,}\.\.\.[a-f0-9]{4,}/i,
+      hasText: addressRegex,
     })
 
+    // Wait for at least one wallet to appear (accounts may still be loading after page nav)
+    await expect.poll(async () => await walletRowLocator.count(), { timeout: 60_000 }).toBeGreaterThanOrEqual(1)
     const initialCount = await walletRowLocator.count()
-    expect(initialCount).toBeGreaterThanOrEqual(1)
 
     // Create new wallet
     const createNewBtn = walletsCard.getByRole('button', {
@@ -35,7 +36,9 @@ test.describe('Wallets - create new wallet', () => {
     await expect(createNewBtn).toBeVisible({ timeout: 30_000 })
     await createNewBtn.click()
 
-    await walletsCard.getByRole('button', { name: /smart account/i }).click()
+    if (m !== 'svm') {
+      await walletsCard.getByRole('button', { name: /smart account/i }).click()
+    }
 
     // Available options
     const automaticBtn = walletsCard.getByRole('button', {

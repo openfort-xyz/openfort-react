@@ -17,7 +17,7 @@ if (!process.env.OPENFORT_SECRET_KEY) {
   throw new Error('Openfort secret key is not set');
 }
 
-const openfort = new Openfort(process.env.OPENFORT_SECRET_KEY);
+const openfort = new Openfort(process.env.OPENFORT_SECRET_KEY, { basePath: process.env.OPENFORT_BASE_PATH });
 
 async function createEncryptionSession(req: Request, res: Response) {
   const uaHead = String(req.headers['user-agent']?.split(' ')[0] || 'unknown').replace(/[\[\]]/g, ''); // Remove brackets to prevent log injection
@@ -36,6 +36,7 @@ async function createEncryptionSession(req: Request, res: Response) {
       shieldApiKey,
       shieldSecretKey,
       shieldEncryptionShare,
+      process.env.SHIELD_BASE_PATH,
     );
 
     res.status(200).send({

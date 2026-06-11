@@ -1,7 +1,7 @@
 const PREFIX = '[Openfort-React]'
 
 export const logger = {
-  enabled: true,
+  enabled: false,
   // biome-ignore lint/suspicious/noConsole: allowed for debugging
   log: (...args: any[]) => (logger.enabled ? console.log(PREFIX, ...args) : null),
   // biome-ignore lint/suspicious/noConsole: allowed for debugging

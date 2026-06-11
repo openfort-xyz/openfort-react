@@ -121,7 +121,7 @@ Required variables:
 # Openfort
 VITE_OPENFORT_PUBLISHABLE_KEY=pk_test_...
 VITE_SHIELD_PUBLISHABLE_KEY=sk_test_...
-VITE_POLICY_ID=pol_...
+VITE_FEE_SPONSORSHIP_ID=pol_...
 VITE_WALLET_CONNECT_PROJECT_ID=your-wallet-connect-project-id
 
 # Better Auth
@@ -210,7 +210,7 @@ pnpm --filter @openfort-betterauth/web dev
 | -------------------------------- | ------------------------ | -------- |
 | `VITE_OPENFORT_PUBLISHABLE_KEY`  | Openfort publishable key | Yes      |
 | `VITE_SHIELD_PUBLISHABLE_KEY`    | Shield publishable key   | Yes      |
-| `VITE_POLICY_ID`                 | Openfort policy ID       | Yes      |
+| `VITE_FEE_SPONSORSHIP_ID`        | Openfort fee sponsorship ID | Yes      |
 | `VITE_WALLET_CONNECT_PROJECT_ID` | WalletConnect project ID | No       |
 | `VITE_BETTERAUTH_URL`            | Backend URL              | Yes      |
 | `VITE_BETTERAUTH_BASE_PATH`      | Auth API base path       | Yes      |

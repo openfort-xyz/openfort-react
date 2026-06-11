@@ -1,0 +1,574 @@
+/**
+ * Shared embedded wallets list for evm (wagmi) and svm.
+ *
+ * Rendering rules for EVM:
+ * - EOAs are chain-agnostic and always rendered.
+ * - Smart Accounts are deployed per chain and only render on the active chain.
+ * - Delegated Accounts share an address with their underlying EOA (EIP-7702),
+ *   are scoped to a chain, and render as a sub-row nested under the EOA when
+ *   the active chain matches the delegation chain.
+ */
+
+import {
+  AccountTypeEnum,
+  type ConnectedEmbeddedEthereumWallet,
+  type EthereumWalletState,
+  RecoveryMethod,
+  useOpenfort,
+} from '@openfort/react'
+import { Link } from '@tanstack/react-router'
+import { AnimatePresence } from 'framer-motion'
+import { ChevronLeftIcon, EyeIcon, EyeOffIcon, Link2Icon, Loader2, RefreshCwIcon } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { MP } from '@/components/motion/motion'
+import { WalletRecoveryIcon } from '@/components/Showcase/app/WalletRecoveryIcon'
+import { TruncatedText } from '@/components/TruncatedText'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { EVM_CHAIN_BY_ID } from '@/lib/chains'
+import { cn } from '@/lib/cn'
+
+const ACCOUNT_TYPE_BADGE: Record<AccountTypeEnum, string> = {
+  [AccountTypeEnum.EOA]: 'EOA',
+  [AccountTypeEnum.SMART_ACCOUNT]: 'SA',
+  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'DELEGATED',
+}
+
+const ACCOUNT_TYPE_LABELS: Record<AccountTypeEnum, string> = {
+  [AccountTypeEnum.EOA]: 'EOA',
+  [AccountTypeEnum.SMART_ACCOUNT]: 'Smart Account',
+  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'Delegated Account',
+}
+
+const ACCOUNT_TYPE_DESCRIPTIONS: Record<AccountTypeEnum, string> = {
+  [AccountTypeEnum.EOA]: 'One signing key, one address — no contract code.',
+  [AccountTypeEnum.SMART_ACCOUNT]: 'Creates a new EOA + deploys a smart-contract wallet at a separate address.',
+  [AccountTypeEnum.DELEGATED_ACCOUNT]: 'Creates a new EOA and attaches contract code to its same address via EIP-7702.',
+}
+
+const AccountTypeBadge = ({ accountType }: { accountType: AccountTypeEnum | undefined }) => {
+  if (!accountType) return null
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <span className="text-[10px] font-semibold leading-none border rounded px-1 py-0.5 opacity-70">
+          {ACCOUNT_TYPE_BADGE[accountType]}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent>{ACCOUNT_TYPE_LABELS[accountType]}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+const ChainBadge = ({ chainId }: { chainId: number }) => {
+  const chainName = EVM_CHAIN_BY_ID[chainId]?.name ?? `chain ${chainId}`
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <span className="text-[10px] font-medium leading-none border rounded px-1 py-0.5 opacity-70">{chainName}</span>
+      </TooltipTrigger>
+      <TooltipContent>Deployed on chain id {chainId}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+type CreateStep = 'idle' | 'choose-account-type' | 'choose-recovery-method'
+
+const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => {
+  const { create, status } = ethereum
+  const [error, setError] = useState<string | null>(null)
+  const isCreating = status === 'creating'
+  const [step, setStep] = useState<CreateStep>('idle')
+  const [selectedAccountType, setSelectedAccountType] = useState<AccountTypeEnum | null>(null)
+  const [creatingMethod, setCreatingMethod] = useState<RecoveryMethod | null>(null)
+
+  useEffect(() => {
+    const handleClickOutsideCreateWallet = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.create-wallet-button')) {
+        setStep('idle')
+        setSelectedAccountType(null)
+      }
+    }
+    document.addEventListener('click', handleClickOutsideCreateWallet)
+    return () => document.removeEventListener('click', handleClickOutsideCreateWallet)
+  }, [])
+
+  // The SDK falls back to the config's default chain when no chainId is passed,
+  // which can deploy a Smart Account / Delegated on the wrong chain when the
+  // user is browsing a different active chain. Always pin creation to the
+  // currently-active chain so Polygon Amoy creates land on Amoy, not Base.
+  const activeChainId = ethereum.status === 'connected' ? ethereum.chainId : undefined
+
+  const handleCreateWallet = async (recoveryMethod: RecoveryMethod) => {
+    if (!selectedAccountType) return
+    const accountType = selectedAccountType
+    setCreatingMethod(recoveryMethod)
+    setStep('idle')
+    setSelectedAccountType(null)
+    try {
+      const options = {
+        accountType,
+        ...(accountType !== AccountTypeEnum.EOA && activeChainId != null && { chainId: activeChainId }),
+        ...(recoveryMethod === RecoveryMethod.PASSWORD && {
+          recoveryMethod: RecoveryMethod.PASSWORD,
+          password: 'example-password',
+        }),
+        ...(recoveryMethod === RecoveryMethod.PASSKEY && { recoveryMethod: RecoveryMethod.PASSKEY }),
+      }
+      await create(options)
+      setCreatingMethod(null)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to create wallet')
+      setCreatingMethod(null)
+    }
+  }
+
+  return (
+    <>
+      <Tooltip delayDuration={500}>
+        <TooltipTrigger asChild>
+          <div className="flex w-full flex-col gap-2">
+            {step === 'idle' && (
+              <Button
+                type="button"
+                className="w-full create-wallet-button"
+                onClick={() => setStep('choose-account-type')}
+                disabled={isCreating}
+              >
+                {isCreating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <span className="mr-2">+</span>}
+                {isCreating ? `Creating${creatingMethod ? ` (${creatingMethod})` : ''}…` : 'Create new wallet'}
+              </Button>
+            )}
+            {step === 'choose-account-type' && (
+              <div className="flex flex-col gap-1 create-wallet-button">
+                <span className="text-xs opacity-70 px-1">Pick an account type:</span>
+                <div className="flex w-full flex-col gap-1">
+                  {Object.values(AccountTypeEnum).map((accountType) => (
+                    <button
+                      key={accountType}
+                      type="button"
+                      className="create-wallet-button text-left rounded border px-3 py-2 hover:bg-muted transition disabled:opacity-50"
+                      onClick={() => {
+                        setSelectedAccountType(accountType)
+                        setStep('choose-recovery-method')
+                      }}
+                      disabled={isCreating}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">{ACCOUNT_TYPE_LABELS[accountType]}</span>
+                        <AccountTypeBadge accountType={accountType} />
+                      </div>
+                      <p className="mt-0.5 text-xs opacity-70">{ACCOUNT_TYPE_DESCRIPTIONS[accountType]}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            {step === 'choose-recovery-method' && selectedAccountType && (
+              <div className="flex flex-col gap-1 create-wallet-button">
+                <div className="flex items-center gap-1 px-1">
+                  <button
+                    type="button"
+                    className="create-wallet-button opacity-70 hover:opacity-100"
+                    onClick={() => setStep('choose-account-type')}
+                  >
+                    <ChevronLeftIcon className="h-3 w-3" />
+                  </button>
+                  <span className="text-xs opacity-70">
+                    {ACCOUNT_TYPE_LABELS[selectedAccountType]} — Recovery method:
+                  </span>
+                </div>
+                <div className="flex w-full gap-2">
+                  <Button
+                    type="button"
+                    className="flex-1 create-wallet-button"
+                    onClick={() => handleCreateWallet(RecoveryMethod.AUTOMATIC)}
+                    disabled={isCreating}
+                  >
+                    <WalletRecoveryIcon recovery={RecoveryMethod.AUTOMATIC} />
+                    Automatic
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 create-wallet-button"
+                    onClick={() => handleCreateWallet(RecoveryMethod.PASSWORD)}
+                    disabled={isCreating}
+                  >
+                    <WalletRecoveryIcon recovery={RecoveryMethod.PASSWORD} />
+                    Password
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 create-wallet-button"
+                    onClick={() => handleCreateWallet(RecoveryMethod.PASSKEY)}
+                    disabled={isCreating}
+                  >
+                    <WalletRecoveryIcon recovery={RecoveryMethod.PASSKEY} />
+                    Passkey
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <h3 className="text-base mb-1">useEthereumEmbeddedWallet</h3>
+          Create a new wallet using the
+          <Link to="/wallet/useEthereumEmbeddedWallet" search={{ focus: 'create' }} className="px-1 group">
+            create
+          </Link>
+          function.
+        </TooltipContent>
+      </Tooltip>
+      <AnimatePresence mode="wait">
+        {isCreating && (
+          <MP
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 0.8, scale: 0.95 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+          >
+            Creating wallet {creatingMethod && `with ${creatingMethod} recovery`}...
+            {creatingMethod === RecoveryMethod.PASSWORD && (
+              <span className="text-sm block mt-2 opacity-70">(using password: "example-password")</span>
+            )}
+          </MP>
+        )}
+      </AnimatePresence>
+      {error && <span className="text-red-500 text-sm mt-2 block">There was an error: {error}</span>}
+    </>
+  )
+}
+
+const WalletButton = ({
+  wallet,
+  setActive,
+}: {
+  wallet: ConnectedEmbeddedEthereumWallet
+  setActive: (opts: { address: `0x${string}`; password?: string; recoveryMethod?: RecoveryMethod }) => Promise<void>
+}) => {
+  const [password, setPassword] = useState('example-password')
+  const [showPasswordInput, setShowPasswordInput] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+
+  useEffect(() => {
+    const handleClickOutsidePassword = (e: MouseEvent) => {
+      if (!(e.target as HTMLElement).closest('.password-input')) setShowPasswordInput(false)
+    }
+    document.addEventListener('click', handleClickOutsidePassword)
+    return () => document.removeEventListener('click', handleClickOutsidePassword)
+  }, [])
+
+  const handleSetActive = () => {
+    if (wallet.recoveryMethod === RecoveryMethod.PASSWORD) {
+      setActive({ address: wallet.address, recoveryMethod: RecoveryMethod.PASSWORD, password })
+    } else if (wallet.recoveryMethod === RecoveryMethod.PASSKEY) {
+      setActive({ address: wallet.address, recoveryMethod: RecoveryMethod.PASSKEY })
+    } else {
+      setActive({ address: wallet.address })
+    }
+  }
+
+  const handleClickWallet = () => {
+    if (wallet.recoveryMethod === RecoveryMethod.PASSWORD) {
+      setShowPasswordInput(true)
+    } else {
+      handleSetActive()
+    }
+  }
+
+  if (showPasswordInput) {
+    return (
+      <form className="flex w-full gap-2 password-input">
+        <Input
+          type={showPassword ? 'text' : 'password'}
+          placeholder="Enter password"
+          className="password-input"
+          value={password}
+          autoFocus
+          onChange={(e) => setPassword(e.target.value)}
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className="password-input"
+          onClick={() => setShowPassword(!showPassword)}
+        >
+          {showPassword ? (
+            <EyeOffIcon className="h-4 w-4 password-input" />
+          ) : (
+            <EyeIcon className="h-4 w-4 password-input" />
+          )}
+        </Button>
+        <Button
+          type="submit"
+          size="sm"
+          className="password-input"
+          onClick={() => {
+            handleSetActive()
+            setShowPasswordInput(false)
+          }}
+        >
+          Set Active
+        </Button>
+      </form>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        type="button"
+        variant="outline"
+        onClick={() => !wallet.isActive && handleClickWallet()}
+        disabled={!wallet.isAvailable}
+        className={cn('w-full justify-between password-input', {
+          'border-primary bg-primary/10 text-primary hover:bg-primary/15': wallet.isActive,
+          'animate-pulse': wallet.isConnecting,
+        })}
+      >
+        <TruncatedText text={wallet.id} startChars={8} endChars={4} className="text-left" />
+        {wallet.isConnecting && (
+          <MP initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 0.8, scale: 0.95 }}>
+            Connecting...
+          </MP>
+        )}
+        <div className="flex items-center gap-2">
+          <AccountTypeBadge accountType={wallet.accountType} />
+          {wallet.accountType !== AccountTypeEnum.EOA &&
+            (() => {
+              const chainId = wallet.accounts?.find((a) => a.chainId != null)?.chainId
+              return chainId != null ? <ChainBadge chainId={chainId} /> : null
+            })()}
+          {wallet.address && (
+            <TruncatedText
+              text={wallet.address}
+              startChars={6}
+              endChars={4}
+              displayText={`${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}`}
+              className="text-xs"
+            />
+          )}
+          <WalletRecoveryIcon recovery={wallet.recoveryMethod} />
+        </div>
+      </Button>
+    </div>
+  )
+}
+
+const WalletTooltipItem = ({
+  wallet,
+  index,
+  setActive,
+}: {
+  wallet: ConnectedEmbeddedEthereumWallet
+  index: number
+  activeWallet: ConnectedEmbeddedEthereumWallet | null
+  connectingAddress: string | undefined
+  setActive: (opts: { address: `0x${string}`; password?: string; recoveryMethod?: RecoveryMethod }) => Promise<void>
+}) => (
+  <Tooltip delayDuration={500}>
+    <TooltipTrigger asChild>
+      <div>
+        <WalletButton wallet={wallet} setActive={setActive} />
+      </div>
+    </TooltipTrigger>
+    <TooltipContent>
+      <div className="flex flex-col gap-1">
+        <h3 className="text-base mb-1">useEthereumEmbeddedWallet</h3>
+        <pre className="flex text-xs flex-col gap-1">
+          wallets[{index}] ={' '}
+          {JSON.stringify(
+            {
+              id: wallet.id,
+              address: wallet.address,
+              accountType: wallet.accountType,
+              recoveryMethod: wallet.recoveryMethod,
+              ownerAddress: wallet.ownerAddress,
+              isActive: wallet.isActive,
+              isAvailable: wallet.isAvailable,
+              walletIndex: wallet.walletIndex,
+              accounts: wallet.accounts,
+            },
+            null,
+            2
+          )}
+        </pre>
+        {wallet.isActive ? (
+          <p className="text-xs text-green-700">Active wallet</p>
+        ) : (
+          <p className="text-xs opacity-70">
+            Click to set this wallet as active. (
+            <Link to="/wallet/useEthereumEmbeddedWallet" search={{ focus: 'setActive' }}>
+              setActive
+            </Link>
+            )
+          </p>
+        )}
+      </div>
+    </TooltipContent>
+  </Tooltip>
+)
+
+const DelegationSubRow = ({ chainId }: { chainId: number }) => {
+  const chainName = EVM_CHAIN_BY_ID[chainId]?.name ?? `chain ${chainId}`
+  return (
+    <Tooltip delayDuration={200}>
+      <TooltipTrigger asChild>
+        <div className="ml-6 mt-1 flex items-center gap-2 text-xs rounded border border-dashed px-2 py-1 opacity-80">
+          <Link2Icon className="h-3 w-3 shrink-0" />
+          <span>
+            Delegated on <span className="font-medium">{chainName}</span> — shares this EOA address
+          </span>
+          <AccountTypeBadge accountType={AccountTypeEnum.DELEGATED_ACCOUNT} />
+        </div>
+      </TooltipTrigger>
+      <TooltipContent>
+        EIP-7702 attaches contract code to the EOA's address on the active chain. The EOA stays usable on other chains.
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+type EmbeddedWalletsListProps = {
+  ethereum: EthereumWalletState
+  activeWallet: ConnectedEmbeddedEthereumWallet | null
+  connectingAddress: string | undefined
+  setActive: (opts: { address: `0x${string}`; password?: string; recoveryMethod?: RecoveryMethod }) => Promise<void>
+  isExternalActive?: boolean
+}
+
+export function EmbeddedWalletsList({
+  ethereum,
+  activeWallet,
+  connectingAddress,
+  setActive,
+  isExternalActive,
+}: EmbeddedWalletsListProps) {
+  const { updateEmbeddedAccounts, embeddedAccounts } = useOpenfort()
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const handleRefresh = async () => {
+    setIsRefreshing(true)
+    try {
+      await updateEmbeddedAccounts()
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  const currentChainId = ethereum.status === 'connected' && 'chainId' in ethereum ? ethereum.chainId : undefined
+
+  // Compute which EOA addresses are delegated on the active chain by looking at
+  // raw embeddedAccounts (the deduped `ethereum.wallets` list collapses entries
+  // sharing an address, so it can hide a Delegated record paired with an EOA).
+  const delegatedAddressesOnChain = useMemo(() => {
+    if (currentChainId == null || !embeddedAccounts) return new Set<string>()
+    return new Set(
+      embeddedAccounts
+        .filter((a) => a.accountType === AccountTypeEnum.DELEGATED_ACCOUNT && a.chainId === currentChainId)
+        .map((a) => a.address.toLowerCase())
+    )
+  }, [embeddedAccounts, currentChainId])
+
+  // Chain filter for the deduped wallet list:
+  // - EOAs are chain-agnostic and always render.
+  // - Smart Accounts/Delegated entries only render on their deployment chain.
+  const wallets = useMemo(() => {
+    if (currentChainId == null) return ethereum.wallets
+    return ethereum.wallets.filter((w) => {
+      if (w.accountType === AccountTypeEnum.EOA) return true
+      const chainScopedAccounts = w.accounts?.filter((a) => a.chainId != null) ?? []
+      if (chainScopedAccounts.length === 0) return true
+      return chainScopedAccounts.some((a) => a.chainId === currentChainId)
+    })
+  }, [ethereum.wallets, currentChainId])
+
+  // Smart Accounts are owned by an EOA at a different address. Group SAs under
+  // their owner EOA when present in the list. SAs whose owner is missing from
+  // the list (e.g. owner EOA not loaded yet) render at the top level.
+  const eoaAddressesInList = useMemo(
+    () => new Set(wallets.filter((w) => w.accountType === AccountTypeEnum.EOA).map((w) => w.address.toLowerCase())),
+    [wallets]
+  )
+  const ownedSmartAccountsByOwner = useMemo(() => {
+    const map = new Map<string, ConnectedEmbeddedEthereumWallet[]>()
+    for (const w of wallets) {
+      if (w.accountType !== AccountTypeEnum.SMART_ACCOUNT) continue
+      const owner = w.ownerAddress?.toLowerCase()
+      if (!owner || !eoaAddressesInList.has(owner)) continue
+      const list = map.get(owner) ?? []
+      list.push(w)
+      map.set(owner, list)
+    }
+    return map
+  }, [wallets, eoaAddressesInList])
+  const topLevelWallets = useMemo(() => {
+    return wallets.filter((w) => {
+      if (w.accountType !== AccountTypeEnum.SMART_ACCOUNT) return true
+      const owner = w.ownerAddress?.toLowerCase()
+      return !owner || !eoaAddressesInList.has(owner)
+    })
+  }, [wallets, eoaAddressesInList])
+
+  // When an external wallet is active, suppress embedded active indicators
+  const effectiveActiveWallet = isExternalActive ? null : activeWallet
+
+  return (
+    <div className="space-y-2">
+      {topLevelWallets.map((wallet, walletIndex) => {
+        const displayWallet = isExternalActive ? { ...wallet, isActive: false } : wallet
+        const isEoa = wallet.accountType === AccountTypeEnum.EOA
+        const isDelegatedHere =
+          isEoa && currentChainId != null && delegatedAddressesOnChain.has(wallet.address.toLowerCase())
+        const ownedSmartAccounts = isEoa ? (ownedSmartAccountsByOwner.get(wallet.address.toLowerCase()) ?? []) : []
+        return (
+          <div key={wallet.id}>
+            <WalletTooltipItem
+              wallet={displayWallet}
+              index={walletIndex}
+              activeWallet={effectiveActiveWallet}
+              connectingAddress={connectingAddress}
+              setActive={setActive}
+            />
+            {isDelegatedHere && currentChainId != null && <DelegationSubRow chainId={currentChainId} />}
+            {ownedSmartAccounts.map((sa) => {
+              const saDisplay = isExternalActive ? { ...sa, isActive: false } : sa
+              return (
+                <div key={sa.id} className="ml-6 mt-1">
+                  <WalletTooltipItem
+                    wallet={saDisplay}
+                    index={walletIndex}
+                    activeWallet={effectiveActiveWallet}
+                    connectingAddress={connectingAddress}
+                    setActive={setActive}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        )
+      })}
+      <div className="flex gap-2">
+        <div className="flex-1">
+          <CreateWalletButton ethereum={ethereum} />
+        </div>
+        <Tooltip delayDuration={200}>
+          <TooltipTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              className="self-start"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+            >
+              <RefreshCwIcon className={cn('h-4 w-4', isRefreshing && 'animate-spin')} />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>Refresh wallets</TooltipContent>
+        </Tooltip>
+      </div>
+    </div>
+  )
+}

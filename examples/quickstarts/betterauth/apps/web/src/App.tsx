@@ -1,5 +1,5 @@
 import { useSignOut, useUser } from '@openfort/react'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import { Main } from './components/cards/main'
 import { useSession } from './integrations/betterauth'
 
@@ -11,6 +11,20 @@ function App() {
   const sessionToken = session?.session?.token
   const hadSessionRef = useRef(false)
 
+  const getAccessTokenRef = useRef(getAccessToken)
+  getAccessTokenRef.current = getAccessToken
+  const signOutRef = useRef(signOut)
+  signOutRef.current = signOut
+
+  const syncSession = useCallback(() => {
+    void getAccessTokenRef.current().catch((error) => {
+      console.error(
+        'Better Auth - Failed to sync session with Openfort:',
+        error,
+      )
+    })
+  }, [])
+
   useEffect(() => {
     if (isPending) {
       return
@@ -19,21 +33,16 @@ function App() {
     if (hasUser && sessionToken) {
       console.log('Better Auth - Session active, syncing with Openfort')
       hadSessionRef.current = true
-      void getAccessToken().catch((error) => {
-        console.error(
-          'Better Auth - Failed to sync session with Openfort:',
-          error,
-        )
-      })
+      syncSession()
       return
     }
 
     if (hadSessionRef.current) {
       console.log('Better Auth - Session ended, clearing Openfort session')
       hadSessionRef.current = false
-      void signOut()
+      void signOutRef.current()
     }
-  }, [getAccessToken, hasUser, isPending, sessionToken, signOut])
+  }, [hasUser, isPending, sessionToken, syncSession])
 
   return (
     <div>

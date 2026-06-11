@@ -2,6 +2,7 @@
 export const availableTemplates = [
   "openfort-ui",
   "headless",
+  "solana-headless",
   "firebase",
 ] as const;
 export type OpenfortTemplate = (typeof availableTemplates)[number];

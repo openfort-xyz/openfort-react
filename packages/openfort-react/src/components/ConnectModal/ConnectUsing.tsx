@@ -1,9 +1,12 @@
+'use client'
+
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { logger } from '../../utils/logger'
-import { useWallet } from '../../wallets/useWagmiWallets'
+import { useExternalConnector } from '../../wallets/useExternalConnectors'
 import Alert from '../Common/Alert'
 import { contentVariants } from '../Common/Modal'
+import { routes } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
 import ConnectWithInjector from './ConnectWithInjector'
 import ConnectWithOAuth from './ConnectWithOAuth'
@@ -14,17 +17,28 @@ const states = {
   INJECTOR: 'injector',
 }
 
+/** Connector id must be a wallet connector (e.g. injected, walletConnect), not an Openfort account id. */
+function isAccountId(id: string): boolean {
+  return id.startsWith('acc_')
+}
+
 const ConnectUsing = () => {
   const context = useOpenfort()
-  const wallet = useWallet(context.connector.id)
+  const connectorId = context.connector.id
+  const isConnectorAccountId = isAccountId(connectorId)
+  const effectiveConnectorId = isConnectorAccountId ? '' : connectorId
+  const wallet = useExternalConnector(effectiveConnectorId)
 
-  // If cannot be scanned, display injector flow, which if extension is not installed will show CTA to install it
   const isQrCode = !wallet?.isInstalled && wallet?.getWalletConnectDeeplink
-
-  // For OAuth connectors, we don't need to show the injector flow
   const isOauth = context.connector.type === 'oauth'
-
   const [status, setStatus] = useState(isQrCode ? states.QRCODE : states.INJECTOR)
+
+  useEffect(() => {
+    if (isConnectorAccountId) {
+      context.setConnector({ id: '' })
+      context.setRoute(routes.PROVIDERS)
+    }
+  }, [isConnectorAccountId, context])
 
   useEffect(() => {
     const connector = context.connector
@@ -33,7 +47,7 @@ const ConnectUsing = () => {
     if (isOauth) return
     // if no provider, change to qrcode
     const checkProvider = async () => {
-      const res = await wallet?.connector.getProvider()
+      const res = await wallet?.connector?.getProvider?.()
       if (!res) {
         setStatus(states.QRCODE)
         setTimeout(context.triggerResize, 10) // delay required here for modal to resize
@@ -42,8 +56,8 @@ const ConnectUsing = () => {
     if (status === states.INJECTOR) checkProvider()
   }, [])
 
+  if (isConnectorAccountId) return null
   if (isOauth) return <ConnectWithOAuth />
-
   if (!wallet) return <Alert>Connector not found {context.connector.id}</Alert>
 
   return (

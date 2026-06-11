@@ -1,3 +1,5 @@
+'use client'
+
 import React from 'react'
 import { EyeIcon, EyeOffIcon } from '../../../assets/icons'
 import { IconButton, InputContainer, Input as StyledInput } from './styles'

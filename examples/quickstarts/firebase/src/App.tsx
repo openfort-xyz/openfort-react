@@ -8,7 +8,7 @@ function App() {
   const { signOut } = useSignOut()
 
   useEffect(() => {
-    auth.onAuthStateChanged((user) => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
       console.log('onAuthStateChanged')
       if (user) {
         console.log('onAuthStateChanged - User is signed in:', user)
@@ -18,6 +18,7 @@ function App() {
         signOut()
       }
     })
+    return unsubscribe
   }, [])
 
   return (

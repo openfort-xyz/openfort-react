@@ -1,24 +1,22 @@
-import { readFileSync } from 'node:fs'
 import peerDepsExternal from 'rollup-plugin-peer-deps-external'
 import typescript from 'rollup-plugin-typescript2'
 
-const packageJson = JSON.parse(readFileSync('./package.json', 'utf-8'))
-
-export default [
-  {
-    input: ['./src/index.ts'],
-    external: ['react', 'react-dom', 'framer-motion', 'wagmi'],
-    output: {
-      file: packageJson.exports.import,
-      format: 'esm',
-      sourcemap: true,
-    },
-    plugins: [
-      peerDepsExternal(),
-      typescript({
-        useTsconfigDeclarationDir: true,
-        exclude: 'node_modules/**',
-      }),
-    ],
+export default {
+  input: ['./src/index.ts', './src/ethereum/index.ts', './src/solana/index.ts', './src/wagmi/index.ts'],
+  external: ['react', 'react-dom', 'framer-motion', 'styled-components'],
+  output: {
+    dir: 'build',
+    format: 'esm',
+    preserveModules: true,
+    preserveModulesRoot: 'src',
+    sourcemap: true,
   },
-]
+  plugins: [
+    peerDepsExternal(),
+    typescript({
+      useTsconfigDeclarationDir: true,
+      include: ['**/*.ts', '**/*.tsx'],
+      exclude: 'node_modules/**',
+    }),
+  ],
+}

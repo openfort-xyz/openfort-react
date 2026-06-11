@@ -1,7 +1,9 @@
 import type { Address } from 'viem'
-import { formatUnits } from 'viem'
-import { useEstimateFeesPerGas, useEstimateGas } from 'wagmi'
-import { useWalletAssets } from '../../../hooks/openfort/useWalletAssets'
+import { createPublicClient, formatUnits, http } from 'viem'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { useAsyncData } from '../../../shared/hooks/useAsyncData'
+import { logger } from '../../../utils/logger'
+import { getDefaultEthereumRpcUrl } from '../../../utils/rpc'
 import Tooltip from '../../Common/Tooltip'
 import { formatBalance } from '../Send/utils'
 import { InfoIconWrapper } from './styles'
@@ -41,33 +43,42 @@ export const EstimatedFees = ({
   enabled = true,
   hideInfoIcon = false,
 }: EstimatedFeesProps) => {
-  const { data: assets } = useWalletAssets()
+  const { data: assets } = useEthereumWalletAssets()
   const pricePerToken = assets?.find((a) => a.type === 'native')?.metadata?.fiat?.value as number | undefined
 
-  const { data: gasEstimate } = useEstimateGas({
-    account,
-    to,
-    value,
-    data,
-    chainId,
-    query: {
-      enabled,
+  const gas = useAsyncData({
+    queryKey: ['gas-estimate', account, to, value, data, chainId],
+    queryFn: async () => {
+      if (!account || !to || !chainId) return null
+      try {
+        const rpcUrl = getDefaultEthereumRpcUrl(chainId)
+        const publicClient = createPublicClient({ transport: http(rpcUrl) })
+        const [gasEstimate, feesPerGas] = await Promise.all([
+          publicClient.estimateGas({
+            account,
+            to,
+            value: value ?? BigInt(0),
+            data: data ?? '0x',
+          }),
+          publicClient.estimateFeesPerGas(),
+        ])
+        const estimatedCost = gasEstimate * (feesPerGas.maxFeePerGas ?? BigInt(0))
+        return { estimatedCost, gasLimit: gasEstimate }
+      } catch (error) {
+        logger.error('Failed to estimate gas:', error)
+        return null
+      }
     },
+    enabled: enabled && !!account && !!to && !!chainId,
   })
 
-  const { data: feeData } = useEstimateFeesPerGas({
-    chainId,
-    query: {
-      enabled: Boolean(chainId),
-    },
-  })
-
-  const gasPrice = feeData?.gasPrice ?? feeData?.maxFeePerGas
-  const gasCost = gasEstimate && gasPrice ? gasEstimate * gasPrice : undefined
-
-  if (!gasCost) {
+  // Handle query states
+  if (!gas.data || gas.error) {
     return <>--</>
   }
+
+  const gasCost = gas.data.estimatedCost
+  const gasUnits = gas.data.gasLimit
 
   if (pricePerToken !== undefined) {
     const gasCostInEth = Number.parseFloat(formatUnits(gasCost, 18))
@@ -77,7 +88,7 @@ export const EstimatedFees = ({
       <>
         ≈ {usdFormatter.format(gasCostInUsd)}
         {!hideInfoIcon && (
-          <Tooltip message={`${gasEstimate?.toString()} gas units (paid in ${nativeSymbol})`} delay={0.2}>
+          <Tooltip message={`${gasUnits.toString()} gas units (paid in ${nativeSymbol})`} delay={0.2}>
             <InfoIconWrapper>
               <InfoIcon />
             </InfoIconWrapper>
@@ -92,7 +103,7 @@ export const EstimatedFees = ({
     <>
       ≈ {formatBalance(gasCost, 18)} {nativeSymbol}
       {!hideInfoIcon && (
-        <Tooltip message={`${gasEstimate?.toString()} gas units`} delay={0.2}>
+        <Tooltip message={`${gasUnits.toString()} gas units`} delay={0.2}>
           <InfoIconWrapper>
             <InfoIcon />
           </InfoIconWrapper>

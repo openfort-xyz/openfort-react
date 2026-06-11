@@ -1,16 +1,20 @@
+'use client'
+
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
+import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../../types'
+import type { OpenfortHookOptions } from '../../../types'
+import { logger } from '../../../utils/logger'
 import { onError, onSuccess } from '../hookConsistency'
-import type { UserWallet } from '../useWallets'
+import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes'
 import { type BaseFlowState, mapStatus } from './status'
 import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth'
 
 type GuestHookResult = {
   error?: OpenfortError
   user?: User
-  wallet?: UserWallet
+  wallet?: EthereumUserWallet | SolanaUserWallet
 }
 
 type GuestHookOptions = OpenfortHookOptions<GuestHookResult> & CreateWalletPostAuthOptions
@@ -75,7 +79,7 @@ type GuestHookOptions = OpenfortHookOptions<GuestHookResult> & CreateWalletPostA
  * ```
  */
 export const useGuestAuth = (hookOptions: GuestHookOptions = {}) => {
-  const { client, updateUser } = useOpenfortCore()
+  const { client, updateUser, updateEmbeddedAccounts } = useOpenfortCore()
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
@@ -88,26 +92,50 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = {}) => {
           status: 'loading',
         })
 
-        const result = await client.auth.signUpGuest()
+        let user: User | undefined
 
-        const user = result.user
+        try {
+          logger.log('Guest signup: calling auth.signUpGuest()')
+          const result = await client.auth.signUpGuest()
+          user = result.user
+          logger.log('Guest signup: auth OK, user id:', user?.id)
+        } catch (authError: unknown) {
+          const isAlreadyLoggedIn =
+            (authError as Error)?.message?.includes('Already logged in') ||
+            (authError as Error)?.name === 'SessionError'
+          if (isAlreadyLoggedIn) {
+            logger.log('Guest signup: already logged in, using existing session')
+            user = (await client.user.get()) ?? undefined
+            if (!user) throw authError
+          } else {
+            throw authError
+          }
+        }
+
         await updateUser(user)
 
+        logger.log('Guest signup: calling tryUseWallet()')
         const { wallet } = await tryUseWallet({
           logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
           recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
         })
 
+        if (wallet && typeof updateEmbeddedAccounts === 'function') {
+          await updateEmbeddedAccounts()
+        }
+
         setStatus({
           status: 'success',
         })
 
+        logger.log('Guest signup: success', wallet ? '(wallet created)' : '(no wallet)')
         return onSuccess({
           hookOptions,
           options,
           data: { user, wallet },
         })
       } catch (error) {
+        logger.error('Guest signup failed:', error)
         const openfortError = new OpenfortError('Failed to signup guest', OpenfortReactErrorType.AUTHENTICATION_ERROR, {
           error,
         })
@@ -124,7 +152,7 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, setStatus, updateUser, updateEmbeddedAccounts, tryUseWallet, hookOptions]
   )
 
   return {

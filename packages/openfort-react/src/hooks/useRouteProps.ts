@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import type { RouteOptions } from '../components/Openfort/types'
 import { useOpenfort } from '../components/Openfort/useOpenfort'

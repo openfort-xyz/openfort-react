@@ -99,6 +99,16 @@ export const chainConfigs: Chain[] = [
     logo: <Logos.Polygon testnet />,
   },
   {
+    id: 80002,
+    name: 'Polygon Amoy',
+    logo: <Logos.Polygon testnet />,
+  },
+  {
+    id: 13337,
+    name: 'Beam Testnet',
+    logo: <Logos.Avalanche testnet />,
+  },
+  {
     id: 31337,
     name: 'Hardhat',
     logo: <Logos.Ethereum testnet />,

@@ -1,11 +1,18 @@
-import { getWalletClient } from '@wagmi/core'
+'use client'
+
 import { useCallback, useState } from 'react'
-import type { Hex } from 'viem'
+import type { Chain, Hex } from 'viem'
+import { createWalletClient, custom } from 'viem'
 import { erc7715Actions, type GrantPermissionsParameters, type GrantPermissionsReturnType } from 'viem/experimental'
-import { useChainId, useConfig } from 'wagmi'
-import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../types'
+import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { DEFAULT_TESTNET_CHAIN_ID } from '../../core/ConnectionStrategy'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
+import type { OpenfortEmbeddedEthereumWalletProvider } from '../../ethereum/types'
+import { useOpenfortCore } from '../../openfort/useOpenfort'
+import type { OpenfortHookOptions } from '../../types'
 import { logger } from '../../utils/logger'
-import { useChains } from '../useChains'
 import { type BaseFlowState, mapStatus } from './auth/status'
 import { onError, onSuccess } from './hookConsistency'
 
@@ -106,10 +113,34 @@ type GrantPermissionsHookOptions = OpenfortHookOptions<GrantPermissionsHookResul
  * );
  * ```
  */
+async function getEmbeddedWalletClientWithErc7715(provider: OpenfortEmbeddedEthereumWalletProvider, chain: Chain) {
+  const accounts = (await provider.request({ method: 'eth_accounts' })) as `0x${string}`[]
+  if (!accounts?.length) throw new OpenfortError('No accounts available', OpenfortReactErrorType.WALLET_ERROR)
+  const account = accounts[0]
+  const transport = custom(provider)
+  const baseClient = createWalletClient({ account, chain, transport })
+  return baseClient.extend(erc7715Actions())
+}
+
+/**
+ * Grants session key permissions for EIP-7702 / account abstraction.
+ *
+ * @param hookOptions - Optional callbacks and configuration
+ * @returns grantPermissions(request), status, data, error
+ *
+ * @example
+ * ```tsx
+ * const { grantPermissions } = useGrantPermissions()
+ * await grantPermissions({ request: { ... } })
+ * ```
+ */
 export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {}) => {
-  const chains = useChains()
-  const chainId = useChainId()
-  const config = useConfig()
+  const bridge = useEthereumBridge()
+  const { chains } = useOpenfort()
+  const { client } = useOpenfortCore()
+  const ethereum = useEthereumEmbeddedWallet()
+  const chainId =
+    bridge?.chainId ?? (ethereum.status === 'connected' ? ethereum.chainId : undefined) ?? DEFAULT_TESTNET_CHAIN_ID
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
@@ -122,26 +153,49 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
       try {
         logger.log('Granting permissions with request:', request)
 
-        const walletClient = await getWalletClient(config).catch(() => null)
-        if (!walletClient) {
-          throw new OpenfortError('Wallet client not available', OpenfortReactErrorType.WALLET_ERROR)
+        const chain = chains.find((c) => c.id === chainId)
+        if (!chain) {
+          throw new OpenfortError('No chain configured', OpenfortReactErrorType.CONFIGURATION_ERROR)
         }
 
         setStatus({
           status: 'loading',
         })
 
-        // Get the current chain configuration
-        const chain = chains.find((c) => c.id === chainId)
-        if (!chain) {
-          throw new OpenfortError('No chain configured', OpenfortReactErrorType.CONFIGURATION_ERROR)
+        let account: `0x${string}`
+        let grantPermissionsResult: GrantPermissionsReturnType
+
+        if (bridge?.getWalletClient) {
+          // Wagmi connector may still be connecting after auto-recover → READY transition.
+          // Poll briefly before giving up.
+          let rawClient = await bridge.getWalletClient()
+          for (let attempt = 0; !rawClient && attempt < 4; attempt++) {
+            await new Promise((r) => setTimeout(r, 300))
+            rawClient = await bridge.getWalletClient()
+            if (rawClient) break
+          }
+          if (!rawClient) {
+            throw new OpenfortError('Wallet client not available', OpenfortReactErrorType.WALLET_ERROR)
+          }
+          const walletClient = rawClient.extend(erc7715Actions())
+          const [addr] = await walletClient.getAddresses()
+          if (!addr) throw new OpenfortError('No account on wallet client', OpenfortReactErrorType.WALLET_ERROR)
+          account = addr
+          grantPermissionsResult = await walletClient.grantPermissions(request)
+        } else {
+          let provider: OpenfortEmbeddedEthereumWalletProvider
+          if (ethereum.status === 'connected') {
+            provider = await ethereum.activeWallet.getProvider()
+          } else {
+            provider = (await client.embeddedWallet.getEthereumProvider()) as OpenfortEmbeddedEthereumWalletProvider
+            await provider.request({ method: 'eth_requestAccounts' })
+          }
+          const walletClient = await getEmbeddedWalletClientWithErc7715(provider, chain)
+          const [addr] = await walletClient.getAddresses()
+          if (!addr) throw new OpenfortError('No account on wallet client', OpenfortReactErrorType.WALLET_ERROR)
+          account = addr
+          grantPermissionsResult = await walletClient.grantPermissions(request)
         }
-
-        // Get the account address
-        const [account] = await walletClient.getAddresses()
-
-        // Grant permissions
-        const grantPermissionsResult = await walletClient.extend(erc7715Actions()).grantPermissions(request)
 
         const data: GrantPermissionsResult = {
           address: account,
@@ -161,9 +215,17 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
           data,
         })
       } catch (error) {
-        const openfortError = new OpenfortError('Failed to grant permissions', OpenfortReactErrorType.WALLET_ERROR, {
-          error,
-        })
+        const isUnsupported =
+          error instanceof Error &&
+          /Method not supported|grantPermissions|wallet_grantPermissions|does not support/i.test(error.message)
+        const message = isUnsupported
+          ? 'Session keys (grantPermissions) are not supported by the embedded wallet provider. Use an external wallet for this flow.'
+          : undefined
+        const openfortError = new OpenfortError(
+          message ?? 'Failed to grant permissions',
+          OpenfortReactErrorType.WALLET_ERROR,
+          { error }
+        )
 
         setStatus({
           status: 'error',
@@ -177,7 +239,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
         })
       }
     },
-    [chains, chainId, config, setStatus, hookOptions]
+    [bridge, chains, chainId, client, ethereum, hookOptions]
   )
 
   return {

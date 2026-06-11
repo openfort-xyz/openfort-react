@@ -1,6 +1,13 @@
+'use client'
+
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect } from 'react'
-import { useAccount, useChainId } from 'wagmi'
+
 import { ExternalLinkIcon } from '../../../assets/icons'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { getExplorerUrl } from '../../../shared/utils/explorer'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
@@ -10,17 +17,27 @@ import { ContinueButtonWrapper, Section } from '../Buy/styles'
 
 const BuyComplete = () => {
   const { setRoute, triggerResize } = useOpenfort()
-  const { address } = useAccount()
-  const chainId = useChainId()
+  const { chainType } = useOpenfortCore()
+
+  // Use chain-specific hooks
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+
+  const isConnected = wallet.status === 'connected'
+  const address = isConnected ? wallet.address : undefined
+  const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
 
   // Trigger resize on mount
   useEffect(() => {
     triggerResize()
   }, [triggerResize])
 
-  // Clean up sessionStorage
+  // Clean up sessionStorage (SSR-safe)
   useEffect(() => {
-    sessionStorage.removeItem('buyPopupOpen')
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('buyPopupOpen')
+    }
   }, [])
 
   const handleDone = () => {
@@ -31,20 +48,7 @@ const BuyComplete = () => {
     setRoute(routes.CONNECTED)
   }
 
-  const getBlockExplorerUrl = (chainId: number, address: string): string => {
-    const explorers: Record<number, string> = {
-      1: 'https://etherscan.io',
-      8453: 'https://basescan.org',
-      137: 'https://polygonscan.com',
-      42161: 'https://arbiscan.io',
-      10: 'https://optimistic.etherscan.io',
-      84532: 'https://sepolia.basescan.org',
-    }
-    const baseUrl = explorers[chainId] || 'https://basescan.org'
-    return `${baseUrl}/address/${address}`
-  }
-
-  const blockExplorerUrl = address ? getBlockExplorerUrl(chainId, address) : ''
+  const blockExplorerUrl = address && chainId ? getExplorerUrl(ChainTypeEnum.EVM, { chainId, address }) : ''
 
   return (
     <PageContent onBack={handleBack}>

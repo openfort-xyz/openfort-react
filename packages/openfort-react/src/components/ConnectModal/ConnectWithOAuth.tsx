@@ -1,7 +1,10 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import { providersLogos } from '../../assets/logos'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
 import { logger } from '../../utils/logger'
+import { parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity'
 import Loader from '../Common/Loading'
 import { routes } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
@@ -23,9 +26,12 @@ const ConnectWithOAuth: React.FC = () => {
 
   useEffect(() => {
     ;(async () => {
+      const win = typeof window !== 'undefined' ? window : null
+      const doc = typeof document !== 'undefined' ? document : null
+      if (!win || !doc) return
       if (connector.type !== 'oauth') throw new Error('Invalid connector type')
 
-      const url = new URL(window.location.href.replace('?access_token=', '&access_token=')) // handle both ? and & cases
+      const url = parseCallbackUrl(win.location.href)
       const hasProvider = !!url.searchParams.get('openfortAuthProviderUI')
       const provider = connector.id
 
@@ -35,6 +41,9 @@ const ConnectWithOAuth: React.FC = () => {
           else setTimeout(() => setStatus(states.REDIRECT), 150) // UX: wait a bit before redirecting
           break
         case states.CONNECTING: {
+          // Suppress Referer before any async work to prevent token leakage
+          const restoreReferrer = suppressReferrer()
+
           const userId = url.searchParams.get('user_id')
           const token = url.searchParams.get('access_token')
           const error = url.searchParams.get('error')
@@ -43,7 +52,8 @@ const ConnectWithOAuth: React.FC = () => {
           ;['openfortAuthProviderUI', 'access_token', 'user_id', 'error'].forEach((key) => {
             url.searchParams.delete(key)
           })
-          window.history.replaceState({}, document.title, url.toString())
+          win.history.replaceState({}, doc.title, url.toString())
+          restoreReferrer()
 
           if (!userId || !token || error) {
             logger.error(
@@ -65,7 +75,7 @@ const ConnectWithOAuth: React.FC = () => {
             return
           }
 
-          client.auth.storeCredentials({
+          await client.auth.storeCredentials({
             token,
             userId,
           })
@@ -76,7 +86,8 @@ const ConnectWithOAuth: React.FC = () => {
         case states.REDIRECT: {
           if (hasProvider) return
 
-          const cleanURL = window.location.origin + window.location.pathname
+          const baseURL = win.location.origin + win.location.pathname
+          const hash = win.location.hash
 
           const queryParams = Object.fromEntries(
             [...url.searchParams.entries()].filter(([key]) =>
@@ -84,6 +95,9 @@ const ConnectWithOAuth: React.FC = () => {
             )
           )
           queryParams.openfortAuthProviderUI = provider
+
+          // Query params must come before the hash fragment in a valid URL
+          const redirectTo = `${baseURL}?${new URLSearchParams(queryParams).toString()}${hash}`
 
           try {
             if (user) {
@@ -95,17 +109,17 @@ const ConnectWithOAuth: React.FC = () => {
               }
               const linkResponse = await client.auth.initLinkOAuth({
                 provider,
-                redirectTo: `${cleanURL}?${new URLSearchParams(queryParams).toString()}`,
+                redirectTo,
               })
               logger.log(linkResponse)
-              window.location.href = linkResponse
+              win.location.href = linkResponse
             } else {
               const r = await client.auth.initOAuth({
                 provider,
-                redirectTo: `${cleanURL}?${new URLSearchParams(queryParams).toString()}`,
+                redirectTo,
               })
               logger.log(r)
-              window.location.href = r
+              win.location.href = r
             }
           } catch (e) {
             logger.error('Error during OAuth initialization:', e)

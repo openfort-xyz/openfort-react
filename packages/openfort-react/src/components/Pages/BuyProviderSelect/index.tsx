@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useMemo } from 'react'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { type BuyProviderId, routes } from '../../Openfort/types'

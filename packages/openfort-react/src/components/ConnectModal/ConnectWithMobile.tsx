@@ -1,10 +1,13 @@
+'use client'
+
 import { useEffect, useState } from 'react'
-import { useAccount } from 'wagmi'
-import { useConnectWithSiwe } from '../../hooks/openfort/useConnectWithSiwe'
+import { embeddedWalletId } from '../../constants/openfort'
+import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
 import styled from '../../styles/styled'
 import { isAndroid } from '../../utils'
 import { useOnUserReturn } from '../../utils/useOnUserReturn'
-import { useWallet } from '../../wallets/useWagmiWallets'
+import { useConnectWithSiwe } from '../../wagmi/useConnectWithSiwe'
+import { useExternalConnector } from '../../wallets/useExternalConnectors'
 import { walletConfigs } from '../../wallets/walletConfigs'
 import Button from '../Common/Button'
 import FitText from '../Common/FitText'
@@ -37,15 +40,18 @@ const ConnectWithMobile: React.FC = () => {
         .indexOf(connector.id) !== -1
   )
 
-  const wallet = useWallet(connector.id) || (walletId && walletConfigs[walletId]) || {}
-  const { isConnected } = useAccount()
+  const wallet = useExternalConnector(connector.id) || (walletId && walletConfigs[walletId]) || {}
+  const bridge = useEthereumBridge()
+  // Only consider external wallets as "connected" — ignore the embedded wallet connector
+  const isExternalConnected =
+    (bridge?.account?.isConnected && bridge?.account?.connector?.id !== embeddedWalletId) ?? false
 
-  const [status, setStatus] = useState(isConnected ? states.INIT : states.CONNECTING)
+  const [status, setStatus] = useState(isExternalConnected ? states.CONNECTING : states.INIT)
   const [description, setDescription] = useState<string | undefined>(undefined)
 
   const [hasReturned, setHasReturned] = useState(false)
 
-  const siwe = useConnectWithSiwe()
+  const { connectWithSiwe } = useConnectWithSiwe()
 
   const openApp = () => {
     const uri = wallet?.getWalletConnectDeeplink?.('')
@@ -66,14 +72,14 @@ const ConnectWithMobile: React.FC = () => {
   useEffect(() => {
     if (hasReturned) {
       setHasReturned(false)
-      if (isConnected) {
+      if (isExternalConnected) {
         setStatus(states.CONNECTING)
       } else {
         setStatus(states.ERROR)
         setDescription('Connection failed or cancelled')
       }
     }
-  }, [hasReturned, isConnected])
+  }, [hasReturned, isExternalConnected])
 
   useEffect(() => {
     switch (status) {
@@ -81,14 +87,12 @@ const ConnectWithMobile: React.FC = () => {
         break
       case states.CONNECTING:
         setDescription('Requesting signature to verify wallet...')
-        siwe({
+        connectWithSiwe({
           walletClientType: walletId,
-          onConnect: () => {
-            setRoute(routes.CONNECTED)
-          },
-          onError: (error) => {
+          onConnect: () => setRoute(routes.CONNECTED),
+          onError: (err) => {
             setStatus(states.ERROR)
-            setDescription(error || 'Connection failed')
+            setDescription(err || 'Connection failed')
           },
         })
         break
@@ -103,11 +107,11 @@ const ConnectWithMobile: React.FC = () => {
         isError={status === states.ERROR}
         description={description}
         onRetry={() => {
-          setStatus(isConnected ? states.CONNECTING : states.INIT)
+          setStatus(isExternalConnected ? states.CONNECTING : states.INIT)
           setDescription('')
         }}
       />
-      {isConnected ? (
+      {isExternalConnected ? (
         <Button
           onClick={() => {
             openApp()

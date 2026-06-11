@@ -1,8 +1,10 @@
+'use client'
+
 import { useEffect, useMemo } from 'react'
 import { socialProviders, UIAuthProvider } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { OpenfortError, OpenfortReactErrorType } from '../../types'
 import { logger } from '../../utils/logger'
 
 export function useProviders() {

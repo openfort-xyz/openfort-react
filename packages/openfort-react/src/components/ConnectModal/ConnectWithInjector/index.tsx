@@ -1,16 +1,17 @@
+'use client'
+
 import { AnimatePresence, type Variants } from 'framer-motion'
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
-import { useAccount, useDisconnect } from 'wagmi'
 import { AlertIcon, RetryIconCircle, TickIcon } from '../../../assets/icons'
-import { useConnectWithSiwe } from '../../../hooks/openfort/useConnectWithSiwe'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import { useUser } from '../../../hooks/openfort/useUser'
-import { useConnect } from '../../../hooks/useConnect'
 import useLocales from '../../../hooks/useLocales'
 import { useRouteProps } from '../../../hooks/useRouteProps'
 import { detectBrowser, isWalletConnectConnector } from '../../../utils'
 import { logger } from '../../../utils/logger'
-import { useWallet } from '../../../wallets/useWagmiWallets'
+import { useConnectWithSiwe } from '../../../wagmi/useConnectWithSiwe'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors'
 import Alert from '../../Common/Alert'
 import BrowserIcon from '../../Common/BrowserIcon'
 import Button from '../../Common/Button'
@@ -26,12 +27,10 @@ import { ConnectingAnimation, ConnectingContainer, Container, Content, RetryButt
 const states = {
   CONNECTED: 'connected',
   CONNECTING: 'connecting',
-  EXPIRING: 'expiring',
   FAILED: 'failed',
   REJECTED: 'rejected',
   NOTCONNECTED: 'notconnected',
   UNAVAILABLE: 'unavailable',
-  DUPLICATED: 'duplicated',
   SIWE: 'siwe',
   RECOVER_ADDRESS_MISMATCH: 'recoverAddressMismatch',
 }
@@ -70,11 +69,13 @@ const ConnectWithInjector: React.FC<{
   forceState?: typeof states
 }> = ({ forceState }) => {
   const { setOpen } = useOpenfort()
-  const { isConnected } = useAccount()
-  const { disconnect } = useDisconnect()
-  const connectWithSiwe = useConnectWithSiwe()
+  const bridge = useEthereumBridge()
+  const { connectWithSiwe } = useConnectWithSiwe()
   const props = useRouteProps(routes.CONNECT)
-  const { linkedAccounts } = useUser()
+  const { linkedAccounts, user } = useUser()
+  const { triggerResize, connector: c } = useOpenfort()
+  const id = c.id
+  const wallet = useExternalConnector(id)
 
   const onConnect = useCallback(() => {
     setStatus(states.CONNECTED)
@@ -84,115 +85,96 @@ const ConnectWithInjector: React.FC<{
     setTimeout(() => {
       setOpen(false)
     }, 1250)
-  }, [])
+  }, [setOpen, triggerResize])
 
-  const { connect } = useConnect({
-    mutation: {
-      onMutate: (connector?: any) => {
-        if (connector.connector) {
-          setStatus(states.CONNECTING)
+  const handleConnectSettled = useCallback(
+    async (
+      walletItem: NonNullable<typeof wallet>,
+      connectResult?: { accounts: readonly `0x${string}`[]; chainId: number }
+    ) => {
+      if (!bridge) return
+      const disconnect = bridge.disconnect
+      const getConnectorAccounts = bridge.getConnectorAccounts
+
+      if (props.connectType === 'recover' && getConnectorAccounts) {
+        const acc = await getConnectorAccounts(walletItem.connector)
+        if (acc.some((v) => v === props.wallet?.address)) {
+          onConnect()
         } else {
-          setStatus(states.UNAVAILABLE)
+          setStatus(states.RECOVER_ADDRESS_MISMATCH)
+          await disconnect()
         }
-      },
-      onError(err?: any) {
-        logger.error(err)
-      },
-      onSettled(data?: any, error?: any) {
-        logger.log(`onSettled - data: ${data}, error: ${error}`, data)
-        if (error) {
-          setShowTryAgainTooltip(true)
-          setTimeout(() => setShowTryAgainTooltip(false), 3500)
-          if (error.code) {
-            // https://github.com/MetaMask/eth-rpc-errors/blob/main/src/error-constants.ts
-            switch (error.code) {
-              case -32002:
-                setStatus(states.NOTCONNECTED)
-                break
-              case 4001:
-                setStatus(states.REJECTED)
-                break
-              default:
-                setStatus(states.FAILED)
-                break
-            }
-          } else {
-            // Sometimes the error doesn't respond with a code
-            if (error.message) {
-              switch (error.message) {
-                case 'User rejected request':
-                  setStatus(states.REJECTED)
-                  break
-                default:
-                  setStatus(states.FAILED)
-                  break
-              }
-            }
-          }
-        } else if (data) {
-          if (!wallet) {
-            setStatus(states.FAILED)
-            logger.error('No wallet found')
-            throw new Error('No wallet found')
-          }
+        return
+      }
 
-          logger.log('Connect type is:', props.connectType)
-
-          if (props.connectType === 'recover') {
-            wallet.connector.getAccounts().then((acc) => {
-              if (acc.some((v) => v === props.wallet.address)) {
-                onConnect()
-              } else {
-                setStatus(states.RECOVER_ADDRESS_MISMATCH)
-                disconnect()
-              }
-            })
-            return
-          }
-
-          const userWallets = linkedAccounts?.filter(
+      // Only skip SIWE when user is logged in AND this wallet is already linked (reconnecting)
+      const userWallets = user
+        ? linkedAccounts?.filter(
             (acc) =>
-              acc.walletClientType === wallet.connector?.name.toLowerCase() ||
-              acc.walletClientType === wallet.connector?.id
+              acc.walletClientType === walletItem.connector?.name?.toLowerCase() ||
+              acc.walletClientType === walletItem.connector?.id
           )
-          // If already has linked account, don't link again
-          if (userWallets && userWallets.length > 0) {
-            wallet.connector.getAccounts().then((acc) => {
-              if (acc.some((v) => userWallets.some((w) => w.accountId === v))) {
-                onConnect()
-                return
-              }
-            })
-          }
-
-          setStatus(states.SIWE)
-
-          connectWithSiwe({
-            // connectorType: wallet.connector.id,
-            // walletClientType: wallet.connector.name.toLowerCase(),
-            onError: (error, _errorType) => {
-              logger.error(error)
-              disconnect()
-              // TODO: TMP FIX: Handle siwe error properly
-              // if (errorType) {
-              //   setStatus(states.DUPLICATED)
-              // } else {
-              setStatus(states.FAILED)
-              // }
-            },
-            onConnect: () => {
-              onConnect()
-            },
-          })
+        : []
+      if (userWallets && userWallets.length > 0 && getConnectorAccounts) {
+        const acc = await getConnectorAccounts(walletItem.connector)
+        if (acc.some((v) => userWallets.some((w) => w.accountId === v))) {
+          onConnect()
+          return
         }
-        setTimeout(triggerResize, 100)
-      },
-    },
-  })
+      }
 
-  const { triggerResize, connector: c } = useOpenfort()
-  const id = c.id
-  const wallet = useWallet(id)
+      setStatus(states.SIWE)
+      const addressFromResult = connectResult?.accounts?.[0]
+      connectWithSiwe({
+        address: addressFromResult,
+        connectorType: walletItem.connector?.type,
+        walletClientType: walletItem.connector?.id,
+        onError: (error, _errorType) => {
+          logger.error('[ConnectWithInjector] SIWE failed:', error)
+          disconnect()
+          setStatus(states.FAILED)
+        },
+        onConnect: () => {
+          onConnect()
+        },
+      })
+    },
+    [
+      bridge,
+      user,
+      linkedAccounts,
+      onConnect,
+      props.connectType,
+      'wallet' in props ? props.wallet?.address : undefined,
+      connectWithSiwe,
+    ]
+  )
+
+  const handleConnectError = useCallback((error: { code?: number; message?: string }) => {
+    setShowTryAgainTooltip(true)
+    setTimeout(() => setShowTryAgainTooltip(false), 3500)
+    if (error?.code !== undefined) {
+      switch (error.code) {
+        case -32002:
+          setStatus(states.NOTCONNECTED)
+          break
+        case 4001:
+          setStatus(states.REJECTED)
+          break
+        default:
+          setStatus(states.FAILED)
+          break
+      }
+    } else if (error?.message) {
+      if (error.message === 'User rejected request') {
+        setStatus(states.REJECTED)
+      } else {
+        setStatus(states.FAILED)
+      }
+    } else {
+      setStatus(states.FAILED)
+    }
+  }, [])
 
   const walletInfo = {
     name: wallet?.name,
@@ -203,9 +185,6 @@ const ConnectWithInjector: React.FC<{
   }
 
   const [showTryAgainTooltip, setShowTryAgainTooltip] = useState(false)
-
-  const expiryDefault = 9 // Starting at 10 causes layout shifting, better to start at 9
-  const [_expiryTimer, _setExpiryTimer] = useState<number>(expiryDefault)
 
   const browser = detectBrowser()
 
@@ -226,21 +205,54 @@ const ConnectWithInjector: React.FC<{
   )
 
   const locales = useLocales({
-    CONNECTORNAME: walletInfo.name,
-    CONNECTORSHORTNAME: walletInfo.shortName ?? walletInfo.name,
+    CONNECTORNAME: walletInfo.name ?? 'UNKNOWN CONNECTOR',
+    CONNECTORSHORTNAME: walletInfo.shortName ?? walletInfo.name ?? 'UNKNOWN CONNECTOR',
     SUGGESTEDEXTENSIONBROWSER: suggestedExtension?.label ?? 'your browser',
   })
 
-  const runConnect = async () => {
-    if (wallet?.isInstalled && wallet?.connector) {
-      // Disconnect if already connected
-      if (isConnected) disconnect()
-
-      connect({ connector: wallet?.connector })
-    } else {
+  const runConnect = useCallback(async () => {
+    if (!bridge || !wallet?.isInstalled || !wallet?.connector) {
       setStatus(states.UNAVAILABLE)
+      return
     }
-  }
+    if (bridge.account.isConnected) {
+      await bridge.disconnect()
+    }
+    setStatus(states.CONNECTING)
+    try {
+      let connectResult: { accounts: readonly `0x${string}`[]; chainId: number } | undefined
+      if (bridge.connectAsync) {
+        const result = await bridge.connectAsync({ connector: wallet.connector })
+        connectResult =
+          result && typeof result === 'object' && 'accounts' in result
+            ? (result as { accounts: readonly `0x${string}`[]; chainId: number })
+            : undefined
+      } else {
+        bridge.connect({ connector: wallet.connector })
+        return
+      }
+      if (!wallet) {
+        setStatus(states.FAILED)
+        logger.error('[ConnectWithInjector] No wallet found after connect')
+        return
+      }
+      logger.log('[ConnectWithInjector] Connect type is:', props.connectType)
+      await handleConnectSettled(wallet, connectResult)
+    } catch (err: unknown) {
+      logger.error('[ConnectWithInjector] Connection error', err instanceof Error ? err.message : err)
+      handleConnectError(
+        err && typeof err === 'object' && 'code' in err
+          ? (err as { code?: number; message?: string })
+          : {
+              message:
+                err instanceof Error && err.message === 'User rejected request'
+                  ? 'User rejected request'
+                  : 'Connection failed',
+            }
+      )
+    }
+    setTimeout(triggerResize, 100)
+  }, [bridge, wallet, props.connectType, handleConnectSettled, handleConnectError, triggerResize])
 
   let connectTimeout: any
   useEffect(() => {
@@ -302,11 +314,7 @@ const ConnectWithInjector: React.FC<{
     )
   }
 
-  const hasError =
-    status === states.FAILED ||
-    status === states.REJECTED ||
-    status === states.DUPLICATED ||
-    status === states.RECOVER_ADDRESS_MISMATCH
+  const hasError = status === states.FAILED || status === states.REJECTED || status === states.RECOVER_ADDRESS_MISMATCH
 
   return (
     <PageContent>
@@ -465,25 +473,7 @@ const ConnectWithInjector: React.FC<{
                 </ModalContent>
               </Content>
             )}
-            {status === states.DUPLICATED && (
-              <Content
-                key={states.DUPLICATED}
-                initial={'initial'}
-                animate={'animate'}
-                exit={'exit'}
-                variants={contentVariants}
-              >
-                <ModalContent style={{ paddingBottom: 28 }}>
-                  <ModalH1 $error>
-                    <AlertIcon />
-                    {locales.injectionScreen_failed_h1}
-                  </ModalH1>
-                  <ModalBody>This wallet is already linked to another player. Please try another wallet.</ModalBody>
-                  {/* TODO: Localize */}
-                </ModalContent>
-              </Content>
-            )}
-            {(status === states.CONNECTING || status === states.EXPIRING) && (
+            {status === states.CONNECTING && (
               <Content
                 key={states.CONNECTING}
                 initial={'initial'}

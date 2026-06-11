@@ -1,3 +1,5 @@
+'use client'
+
 import type { OAuthProvider } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
 import type { Hex } from 'viem'
@@ -13,32 +15,7 @@ import { ProviderIcon } from '../../Common/Providers/ProviderIcon'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-
-const ProviderIconContainer = styled.div`
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
-
-const ProviderIconWrapper = styled.div`
-  width: 54px;
-  height: 54px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--ck-body-background-secondary);
-  border-radius: 28px;
-`
-const ProviderIconInner = styled.div`
-  width: 32px;
-  height: 32px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-`
+import { ProviderIconContainer, ProviderIconInner, ProviderIconWrapper } from '../LinkedProvider'
 
 const ButtonWrapper = styled.div`
   display: flex;
@@ -59,10 +36,10 @@ const RemoveLinkedProvider: React.FC = () => {
 
   const provider = useMemo(() => {
     if (route.route === 'removeLinkedProvider') {
-      return route.provider
+      return route.account
     }
-    throw new Error('No provider found in route')
-  }, [])
+    return null
+  }, [route])
 
   useEffect(() => {
     if (error) triggerResize()
@@ -89,47 +66,41 @@ const RemoveLinkedProvider: React.FC = () => {
   }, [isSuccess])
 
   const handleRemove = async () => {
-    if (provider.provider === 'siwe' || provider.provider === 'wallet')
+    if (!provider) return
+    const errorMsg = 'Failed to remove linked provider. Please try again.'
+    if (provider.provider === 'siwe' || provider.provider === 'wallet') {
       try {
         const result = await client.auth.unlinkWallet({
           address: provider.accountId as Hex,
-          chainId: provider.chainId!,
+          chainId: Number(provider.chainId ?? 0),
         })
         if (!result.success) {
-          setError('Failed to remove linked provider. Please try again.')
-          return
+          setError(errorMsg)
         } else {
           setIsSuccess(true)
         }
       } catch (e) {
-        if (e instanceof Error) setError(e.message)
-        else {
-          logger.error('Unexpected error removing linked provider:', e)
-          setError('Failed to remove linked provider. Please try again.')
-        }
-        return
+        logger.error('Unexpected error removing linked provider:', e)
+        setError(errorMsg)
       }
-    else {
+    } else {
       try {
         const result = await client.auth.unlinkOAuth({
           provider: provider.provider as OAuthProvider,
         })
         if (!result.status) {
-          setError('Failed to remove linked provider. Please try again.')
-          return
+          setError(errorMsg)
         } else {
           setIsSuccess(true)
         }
       } catch (e) {
-        if (e instanceof Error) setError(e.message)
-        else {
-          logger.error('Unexpected error removing linked provider:', e)
-          setError('Failed to remove linked provider. Please try again.')
-        }
-        return
+        logger.error('Unexpected error removing linked provider:', e)
+        setError(errorMsg)
       }
     }
   }
+
+  if (!provider) return null
 
   return (
     <PageContent>
@@ -138,7 +109,7 @@ const RemoveLinkedProvider: React.FC = () => {
         <ProviderIconContainer style={{ marginBottom: '16px' }}>
           <ProviderIconWrapper>
             <ProviderIconInner>
-              <ProviderIcon provider={provider} />
+              <ProviderIcon account={provider} />
             </ProviderIconInner>
           </ProviderIconWrapper>
         </ProviderIconContainer>

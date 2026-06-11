@@ -1,18 +1,21 @@
-import { useQueryClient } from '@tanstack/react-query'
+'use client'
+
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { AnimatePresence, motion } from 'framer-motion'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { keyframes } from 'styled-components'
-import { useAccount, useBalance, useBlockNumber } from 'wagmi'
+
 import { chainConfigs } from '../../constants/chainConfigs'
-import { useChainIsSupported } from '../../hooks/useChainIsSupported'
-import { useChains } from '../../hooks/useChains'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useBalance } from '../../hooks/useBalance'
 import useIsMounted from '../../hooks/useIsMounted'
+import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../solana/hooks/useSolanaEmbeddedWallet'
 import styled from '../../styles/styled'
-import type { All } from '../../types'
 import { nFormatter } from '../../utils'
 import Chain from '../Common/Chain'
-import ThemedButton from '../Common/ThemedButton'
+import { useOpenfort } from '../Openfort/useOpenfort'
 
 const Container = styled(motion.div)`
   display: flex;
@@ -49,26 +52,35 @@ export const Balance: React.FC<BalanceProps> = ({ hideIcon, hideSymbol }) => {
   const isMounted = useIsMounted()
   const [isInitial, setIsInitial] = useState(true)
 
-  const { address, chain } = useAccount()
-  const _chains = useChains()
-  const isChainSupported = useChainIsSupported(chain?.id)
+  // Use chain-specific hooks
+  const { chainType } = useOpenfortCore()
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
 
-  const queryClient = useQueryClient()
-  const { data: blockNumber } = useBlockNumber({ watch: true })
-  const { data: balance, queryKey } = useBalance({
-    address,
-    chainId: chain?.id,
+  const isConnected = wallet.status === 'connected'
+  const address = isConnected ? wallet.address : undefined
+  const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
+  const cluster = chainType === ChainTypeEnum.SVM && isConnected ? (wallet as typeof solanaWallet).cluster : undefined
+
+  const { chains } = useOpenfort()
+  const chainIsSupported = chainId != null && chains.some((c) => c.id === chainId)
+
+  const balance = useBalance({
+    address: address ?? '',
+    chainType: chainType,
+    chainId: chainId ?? 84532,
+    cluster,
+    enabled: isConnected && !!address,
+    refetchInterval: 30_000, // Replaces blockNumber-based invalidation
   })
 
-  useEffect(() => {
-    if (blockNumber ?? 0 % 5 === 0) queryClient.invalidateQueries({ queryKey })
-  }, [blockNumber, queryKey])
+  const currentChain = chainConfigs.find((c) => c.id === chainId)
+  const balanceFormatted = balance.status === 'success' ? balance.formatted : undefined
+  const balanceSymbol = balance.status === 'success' ? balance.symbol : undefined
 
-  const currentChain = chainConfigs.find((c) => c.id === chain?.id)
   const state = `${
-    !isMounted || balance?.formatted === undefined
-      ? `balance-loading`
-      : `balance-${currentChain?.id}-${balance?.formatted}`
+    !isMounted || balanceFormatted === undefined ? `balance-loading` : `balance-${currentChain?.id}-${balanceFormatted}`
   }`
 
   useEffect(() => {
@@ -81,7 +93,7 @@ export const Balance: React.FC<BalanceProps> = ({ hideIcon, hideSymbol }) => {
         <motion.div
           key={state}
           initial={
-            balance?.formatted !== undefined && isInitial
+            balanceFormatted !== undefined && isInitial
               ? {
                   opacity: 1,
                 }
@@ -101,9 +113,9 @@ export const Balance: React.FC<BalanceProps> = ({ hideIcon, hideSymbol }) => {
             delay: 0.4,
           }}
         >
-          {!address || !isMounted || balance?.formatted === undefined ? (
+          {!isConnected || !isMounted || balanceFormatted === undefined ? (
             <Container>
-              {!hideIcon && <Chain id={chain?.id} />}
+              {!hideIcon && chainType === ChainTypeEnum.EVM && <Chain id={chainId} />}
               <span style={{ minWidth: 32 }}>
                 <PulseContainer>
                   <span style={{ animationDelay: '0ms' }} />
@@ -112,51 +124,20 @@ export const Balance: React.FC<BalanceProps> = ({ hideIcon, hideSymbol }) => {
                 </PulseContainer>
               </span>
             </Container>
-          ) : !isChainSupported ? (
+          ) : chainType === ChainTypeEnum.EVM && !chainIsSupported ? (
             <Container>
-              {!hideIcon && <Chain id={chain?.id} />}
+              {!hideIcon && <Chain id={chainId} />}
               <span style={{ minWidth: 32 }}>???</span>
             </Container>
           ) : (
             <Container>
-              {!hideIcon && <Chain id={chain?.id} />}
-              <span style={{ minWidth: 32 }}>{nFormatter(Number(balance?.formatted))}</span>
-              {!hideSymbol && ` ${balance?.symbol}`}
+              {!hideIcon && chainType === ChainTypeEnum.EVM && <Chain id={chainId} />}
+              <span style={{ minWidth: 32 }}>{nFormatter(Number(balanceFormatted))}</span>
+              {!hideSymbol && balanceSymbol && ` ${balanceSymbol}`}
             </Container>
           )}
         </motion.div>
       </AnimatePresence>
-      {/* <Container
-        style={{
-          position: 'absolute',
-          x: 'calc(-50% - 12px)',
-          y: '-50%',
-          left: '50%',
-          top: '50%',
-        }}
-        initial={{
-          opacity: 0,
-        }}
-        animate={{
-          opacity: balance?.formatted !== undefined ? 1 : 0,
-        }}
-        transition={{
-          duration: balance && isInitial ? 0 : 0.4,
-          ease: [0.25, 1, 0.5, 1],
-        }}
-      >
-        {!hideIcon && <Chain id={chain?.id} />}
-        {nFormatter(Number(balance?.formatted))}
-        {!hideSymbol && ` ${balance?.symbol}`}
-      </Container> */}
     </div>
-  )
-}
-
-const _BalanceButton: React.FC<All & BalanceProps> = ({ theme, mode, customTheme, hideIcon, hideSymbol }) => {
-  return (
-    <ThemedButton duration={0.4} variant={'secondary'} theme={theme} mode={mode} customTheme={customTheme}>
-      <Balance hideIcon={hideIcon} hideSymbol={hideSymbol} />
-    </ThemedButton>
   )
 }

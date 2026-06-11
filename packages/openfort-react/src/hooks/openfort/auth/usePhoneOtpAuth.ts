@@ -1,16 +1,19 @@
+'use client'
+
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
+import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../../types'
+import type { OpenfortHookOptions } from '../../../types'
 import { onError, onSuccess } from '../hookConsistency'
-import type { UserWallet } from '../useWallets'
+import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes'
 import { type BaseFlowState, mapStatus } from './status'
 import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth'
 
 type PhoneAuthResult = {
   error?: OpenfortError
   user?: User
-  wallet?: UserWallet
+  wallet?: EthereumUserWallet | SolanaUserWallet
 }
 
 type LoginWithPhoneOtpOptions = {
@@ -88,13 +91,13 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
 
         setStatus({
           status: 'error',
-          error: error,
+          error,
         })
 
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },
@@ -140,13 +143,13 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
 
         setStatus({
           status: 'error',
-          error: error,
+          error,
         })
 
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },
@@ -197,13 +200,13 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
 
         setStatus({
           status: 'error',
-          error: error,
+          error,
         })
 
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },

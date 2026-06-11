@@ -2,6 +2,7 @@ import { useEmailAuth } from '@openfort/react'
 import { createFileRoute } from '@tanstack/react-router'
 import { onSettledInputs, onSettledOptions } from '@/components/Variable/commonVariables'
 import { HookVariable } from '@/components/Variable/HookVariable'
+import { AUTH_CALLBACK_PATH } from '@/lib/chains'
 import { Layout } from '../../../components/Layout'
 
 export const Route = createFileRoute('/_hooks/auth/useEmailAuth')({
@@ -16,7 +17,7 @@ function RouteComponent() {
         hook={useEmailAuth}
         description="This hook allows you to sign up or sign in with email and password, verify and link email"
         defaultOptions={{
-          emailVerificationRedirectTo: `${location.origin}/auth/useAuthCallback`,
+          emailVerificationRedirectTo: `${location.origin}${AUTH_CALLBACK_PATH}`,
           ...onSettledOptions,
         }}
         optionsVariables={{

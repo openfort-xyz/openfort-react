@@ -1,6 +1,9 @@
+'use client'
+
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { EmailIcon } from '../../../assets/icons'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { logger } from '../../../utils/logger'
 import Button from '../../Common/Button'
 import { TextLinkButton } from '../../Common/Button/styles'
@@ -19,6 +22,8 @@ type VerificationResponse = {
 
 const EmailVerification: React.FC = () => {
   const { setRoute, emailInput, setEmailInput } = useOpenfort()
+  const { user } = useOpenfortCore()
+  const isLinkFlow = !!user
 
   const [loading, setLoading] = useState(true)
   const [verificationResponse, setVerificationResponse] = useState<VerificationResponse | null>(null)
@@ -126,10 +131,10 @@ const EmailVerification: React.FC = () => {
             <TextLinkButton
               style={{ textDecoration: 'underline' }}
               onClick={() => {
-                setRoute(routes.EMAIL_LOGIN)
+                setRoute(isLinkFlow ? routes.CONNECTED : routes.EMAIL_LOGIN)
               }}
             >
-              Go back to login
+              {isLinkFlow ? 'Go back' : 'Go back to login'}
             </TextLinkButton>
           </>
         )}

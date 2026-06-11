@@ -1,4 +1,4 @@
-import type { UserAccount } from '../../../openfortCustomTypes'
+import type { UserAccount } from '@openfort/openfort-js'
 
 export const getProviderName = (provider: UserAccount['provider']) => {
   switch (provider) {

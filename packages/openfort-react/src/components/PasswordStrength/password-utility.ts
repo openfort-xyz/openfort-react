@@ -6,10 +6,6 @@
 
 import calculateEntropy from 'fast-password-entropy'
 
-// ============================================================================
-// Constants and Regular Expressions
-// ============================================================================
-
 /**
  * Regular expression to match lowercase letters.
  */
@@ -31,11 +27,6 @@ const DIGIT_REGEX = /[0-9]/
 const SPECIAL_CHARACTERS = '!@#$%^&()\\-*+.'
 
 /**
- * All valid password characters.
- */
-const VALID_PASSWORD_CHARACTERS = `a-zA-Z0-9${SPECIAL_CHARACTERS}`
-
-/**
  * Escape regex metacharacters for safe use inside a character class.
  */
 function escapeForCharClass(str) {
@@ -47,11 +38,6 @@ function escapeForCharClass(str) {
  * Regular expression to match special characters.
  */
 const SPECIAL_CHARACTER_REGEX = new RegExp(`[${escapeForCharClass(SPECIAL_CHARACTERS)}]`)
-
-/**
- * Regular expression to match valid password characters.
- */
-const VALID_CHARACTER_REGEX = new RegExp(`[${VALID_PASSWORD_CHARACTERS}]`)
 
 /**
  * Maximum entropy score for normalization.
@@ -73,49 +59,10 @@ export const MEDIUM_SCORE_THRESHOLD = 0.5
 const STRONG_SCORE_THRESHOLD = 0.75
 const VERY_STRONG_SCORE_THRESHOLD = 0.9
 
-// ============================================================================
-// Types
-// ============================================================================
-
 /**
  * Password strength levels.
  */
 type PasswordStrengthLabel = 'Weak' | 'Medium' | 'Strong' | 'Very Strong'
-
-/**
- * Password summary information.
- */
-interface PasswordSummary {
-  value: number
-  label: PasswordStrengthLabel
-}
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Gets a list of invalid characters in the provided text.
- *
- * Replaces spaces with `SPACE` for visibility.
- *
- * @param text - The text to check for invalid characters.
- * @returns Array of unique invalid characters.
- *
- * @example
- * ```ts
- * const invalid = getInvalidCharacters('Pa$$ word');
- * // invalid === ['$', 'SPACE']
- * ```
- */
-function _getInvalidCharacters(text: string = ''): string[] {
-  const invalidChars = text
-    .split('')
-    .filter((char) => !VALID_CHARACTER_REGEX.test(char))
-    .map((char) => char.replace(' ', 'SPACE'))
-
-  return [...new Set(invalidChars)]
-}
 
 /**
  * Converts a numeric password strength score to a human-readable label.
@@ -197,25 +144,4 @@ export function getPasswordStrength(password: string = ''): number {
   const entropyScore = calculateEntropy(password) / MAX_ENTROPY_SCORE
 
   return Math.min(diversityScore * DIVERSITY_WEIGHT + entropyScore * ENTROPY_WEIGHT, 1)
-}
-
-/**
- * Gets a comprehensive summary of password strength.
- *
- * @param password - The password to analyse.
- * @returns An object containing the strength value and label.
- *
- * @example
- * ```ts
- * const summary = getPasswordSummary('Password123!');
- * // summary === { value: 0.74, label: 'Strong' }
- * ```
- */
-function _getPasswordSummary(password: string = ''): PasswordSummary {
-  const strengthValue = getPasswordStrength(password)
-
-  return {
-    value: strengthValue,
-    label: getPasswordStrengthLabel(strengthValue),
-  }
 }

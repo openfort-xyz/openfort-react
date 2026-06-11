@@ -18,7 +18,8 @@
       "!examples/quickstarts",
       "!packages/create-openfort/template",
       "!packages/create-openfort/.github",
-      "!packages/create-openfort/.codesandbox"
+      "!packages/create-openfort/.codesandbox",
+      "!**/*.md"
     ],
     "ignoreUnknown": true
   },

@@ -1,0 +1,120 @@
+# quickstart-solana-headless
+
+## 0.0.17
+
+### Patch Changes
+
+- Updated dependencies [[`91eaa8b`](https://github.com/openfort-xyz/openfort-react/commit/91eaa8b307fd30cead8fdb13cd11b34c530e8837)]:
+  - @openfort/react@1.1.1
+
+## 0.0.16
+
+### Patch Changes
+
+- Updated dependencies [[`cb65c6f`](https://github.com/openfort-xyz/openfort-react/commit/cb65c6f1fcbdff882059472a19b9e4db5fff0b93)]:
+  - @openfort/react@1.1.0
+
+## 0.0.15
+
+### Patch Changes
+
+- Updated dependencies [[`7a0b70c`](https://github.com/openfort-xyz/openfort-react/commit/7a0b70c5986a1f1d1dbb5956b24a4bc45f608c56)]:
+  - @openfort/react@1.0.16
+
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [[`d3508ad`](https://github.com/openfort-xyz/openfort-react/commit/d3508ad0fb71acb9f362269305acf841101f135c)]:
+  - @openfort/react@1.0.15
+
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`919b5b2`](https://github.com/openfort-xyz/openfort-react/commit/919b5b240242e6c6ddde64c781c9b30dd453c49c)]:
+  - @openfort/react@1.0.14
+
+## 0.0.12
+
+### Patch Changes
+
+- Updated dependencies [[`7351b1a`](https://github.com/openfort-xyz/openfort-react/commit/7351b1a8051a77f508321616afbbdc756434a556)]:
+  - @openfort/react@1.0.13
+
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies [[`54fc075`](https://github.com/openfort-xyz/openfort-react/commit/54fc075b13e13688260d72b1ef750739bb60b202)]:
+  - @openfort/react@1.0.12
+
+## 0.0.10
+
+### Patch Changes
+
+- Updated dependencies [[`cf02ea9`](https://github.com/openfort-xyz/openfort-react/commit/cf02ea95aa80eff8fb6d970000b0b8df6ca68a7a)]:
+  - @openfort/react@1.0.11
+
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [[`a691016`](https://github.com/openfort-xyz/openfort-react/commit/a6910161a7b363dec4d156bb44e3ee39a5d0ece2)]:
+  - @openfort/react@1.0.10
+
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`a526020`](https://github.com/openfort-xyz/openfort-react/commit/a526020d5bf1b0a46a0fbd3bd020489a167dc872)]:
+  - @openfort/react@1.0.9
+
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`a887d13`](https://github.com/openfort-xyz/openfort-react/commit/a887d13f04f09abbced010765af5b648eb9c8410), [`b14401c`](https://github.com/openfort-xyz/openfort-react/commit/b14401c0318206701203dd6e70b9697c2c25631f)]:
+  - @openfort/react@1.0.8
+
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [[`707b47b`](https://github.com/openfort-xyz/openfort-react/commit/707b47b80ec80f296c2d6fc38d3e6d8243cf0ff2), [`4976218`](https://github.com/openfort-xyz/openfort-react/commit/4976218660cb9e6a19f7572bb5efe81dbd166c48)]:
+  - @openfort/react@1.0.7
+
+## 0.0.5
+
+### Patch Changes
+
+- Updated dependencies [[`1033670`](https://github.com/openfort-xyz/openfort-react/commit/10336701d4d68f003b75e273b9791f728c137a48)]:
+  - @openfort/react@1.0.6
+
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [[`331f3b6`](https://github.com/openfort-xyz/openfort-react/commit/331f3b6c60f20c8c1c997a00bfeb83c3d467eedc)]:
+  - @openfort/react@1.0.5
+
+## 0.0.3
+
+### Patch Changes
+
+- Updated dependencies [[`84a3961`](https://github.com/openfort-xyz/openfort-react/commit/84a3961d9e465ff5da1a4dfa8ce4e42c1448500b)]:
+  - @openfort/react@1.0.4
+
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`d29c3d8`](https://github.com/openfort-xyz/openfort-react/commit/d29c3d8c6c7876a58428894fa2ea9590af9bddae)]:
+  - @openfort/react@1.0.3
+
+## 0.0.1
+
+### Patch Changes
+
+- Updated dependencies [[`2c23537`](https://github.com/openfort-xyz/openfort-react/commit/2c235373b7879584c26e70951d3839b3157bd4b0), [`68c497a`](https://github.com/openfort-xyz/openfort-react/commit/68c497a0df2848dcba91e3ca23c12fd309fae418), [`a002d56`](https://github.com/openfort-xyz/openfort-react/commit/a002d56f18dfc1a670892ea153f632dcacbcc6e1)]:
+  - @openfort/react@1.0.2

@@ -2,21 +2,25 @@ import { useMemo } from 'react'
 import { getAddress, parseAbi } from 'viem'
 import {
   useAccount,
+  useChainId,
   useChains,
   useReadContract,
   useWriteContract
 } from 'wagmi'
+import { getMintContractConfig } from '../../../lib/contracts'
 import { TruncateData } from '../../../components/ui/TruncateData';
 
 const MintContract = () => {
   const { address } = useAccount()
+  const chainId = useChainId()
+  const config = getMintContractConfig(chainId)
 
   const {
     data: balance,
     refetch,
     error: balanceError,
   } = useReadContract({
-    address: '0xef147ed8bb07a2a0e7df4c1ac09e96dec459ffac',
+    address: (config?.address ?? undefined) as `0x${string}` | undefined,
     abi: [
       {
         type: 'function',
@@ -27,11 +31,11 @@ const MintContract = () => {
       },
     ],
     functionName: 'balanceOf',
-    args: [address!],
+    args: config && address ? [address] : undefined,
   })
 
   const { data: tokenSymbol } = useReadContract({
-    address: '0xef147ed8bb07a2a0e7df4c1ac09e96dec459ffac',
+    address: (config?.address ?? undefined) as `0x${string}` | undefined,
     abi: [
       {
         type: 'function',
@@ -62,12 +66,23 @@ const MintContract = () => {
   })
 
   async function submit({ amount }: { amount: string }) {
-    writeContract({
-      address: getAddress('0xef147ed8bb07a2a0e7df4c1ac09e96dec459ffac'),
-      abi: parseAbi(['function mint(address to, uint256 amount)']),
-      functionName: 'mint',
-      args: [address!, BigInt(amount)],
-    })
+    if (!config?.address) return
+    const amountWei = BigInt(amount) * BigInt(10 ** 18)
+    if (config.type === 'claim') {
+      writeContract({
+        address: getAddress(config.address),
+        abi: parseAbi(['function claim(uint256 amount)']),
+        functionName: 'claim',
+        args: [amountWei],
+      })
+    } else {
+      writeContract({
+        address: getAddress(config.address),
+        abi: parseAbi(['function mint(address to, uint256 amount)']),
+        functionName: 'mint',
+        args: [address!, amountWei],
+      })
+    }
   }
 
   return (
@@ -90,7 +105,7 @@ const MintContract = () => {
           className="grow peer"
           name="amount"
         />
-        <button className="btn" disabled={isPending || !address}>
+        <button className="btn" disabled={isPending || !address || !config}>
           {isPending ? 'Minting...' : 'Mint Tokens'}
         </button>
       </form>
@@ -102,7 +117,7 @@ const MintContract = () => {
 }
 
 export const ActionsCard = () => {
-  const hasSponsorPolicy = useMemo(() => !!import.meta.env.VITE_POLICY_ID, [])
+  const hasFeeSponsorship = useMemo(() => !!import.meta.env.VITE_FEE_SPONSORSHIP_ID, [])
   const chains = useChains()
   return (
     <div className="flex flex-col w-full">
@@ -110,7 +125,7 @@ export const ActionsCard = () => {
       <span className="mb-4 text-zinc-400 text-sm">
         Interact with smart contracts on the blockchain.
       </span>
-      {!hasSponsorPolicy && (
+      {!hasFeeSponsorship && (
         <div className="mb-3 p-3 bg-red-800 text-white rounded text-sm">
           <strong>Warning: Transactions are not sponsored.</strong> Minting may
           fail because transactions are not being sponsored. To sponsor
@@ -123,9 +138,9 @@ export const ActionsCard = () => {
           >
             Openfort Dashboard
           </a>{' '}
-          and <b>create a policy</b> sponsoring transactions in{' '}
-          <b>{chains[0].name}</b>. Set the <code>VITE_POLICY_ID</code>{' '}
-          environment variable with the policy ID.
+          and <b>create a fee sponsorship</b> for transactions in{' '}
+          <b>{chains[0].name}</b>. Set the <code>VITE_FEE_SPONSORSHIP_ID</code>{' '}
+          environment variable with the fee sponsorship ID.
         </div>
       )}
       <MintContract />

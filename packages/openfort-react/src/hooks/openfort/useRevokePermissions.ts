@@ -1,11 +1,17 @@
+'use client'
+
 import type { RevokePermissionsRequestParams, SessionResponse } from '@openfort/openfort-js'
-import { getWalletClient } from '@wagmi/core'
 import { useCallback, useState } from 'react'
 import type { Hex } from 'viem'
-import { useChainId, useConfig } from 'wagmi'
-import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../types'
+import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { DEFAULT_TESTNET_CHAIN_ID } from '../../core/ConnectionStrategy'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
+import { getEmbeddedWalletClient } from '../../ethereum/hooks/getEmbeddedWalletClient'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
+import type { OpenfortEmbeddedEthereumWalletProvider } from '../../ethereum/types'
+import { useOpenfortCore } from '../../openfort/useOpenfort'
+import type { OpenfortHookOptions } from '../../types'
 import { logger } from '../../utils/logger'
-import { useChains } from '../useChains'
 import { type BaseFlowState, mapStatus } from './auth/status'
 import { onError, onSuccess } from './hookConsistency'
 
@@ -59,9 +65,10 @@ type RevokePermissionsHookOptions = OpenfortHookOptions<RevokePermissionsHookRes
  * ```
  */
 export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = {}) => {
-  const chains = useChains()
-  const chainId = useChainId()
-  const config = useConfig()
+  const { chains } = useOpenfort()
+  const { client } = useOpenfortCore()
+  const ethereum = useEthereumEmbeddedWallet()
+  const chainId = ethereum.chainId ?? DEFAULT_TESTNET_CHAIN_ID
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
@@ -72,9 +79,9 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
       options: RevokePermissionsHookOptions = {}
     ): Promise<RevokePermissionsHookResult> => {
       try {
-        const walletClient = await getWalletClient(config).catch(() => null)
-        if (!walletClient) {
-          throw new OpenfortError('Wallet client not available', OpenfortReactErrorType.WALLET_ERROR)
+        const chain = chains.find((c) => c.id === chainId)
+        if (!chain) {
+          throw new OpenfortError('No chain configured', OpenfortReactErrorType.CONFIGURATION_ERROR)
         }
 
         logger.log('Revoking permissions for session key:', sessionKey)
@@ -82,25 +89,27 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
           status: 'loading',
         })
 
-        // Get the current chain configuration
-        const chain = chains.find((c) => c.id === chainId)
-        if (!chain) {
-          throw new OpenfortError('No chain configured', OpenfortReactErrorType.CONFIGURATION_ERROR)
-        }
+        const revokeParams = [
+          {
+            permissionContext: sessionKey,
+          },
+        ] as [RevokePermissionsRequestParams]
 
-        // Get the account address
-        const revokePermissionsResult = await walletClient.request<{
+        let provider: OpenfortEmbeddedEthereumWalletProvider
+        if (ethereum.status === 'connected') {
+          provider = await ethereum.activeWallet.getProvider()
+        } else {
+          provider = (await client.embeddedWallet.getEthereumProvider()) as OpenfortEmbeddedEthereumWalletProvider
+          await provider.request({ method: 'eth_requestAccounts' })
+        }
+        const walletClient = await getEmbeddedWalletClient(provider, chain)
+        const revokePermissionsResult: SessionResponse = await walletClient.request<{
           Method: 'wallet_revokePermissions'
           Parameters: [RevokePermissionsRequestParams]
           ReturnType: SessionResponse
         }>({
           method: 'wallet_revokePermissions',
-
-          params: [
-            {
-              permissionContext: sessionKey,
-            },
-          ],
+          params: revokeParams,
         })
 
         logger.log('Revoke permissions result:', revokePermissionsResult)
@@ -134,7 +143,7 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
         })
       }
     },
-    [chains, chainId, config, setStatus, hookOptions]
+    [chains, chainId, client, ethereum, hookOptions]
   )
 
   return {

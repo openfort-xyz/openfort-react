@@ -1,3 +1,5 @@
+'use client'
+
 import { useRef } from 'react'
 
 export default function usePrevious<T>(value: T, initial: T) {

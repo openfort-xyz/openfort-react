@@ -2,9 +2,17 @@
  * Utility to handle and provide better error messages for OAuth configuration errors
  */
 
-export function handleOAuthConfigError(error: any): void {
-  if (error?.message?.includes('OAuth Config with provider') && error?.message?.includes('not found')) {
-    const providerMatch = error.message.match(/provider\s+(\w+)\s+not found/i)
+import { logger } from './logger'
+
+export function handleOAuthConfigError(error: unknown): void {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : ''
+  if (message.includes('OAuth Config with provider') && message.includes('not found')) {
+    const providerMatch = message.match(/provider\s+(\w+)\s+not found/i)
     const provider = providerMatch ? providerMatch[1] : 'unknown'
     const providerLower = provider.toLowerCase()
 
@@ -24,8 +32,7 @@ export function handleOAuthConfigError(error: any): void {
 
     const hint = configHints[providerLower] || configHints.custom
 
-    // biome-ignore lint/suspicious/noConsole: allowed for debugging
-    console.error(
+    logger.error(
       `❌ Openfort OAuth Configuration Error:\n\n` +
         `The OAuth provider "${provider}" is not configured in your Openfort account.\n\n` +
         `To fix this:\n` +
@@ -38,8 +45,4 @@ export function handleOAuthConfigError(error: any): void {
         `See: https://www.openfort.io/docs/configuration/external-auth`
     )
   }
-}
-
-function _isOAuthConfigError(error: any): boolean {
-  return error?.message?.includes('OAuth Config with provider') && error?.message?.includes('not found')
 }

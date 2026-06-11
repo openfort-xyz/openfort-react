@@ -1,9 +1,11 @@
+'use client'
+
 import { useEffect } from 'react'
 import type { Theme } from '../types'
 
 function useGoogleFont(font: string) {
   useEffect(() => {
-    if (!font) return
+    if (!font || typeof document === 'undefined') return
     font = font.replace(/ /g, '+')
 
     const googleapis = document.createElement('link')
@@ -32,13 +34,13 @@ function useGoogleFont(font: string) {
 
 // OLD_TODO: This could be dynamic if theming wasn't set up as css variables
 export function useThemeFont(theme: Theme) {
-  const themeFonts: any = {
+  const themeFonts: Partial<Record<Theme, string>> = {
     web95: 'Lato',
     retro: 'Nunito',
     midnight: 'Inter',
     minimal: 'Inter',
     rounded: 'Nunito',
   }
-  const font: string = themeFonts[theme] ?? null
+  const font = themeFonts[theme] ?? ''
   useGoogleFont(font ?? '')
 }

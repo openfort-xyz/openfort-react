@@ -1,5 +1,12 @@
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
-import { RecoveryMethod, type UserWallet, useWallets } from '@openfort/react'
+import {
+  AccountTypeEnum,
+  RecoveryMethod,
+  type ConnectedEmbeddedEthereumWallet,
+} from '@openfort/react'
+import type { EmbeddedAccount } from '@openfort/react'
+import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
+import { useState } from 'react'
 
 import { Sheet } from '../../../components/ui/Sheet'
 
@@ -7,21 +14,32 @@ type CreateWalletPasswordSheetProps = {
   open: boolean
   onClose: () => void
   onCreateWallet?: () => void
+  create: (options: {
+    recoveryMethod: RecoveryMethod
+    accountType?: AccountTypeEnum
+    password?: string
+  }) => Promise<EmbeddedAccount>
+  status: string
+  accountType: AccountTypeEnum
 }
 
 export function CreateWalletPasswordSheet({
   open,
   onClose,
   onCreateWallet,
+  create,
+  status,
+  accountType,
 }: CreateWalletPasswordSheetProps) {
-  const { createWallet, error, isCreating, reset } = useWallets()
+  const [error, setError] = useState<string | null>(null)
+  const isCreating = status === 'creating'
 
   return (
     <Sheet
       open={open}
       onClose={() => {
         onClose()
-        reset()
+        setError(null)
       }}
       title="Enter Password"
       description="Please enter the password of your wallet."
@@ -33,16 +51,16 @@ export function CreateWalletPasswordSheet({
           const formData = new FormData(event.target as HTMLFormElement)
           const password = formData.get('password') as string
 
-          const { error: walletError } = await createWallet({
-            recovery: {
+          try {
+            await create({
               recoveryMethod: RecoveryMethod.PASSWORD,
+              accountType,
               password,
-            },
-          })
-
-          if (!walletError) {
+            })
             onCreateWallet?.()
             onClose()
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to create wallet')
           }
         }}
       >
@@ -62,11 +80,12 @@ export function CreateWalletPasswordSheet({
         <input
           type="password"
           name="password"
+          autoComplete="new-password"
           placeholder="Enter your wallet's password"
           className="w-full mt-2 p-2 border border-gray-300 rounded"
         />
         {error && (
-          <span className="text-red-500 text-sm mt-2">{error?.message}</span>
+          <span className="text-red-500 text-sm mt-2">{error}</span>
         )}
         <button
           className="mt-4 w-full bg-zinc-700 text-white p-2 rounded cursor-pointer"
@@ -83,7 +102,7 @@ export function CreateWalletPasswordSheet({
 type WalletRecoverPasswordSheetProps = {
   open: boolean
   onClose: () => void
-  wallet: UserWallet | null
+  wallet: ConnectedEmbeddedEthereumWallet | null
 }
 
 export function WalletRecoverPasswordSheet({
@@ -91,34 +110,38 @@ export function WalletRecoverPasswordSheet({
   onClose,
   wallet,
 }: WalletRecoverPasswordSheetProps) {
-  const { setActiveWallet, error, isConnecting, reset } = useWallets()
+  const { setActive, status } = useEthereumEmbeddedWallet()
+  const [error, setError] = useState<string | null>(null)
+  const isConnecting = status === 'connecting'
 
   return (
     <Sheet
       open={open}
       onClose={() => {
         onClose()
-        reset()
+        setError(null)
       }}
       title="Enter Password"
       description="Please enter the password of your wallet."
     >
       <form
         className="w-full flex-1 flex flex-col justify-center"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault()
           const formData = new FormData(event.target as HTMLFormElement)
           const password = formData.get('password') as string
           if (!wallet) throw new Error('No wallet to recover')
 
-          setActiveWallet({
-            walletId: 'xyz.openfort',
-            recovery: {
+          try {
+            await setActive({
+              address: wallet.address,
               recoveryMethod: RecoveryMethod.PASSWORD,
               password,
-            },
-            address: wallet.address,
-          })
+            })
+            onClose()
+          } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to recover wallet')
+          }
         }}
       >
         {wallet && (
@@ -130,11 +153,12 @@ export function WalletRecoverPasswordSheet({
         <input
           type="password"
           name="password"
+          autoComplete="current-password"
           placeholder="Enter your wallet's password"
           className="w-full mt-2 p-2 border border-gray-300 rounded"
         />
         {error && (
-          <span className="text-red-500 text-sm mt-2">{error?.message}</span>
+          <span className="text-red-500 text-sm mt-2">{error}</span>
         )}
         <button
           className="mt-4 w-full bg-zinc-700 text-white p-2 rounded cursor-pointer"

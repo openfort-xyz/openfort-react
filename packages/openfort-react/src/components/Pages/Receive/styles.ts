@@ -1,5 +1,11 @@
 import styled from '../../../styles/styled'
 
+export const ReceiveContent = styled.div`
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+`
+
 export const QRWrapper = styled.div`
   display: block;
   margin: 24px auto 16px;

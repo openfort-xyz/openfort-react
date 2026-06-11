@@ -1,6 +1,8 @@
+'use client'
+
 import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
-import { useWalletAssets } from '../../../hooks/openfort/useWalletAssets'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes } from '../../Openfort/types'
@@ -34,7 +36,7 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
     triggerResize()
   }, [viewAllAssets])
 
-  const { data: walletAssets, isLoading: isBalancesLoading } = useWalletAssets()
+  const { data: walletAssets, isLoading: isBalancesLoading } = useEthereumWalletAssets()
 
   // Show all tokens for both buy and send flows
   const selectableTokens = walletAssets || []

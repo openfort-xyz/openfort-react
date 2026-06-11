@@ -1,12 +1,15 @@
+'use client'
+
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
+import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { OpenfortError, type OpenfortHookOptions, OpenfortReactErrorType } from '../../../types'
+import type { OpenfortHookOptions } from '../../../types'
 import { logger } from '../../../utils/logger'
 import { isValidEmail } from '../../../utils/validation'
 import { onError, onSuccess } from '../hookConsistency'
 import { useUI } from '../useUI'
-import type { UserWallet } from '../useWallets'
+import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes'
 import { buildCallbackUrl } from './requestEmailVerification'
 import { type BaseFlowState, mapStatus } from './status'
 import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth'
@@ -14,7 +17,7 @@ import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './
 type EmailAuthResult = {
   error?: OpenfortError
   user?: User
-  wallet?: UserWallet
+  wallet?: EthereumUserWallet | SolanaUserWallet
   requiresEmailVerification?: boolean
 }
 
@@ -234,18 +237,20 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         const error = new OpenfortError(
           'Failed to login with email and password',
           OpenfortReactErrorType.AUTHENTICATION_ERROR,
-          { error: e }
+          {
+            error: e,
+          }
         )
 
         setStatus({
           status: 'error',
-          error: error,
+          error,
         })
 
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },
@@ -305,7 +310,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },
@@ -360,7 +365,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },
@@ -413,8 +418,8 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
           ...(options.name && { name: options.name }),
         })
 
-        // TODO: TMP FIX
-        if ('token' in result && result.token !== null) {
+        // API returns token when auth succeeds immediately; otherwise requires email verification
+        if ('token' in result && result.token != null) {
           const { wallet } = await tryUseWallet({
             logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
             recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
@@ -447,7 +452,9 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         const error = new OpenfortError(
           'Failed to login with email and password',
           OpenfortReactErrorType.AUTHENTICATION_ERROR,
-          { error: e }
+          {
+            error: e,
+          }
         )
         setStatus({
           status: 'error',
@@ -457,7 +464,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },
@@ -522,13 +529,13 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
 
         setStatus({
           status: 'error',
-          error: error,
+          error,
         })
 
         return onError({
           hookOptions,
           options,
-          error: error,
+          error,
         })
       }
     },
@@ -579,7 +586,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
           error,
         })
 
-        logger.log('Error verifying email', e)
+        logger.error('Error verifying email', e)
 
         return onError({
           hookOptions,

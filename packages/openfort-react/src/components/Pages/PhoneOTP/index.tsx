@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { PhoneIcon } from '../../../assets/icons'
@@ -78,7 +80,7 @@ const PhoneOTP: React.FC = () => {
         if (error.message === 'Invalid OTP') {
           setErrorMessage('Invalid code. Please try again.')
         } else {
-          setErrorMessage(error.message)
+          setErrorMessage('Verification failed. Please try again.')
         }
       } else {
         setStatus('success')

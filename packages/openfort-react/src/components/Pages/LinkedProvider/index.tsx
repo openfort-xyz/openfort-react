@@ -1,9 +1,11 @@
-import { useMemo } from 'react'
+'use client'
+
+import { useMemo, useRef } from 'react'
 import type { Hex } from 'viem'
-import { useEnsName } from 'wagmi'
+
 import { useUser } from '../../../hooks/openfort/useUser'
-import { useEnsFallbackConfig } from '../../../hooks/useEnsFallbackConfig'
-import type { UserAccount } from '../../../openfortCustomTypes'
+import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import styled from '../../../styles/styled'
 import { truncateEthAddress } from '../../../utils'
 import Button from '../../Common/Button'
@@ -14,17 +16,18 @@ import { getProviderName } from '../../Common/Providers/getProviderName'
 import { ProviderHeader } from '../../Common/Providers/ProviderHeader'
 import { ProviderIcon } from '../../Common/Providers/ProviderIcon'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
+import type { LinkedAccount } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 
-const ProviderIconContainer = styled.div`
+export const ProviderIconContainer = styled.div`
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
 `
 
-const ProviderIconWrapper = styled.div`
+export const ProviderIconWrapper = styled.div`
   width: 54px;
   height: 54px;
   flex-shrink: 0;
@@ -34,7 +37,8 @@ const ProviderIconWrapper = styled.div`
   background-color: var(--ck-body-background-secondary);
   border-radius: 28px;
 `
-const ProviderIconInner = styled.div`
+
+export const ProviderIconInner = styled.div`
   width: 32px;
   height: 32px;
   flex-shrink: 0;
@@ -43,16 +47,18 @@ const ProviderIconInner = styled.div`
   justify-content: center;
 `
 
-const SiweContent = ({ provider }: { provider: UserAccount }) => {
-  const address = provider.accountId as Hex
-  const ensFallbackConfig = useEnsFallbackConfig()
-  const { data: ensName } = useEnsName({
-    chainId: 1,
-    address,
-    config: ensFallbackConfig,
-  })
+const SiweContent = ({ account }: { account: LinkedAccount }) => {
+  const address = account.accountId as Hex
   const context = useOpenfort()
+  const { chainType } = useOpenfortCore()
   const themeContext = useThemeContext()
+
+  const identity = useResolvedIdentity({
+    address,
+    chainType,
+    enabled: !!address,
+  })
+  const ensName = identity.status === 'success' ? identity.name : undefined
 
   const separator = ['web95', 'rounded', 'minimal'].includes(themeContext.theme ?? context.uiConfig.theme ?? '')
     ? '....'
@@ -65,26 +71,22 @@ const SiweContent = ({ provider }: { provider: UserAccount }) => {
       </ModalH1>
       <div style={{ marginTop: '16px' }}>
         Linked via Sign-In with Ethereum (SIWE)
-        <Button onClick={() => context.setRoute({ route: 'removeLinkedProvider', provider })}>
-          Remove this wallet
-        </Button>
+        <Button onClick={() => context.setRoute({ route: 'removeLinkedProvider', account })}>Remove this wallet</Button>
       </div>
     </>
   )
 }
 
-const OAuthContent = ({ provider }: { provider: UserAccount }) => {
+const OAuthContent = ({ account }: { account: LinkedAccount }) => {
   const { user } = useUser()
   const { setRoute } = useOpenfort()
 
   return (
     <>
-      <ModalH1>{provider.provider.charAt(0).toUpperCase() + provider.provider.slice(1)}</ModalH1>
+      <ModalH1>{account.provider.charAt(0).toUpperCase() + account.provider.slice(1)}</ModalH1>
       <div style={{ marginTop: '16px' }}>
         {user?.email}
-        <Button onClick={() => setRoute({ route: 'removeLinkedProvider', provider })}>
-          Remove {provider.provider}
-        </Button>
+        <Button onClick={() => setRoute({ route: 'removeLinkedProvider', account })}>Remove {account.provider}</Button>
       </div>
     </>
   )
@@ -92,50 +94,55 @@ const OAuthContent = ({ provider }: { provider: UserAccount }) => {
 
 const LinkedProvider: React.FC = () => {
   const { route } = useOpenfort()
+  const lastAccountRef = useRef<LinkedAccount | null>(null)
 
-  const provider = useMemo(() => {
+  const account = useMemo(() => {
     if (route.route === 'linkedProvider') {
-      return route.provider
+      lastAccountRef.current = route.account
+      return route.account
     }
-    throw new Error('No provider found in route')
-  }, [])
+    // During exit animations or route transitions, return the last known account
+    return lastAccountRef.current
+  }, [route])
 
-  const getProviderDetails = (provider: UserAccount) => {
-    switch (provider.provider) {
+  const getProviderDetails = (account: LinkedAccount) => {
+    switch (account.provider) {
       case 'siwe':
-        return <SiweContent provider={provider} />
+        return <SiweContent account={account} />
       case 'google':
       case 'facebook':
       case 'twitter':
-        return <OAuthContent provider={provider} />
+        return <OAuthContent account={account} />
       default:
         return (
           <div
             style={{ marginTop: '16px', display: 'flex', alignItems: 'center', gap: '8px', flexDirection: 'column' }}
           >
             <div>
-              Authentication method: <b>{getProviderName(provider.provider)}</b>
+              Authentication method: <b>{getProviderName(account.provider)}</b>
             </div>
             <FitText>
-              <ProviderHeader provider={provider} />
+              <ProviderHeader account={account} />
             </FitText>
           </div>
         )
     }
   }
 
+  if (!account) return null
+
   return (
     <PageContent>
-      <ModalHeading>{getProviderName(provider.provider)}</ModalHeading>
+      <ModalHeading>{getProviderName(account.provider)}</ModalHeading>
       <ModalContent style={{ paddingBottom: 0 }}>
         <ProviderIconContainer>
           <ProviderIconWrapper>
             <ProviderIconInner>
-              <ProviderIcon provider={provider} />
+              <ProviderIcon account={account} />
             </ProviderIconInner>
           </ProviderIconWrapper>
         </ProviderIconContainer>
-        <ModalBody>{getProviderDetails(provider)}</ModalBody>
+        <ModalBody>{getProviderDetails(account)}</ModalBody>
       </ModalContent>
     </PageContent>
   )

@@ -1,15 +1,18 @@
+'use client'
+
 // Based on https://hiddedevries.nl/en/blog/2017-01-29-using-javascript-to-trap-focus-in-an-element
 
+import type React from 'react'
 import { useEffect, useRef } from 'react'
 
 const KEYCODE_TAB = 9
 
 function useFocusTrap() {
-  const elRef = useRef<any>(null)
+  const elRef = useRef<HTMLDivElement | null>(null)
 
-  function handleFocus(e: any) {
+  function handleFocus(e: KeyboardEvent) {
     if (!elRef.current) return
-    var focusableEls = elRef.current.querySelectorAll(`
+    var focusableEls = elRef.current.querySelectorAll<HTMLElement>(`
         a[href]:not(:disabled),
         button:not(:disabled),
         textarea:not(:disabled),
@@ -29,12 +32,12 @@ function useFocusTrap() {
 
     if (e.shiftKey) {
       /* shift + tab */ if (document.activeElement === firstFocusableEl) {
-        lastFocusableEl.focus()
+        lastFocusableEl?.focus()
         e.preventDefault()
       }
     } /* tab */ else {
       if (document.activeElement === lastFocusableEl) {
-        firstFocusableEl.focus()
+        firstFocusableEl?.focus()
         e.preventDefault()
       }
     }
@@ -55,7 +58,7 @@ function useFocusTrap() {
   return elRef
 }
 
-export default function FocusTrap(props: any) {
+export default function FocusTrap(props: { children?: React.ReactNode }) {
   const elRef = useFocusTrap()
 
   useEffect(() => {

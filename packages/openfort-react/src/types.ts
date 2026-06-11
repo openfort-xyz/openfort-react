@@ -1,5 +1,6 @@
 import type { Languages as Lang } from './localizations'
 import type { CustomTheme } from './styles/customTheme'
+
 export type { CustomTheme }
 export type Languages = Lang
 
@@ -16,7 +17,6 @@ export type All = {
 export type { CustomAvatarProps } from './components/Common/Avatar'
 export type {
   ConnectUIOptions as OpenfortOptions,
-  CustomizableRoutes,
   OpenfortWalletConfig,
   PhoneConfig,
 } from './components/Openfort/types'
@@ -29,26 +29,29 @@ export enum OpenfortReactErrorType {
   UNEXPECTED_ERROR = 'UNEXPECTED_ERROR',
 }
 
-interface Data {
-  [key: string]: any
+interface OpenfortErrorData {
+  [key: string]: unknown
 }
+
 export class OpenfortError extends Error {
   type: OpenfortReactErrorType
-  data: Data
-  constructor(message: string, type: OpenfortReactErrorType, data?: Data) {
+  data: OpenfortErrorData
+
+  constructor(message: string, type: OpenfortReactErrorType, data?: OpenfortErrorData) {
     if (data?.error instanceof OpenfortError) {
       super(data.error.message)
-      this.data = data.error.data
+      this.data = Object.freeze(data.error.data)
       this.type = data.error.type
       this.name = data.error.name
       return
-    } else if (data?.error instanceof Error) {
+    }
+    if (data?.error instanceof Error) {
       super(data.error.message)
     } else {
       super(message)
     }
     this.type = type
-    this.data = data || {}
+    this.data = Object.freeze(data ?? {})
     this.name = 'OpenfortError'
   }
 }
@@ -56,7 +59,6 @@ export class OpenfortError extends Error {
 export type OpenfortHookOptions<T = { error?: OpenfortError }> = {
   onSuccess?: (data: T) => void
   onError?: (error: OpenfortError) => void
-  onSettled?: (data: T | undefined | null, error: OpenfortError | null) => void
   throwOnError?: boolean
 }
 

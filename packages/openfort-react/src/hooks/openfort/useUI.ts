@@ -1,7 +1,14 @@
-import { useAccount } from 'wagmi'
+'use client'
+
+import { ChainTypeEnum } from '@openfort/openfort-js'
+import React from 'react'
 import { type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../solana/hooks/useSolanaEmbeddedWallet'
 import { logger } from '../../utils/logger'
 
 type ModalRoutes = RoutesWithoutOptions['route'] | RouteOptions
@@ -13,14 +20,12 @@ const safeRoutes: {
   disconnected: [
     routes.PROVIDERS,
     { route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' },
-    // routes.ABOUT,
-    // routes.ONBOARDING,
     routes.MOBILECONNECTORS,
   ],
   connected: [
     routes.CONNECTED,
     { route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' },
-    routes.SWITCHNETWORKS,
+    routes.ETH_SWITCH_NETWORK,
     routes.PROVIDERS,
   ],
 }
@@ -34,6 +39,10 @@ function routeMatches(a: ModalRoutes, b: ModalRoutes): boolean {
   const aRoute = typeof a === 'object' && 'route' in a ? a.route : a
   const bRoute = typeof b === 'object' && 'route' in b ? b.route : b
   return aRoute === bRoute
+  
+/** Connector id must be a connector (e.g. injected, walletConnect), not an Openfort account id. */
+function isAccountId(id: string): boolean {
+  return id.startsWith('acc_')
 }
 
 /**
@@ -42,7 +51,6 @@ function routeMatches(a: ModalRoutes, b: ModalRoutes): boolean {
  * This hook provides programmatic control over the Openfort UI modal, including opening,
  * closing, and navigating between different screens. It handles route validation and
  * automatically selects appropriate screens based on user connection and authentication state.
- * The hook ensures safe navigation by validating routes against user's current state.
  *
  * @returns UI control functions and modal state
  *
@@ -50,67 +58,48 @@ function routeMatches(a: ModalRoutes, b: ModalRoutes): boolean {
  * ```tsx
  * const ui = useUI();
  *
- * // Check if modal is open
  * if (ui.isOpen) {
- *   console.log('Openfort modal is currently open');
+ *   console.log('Openfort modal is open');
  * }
  *
- * // Open modal with default route (auto-determined by user state)
- * const handleConnect = () => {
- *   ui.open(); // Opens providers screen if not connected, profile if connected
- * };
- *
- * // Close modal
- * const handleClose = () => {
- *   ui.close();
- * };
- *
- * // Programmatically control modal state
- * const toggleModal = () => {
- *   ui.setIsOpen(!ui.isOpen);
- * };
- *
- * // Open specific screens
- * const handleProfileClick = () => {
- *   ui.openProfile(); // Opens user profile screen (connected users only)
- * };
- *
- * const handleProvidersClick = () => {
- *   ui.openProviders(); // Opens authentication providers screen
- * };
- *
- * const handleWalletsClick = () => {
- *   ui.openWallets(); // Opens wallet connectors screen
- * };
- *
- * const handleNetworkClick = () => {
- *   ui.openSwitchNetworks(); // Opens network switching screen (connected users only)
- * };
- *
- * // Example usage in component
- * return (
- *   <div>
- *     <button onClick={handleConnect}>
- *       {ui.isOpen ? 'Close' : 'Open'} Openfort
- *     </button>
- *     <button onClick={handleProfileClick}>Profile</button>
- *     <button onClick={handleWalletsClick}>Wallets</button>
- *   </div>
- * );
+ * ui.open(); // Opens modal with default route
+ * ui.close(); // Closes modal
+ * ui.openProfile(); // Opens user profile screen
  * ```
  */
 export function useUI() {
-  const { open, setOpen, setRoute } = useOpenfort()
-  const { isLoading, user, needsRecovery } = useOpenfortCore()
-  const { isConnected } = useAccount()
+  const { open, setOpen, setRoute, setConnector, connector, chainType } = useOpenfort()
+  const { isLoading, user, needsRecovery, embeddedAccounts, activeEmbeddedAddress, embeddedState } = useOpenfortCore()
+  const bridge = useEthereumBridge()
+  const strategy = useConnectionStrategy()
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+
+  const state = React.useMemo(
+    () => ({
+      user,
+      embeddedAccounts,
+      activeEmbeddedAddress,
+      chainType,
+      embeddedState,
+    }),
+    [user, embeddedAccounts, activeEmbeddedAddress, chainType, embeddedState]
+  )
+  // Bridge: strategy owns connection. Embedded: wallet hooks are source of truth.
+  const isConnected =
+    strategy?.kind === 'bridge' ? (strategy?.isConnected(state) ?? false) : wallet.status === 'connected'
 
   function defaultOpen() {
     setOpen(true)
+    if (isAccountId(connector.id)) {
+      setConnector({ id: '' })
+    }
 
     if (isLoading) setRoute(routes.LOADING)
     else if (!user) setRoute(routes.PROVIDERS)
     else if (!isConnected) setRoute(routes.LOAD_WALLETS)
-    else if (needsRecovery) setRoute(routes.LOAD_WALLETS)
+    else if (needsRecovery && !bridge) setRoute(routes.LOAD_WALLETS)
     else setRoute(routes.CONNECTED)
   }
 
@@ -145,7 +134,7 @@ export function useUI() {
     setIsOpen: setOpen,
 
     openProfile: () => gotoAndOpen(routes.CONNECTED),
-    openSwitchNetworks: () => gotoAndOpen(routes.SWITCHNETWORKS),
+    openSwitchNetworks: () => gotoAndOpen(routes.ETH_SWITCH_NETWORK),
     openProviders: () => gotoAndOpen(routes.PROVIDERS),
     openWallets: () => gotoAndOpen({ route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' }),
   }

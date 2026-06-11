@@ -102,6 +102,19 @@ export const scaffoldProject = async ({
 
   fs.copySync(templateSrcDir, targetDir);
 
+  const pkgPath = path.join(targetDir, "package.json");
+  if (fs.existsSync(pkgPath)) {
+    const pkg = fs.readJsonSync(pkgPath) as Record<string, unknown>;
+    const deps = pkg.dependencies as Record<string, string> | undefined;
+    if (deps?.["@openfort/react"]) {
+      const ref = deps["@openfort/react"];
+      if (ref.startsWith("workspace:")) {
+        deps["@openfort/react"] = "latest";
+        fs.writeJsonSync(pkgPath, pkg, { spaces: 2 });
+      }
+    }
+  }
+
   const scaffoldedName =
     projectName === "." ? "App" : chalk.cyan.bold(projectName);
 

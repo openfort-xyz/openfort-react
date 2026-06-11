@@ -1,3 +1,5 @@
+'use client'
+
 import QRCodeUtil from 'qrcode'
 import type React from 'react'
 import { type ReactElement, useMemo } from 'react'

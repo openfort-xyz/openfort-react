@@ -1,5 +1,141 @@
 # Changelog
 
+## 1.1.1
+
+### Patch Changes
+
+- [#261](https://github.com/openfort-xyz/openfort-react/pull/261) [`91eaa8b`](https://github.com/openfort-xyz/openfort-react/commit/91eaa8b307fd30cead8fdb13cd11b34c530e8837) Thanks [@joalavedra](https://github.com/joalavedra)! - Fix blank screen in Vite apps. The `OpenfortProvider` lazy imports carried a `@vite-ignore` hint, which made Vite's dependency pre-bundler keep the relative dynamic imports external — so they resolved against `node_modules/.vite/deps` instead of the package and the provider failed to load in dev ("Failed to resolve import ../../solana/SolanaContext.js"). Removing the hint lets Vite (and Rollup/webpack) resolve and code-split the chunks correctly.
+
+## 1.1.0
+
+### Minor Changes
+
+- [#259](https://github.com/openfort-xyz/openfort-react/pull/259) [`cb65c6f`](https://github.com/openfort-xyz/openfort-react/commit/cb65c6f1fcbdff882059472a19b9e4db5fff0b93) Thanks [@isardmart](https://github.com/isardmart)! - feat: upgrade wagmi to v3
+
+  Also fixes `useSwitchChain` for the embedded wallet (connector now implements `switchChain`).
+
+## 1.0.16
+
+### Patch Changes
+
+- [#248](https://github.com/openfort-xyz/openfort-react/pull/248) [`7a0b70c`](https://github.com/openfort-xyz/openfort-react/commit/7a0b70c5986a1f1d1dbb5956b24a4bc45f608c56) Thanks [@n00m4d](https://github.com/n00m4d)! - Import wallet feature
+
+## 1.0.15
+
+### Patch Changes
+
+- [#246](https://github.com/openfort-xyz/openfort-react/pull/246) [`d3508ad`](https://github.com/openfort-xyz/openfort-react/commit/d3508ad0fb71acb9f362269305acf841101f135c) Thanks [@isardmart](https://github.com/isardmart)! - Stops `POST /v2/accounts/switch-chain` 4xx errors logging in console on signup and reload
+
+## 1.0.14
+
+### Patch Changes
+
+- [`919b5b2`](https://github.com/openfort-xyz/openfort-react/commit/919b5b240242e6c6ddde64c781c9b30dd453c49c) Thanks [@isardmart](https://github.com/isardmart)! - Fixes `POST /v2/accounts/switch-chain` 422 errors logged in console on signup and page reload with embedded wallets.
+
+## 1.0.13
+
+### Patch Changes
+
+- [#242](https://github.com/openfort-xyz/openfort-react/pull/242) [`7351b1a`](https://github.com/openfort-xyz/openfort-react/commit/7351b1a8051a77f508321616afbbdc756434a556) Thanks [@isardmart](https://github.com/isardmart)! - Fixes repeated `POST /v2/accounts/switch-chain` 422 errors during initial mount with an external (wagmi) wallet.
+
+## 1.0.12
+
+### Patch Changes
+
+- [#237](https://github.com/openfort-xyz/openfort-react/pull/237) [`54fc075`](https://github.com/openfort-xyz/openfort-react/commit/54fc075b13e13688260d72b1ef750739bb60b202) Thanks [@isardmart](https://github.com/isardmart)! - Fixes provider not re-initializing when fee sponsorship policy changes, causing stale sponsorship state.
+
+## 1.0.11
+
+### Patch Changes
+
+- [#235](https://github.com/openfort-xyz/openfort-react/pull/235) [`cf02ea9`](https://github.com/openfort-xyz/openfort-react/commit/cf02ea95aa80eff8fb6d970000b0b8df6ca68a7a) Thanks [@isardmart](https://github.com/isardmart)! - race condition on openfort button loading state
+
+## 1.0.10
+
+### Patch Changes
+
+- [#232](https://github.com/openfort-xyz/openfort-react/pull/232) [`a691016`](https://github.com/openfort-xyz/openfort-react/commit/a6910161a7b363dec4d156bb44e3ee39a5d0ece2) Thanks [@isardmart](https://github.com/isardmart)! - sync external wallet when no embedded in openfort button
+
+## 1.0.9
+
+### Patch Changes
+
+- [#229](https://github.com/openfort-xyz/openfort-react/pull/229) [`a526020`](https://github.com/openfort-xyz/openfort-react/commit/a526020d5bf1b0a46a0fbd3bd020489a167dc872) Thanks [@isardmart](https://github.com/isardmart)! - fixed wallet connect bug when no walletconnect env var set
+
+## 1.0.8
+
+### Patch Changes
+
+- [#218](https://github.com/openfort-xyz/openfort-react/pull/218) [`a887d13`](https://github.com/openfort-xyz/openfort-react/commit/a887d13f04f09abbced010765af5b648eb9c8410) Thanks [@isardmart](https://github.com/isardmart)! - Respect connectOnLogin flag in manage wallets flow
+
+- [#223](https://github.com/openfort-xyz/openfort-react/pull/223) [`b14401c`](https://github.com/openfort-xyz/openfort-react/commit/b14401c0318206701203dd6e70b9697c2c25631f) Thanks [@isardmart](https://github.com/isardmart)! - fixed bug on chainselector import depending on wagmi
+
+## 1.0.7
+
+### Patch Changes
+
+- [#217](https://github.com/openfort-xyz/openfort-react/pull/217) [`707b47b`](https://github.com/openfort-xyz/openfort-react/commit/707b47b80ec80f296c2d6fc38d3e6d8243cf0ff2) Thanks [@isardmart](https://github.com/isardmart)! - wallet recover page improved, better autoconnect choosing
+
+- [#209](https://github.com/openfort-xyz/openfort-react/pull/209) [`4976218`](https://github.com/openfort-xyz/openfort-react/commit/4976218660cb9e6a19f7572bb5efe81dbd166c48) Thanks [@isardmart](https://github.com/isardmart)! - fixed external connector error on already connected account and delete account + oauth callback url improved
+
+## 1.0.6
+
+### Patch Changes
+
+- [#208](https://github.com/openfort-xyz/openfort-react/pull/208) [`1033670`](https://github.com/openfort-xyz/openfort-react/commit/10336701d4d68f003b75e273b9791f728c137a48) Thanks [@isardmart](https://github.com/isardmart)! - solved error on processing buy tokens, added check on chainId and address
+
+## 1.0.5
+
+### Patch Changes
+
+- [#212](https://github.com/openfort-xyz/openfort-react/pull/212) [`331f3b6`](https://github.com/openfort-xyz/openfort-react/commit/331f3b6c60f20c8c1c997a00bfeb83c3d467eedc) Thanks [@isardmart](https://github.com/isardmart)! - Social Login race condition, create evm wallet button when session but no wallet
+
+## 1.0.4
+
+### Patch Changes
+
+- [#210](https://github.com/openfort-xyz/openfort-react/pull/210) [`84a3961`](https://github.com/openfort-xyz/openfort-react/commit/84a3961d9e465ff5da1a4dfa8ce4e42c1448500b) Thanks [@isardmart](https://github.com/isardmart)! - added multichainassets in useEthereumWalletAssets
+
+## 1.0.3
+
+### Patch Changes
+
+- [#206](https://github.com/openfort-xyz/openfort-react/pull/206) [`d29c3d8`](https://github.com/openfort-xyz/openfort-react/commit/d29c3d8c6c7876a58428894fa2ea9590af9bddae) Thanks [@isardmart](https://github.com/isardmart)! - create solana wallet opf button fixed, isloading in useUser
+
+## 1.0.2
+
+### Patch Changes
+
+- [#201](https://github.com/openfort-xyz/openfort-react/pull/201) [`2c23537`](https://github.com/openfort-xyz/openfort-react/commit/2c235373b7879584c26e70951d3839b3157bd4b0) Thanks [@isardmart](https://github.com/isardmart)! - added google as default auth provider, EOA as default accountType
+
+- [#204](https://github.com/openfort-xyz/openfort-react/pull/204) [`68c497a`](https://github.com/openfort-xyz/openfort-react/commit/68c497a0df2848dcba91e3ca23c12fd309fae418) Thanks [@isardmart](https://github.com/isardmart)! - openfortbutton, re create wallet bug on login solved
+
+- [#205](https://github.com/openfort-xyz/openfort-react/pull/205) [`a002d56`](https://github.com/openfort-xyz/openfort-react/commit/a002d56f18dfc1a670892ea153f632dcacbcc6e1) Thanks [@isardmart](https://github.com/isardmart)! - wagmi been imported without dynamic guard, fixed
+
+## 1.0.1
+
+### Patch Changes
+
+- [#198](https://github.com/openfort-xyz/openfort-react/pull/198) [`33aea2a`](https://github.com/openfort-xyz/openfort-react/commit/33aea2ace4de11ed182e9e5994827048e7a9c1ba) Thanks [@isardmart](https://github.com/isardmart)! - solana kit treeshakeable bug
+
+## 1.0.0
+
+### Major Changes
+
+- [#172](https://github.com/openfort-xyz/openfort-react/pull/172) [`62359d1`](https://github.com/openfort-xyz/openfort-react/commit/62359d14d16ab3923eecc43595d52517ba63d83b) Thanks [@isardmart](https://github.com/isardmart)! - added svm, tree shakeable, wagmi subpath
+
+## 0.3.3
+
+### Patch Changes
+
+- [#193](https://github.com/openfort-xyz/openfort-react/pull/193) [`becf0c9`](https://github.com/openfort-xyz/openfort-react/commit/becf0c9bdc12f691a9bef7c6fc0991e8db39f228) Thanks [@isardmart](https://github.com/isardmart)! - added tests for account types, improved wallet-auth code
+
+## 0.3.2
+
+### Patch Changes
+
+- [#191](https://github.com/openfort-xyz/openfort-react/pull/191) [`44f2f1f`](https://github.com/openfort-xyz/openfort-react/commit/44f2f1f8e39f4e806a9c8357b381bd0f0dc767ad) Thanks [@isardmart](https://github.com/isardmart)! - updated fallback when no chainId on wallet, fallback to eoa check, added export key in headless example
+
 ## 0.3.1
 
 ### Patch Changes

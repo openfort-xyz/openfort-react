@@ -10,22 +10,22 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
-    "@openfort/react": "latest",
-    "@tanstack/react-query": "^5.90.2",
-    "better-auth": "^1.4.3",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "viem": "2.38.4",
-    "wagmi": "^2.18.2"
+    "@openfort/react": "workspace:*",
+    "@tanstack/react-query": "^5.99.2",
+    "better-auth": "^1.6.11",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "viem": "^2.52.2",
+    "wagmi": "^3.6.16"
   },
   "devDependencies": {
-    "@types/node": "^22.10.5",
-    "@types/react": "^19.1.10",
-    "@tailwindcss/vite": "^4.1.15",
-    "tailwindcss": "^4.1.15",
-    "@types/react-dom": "^19.1.7",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/node": "^22.19.17",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^4.7.0",
+    "tailwindcss": "^4.2.2",
     "typescript": "~5.8.3",
-    "vite": "^6.4.1"
+    "vite": "^6.4.2"
   }
 }

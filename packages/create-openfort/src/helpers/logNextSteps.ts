@@ -1,6 +1,4 @@
-import path from "node:path";
 import chalk from "chalk";
-import fs from "fs-extra";
 
 import { DEFAULT_APP_NAME } from "~/consts.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
@@ -28,64 +26,25 @@ export const logNextSteps = async ({
     logger.info(`  ${chalk.cyan(`cd ${projectName}`)}`);
   }
 
-  if (createBackend) {
-    // Check if backend has node_modules
-    const backendNodeModules = path.join(projectDir, "backend", "node_modules");
-    const frontendNodeModules = path.join(
-      projectDir,
-      "frontend",
-      "node_modules",
-    );
-    const needsInstall =
-      !fs.existsSync(backendNodeModules) || !fs.existsSync(frontendNodeModules);
+  const installCmd =
+    pkgManager === "yarn" ? pkgManager : `${pkgManager} install`;
+  const devCmd = ["npm", "bun"].includes(pkgManager)
+    ? `${pkgManager} run dev`
+    : `${pkgManager} dev`;
 
+  if (createBackend) {
     logger.info(`\n${chalk.yellow("For the backend:")}`);
     logger.info(`  ${chalk.cyan("cd backend")}`);
-    if (needsInstall) {
-      if (pkgManager === "yarn") {
-        logger.info(`  ${chalk.cyan(pkgManager)}`);
-      } else {
-        logger.info(`  ${chalk.cyan(`${pkgManager} install`)}`);
-      }
-    }
-    if (["npm", "bun"].includes(pkgManager)) {
-      logger.info(`  ${chalk.cyan(`${pkgManager} run dev`)}`);
-    } else {
-      logger.info(`  ${chalk.cyan(`${pkgManager} dev`)}`);
-    }
+    logger.info(`  ${chalk.cyan(installCmd)}`);
+    logger.info(`  ${chalk.cyan(devCmd)}`);
 
     logger.info(`\n${chalk.yellow("For the frontend (in a new terminal):")}`);
     logger.info(`  ${chalk.cyan("cd frontend")}`);
-    if (needsInstall) {
-      if (pkgManager === "yarn") {
-        logger.info(`  ${chalk.cyan(pkgManager)}`);
-      } else {
-        logger.info(`  ${chalk.cyan(`${pkgManager} install`)}`);
-      }
-    }
-    if (["npm", "bun"].includes(pkgManager)) {
-      logger.info(`  ${chalk.cyan(`${pkgManager} run dev`)}`);
-    } else {
-      logger.info(`  ${chalk.cyan(`${pkgManager} dev`)}`);
-    }
+    logger.info(`  ${chalk.cyan(installCmd)}`);
+    logger.info(`  ${chalk.cyan(devCmd)}`);
   } else {
-    // Single project structure
-    const nodeModules = path.join(projectDir, "node_modules");
-    const needsInstall = !fs.existsSync(nodeModules);
-
-    if (needsInstall) {
-      if (pkgManager === "yarn") {
-        logger.info(`  ${chalk.cyan(pkgManager)}`);
-      } else {
-        logger.info(`  ${chalk.cyan(`${pkgManager} install`)}`);
-      }
-    }
-
-    if (["npm", "bun"].includes(pkgManager)) {
-      logger.info(`  ${chalk.cyan(`${pkgManager} run dev`)}`);
-    } else {
-      logger.info(`  ${chalk.cyan(`${pkgManager} dev`)}`);
-    }
+    logger.info(`  ${chalk.cyan(installCmd)}`);
+    logger.info(`  ${chalk.cyan(devCmd)}`);
   }
 
   if (!(await isInsideGitRepo(projectDir)) && !isRootGitRepo(projectDir)) {

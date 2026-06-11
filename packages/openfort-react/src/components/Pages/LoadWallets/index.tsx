@@ -1,18 +1,73 @@
+'use client'
+
+import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
-import { embeddedWalletId } from '../../../constants/openfort'
-import { useWallets } from '../../../hooks/openfort/useWallets'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
+import { toSolanaUserWallet } from '../../../hooks/openfort/walletTypes'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
+import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types'
 import { logger } from '../../../utils/logger'
 import Loader from '../../Common/Loading'
+import { createRoute, recoverRoute } from '../../Openfort/routeHelpers'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 
+/** Pick the best wallet to auto-recover: automatic > passkey > first available */
+function pickBestWallet(
+  wallets: ReadonlyArray<ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet>
+): ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet {
+  return (
+    wallets.find((w) => w.recoveryMethod === RecoveryMethod.AUTOMATIC) ??
+    wallets.find((w) => w.recoveryMethod === RecoveryMethod.PASSKEY) ??
+    wallets[0]
+  )
+}
+
+function routeToRecover(
+  wallet: ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet,
+  chainType: ChainTypeEnum,
+  setRoute: (opts: ReturnType<typeof recoverRoute>) => void
+) {
+  if (chainType === ChainTypeEnum.SVM) {
+    setRoute(recoverRoute(chainType, toSolanaUserWallet(wallet as ConnectedEmbeddedSolanaWallet)))
+  } else {
+    setRoute(recoverRoute(chainType, wallet as ConnectedEmbeddedEthereumWallet))
+  }
+}
+
+const errorForChainRegistry: Record<
+  ChainTypeEnum.EVM | ChainTypeEnum.SVM,
+  (errorWallets: Error | undefined) => { isError: boolean; message: string | undefined }
+> = {
+  [ChainTypeEnum.SVM]: () => ({ isError: false, message: undefined }),
+  [ChainTypeEnum.EVM]: (errorWallets) => ({
+    isError: !!errorWallets,
+    message: errorWallets?.message || 'There was an error loading wallets',
+  }),
+}
+
 const LoadWallets: React.FC = () => {
-  const { user } = useOpenfortCore()
-  const { triggerResize, setRoute, setConnector } = useOpenfort()
-  const { wallets, isLoadingWallets, error: errorWallets } = useWallets()
+  const { chainType, user, isLoadingAccounts } = useOpenfortCore()
+  const { triggerResize, setRoute, setConnector, walletConfig } = useOpenfort()
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+  const connectOnLogin = walletConfig?.connectOnLogin ?? true
+
   const [loadingUX, setLoadingUX] = useState(true)
+
+  const wallets = embeddedWallet.wallets
+  const isLoadingWallets =
+    embeddedWallet.status === 'fetching-wallets' ||
+    embeddedWallet.status === 'connecting' ||
+    embeddedWallet.status === 'creating' ||
+    // For Solana, the hook never enters 'fetching-wallets' — accounts are derived from the
+    // core embeddedAccounts store. Wait for the core fetch to complete before routing.
+    isLoadingAccounts
+  const errorWallets = embeddedWallet.status === 'error' ? new Error(embeddedWallet.error) : undefined
 
   useEffect(() => {
     let timeout: NodeJS.Timeout
@@ -22,39 +77,51 @@ const LoadWallets: React.FC = () => {
         triggerResize()
       }, 500)
     }
-    return () => {
-      clearTimeout(timeout)
-    }
-  }, [isLoadingWallets])
+    return () => clearTimeout(timeout)
+  }, [isLoadingWallets, triggerResize])
 
   useEffect(() => {
-    if (loadingUX || isLoadingWallets) return
+    if (loadingUX) return
+    if (isLoadingWallets) return
     if (!wallets) {
       logger.error('Could not load wallets for user:', user)
       return
     }
-    logger.log('User wallets loaded:', wallets)
+    logger.log('User wallets loaded:', wallets.length)
 
+    // No wallets → create one
     if (wallets.length === 0) {
-      setRoute(routes.CREATE_WALLET)
+      setRoute(createRoute(chainType))
       return
     }
 
-    if (wallets.length === 1) {
-      if (wallets[0].id === embeddedWalletId) {
-        setRoute({ route: routes.RECOVER_WALLET, wallet: wallets[0] })
-      } else {
-        setRoute({ route: routes.CONNECT, connectType: 'recover', wallet: wallets[0] })
-        setConnector({ id: wallets[0].id })
+    // If a wallet is already active and connected, go to connected (triggers auto-close)
+    if (embeddedWallet.status === 'connected' && embeddedWallet.address) {
+      const activeAddr = embeddedWallet.address
+      const isActiveInList = wallets.some((w) =>
+        chainType === ChainTypeEnum.SVM
+          ? w.address === activeAddr
+          : (w.address as string).toLowerCase() === (activeAddr as string).toLowerCase()
+      )
+      if (isActiveInList) {
+        setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_CONNECTED : routes.ETH_CONNECTED)
+        return
       }
-      return
     }
 
-    setRoute(routes.SELECT_WALLET_TO_RECOVER)
-  }, [loadingUX])
+    if (connectOnLogin) {
+      // Auto-connect: pick the best wallet (automatic > passkey > password) and recover it
+      const best = pickBestWallet(wallets)
+      routeToRecover(best, chainType, setRoute)
+    } else {
+      // Not auto-connecting: close modal (go to connected page which triggers auto-close)
+      setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_CONNECTED : routes.ETH_CONNECTED)
+    }
+  }, [loadingUX, isLoadingWallets, wallets, user, chainType, setRoute, setConnector, walletConfig, connectOnLogin])
 
-  const isError = !!errorWallets || !user
-  const errorMessage = errorWallets ? errorWallets.message || 'There was an error loading wallets' : undefined
+  const { isError: isErrorFromChain, message: errorMessageFromChain } = errorForChainRegistry[chainType](errorWallets)
+  const isError = !user || isErrorFromChain
+  const errorMessage = !user ? undefined : errorMessageFromChain
 
   return (
     <PageContent onBack={!user ? 'back' : null}>

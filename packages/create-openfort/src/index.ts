@@ -38,6 +38,7 @@ const main = async () => {
     theme,
     createBackend,
     apiEndpoint,
+    walletConnectProjectId,
     openfortPublishableKey,
     openfortSecretKey,
     shieldPublishableKey,
@@ -60,6 +61,7 @@ const main = async () => {
       (createBackend
         ? "http://localhost:3110/api/protected-create-encryption-session"
         : undefined),
+    walletConnectProjectId,
     theme,
     createBackendOption: createBackend,
     openfortSecretKey,

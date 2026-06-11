@@ -1,3 +1,5 @@
+'use client'
+
 import React, { useMemo } from 'react'
 import Logos from '../assets/logos'
 
@@ -7,7 +9,7 @@ import { getLocale } from './../localizations'
 import type { LocaleProps } from '../localizations/locales'
 import { logger } from '../utils/logger'
 
-export default function useLocales(replacements?: any): LocaleProps {
+export default function useLocales(replacements?: Record<string, string>): LocaleProps {
   const context = useOpenfort()
   const language = context.uiConfig.language ?? 'en-US'
 
@@ -29,7 +31,7 @@ export default function useLocales(replacements?: any): LocaleProps {
   return translated as LocaleProps
 }
 
-const localize = (text: string, replacements?: any[string]) => {
+const localize = (text: string, replacements?: Record<string, string>) => {
   let parsedText: string = text
   if (replacements) {
     Object.keys(replacements).forEach((key) => {
@@ -40,18 +42,15 @@ const localize = (text: string, replacements?: any[string]) => {
   return replaceMarkdown(parsedText)
 }
 
-const replaceMarkdown = (markdownText: string) => {
-  let text: any = markdownText
-  text = text.split('\n')
-  text = text.map((t: string, i: number) => {
-    return (
-      <React.Fragment key={`line-${i}-${t.substring(0, 20)}`}>
-        {wrapTags(t)}
-        {i < text.length - 1 && <br />}
-      </React.Fragment>
-    )
-  })
-  return text
+const replaceMarkdown = (markdownText: string): React.ReactNode[] => {
+  const lines = markdownText.split('\n')
+  return lines.map((t, i) => (
+    // biome-ignore lint/suspicious/noArrayIndexKey: static markdown lines don't reorder
+    <React.Fragment key={`line-${i}-${t.substring(0, 20)}`}>
+      {wrapTags(t)}
+      {i < lines.length - 1 && <br />}
+    </React.Fragment>
+  ))
 }
 
 const wrapTags = (text: string) => {
@@ -60,6 +59,7 @@ const wrapTags = (text: string) => {
   const result = textArray.map((str, i) => {
     if (/(\*\*.*\*\*)/g.test(str)) {
       // use `replace` instead of `replaceAll` to support Node 14
+      // biome-ignore lint/suspicious/noArrayIndexKey: static markdown splits don't reorder
       return <strong key={`bold-${i}-${str.substring(0, 10)}`}>{str.replace(/\*\*/g, '')}</strong>
     }
     return `${str}`

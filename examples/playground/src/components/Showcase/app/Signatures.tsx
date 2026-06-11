@@ -1,46 +1,74 @@
-import { useSignMessage } from 'wagmi'
-import { Button } from '@/components/Showcase/ui/Button'
-import { InputMessage } from '@/components/Showcase/ui/InputMessage'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/cn'
+import { embeddedWalletId, useOpenfort } from '@openfort/react'
+import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
+import { useState } from 'react'
+import { createWalletClient, custom } from 'viem'
+import { useAccount, useSignMessage } from 'wagmi'
+import { useConnectedEthereumAccount } from '@/hooks/useConnectedEthereumAccount'
+import { toError } from '@/lib/errors'
+import { SignaturesLayout } from './signatures-shared'
 
-export const SignaturesCard = () => {
-  const { data, signMessage } = useSignMessage()
+export const SignaturesCard = ({ hook }: { hook?: string }) => {
+  const { address } = useConnectedEthereumAccount()
+  const { isConnected, connector } = useAccount()
+  const {
+    data: wagmiData,
+    signMessage: wagmiSignMessage,
+    isPending: wagmiPending,
+    error: wagmiErrorObj,
+  } = useSignMessage()
+
+  const core = useOpenfort()
+  const embedded = useEthereumEmbeddedWallet()
+  const [localSignature, setLocalSignature] = useState<string | null>(null)
+  const [localError, setLocalError] = useState<Error | null>(null)
+  const [localPending, setLocalPending] = useState(false)
+
+  const useWagmiSign = isConnected && !!connector && connector.id !== embeddedWalletId
+  const isPending = useWagmiSign ? wagmiPending : localPending
+  const signature = useWagmiSign ? wagmiData : localSignature
+  const error = useWagmiSign ? wagmiErrorObj : localError
+
+  const handleSign = async (message: string) => {
+    if (!address) return
+
+    if (useWagmiSign) {
+      wagmiSignMessage({ message })
+      return
+    }
+
+    setLocalPending(true)
+    setLocalError(null)
+    setLocalSignature(null)
+    try {
+      const provider =
+        embedded.status === 'connected' && embedded.activeWallet
+          ? await embedded.activeWallet.getProvider()
+          : await core.client.embeddedWallet.getEthereumProvider()
+
+      const walletClient = createWalletClient({
+        account: address,
+        transport: custom(provider),
+      })
+      const sig = await walletClient.signMessage({
+        account: address,
+        message,
+      })
+      setLocalSignature(sig)
+    } catch (err) {
+      setLocalError(toError(err))
+    } finally {
+      setLocalPending(false)
+    }
+  }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Signatures</CardTitle>
-        <CardDescription>
-          Sign messages with your wallet to prove ownership and perform actions in the app.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form
-          className="space-y-2"
-          onSubmit={(e) => {
-            e.preventDefault()
-            const message = (e.target as HTMLFormElement).message.value
-            signMessage({ message })
-          }}
-        >
-          <label className={cn('input w-full')}>
-            <input
-              name="message"
-              type="username"
-              placeholder="Enter a message to sign"
-              className="grow peer"
-              defaultValue="Hello from Openfort!"
-            />
-          </label>
-          <Button className="btn btn-accent w-full">Sign a message</Button>
-          <InputMessage
-            message={`Signed message: ${data?.slice(0, 10)}...${data?.slice(-10)}`}
-            show={!!data}
-            variant="success"
-          />
-        </form>
-      </CardContent>
-    </Card>
+    <SignaturesLayout
+      hook={hook}
+      isPending={isPending}
+      canSign={!!address}
+      signature={signature ?? undefined}
+      error={error}
+      onSubmit={handleSign}
+    />
   )
 }

@@ -1,4 +1,5 @@
-import { createFileRoute, Link, Outlet, redirect, useLocation } from '@tanstack/react-router'
+import { createFileRoute, Link, Navigate, Outlet, redirect, useLocation } from '@tanstack/react-router'
+import { usePlaygroundMode } from '@/providers'
 
 export const Route = createFileRoute('/_hooks/wagmi')({
   component: RouteComponent,
@@ -17,7 +18,13 @@ const nav = [
 ]
 
 function RouteComponent() {
+  const { mode } = usePlaygroundMode()
   const { pathname } = useLocation()
+
+  if (mode !== 'evm') {
+    return <Navigate to="/" />
+  }
+
   return (
     <div className="flex gap-2 mb-4 w-full justify-between items-start">
       <Outlet />

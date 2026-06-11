@@ -52,22 +52,20 @@ const getObjectKeys = (obj: unknown): string[] => {
     keys.add(sym.toString())
   })
 
-  return Array.from(keys)
-    .sort((a, b) => {
-      const typeA = typeof obj[a]
-      const typeB = typeof obj[b]
-      if (typeA === typeB) {
-        return a.localeCompare(b)
-      }
-      if (typeA === 'function' || typeB === 'function') {
-        return typeA === 'function' ? 1 : -1 // Functions last
-      }
-      if (typeA === 'object' || typeB === 'object') {
-        return typeA === 'object' ? 1 : -1 // Objects last
-      }
+  return Array.from(keys).sort((a, b) => {
+    const typeA = typeof obj[a]
+    const typeB = typeof obj[b]
+    if (typeA === typeB) {
       return a.localeCompare(b)
-    })
-    .sort()
+    }
+    if (typeA === 'function' || typeB === 'function') {
+      return typeA === 'function' ? 1 : -1 // Functions last
+    }
+    if (typeA === 'object' || typeB === 'object') {
+      return typeA === 'object' ? 1 : -1 // Objects last
+    }
+    return a.localeCompare(b)
+  })
 }
 
 const formatValue = (val: any, valueType: string, _name: string) => {
@@ -101,6 +99,14 @@ const formatValue = (val: any, valueType: string, _name: string) => {
     default:
       return String(val)
   }
+}
+
+/** Short TS type label shown after a top-level value. Uses the explicit
+ * typescriptType when provided, otherwise infers it for primitives only. */
+const getTypeLabel = (variable: HookInput | undefined, valueType: string): string | undefined => {
+  if (variable?.typescriptType) return variable.typescriptType
+  if (valueType === 'boolean' || valueType === 'string' || valueType === 'number') return valueType
+  return undefined
 }
 
 const EditableVariable = ({
@@ -187,7 +193,12 @@ const EditableVariable = ({
         />
       </button>
       {isEditing && (
-        <div className={cn(actualType === 'select' ? '-left-3' : 'left-0', 'absolute -top-2 max-w-full w-lg z-10')}>
+        <div
+          className={cn(
+            actualType === 'select' ? '-left-3' : 'left-0',
+            'absolute -top-2 z-10 w-max min-w-[12rem] max-w-[20rem]'
+          )}
+        >
           <InputAny
             className="bg-background p-2 rounded-lg"
             type={variable.type || 'text'}
@@ -232,6 +243,7 @@ export const BaseVariable = ({
   const isEditable = hasVariable && !!variable.onEdit
 
   const actualType = getValueType(value)
+  const typeLabel = depth === 0 ? getTypeLabel(variable, actualType) : undefined
   const isExpandable =
     (actualType === 'object' || actualType === 'array' || (actualType === 'function' && hasVariable)) &&
     value !== null &&
@@ -330,6 +342,7 @@ export const BaseVariable = ({
             formatValue(value, actualType, name)
           )}
         </span>
+        {typeLabel && <span className="text-xs text-muted-foreground/70">: {typeLabel}</span>}
       </div>
     )
   }
@@ -365,6 +378,7 @@ export const BaseVariable = ({
         <span className={cn('font-mono text-sm', getValueColor(actualType, 'text'))}>
           {formatValue(value, actualType, name)}
         </span>
+        {typeLabel && <span className="text-xs text-muted-foreground/70">: {typeLabel}</span>}
       </button>
       {renderExpandedContent()}
     </div>
@@ -396,20 +410,6 @@ export const Variable = ({
         <div className="flex flex-col gap-2 group">
           {Object.entries(values)
             .sort()
-            // .sort(([a], [b]) => {
-            //   const typeA = typeof values[a]
-            //   const typeB = typeof values[b];
-            //   if (typeA === typeB) {
-            //     return a.localeCompare(b);
-            //   }
-            //   if (typeA === "function" || typeB === "function") {
-            //     return typeA === "function" ? 1 : -1; // Functions last
-            //   }
-            //   if (typeA === "object" || typeB === "object") {
-            //     return typeA === "object" ? 1 : -1; // Objects last
-            //   }
-            //   return a.localeCompare(b);
-            // })
             .map(([key, value]) => (
               <BaseVariable
                 key={key}

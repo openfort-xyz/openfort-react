@@ -1,14 +1,20 @@
-import { OAuthProvider } from '@openfort/openfort-js'
-import { useEffect } from 'react'
-import type { ValueOf } from 'viem/_types/types/utils'
-import { useAccount } from 'wagmi'
-import { getAppName } from '../../defaultConfig'
-import { useChainIsSupported } from '../../hooks/useChainIsSupported'
+'use client'
+
+import { ChainTypeEnum, OAuthProvider } from '@openfort/openfort-js'
+import { lazy, Suspense, useEffect, useMemo, useRef } from 'react'
+
+type ValueOf<T> = T[keyof T]
+
+import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
+import { useOpenfortCore } from '../../openfort/useOpenfort'
 import type { CustomTheme, Languages, Mode, Theme } from '../../types'
 import { logger } from '../../utils/logger'
+
+const LazySwitchNetworks = lazy(() => import('../../wagmi/components/SwitchNetworks'))
+
 import Modal from '../Common/Modal'
 import { ConnectKitThemeProvider } from '../ConnectKitThemeProvider/ConnectKitThemeProvider'
-import { routes } from '../Openfort/types'
+import { routes, type SetRouteOptions } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
 import About from '../Pages/About'
 import { AssetInventory } from '../Pages/AssetInventory'
@@ -17,7 +23,7 @@ import BuyComplete from '../Pages/BuyComplete'
 import BuyProcessing from '../Pages/BuyProcessing'
 import BuyProviderSelect from '../Pages/BuyProviderSelect'
 import BuySelectProvider from '../Pages/BuySelectProvider'
-import Connected from '../Pages/Connected'
+import { Connected } from '../Pages/Connected'
 import ConnectedSuccess from '../Pages/ConnectedSuccess'
 import Connectors from '../Pages/Connectors'
 import CreateGuestUserPage from '../Pages/CreateGuestUserPage'
@@ -46,109 +52,43 @@ import SelectToken from '../Pages/SelectToken'
 import SelectWalletToRecover from '../Pages/SelectWalletToRecover'
 import Send from '../Pages/Send'
 import SendConfirmation from '../Pages/SendConfirmation'
-import SocialProviders from '../Pages/SoicalProviders'
-import SwitchNetworks from '../Pages/SwitchNetworks'
+import SocialProviders from '../Pages/SocialProviders'
 import ConnectUsing from './ConnectUsing'
 import ConnectWithMobile from './ConnectWithMobile'
 
-const customThemeDefault: object = {}
+type RoutePages = Partial<Record<ValueOf<typeof routes>, React.ReactNode>>
 
-const ConnectModal: React.FC<{
-  mode?: Mode
-  theme?: Theme
-  customTheme?: CustomTheme
-  lang?: Languages
-}> = ({ mode = 'auto', theme = 'auto', customTheme = customThemeDefault, lang = 'en-US' }) => {
-  const context = useOpenfort()
-  // const { logout, user } = useOpenfortCore()
-  const { isConnected, chain } = useAccount()
-  const chainIsSupported = useChainIsSupported(chain?.id)
-
-  //if chain is unsupported we enforce a "switch chain" prompt
-  const closeable = !(context.uiConfig.enforceSupportedChains && isConnected && !chainIsSupported)
-
-  // const mainRoutes: ValueOf<typeof routes>[] = [
-  //   routes.CONNECTED,
-  //   routes.LOADING,
-  //   routes.PROVIDERS,
-  //   routes.EMAIL_VERIFICATION,
-  // ]
-
-  const route = context.route.route
-
-  // const showBackButton = (closeable && !mainRoutes.includes(route)) || (closeable && route === routes.PROVIDERS && user)
-
-  const _showInfoButton = closeable && route !== routes.CONNECTED
-
-  // const onBack = context.onBack
-  //   ? context.onBack
-  //   : () => {
-  //       if (route === routes.CONNECT) {
-  //         context.setRoute(routes.CONNECTORS)
-  //         return
-  //       }
-
-  //       if (route === routes.FORGOT_PASSWORD) {
-  //         context.setRoute(routes.EMAIL_LOGIN)
-  //         return
-  //       }
-
-  //       if (route === routes.CONNECTORS && user) {
-  //         context.setRoute(routes.CONNECTED)
-  //         return
-  //       }
-
-  //       if (route === routes.PROVIDERS || route === routes.SWITCHNETWORKS) {
-  //         context.setRoute(routes.CONNECTED)
-  //         return
-  //       }
-
-  //       if (route === routes.LOAD_WALLETS || route === routes.RECOVER_WALLET || route === routes.EMAIL_VERIFICATION) {
-  //         logout()
-  //       }
-
-  //       context.setRoute(routes.PROVIDERS)
-  //       // }
-  //     }
-
-  const pages: Record<ValueOf<typeof routes>, React.ReactNode> = {
+function buildSharedPages(): RoutePages {
+  return {
     onboarding: <Onboarding />,
     about: <About />,
     loading: <Loading />,
     loadWallets: <LoadWallets />,
     connectedSuccess: <ConnectedSuccess />,
-
     createGuestUser: <CreateGuestUserPage />,
     socialProviders: <SocialProviders />,
     emailLogin: <EmailLogin />,
     emailOtp: <EmailOTP />,
     phoneOtp: <PhoneOTP />,
-
     forgotPassword: <ForgotPassword />,
     emailVerification: <EmailVerification />,
     linkEmail: <LinkEmail />,
-
     createWallet: <CreateWallet />,
     recoverWallets: <RecoverPage />,
-
     download: <DownloadApp />,
     connectors: <Connectors />,
     mobileConnectors: <MobileConnectors />,
     selectWalletToRecover: <SelectWalletToRecover />,
-
     providers: <Providers />,
     connect: <ConnectUsing />,
     connected: <Connected />,
     profile: <Profile />,
-    switchNetworks: <SwitchNetworks />,
     linkedProviders: <LinkedProviders />,
     linkedProvider: <LinkedProvider />,
     removeLinkedProvider: <RemoveLinkedProvider />,
     connectWithMobile: <ConnectWithMobile />,
-
     noAssetsAvailable: <NoAssetsAvailable />,
     assetInventory: <AssetInventory />,
-
     send: <Send />,
     sendConfirmation: <SendConfirmation />,
     sendTokenSelect: <SelectToken isBuyFlow={false} />,
@@ -159,9 +99,95 @@ const ConnectModal: React.FC<{
     buyProviderSelect: <BuyProviderSelect />,
     receive: <Receive />,
     buy: <Buy />,
-
     exportKey: <ExportKey />,
+    walletOverview: <Connected />,
   }
+}
+
+const CHAIN_PREFIXED_PAGES: Record<ChainTypeEnum, RoutePages> = {
+  [ChainTypeEnum.EVM]: {
+    'eth:connected': <Connected />,
+    'eth:createWallet': <CreateWallet />,
+    'eth:recoverWallet': <RecoverPage />,
+    'eth:switchNetworks': (
+      <Suspense fallback={null}>
+        <LazySwitchNetworks />
+      </Suspense>
+    ),
+    'eth:send': <Send />,
+    'eth:receive': <Receive />,
+    'eth:buy': <Buy />,
+    'eth:connectors': <Connectors />,
+  },
+  [ChainTypeEnum.SVM]: {
+    'sol:connected': <Connected />,
+    'sol:createWallet': <CreateWallet />,
+    'sol:recoverWallet': <RecoverPage />,
+    // 'sol:send': <SolanaSend />,
+    // 'sol:sendConfirmation': <SolanaSendConfirmation />,
+    'sol:receive': <Receive />,
+    // 'sol:wallets': <SolanaWallets />,
+  },
+}
+
+const DEFAULT_CONNECTED_ROUTE: Record<ChainTypeEnum, ValueOf<typeof routes>> = {
+  [ChainTypeEnum.EVM]: routes.ETH_CONNECTED,
+  [ChainTypeEnum.SVM]: routes.SOL_CONNECTED,
+}
+
+const customThemeDefault: object = {}
+
+const ConnectModal: React.FC<{
+  mode?: Mode
+  theme?: Theme
+  customTheme?: CustomTheme
+  lang?: Languages
+}> = ({ mode = 'auto', theme = 'auto', customTheme = customThemeDefault, lang = 'en-US' }) => {
+  const context = useOpenfort()
+  const core = useOpenfortCore()
+  const strategy = useConnectionStrategy()
+  const state = useMemo(
+    () => ({
+      user: core.user,
+      embeddedAccounts: core.embeddedAccounts,
+      activeEmbeddedAddress: core.activeEmbeddedAddress,
+      chainType: context.chainType,
+      embeddedState: core.embeddedState,
+    }),
+    [core.user, core.embeddedAccounts, core.activeEmbeddedAddress, context.chainType, core.embeddedState]
+  )
+  const isConnected = strategy?.isConnected(state) ?? false
+  const chainId = strategy?.getChainId()
+  const chainIsSupported = chainId != null && context.chains.some((c) => c.id === chainId)
+
+  // Auto-close when the user goes from not-connected → connected while the modal is open.
+  // Using a ref to track the previous value so we only react to the false → true transition,
+  // not when the modal is opened while already connected (e.g. user opens profile).
+  const prevIsConnectedRef = useRef(isConnected)
+  useEffect(() => {
+    const wasConnected = prevIsConnectedRef.current
+    prevIsConnectedRef.current = isConnected
+    if (!wasConnected && isConnected && context.open) {
+      context.setOpen(false)
+    }
+  }, [isConnected])
+
+  //if chain is unsupported we enforce a "switch chain" prompt
+  const closeable = !(context.uiConfig.enforceSupportedChains && isConnected && !chainIsSupported)
+
+  const route = context.route.route
+  const chainType = context.chainType
+
+  const sharedPages = useMemo(buildSharedPages, [])
+  const pages = useMemo(() => ({ ...sharedPages, ...CHAIN_PREFIXED_PAGES[chainType] }), [sharedPages, chainType])
+  const effectivePageId =
+    route in pages && pages[route as ValueOf<typeof routes>] != null ? route : DEFAULT_CONNECTED_ROUTE[chainType]
+
+  useEffect(() => {
+    if (effectivePageId !== route) {
+      context.setRoute(effectivePageId as SetRouteOptions)
+    }
+  }, [effectivePageId, route, context.setRoute])
 
   function hide() {
     context.setOpen(false)
@@ -169,6 +195,7 @@ const ConnectModal: React.FC<{
 
   // if auth redirect
   useEffect(() => {
+    if (typeof window === 'undefined') return
     const url = new URL(window.location.href.replace('?access_token=', '&access_token=')) // handle both ? and & cases
     const provider = url.searchParams.get('openfortAuthProviderUI')
     const emailVerification = url.searchParams.get('openfortEmailVerificationUI')
@@ -208,7 +235,7 @@ const ConnectModal: React.FC<{
 
   /* When pulling data into WalletConnect, it prioritises the og:title tag over the title tag */
   useEffect(() => {
-    const appName = getAppName()
+    const appName = context.uiConfig.appName ?? 'Openfort'
     if (!appName || !context.open) return
 
     const title = document.createElement('meta')
@@ -237,7 +264,7 @@ const ConnectModal: React.FC<{
       <Modal
         open={context.open}
         pages={pages}
-        pageId={route}
+        pageId={effectivePageId}
         onClose={closeable ? hide : undefined}
         // TODO: Implement onInfo
         // onInfo={

@@ -1,6 +1,11 @@
+'use client'
+
+import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import React, { useEffect } from 'react'
-import { useAccount } from 'wagmi'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Loader from '../../Common/Loading'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -8,15 +13,34 @@ import { PageContent } from '../../PageContent'
 
 const Loading: React.FC = () => {
   const { setRoute, walletConfig } = useOpenfort()
-  const { isLoading, user, needsRecovery } = useOpenfortCore()
-  const { address } = useAccount()
+  const { user, isLoadingAccounts, isLoading, needsRecovery, embeddedState } = useOpenfortCore()
+  const { chainType } = useOpenfortCore()
+  const bridge = useEthereumBridge()
+
+  // Use chain-specific hooks
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+
+  // Check embedded wallet or bridge (external wallet) connection
+  const embeddedConnected = wallet.status === 'connected'
+  const bridgeConnected = chainType === ChainTypeEnum.EVM && !!(bridge?.account.isConnected && bridge?.account.address)
+  const address = embeddedConnected ? wallet.address : bridgeConnected ? bridge?.account.address : undefined
+
   const [isFirstFrame, setIsFirstFrame] = React.useState(true)
   const [retryCount, setRetryCount] = React.useState(0)
 
   useEffect(() => {
     if (isFirstFrame) return
 
-    if (isLoading) return
+    // Wait for the SDK to settle. After storeCredentials the embedded state
+    // briefly stays UNAUTHENTICATED/NONE while the SDK processes the token.
+    // Routing to PROVIDERS here would abort the auth flow.
+    // However, if bridge (external wallet) is already connected, don't block routing.
+    if ((embeddedState === EmbeddedState.NONE || embeddedState === EmbeddedState.UNAUTHENTICATED) && !bridgeConnected)
+      return
+    // Also wait while accounts or user are still loading.
+    if (isLoadingAccounts || isLoading) return
     else if (!user) setRoute(routes.PROVIDERS)
     else if (!address) {
       if (!walletConfig) setRoute({ route: routes.CONNECTORS, connectType: 'connect' })
@@ -25,7 +49,7 @@ const Loading: React.FC = () => {
       if (!walletConfig) setRoute({ route: routes.CONNECTORS, connectType: 'connect' })
       else setRoute(routes.LOAD_WALLETS)
     } else setRoute(routes.CONNECTED)
-  }, [isLoading, user, address, needsRecovery, isFirstFrame, retryCount])
+  }, [embeddedState, isLoadingAccounts, isLoading, user, address, needsRecovery, isFirstFrame, retryCount])
 
   // Retry every 250ms
   useEffect(() => {

@@ -5,3 +5,5 @@ minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - "@openfort/openfort-js"
   - "@openfort/openfort-node"
+  - "@openfort/better-auth"
+  - "hono"

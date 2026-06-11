@@ -1,3 +1,5 @@
+'use client'
+
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { useOpenfort } from '../components/Openfort/useOpenfort'
 

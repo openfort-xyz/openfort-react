@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import { useEffect, useRef } from 'react'
 import useIsMobile from '../../../hooks/useIsMobile'

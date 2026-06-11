@@ -28,7 +28,6 @@ export const Profile = ({
         <br />
         You can sign messages and interact with smart contracts.
       </p>
-      <p>
         <div className="border border-zinc-700 rounded p-4">
           <h2 className="mb-2">Get started</h2>
           <p className="mb-2 text-zinc-400 text-sm">
@@ -69,7 +68,6 @@ export const Profile = ({
             </a>
           </div>
         </div>
-      </p>
 
       <button
         onClick={() => {

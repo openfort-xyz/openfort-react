@@ -28,7 +28,7 @@ export const Auth = () => {
           Click the button below to sign in with Openfort. This will open a
           modal where you can choose your authentication method.
         </p>
-        <OpenfortButton label="Sign In" />
+        <OpenfortButton  label="Sign In" />
       </div>
       <div className="mt-8 space-y-2">
         <h2>Code Example</h2>

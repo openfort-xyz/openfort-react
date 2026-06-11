@@ -1,9 +1,17 @@
 import { expect, test } from '../fixtures/test'
 
 test.describe('Session keys - multiple + delete flow', () => {
-  test('can create multiple session keys, revoke one (X), and delete it (trash)', async ({ page, dashboardPage }) => {
+  // test.describe.configure({ retries: 3 })
+
+  test('can create multiple session keys, revoke one (X), and delete it (trash)', async ({
+    page,
+    dashboardPage,
+    mode,
+  }) => {
+    test.skip(mode === 'svm', 'Session keys are EVM only')
     test.setTimeout(180_000)
-    await dashboardPage.ensureReady()
+    const m = mode
+    await dashboardPage.ensureReady(m)
 
     // Wallets card
     const walletsTitle = page
@@ -26,6 +34,22 @@ test.describe('Session keys - multiple + delete flow', () => {
     await expect(walletsCard.getByText(/^creating wallet with password recovery/i)).toBeVisible({ timeout: 30_000 })
     await expect.poll(async () => await walletRowLocator.count(), { timeout: 120_000 }).toBeGreaterThan(initialCount)
 
+    // Wait for any wallet row to become the active account
+    await expect
+      .poll(
+        async () => {
+          const count = await walletRowLocator.count()
+          if (count <= initialCount) return false
+          for (let i = 0; i < count; i++) {
+            const isActive = await walletRowLocator.nth(i).evaluate((el) => el.classList.contains('text-primary'))
+            if (isActive) return true
+          }
+          return false
+        },
+        { timeout: 60_000 }
+      )
+      .toBe(true)
+
     const sessionCard = await dashboardPage.getCardByTitle(/session keys/i)
 
     await expect(sessionCard).toBeVisible({ timeout: 60_000 })
@@ -40,8 +64,8 @@ test.describe('Session keys - multiple + delete flow', () => {
     const ensureAtLeast = async (n: number) => {
       while ((await keySpans.count()) < n) {
         const before = await keySpans.count()
+        await page.waitForTimeout(1000)
         await createBtn.click()
-
         await expect.poll(async () => await keySpans.count(), { timeout: 120_000 }).toBeGreaterThan(before)
       }
     }

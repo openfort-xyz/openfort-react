@@ -1,9 +1,12 @@
+'use client'
+
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTransition } from 'react-transition-state'
-import { useAccount, useSwitchChain } from 'wagmi'
 import { AuthIcon } from '../../../assets/icons'
+import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import FocusTrap from '../../../hooks/useFocusTrap'
 import useLocales from '../../../hooks/useLocales'
 import useLockBodyScroll from '../../../hooks/useLockBodyScroll'
@@ -11,7 +14,7 @@ import usePrevious from '../../../hooks/usePrevious'
 import { ResetContainer } from '../../../styles'
 import type { CustomTheme } from '../../../types'
 import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../utils'
-import { useWallet } from '../../../wallets/useWagmiWallets'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -24,7 +27,6 @@ import {
   CloseButton,
   Container,
   ControllerContainer,
-  ErrorMessage,
   InfoButton,
   InnerContainer,
   ModalContainer,
@@ -170,7 +172,7 @@ const Modal: React.FC<ModalProps> = ({
   const themeContext = useThemeContext()
   const mobile = isMobile()
 
-  const wallet = useWallet(context.connector?.id)
+  const wallet = useExternalConnector(context.connector?.id)
 
   const walletInfo = {
     name: wallet?.name,
@@ -181,7 +183,7 @@ const Modal: React.FC<ModalProps> = ({
   }
 
   const locales = useLocales({
-    CONNECTORNAME: walletInfo?.name,
+    CONNECTORNAME: walletInfo?.name ?? 'UNKNOWN CONNECTOR',
   })
 
   const [state, setOpen] = useTransition({
@@ -248,13 +250,15 @@ const Modal: React.FC<ModalProps> = ({
   )
 
   // Update layout on chain/network switch to avoid clipping
-  const { chain } = useAccount()
-  const { switchChain } = useSwitchChain()
+  const strategy = useConnectionStrategy()
+  const bridge = useEthereumBridge()
+  const chainId = strategy?.getChainId() ?? bridge?.account?.chain?.id ?? bridge?.chainId
+  const switchChain = bridge?.switchChain?.switchChain
 
   const ref = useRef<any>(null)
   useEffect(() => {
     if (ref.current) updateBounds(ref.current)
-  }, [chain, switchChain, mobile, context.uiConfig, context.resize])
+  }, [chainId, switchChain, mobile, context.uiConfig, context.resize])
 
   useEffect(() => {
     if (!mounted) {
@@ -314,6 +318,7 @@ const Modal: React.FC<ModalProps> = ({
       case routes.ONBOARDING:
         return locales.onboardingScreen_heading
       case routes.SWITCHNETWORKS:
+      case routes.ETH_SWITCH_NETWORK:
         return locales.switchNetworkScreen_heading
       default:
         return ''
@@ -379,34 +384,6 @@ const Modal: React.FC<ModalProps> = ({
                   </DisclaimerBackground>
                 )}
             </AnimatePresence> */}
-            <AnimatePresence initial={false}>
-              {context.errorMessage && (
-                <ErrorMessage
-                  initial={{ y: '10%', x: '-50%' }}
-                  animate={{ y: '-100%' }}
-                  exit={{ y: '100%' }}
-                  transition={{ duration: 0.2, ease: 'easeInOut' }}
-                >
-                  <span>{context.errorMessage}</span>
-                  <button
-                    type="button"
-                    aria-label={flattenChildren(locales.close).toString()}
-                    style={{
-                      position: 'absolute',
-                      right: 24,
-                      top: 24,
-                      cursor: 'pointer',
-                      background: 'transparent',
-                      border: 'none',
-                      padding: 0,
-                      display: 'flex',
-                    }}
-                  >
-                    <CloseIcon />
-                  </button>
-                </ErrorMessage>
-              )}
-            </AnimatePresence>
             <ControllerContainer>
               {onClose && (
                 <CloseButton aria-label={flattenChildren(locales.close).toString()} onClick={onClose}>

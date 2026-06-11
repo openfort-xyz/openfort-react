@@ -20,39 +20,8 @@ export function createOpenfortClient(config: OpenfortSDKConfiguration): Openfort
 }
 
 /**
- * Default {@link OpenfortClient} instance used internally by the package.
- *
- * Applications should generally create their own client instances using {@link createOpenfortClient}.
- */
-let defaultClient: OpenfortClient | null = null
-
-/**
- * Gets or initialises the shared {@link OpenfortClient} instance.
- *
- * @param options - Optional configuration used when initialising the client for the first time.
- * @returns The shared Openfort client instance.
- * @throws If the default client has not been set and no configuration options are provided.
- *
- * @example
- * ```ts
- * setDefaultClient(createOpenfortClient({ baseConfiguration: { publishableKey: 'pk' } }));
- * const client = getDefaultClient();
- * ```
- */
-function _getDefaultClient(options?: OpenfortSDKConfiguration): OpenfortClient {
-  if (!defaultClient && options) {
-    defaultClient = new OpenfortClient(options)
-  }
-
-  if (!defaultClient) {
-    throw new Error('Openfort client not initialized. Make sure to wrap your app with OpenfortProvider.')
-  }
-
-  return defaultClient
-}
-
-/**
  * Sets the shared {@link OpenfortClient} instance.
+ * Kept for backwards compatibility; the client is provided via React context.
  *
  * @param client - Pre-configured Openfort client to store as the default.
  *
@@ -62,6 +31,6 @@ function _getDefaultClient(options?: OpenfortSDKConfiguration): OpenfortClient {
  * setDefaultClient(client);
  * ```
  */
-export function setDefaultClient(client: OpenfortClient): void {
-  defaultClient = client
+export function setDefaultClient(_client: OpenfortClient): void {
+  // No-op: client is provided via CoreOpenfortProvider context
 }

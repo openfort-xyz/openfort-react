@@ -1,13 +1,17 @@
-import { OAuthProvider } from '@openfort/openfort-js'
+'use client'
+
+import { ChainTypeEnum, OAuthProvider } from '@openfort/openfort-js'
 import { AnimatePresence, motion } from 'framer-motion'
 import type React from 'react'
 import { useEffect, useMemo } from 'react'
 import { PhoneInput } from 'react-international-phone'
-import { useAccount, useDisconnect } from 'wagmi'
+
 import { EmailIcon, GuestIcon, PhoneIcon } from '../../../assets/icons'
 import Logos, { OtherSocials, providersLogos } from '../../../assets/logos'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useProviders } from '../../../hooks/openfort/useProviders'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { logger } from '../../../utils/logger'
 import { isValidEmail as isValidEmailFn } from '../../../utils/validation'
 import Button from '../../Common/Button'
@@ -30,10 +34,11 @@ const ProviderButtonBase: React.FC<{
   onClick: () => void
   icon?: React.ReactNode
   children?: React.ReactNode
-}> = ({ children, icon, onClick }) => {
+  disabled?: boolean
+}> = ({ children, icon, onClick, disabled }) => {
   return (
     <ProvidersButtonStyle>
-      <Button onClick={onClick}>
+      <Button onClick={onClick} disabled={disabled}>
         <ProviderLabel>{children}</ProviderLabel>
         <ProviderIcon>{icon}</ProviderIcon>
       </Button>
@@ -55,13 +60,14 @@ const GuestButton: React.FC = () => {
   )
 }
 
-const WalletButton: React.FC = () => {
+const WalletButton: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { setRoute } = useOpenfort()
   const { user } = useOpenfortCore()
   return (
     <ProviderButtonBase
       onClick={() => setRoute({ route: routes.CONNECTORS, connectType: user ? 'link' : 'connect' })}
       icon={<Logos.OtherWallets />}
+      disabled={disabled}
     >
       Wallet
     </ProviderButtonBase>
@@ -271,7 +277,7 @@ const AuthProviderButton: React.FC<{ provider: OAuthProvider; title?: string; ic
 
 const authProviderToOAuthProviderMap: Record<UIAuthProvider, React.ReactNode> = {
   guest: <GuestButton />,
-  wallet: <WalletButton />,
+  wallet: null,
   emailPassword: <EmailPasswordButton />,
   emailOtp: <EmailOTPButton />,
   phone: <PhoneButton />,
@@ -301,9 +307,12 @@ const authProviderToOAuthProviderMap: Record<UIAuthProvider, React.ReactNode> = 
 }
 
 export const ProviderButton: React.FC<{ provider: UIAuthProvider }> = ({ provider }) => {
-  const { user } = useOpenfortCore()
+  const { user, chainType } = useOpenfortCore()
   if (user && (provider === UIAuthProvider.EMAIL_OTP || provider === UIAuthProvider.EMAIL_PASSWORD)) {
     return <EmailPasswordButton />
+  }
+  if (provider === UIAuthProvider.WALLET) {
+    return <WalletButton disabled={chainType === ChainTypeEnum.SVM} />
   }
   return authProviderToOAuthProviderMap[provider] || null
 }
@@ -311,17 +320,17 @@ export const ProviderButton: React.FC<{ provider: UIAuthProvider }> = ({ provide
 // This accounts for the case where the user has an address but no user, which can happen if the user has not signed up yet, but logged in with a wallet
 const AddressButNoUserCase: React.FC = () => {
   const { updateUser } = useOpenfortCore()
-  const { disconnect } = useDisconnect()
+  const { logout } = useOpenfortCore()
 
   useEffect(() => {
     updateUser()
       .then((user) => {
-        if (!user) disconnect()
+        if (!user) logout()
       })
       .catch(() => {
         logger.error('Failed to update user')
       })
-  }, [])
+  }, [updateUser, logout])
 
   return (
     <PageContent>
@@ -341,16 +350,24 @@ const SocialProvidersButton = ({ thereAreSocialsAlready }: { thereAreSocialsAlre
 
 const Providers: React.FC = () => {
   const { user } = useOpenfortCore()
-  const { address } = useAccount()
   const { previousRoute } = useOpenfort()
   const { mainProviders, hasExcessProviders } = useProviders()
+  const { chainType } = useOpenfortCore()
+
+  // Use chain-specific hooks
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+
+  const isConnected = wallet.status === 'connected'
+  const address = isConnected ? wallet.address : undefined
 
   const onBack: SetOnBackFunction = useMemo(() => {
     if (user) {
       return 'back'
     }
     return null
-  }, [previousRoute])
+  }, [previousRoute, user])
 
   if (address && !user) {
     return <AddressButNoUserCase />

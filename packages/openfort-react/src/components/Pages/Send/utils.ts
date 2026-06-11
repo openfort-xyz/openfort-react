@@ -1,7 +1,13 @@
 import { formatUnits } from 'viem'
 import type { Asset } from '../../Openfort/types'
 
-export const sanitizeAmountInput = (value: string) => value.replace(/,/g, '.')
+export function sanitizeAmountInput(value: string): string {
+  const normalized = value.replace(/,/g, '.')
+  const trimmed = normalized.trim()
+  if (trimmed === '' || trimmed === '.') return trimmed
+  const match = trimmed.match(/^([0-9]*)(\.?)([0-9]*)$/)
+  return match ? match[1] + match[2] + match[3] : ''
+}
 
 export const sanitizeForParsing = (value: string) => {
   const trimmed = value.trim()

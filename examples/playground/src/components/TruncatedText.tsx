@@ -16,7 +16,7 @@ type TruncatedTextProps = {
   CustomContent?: ComponentType<CustomTruncatedTextContentProps>
 }
 
-export const TruncatedText = forwardRef<HTMLDivElement, TruncatedTextProps>(
+export const TruncatedText = forwardRef<HTMLSpanElement, TruncatedTextProps>(
   (
     {
       text,
@@ -31,17 +31,20 @@ export const TruncatedText = forwardRef<HTMLDivElement, TruncatedTextProps>(
   ) => {
     return (
       <Tooltip>
-        <div ref={ref} className={cn('inline-flex flex-row gap-1 group items-center overflow-hidden', layoutClassName)}>
+        <span
+          ref={ref}
+          className={cn('inline-flex flex-row gap-1 group items-center overflow-hidden', layoutClassName)}
+        >
           <TooltipTrigger asChild>
-            <div className={cn('flex items-center overflow-hidden')}>
+            <span className={cn('inline-flex items-center overflow-hidden')}>
               {CustomContent ? (
                 <CustomContent displayText={displayText} className={className} />
               ) : (
                 <span className={cn('pl-0 pr-0 text-sm truncate', className)}>{displayText}</span>
               )}
-            </div>
+            </span>
           </TooltipTrigger>
-        </div>
+        </span>
         <TooltipContent>
           <span>{text}</span>
         </TooltipContent>
