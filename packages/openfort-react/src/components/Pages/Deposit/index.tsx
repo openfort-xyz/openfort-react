@@ -14,7 +14,7 @@ import { DepositContent, OptionButton, OptionInfo, OptionList, OptionSubtitle, O
  * new funding-session Pages; fiat rows reuse the existing Buy flow.
  */
 const Deposit = () => {
-  const { setRoute } = useOpenfort()
+  const { setRoute, setBuyForm } = useOpenfort()
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
 
@@ -29,9 +29,9 @@ const Deposit = () => {
       setRoute(routes.DEPOSIT_CEX)
       return
     }
-    // Fiat rails reuse the existing Buy flow.
-    // TODO(openfort-funding-backend): preselect the rail (target.providerId) on buyForm
-    // before routing, so Apple Pay / Card land on the right provider.
+    // Fiat rails reuse the existing Buy flow; preselect the chosen provider so
+    // Apple Pay / Card land on the right rail.
+    setBuyForm((prev) => ({ ...prev, providerId: target.providerId }))
     setRoute(routes.BUY)
   }
 
