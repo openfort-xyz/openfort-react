@@ -7,6 +7,7 @@ import { CopyButton } from '../../Common/CopyToClipboard/CopyButton'
 import { ModalContent } from '../../Common/Modal/styles'
 import { ScrollArea } from '../../Common/ScrollArea'
 import { Spinner } from '../../Common/Spinner'
+import WalletConnectNotConfigured, { useHasWalletConnect } from '../../Common/WalletConnectNotConfigured'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -25,6 +26,7 @@ const MobileConnectors: React.FC = () => {
 
   const { open: openW3M, isOpen: isOpenW3M } = useWalletConnectModal()
   const wallets = useExternalConnectors()
+  const hasWalletConnect = useHasWalletConnect()
 
   // filter out installed wallets
   const walletsIdsToDisplay =
@@ -39,6 +41,9 @@ const MobileConnectors: React.FC = () => {
     context.setRoute(routes.CONNECT_WITH_MOBILE)
     context.setConnector({ id: walletId })
   }
+
+  // Every wallet on this page connects through WalletConnect deeplinks
+  if (!hasWalletConnect) return <WalletConnectNotConfigured />
 
   return (
     <PageContent width={312} onBack={routes.PROVIDERS}>
