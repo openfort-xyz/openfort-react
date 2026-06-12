@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.2
+
+### Patch Changes
+
+- [#265](https://github.com/openfort-xyz/openfort-react/pull/265) [`f593ad5`](https://github.com/openfort-xyz/openfort-react/commit/f593ad5967667e8335753bafa7618cac530e1cbc) Thanks [@joalavedra](https://github.com/joalavedra)! - Update @openfort/openfort-js to 1.3.6
+
+## 1.1.1
+
+### Patch Changes
+
+- [#261](https://github.com/openfort-xyz/openfort-react/pull/261) [`91eaa8b`](https://github.com/openfort-xyz/openfort-react/commit/91eaa8b307fd30cead8fdb13cd11b34c530e8837) Thanks [@joalavedra](https://github.com/joalavedra)! - Fix blank screen in Vite apps. The `OpenfortProvider` lazy imports carried a `@vite-ignore` hint, which made Vite's dependency pre-bundler keep the relative dynamic imports external — so they resolved against `node_modules/.vite/deps` instead of the package and the provider failed to load in dev ("Failed to resolve import ../../solana/SolanaContext.js"). Removing the hint lets Vite (and Rollup/webpack) resolve and code-split the chunks correctly.
+
 ## 1.1.0
 
 ### Minor Changes

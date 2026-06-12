@@ -12,6 +12,7 @@ import { walletConfigs } from '../../wallets/walletConfigs'
 import Button from '../Common/Button'
 import FitText from '../Common/FitText'
 import Loader from '../Common/Loading'
+import WalletConnectNotConfigured, { useHasWalletConnect } from '../Common/WalletConnectNotConfigured'
 import { routes } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
 import { PageContent } from '../PageContent'
@@ -42,6 +43,7 @@ const ConnectWithMobile: React.FC = () => {
 
   const wallet = useExternalConnector(connector.id) || (walletId && walletConfigs[walletId]) || {}
   const bridge = useEthereumBridge()
+  const hasWalletConnect = useHasWalletConnect()
   // Only consider external wallets as "connected" — ignore the embedded wallet connector
   const isExternalConnected =
     (bridge?.account?.isConnected && bridge?.account?.connector?.id !== embeddedWalletId) ?? false
@@ -98,6 +100,8 @@ const ConnectWithMobile: React.FC = () => {
         break
     }
   }, [status])
+
+  if (!hasWalletConnect) return <WalletConnectNotConfigured />
 
   return (
     <PageContent>

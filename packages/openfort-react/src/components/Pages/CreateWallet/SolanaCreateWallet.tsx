@@ -310,7 +310,9 @@ const SolanaCreatePassword = ({
       />
       <ModalHeading>Secure your wallet</ModalHeading>
       <ModalBody style={{ textAlign: 'center' }}>
-        <FitText>Set a password for your wallet.</FitText>
+        <span style={{ display: 'block', marginBottom: 16 }}>
+          You will use this password to access your wallet, so keep it safe.
+        </span>
         <form
           onSubmit={(e) => {
             e.preventDefault()
@@ -331,9 +333,13 @@ const SolanaCreatePassword = ({
             password={recoveryPhrase}
             showPasswordIsTooWeakError={showPasswordIsTooWeakError}
           />
-          <TickList
-            items={['You will use this password to access your wallet', "Make sure it's strong and memorable"]}
-          />
+          {recoveryPhrase && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+              <TickList
+                items={["Make sure it's strong and memorable", 'If you lose it, no one can recover it for you']}
+              />
+            </motion.div>
+          )}
           {recoveryError && (
             <motion.div key={recoveryError} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <ModalBody style={{ height: 24, marginTop: 12 }} $error>
