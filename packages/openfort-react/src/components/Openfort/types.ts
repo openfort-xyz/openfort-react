@@ -53,9 +53,6 @@ export const routes = {
   SEND_TOKEN_SELECT: 'sendTokenSelect',
   SEND_CONFIRMATION: 'sendConfirmation',
   RECEIVE: 'receive',
-  DEPOSIT: 'deposit',
-  DEPOSIT_CRYPTO: 'depositCrypto',
-  DEPOSIT_CEX: 'depositCex',
   BUY: 'buy',
   BUY_TOKEN_SELECT: 'buyTokenSelect',
   BUY_SELECT_PROVIDER: 'buySelectProvider',
@@ -356,15 +353,6 @@ export type ConnectUIOptions = {
   buyWithCardUrl?: string
   buyFromExchangeUrl?: string
   buyTroubleshootingUrl?: string
-  /**
-   * Base URL of the openfort-funding backend (e.g. `https://funding.openfort.io`).
-   * Powers the Deposit hub's crypto/CEX rails (session API). When omitted, those
-   * rails are unavailable and the network layer is a no-op.
-   *
-   * TODO(openfort-funding-backend): default this from the platform config once the
-   * backend ships, so integrators don't have to set it manually.
-   */
-  fundingBaseUrl?: string
   phoneConfig?: PhoneConfig
   customPageComponents?: {
     [key in CustomizableRoutes]?: React.ReactElement
@@ -411,8 +399,6 @@ export type OpenfortUIOptionsExtended = {
   buyWithCardUrl?: string
   buyFromExchangeUrl?: string
   buyTroubleshootingUrl?: string
-  /** Base URL of the openfort-funding backend. See {@link ConnectUIOptions.fundingBaseUrl}. */
-  fundingBaseUrl?: string
   walletRecovery: WalletRecoveryOptionsExtended
   phoneConfig?: PhoneConfig
   customPageComponents?: {
