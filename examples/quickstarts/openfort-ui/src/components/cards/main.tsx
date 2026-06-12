@@ -1,5 +1,4 @@
 import {
-  BanknotesIcon,
   HomeIcon,
   PencilIcon,
   PlayIcon,
@@ -10,7 +9,6 @@ import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { DesktopTabGroup, MobileTabGroup, type TabType } from '../ui/Tabs'
 import { Actions } from './actions'
-import { Funding } from './funding'
 import { Head } from './head'
 import { Profile } from './profile'
 import { Sign } from './sign'
@@ -82,11 +80,6 @@ const tabs: TabType[] = [
     name: 'Wallets',
     component: <Wallets />,
     icon: WalletIcon,
-  },
-  {
-    name: 'Funding',
-    component: <Funding />,
-    icon: BanknotesIcon,
   },
 ]
 

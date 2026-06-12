@@ -28,9 +28,6 @@ import ConnectedSuccess from '../Pages/ConnectedSuccess'
 import Connectors from '../Pages/Connectors'
 import CreateGuestUserPage from '../Pages/CreateGuestUserPage'
 import CreateWallet from '../Pages/CreateWallet'
-import Deposit from '../Pages/Deposit'
-import DepositCex from '../Pages/DepositCex'
-import DepositCrypto from '../Pages/DepositCrypto'
 import DownloadApp from '../Pages/DownloadApp'
 import EmailLogin from '../Pages/EmailLogin'
 import EmailOTP from '../Pages/EmailOTP'
@@ -102,9 +99,6 @@ function buildSharedPages(): RoutePages {
     buyProviderSelect: <BuyProviderSelect />,
     receive: <Receive />,
     buy: <Buy />,
-    deposit: <Deposit />,
-    depositCrypto: <DepositCrypto />,
-    depositCex: <DepositCex />,
     exportKey: <ExportKey />,
     walletOverview: <Connected />,
   }

@@ -1,4 +1,8 @@
-import { BuyIcon, DollarIcon } from '../../../assets/icons'
+import { ChainTypeEnum } from '@openfort/openfort-js'
+import { BuyIcon, DollarIcon, ReceiveIcon } from '../../../assets/icons'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
 import { FloatingGraphic } from '../../FloatingGraphic'
@@ -8,7 +12,20 @@ import { PageContent } from '../../PageContent'
 import { ButtonsContainer } from './styles'
 
 export const NoAssetsAvailable = () => {
-  const { setRoute } = useOpenfort()
+  const { setRoute, chains } = useOpenfort()
+  const { chainType } = useOpenfortCore()
+
+  // Use chain-specific hooks
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+
+  const chainId =
+    wallet.status === 'connected' && chainType === ChainTypeEnum.EVM
+      ? (wallet as typeof ethereumWallet).chainId
+      : undefined
+  const chain = chains.find((c) => c.id === chainId)
+  const showBuyOption = chain && !chain.testnet
 
   return (
     <PageContent>
@@ -39,12 +56,22 @@ export const NoAssetsAvailable = () => {
           <ButtonsContainer>
             <Button
               onClick={() => {
-                setRoute(routes.DEPOSIT)
+                setRoute(routes.RECEIVE)
               }}
-              icon={<DollarIcon />}
+              icon={<ReceiveIcon />}
             >
-              Add funds
+              Get assets
             </Button>
+            {showBuyOption && (
+              <Button
+                onClick={() => {
+                  setRoute(routes.BUY)
+                }}
+                icon={<BuyIcon />}
+              >
+                Buy assets
+              </Button>
+            )}
           </ButtonsContainer>
         </ModalBody>
       </ModalContent>
