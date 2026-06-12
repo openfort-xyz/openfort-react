@@ -2,7 +2,13 @@
 
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { useOpenfortCore } from '../../openfort/useOpenfort'
 import { createFetchFundingClient, type FundingClient } from './fundingClient'
+
+/** Pay-links aren't exposed by the SDK funding namespace yet (CEX is API-deferred). */
+const sdkPayLinkUnavailable = async (): Promise<string> => {
+  throw new Error('Exchange pay-links are not available through the SDK yet')
+}
 
 /**
  * Funding session client — adapted from the openfort-funding prototype.
@@ -152,14 +158,24 @@ export type UseFundingOptions = {
  */
 export function useFunding(options?: UseFundingOptions): UseFunding {
   const { uiConfig } = useOpenfort()
+  const { client: coreClient } = useOpenfortCore()
   const baseUrl = uiConfig.fundingBaseUrl ?? ''
   const injected = options?.client
-  // Resolve the client: an injected one wins; otherwise the fetch adapter when a
-  // base URL is configured. When openfort-js ships `funding`, prefer that here.
-  const client = useMemo<FundingClient | null>(
-    () => injected ?? (baseUrl ? createFetchFundingClient(baseUrl) : null),
-    [injected, baseUrl]
-  )
+  // Resolve the client, in order of preference:
+  //   1. an explicitly injected client (tests / custom backends),
+  //   2. the SDK's `openfort.funding` namespace once available,
+  //   3. the fetch adapter over uiConfig.fundingBaseUrl.
+  // The SDK namespace covers sessions; pay-links stay on the backend adapter
+  // until the API exposes them (CEX is deferred), so we compose the two.
+  const client = useMemo<FundingClient | null>(() => {
+    if (injected) return injected
+    const sdkFunding = (coreClient as unknown as { funding?: Pick<FundingClient, 'sessions'> } | undefined)?.funding
+    const fetchClient = baseUrl ? createFetchFundingClient(baseUrl) : null
+    if (sdkFunding) {
+      return { sessions: sdkFunding.sessions, payLink: fetchClient?.payLink ?? sdkPayLinkUnavailable }
+    }
+    return fetchClient
+  }, [injected, coreClient, baseUrl])
   const isAvailable = client != null
 
   const [session, setSession] = useState<FundingSession | null>(null)

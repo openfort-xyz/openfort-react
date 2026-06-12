@@ -10,6 +10,11 @@ vi.mock('../components/Openfort/useOpenfort', () => ({
   useOpenfort: () => ({ uiConfig: mockUiConfig }),
 }))
 
+// No SDK funding namespace in tests — the injected client is used instead.
+vi.mock('../openfort/useOpenfort', () => ({
+  useOpenfortCore: () => ({ client: undefined }),
+}))
+
 const { useFunding } = await import('../hooks/openfort/useFunding')
 
 const target: FundingTarget = { chain: 'eip155:8453', currency: '0xUSDC', address: '0xdest' }
