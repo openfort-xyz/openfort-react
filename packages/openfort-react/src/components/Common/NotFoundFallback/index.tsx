@@ -1,28 +1,16 @@
 'use client'
 
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import Button from '../Button'
-import Loader from '../Loading'
+import ErrorFallbackPage from '../ErrorFallbackPage'
 
 /**
  * Catch-all page for flows that would otherwise spin forever
  * (loading watchdog timeouts, unreachable states).
  */
-const NotFoundFallback = () => {
-  const { setRoute } = useOpenfort()
-
-  return (
-    <PageContent onBack={routes.PROVIDERS}>
-      <Loader
-        header="We couldn't find what you're looking for"
-        isError
-        description="This is taking longer than expected. Go back to sign in and try again."
-      />
-      <Button onClick={() => setRoute(routes.PROVIDERS)}>Back to sign in</Button>
-    </PageContent>
-  )
-}
+const NotFoundFallback = () => (
+  <ErrorFallbackPage
+    header="This is taking longer than expected"
+    description="We couldn't load this screen. Go back and try again."
+  />
+)
 
 export default NotFoundFallback

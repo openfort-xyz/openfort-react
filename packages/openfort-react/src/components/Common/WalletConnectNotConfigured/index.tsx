@@ -1,12 +1,9 @@
 'use client'
 
+import { useEffect } from 'react'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import { isWalletConnectConnector } from '../../../utils'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import Button from '../Button'
-import Loader from '../Loading'
+import ErrorFallbackPage from '../ErrorFallbackPage'
 
 /** True when a WalletConnect connector is configured (i.e. a projectId was provided). */
 export function useHasWalletConnect(): boolean {
@@ -16,20 +13,22 @@ export function useHasWalletConnect(): boolean {
 
 /**
  * Shown when a WalletConnect-dependent flow is opened but no WalletConnect
- * projectId was configured (e.g. the WalletConnect env variable is missing).
+ * projectId was configured. End users get neutral copy; the actionable
+ * config hint goes to the developer console.
  */
 const WalletConnectNotConfigured = () => {
-  const { setRoute } = useOpenfort()
+  useEffect(() => {
+    // biome-ignore lint/suspicious/noConsole: config error must reach developers without debug mode
+    console.warn(
+      '[Openfort-React] WalletConnect is not configured: pass walletConnectProjectId to getDefaultConnectors (e.g. via your WalletConnect env variable) to enable external wallet connections.'
+    )
+  }, [])
 
   return (
-    <PageContent onBack={routes.PROVIDERS}>
-      <Loader
-        header="WalletConnect is not configured"
-        isError
-        description="Set your WalletConnect project ID environment variable to enable external wallet connections."
-      />
-      <Button onClick={() => setRoute(routes.PROVIDERS)}>Back to sign in</Button>
-    </PageContent>
+    <ErrorFallbackPage
+      header="Wallet connections unavailable"
+      description="External wallet connections aren't available right now. Please use another sign-in method."
+    />
   )
 }
 

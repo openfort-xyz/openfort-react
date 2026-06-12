@@ -27,6 +27,7 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
   }),
 }))
 vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({ useEthereumBridge: () => bridgeValue }))
+vi.mock('../../openfort/useOpenfort', () => ({ useOpenfortCore: () => ({ user: null }) }))
 vi.mock('../../core/ConnectionStrategyContext', () => ({ useConnectionStrategy: () => null }))
 vi.mock('../../hooks/openfort/auth/useSignOut', () => ({ useSignOut: () => ({ signOut: vi.fn() }) }))
 // FitText measures DOM sizes that jsdom cannot provide
@@ -64,11 +65,22 @@ describe('WalletConnectNotConfigured page', () => {
     setRoute.mockClear()
   })
 
-  it('explains the missing WalletConnect project ID', () => {
+  it('shows end-user copy without developer config details', () => {
     render(<WalletConnectNotConfigured />)
 
-    expect(screen.getByText('WalletConnect is not configured')).toBeTruthy()
-    expect(screen.getByText(/project ID environment variable/i)).toBeTruthy()
+    expect(screen.getByText('Wallet connections unavailable')).toBeTruthy()
+    expect(screen.getByText(/another sign-in method/i)).toBeTruthy()
+    // env-var / projectId speak must not reach end users
+    expect(screen.queryByText(/environment variable|project ID/i)).toBeNull()
+  })
+
+  it('warns the developer in the console with the config hint', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+
+    render(<WalletConnectNotConfigured />)
+
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining('walletConnectProjectId'))
+    warnSpy.mockRestore()
   })
 
   it('"Back to sign in" routes to the providers (sign-in) page', () => {
@@ -86,6 +98,6 @@ describe('MobileConnectors without WalletConnect', () => {
 
     render(<MobileConnectors />)
 
-    expect(screen.getByText('WalletConnect is not configured')).toBeTruthy()
+    expect(screen.getByText('Wallet connections unavailable')).toBeTruthy()
   })
 })

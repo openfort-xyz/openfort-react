@@ -4,6 +4,7 @@ import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import React, { useEffect } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
+import { useTimedOut } from '../../../hooks/useTimedOut'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Loader from '../../Common/Loading'
@@ -34,12 +35,7 @@ const Loading: React.FC = () => {
 
   const [isFirstFrame, setIsFirstFrame] = React.useState(true)
   const [retryCount, setRetryCount] = React.useState(0)
-  const [timedOut, setTimedOut] = React.useState(false)
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setTimedOut(true), LOADING_TIMEOUT_MS)
-    return () => clearTimeout(timeout)
-  }, [])
+  const timedOut = useTimedOut(LOADING_TIMEOUT_MS)
 
   useEffect(() => {
     if (isFirstFrame) return

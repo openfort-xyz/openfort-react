@@ -63,7 +63,7 @@ describe('Loading page watchdog', () => {
 
     act(() => vi.advanceTimersByTime(5_000))
 
-    expect(screen.queryByText(/couldn't find what you're looking for/i)).toBeNull()
+    expect(screen.queryByText(/taking longer than expected/i)).toBeNull()
   })
 
   it('falls back to not-found after the timeout instead of spinning forever', () => {
@@ -71,7 +71,7 @@ describe('Loading page watchdog', () => {
 
     act(() => vi.advanceTimersByTime(10_000))
 
-    expect(screen.getByText(/couldn't find what you're looking for/i)).toBeTruthy()
+    expect(screen.getByText(/taking longer than expected/i)).toBeTruthy()
   })
 
   it('"Back to sign in" routes to the providers (sign-in) page', () => {

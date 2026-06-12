@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
 import { toSolanaUserWallet } from '../../../hooks/openfort/walletTypes'
+import { useTimedOut } from '../../../hooks/useTimedOut'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types'
@@ -63,12 +64,7 @@ const LoadWallets: React.FC = () => {
   const connectOnLogin = walletConfig?.connectOnLogin ?? true
 
   const [loadingUX, setLoadingUX] = useState(true)
-  const [timedOut, setTimedOut] = useState(false)
-
-  useEffect(() => {
-    const timeout = setTimeout(() => setTimedOut(true), LOADING_TIMEOUT_MS)
-    return () => clearTimeout(timeout)
-  }, [])
+  const timedOut = useTimedOut(LOADING_TIMEOUT_MS)
 
   const wallets = embeddedWallet.wallets
   const isLoadingWallets =

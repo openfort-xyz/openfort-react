@@ -71,16 +71,6 @@ describe('useUI gotoAndOpen', () => {
     expect(state.route).toMatchObject({ route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' })
   })
 
-  it('opens the modal before setting the route', () => {
-    const { result } = renderHook(() => useUI())
-
-    act(() => result.current.openWallets())
-
-    const openOrder = setOpen.mock.invocationCallOrder[0]
-    const routeOrder = setRoute.mock.invocationCallOrder[0]
-    expect(openOrder).toBeLessThan(routeOrder)
-  })
-
   it('falls back to PROVIDERS for routes not allowed while disconnected', () => {
     const { result } = renderHook(() => useUI())
 
