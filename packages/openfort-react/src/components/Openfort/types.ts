@@ -365,6 +365,8 @@ export type ConnectUIOptions = {
    * backend ships, so integrators don't have to set it manually.
    */
   fundingBaseUrl?: string
+  /** Deposit-hub funding options (destination chain/token for incoming deposits). */
+  funding?: FundingUIOptions
   phoneConfig?: PhoneConfig
   customPageComponents?: {
     [key in CustomizableRoutes]?: React.ReactElement
@@ -374,6 +376,20 @@ export type ConnectUIOptions = {
 type WalletRecoveryOptionsExtended = {
   allowedMethods: RecoveryMethod[]
   defaultMethod: RecoveryMethod
+}
+
+/** Where Deposit-hub funding lands. Defaults to USDC on Base when omitted. */
+export type FundingUIOptions = {
+  /**
+   * Destination CAIP-2 chain id for deposits.
+   * @default "eip155:8453" (Base)
+   */
+  targetChain?: string
+  /**
+   * Destination token contract on the target chain (or the zero address for native).
+   * @default USDC on Base
+   */
+  targetCurrency?: string
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED
@@ -413,6 +429,8 @@ export type OpenfortUIOptionsExtended = {
   buyTroubleshootingUrl?: string
   /** Base URL of the openfort-funding backend. See {@link ConnectUIOptions.fundingBaseUrl}. */
   fundingBaseUrl?: string
+  /** Deposit-hub funding options. See {@link ConnectUIOptions.funding}. */
+  funding?: FundingUIOptions
   walletRecovery: WalletRecoveryOptionsExtended
   phoneConfig?: PhoneConfig
   customPageComponents?: {

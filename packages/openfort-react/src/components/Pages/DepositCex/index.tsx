@@ -24,18 +24,9 @@ import {
   twoCol,
 } from '../Deposit/formStyles'
 import { OrDivider } from '../Deposit/OrDivider'
-import {
-  addressFor,
-  chainLogo,
-  DEST_CHAIN,
-  DEST_USDC,
-  isSolana,
-  NOMINAL_UNITS,
-  SOURCE_CHAINS,
-  tokenLogo,
-  tokensFor,
-} from '../Deposit/sources'
+import { addressFor, chainLogo, isSolana, NOMINAL_UNITS, SOURCE_CHAINS, tokenLogo, tokensFor } from '../Deposit/sources'
 import { QRWrapper } from '../Deposit/styles'
+import { useFundingTarget } from '../Deposit/useFundingTarget'
 
 // Exchanges withdraw to EVM networks here; Solana CEX withdrawal isn't profiled yet.
 const CEX_CHAINS = SOURCE_CHAINS.filter((c) => !isSolana(c.id))
@@ -57,8 +48,9 @@ const DepositCex = () => {
   const wallet = useEthereumEmbeddedWallet()
   const { triggerResize } = useOpenfort()
   const { session, error, loading, isAvailable, fund, payLink, reset } = useFunding()
+  const target = useFundingTarget()
   const address = wallet.status === 'connected' ? wallet.address : undefined
-  const firstChain = CEX_CHAINS[0]?.id ?? DEST_CHAIN
+  const firstChain = CEX_CHAINS[0]?.id ?? target.chain
   const [chain, setChain] = useState(firstChain)
   const [token, setToken] = useState(tokensFor(firstChain)[0]?.symbol ?? 'USDC')
   const pm = session?.paymentMethod ?? null
@@ -66,7 +58,7 @@ const DepositCex = () => {
 
   const tokens = tokensFor(chain)
   const activeToken = tokens.some((t) => t.symbol === token) ? token : (tokens[0]?.symbol ?? 'USDC')
-  const sameChain = chain === DEST_CHAIN
+  const sameChain = chain === target.chain
   const receiverAddress = sameChain ? address : (pm?.receiverAddress ?? null)
 
   useEffect(() => {
@@ -80,14 +72,14 @@ const DepositCex = () => {
     if (lastKey.current === key) return
     lastKey.current = key
     fund(
-      { chain: DEST_CHAIN, currency: DEST_USDC, address },
+      { chain: target.chain, currency: target.currency, address },
       {
         type: 'cex',
         cex: 'binance',
         source: { chain, currency: addressFor(chain, activeToken), amount: NOMINAL_UNITS },
       }
     ).catch(() => {})
-  }, [address, chain, activeToken, isAvailable, sameChain, fund, reset])
+  }, [address, chain, activeToken, isAvailable, sameChain, fund, reset, target.chain, target.currency])
 
   useEffect(() => {
     triggerResize()
@@ -96,7 +88,7 @@ const DepositCex = () => {
   const openPay = (exchange: string) => {
     if (!address) return
     const w = window.open('about:blank', '_blank', 'noopener,noreferrer')
-    void payLink({ exchange, address, asset: activeToken, chain: DEST_CHAIN, amount: '10' })
+    void payLink({ exchange, address, asset: activeToken, chain: target.chain, amount: '10' })
       .then((url) => {
         if (w) w.location.href = url
       })
