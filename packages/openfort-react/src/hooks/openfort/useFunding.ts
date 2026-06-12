@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
 import { createFetchFundingClient, type FundingClient } from './fundingClient'
@@ -184,6 +184,14 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
   // Generation guard: only the latest fund()/reset() updates state, so
   // re-selecting a source mid-poll can't be clobbered by a stale request.
   const generation = useRef(0)
+
+  // Stop any in-flight poll loop on unmount — without this the loop keeps
+  // hitting the network until the session turns terminal (up to its 24h TTL).
+  useEffect(() => {
+    return () => {
+      generation.current += 1
+    }
+  }, [])
 
   const reset = useCallback(() => {
     generation.current += 1

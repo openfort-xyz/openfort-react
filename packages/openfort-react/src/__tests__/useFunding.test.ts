@@ -130,6 +130,35 @@ describe('useFunding', () => {
     expect(result.current.status).toBe('succeeded')
   })
 
+  it('stops polling when the hook unmounts mid-flight', async () => {
+    vi.useFakeTimers()
+    try {
+      const { client, create, setPaymentMethod, get } = makeClient()
+      create.mockResolvedValue(makeSession())
+      let release: (s: FundingSession) => void = () => {}
+      setPaymentMethod.mockImplementation(() => new Promise<FundingSession>((r) => (release = r)))
+
+      const { result, unmount } = renderHook(() => useFunding({ client }))
+      await act(async () => {
+        void result.current.fund(target, paymentMethod).catch(() => {})
+        await Promise.resolve() // flush microtasks so setPaymentMethod is actually in flight
+      })
+      expect(setPaymentMethod).toHaveBeenCalledTimes(1)
+
+      unmount()
+      // Resolve with a NON-terminal status — an alive hook would start polling.
+      await act(async () => {
+        release(makeSession({ status: 'waiting_payment' }))
+        await Promise.resolve()
+      })
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      expect(get).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('resolves a pay link through the client', async () => {
     const { client, payLink } = makeClient()
     payLink.mockResolvedValue('https://pay.example/checkout')
