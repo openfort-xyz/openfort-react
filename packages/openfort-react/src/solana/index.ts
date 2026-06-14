@@ -30,6 +30,8 @@ export type {
   SolanaSignAllTransactionsRequest,
   SolanaSignMessageRequest,
   SolanaSignTransactionRequest,
+  // Sponsorship
+  SolanaSponsorConfig,
   // Transaction types
   SolanaTransaction,
   SolanaWalletActions,

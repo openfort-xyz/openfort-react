@@ -9,7 +9,7 @@
 
 import { createContext, type ReactNode, useContext, useMemo } from 'react'
 import { OpenfortError, OpenfortReactErrorType } from '../core/errors'
-import type { SolanaCluster, SolanaCommitment, SolanaConfig } from './types'
+import type { SolanaCluster, SolanaCommitment, SolanaConfig, SolanaSponsorConfig } from './types'
 
 /**
  * Solana context value with resolved configuration
@@ -21,6 +21,8 @@ interface SolanaContextValue {
   rpcUrl: string
   /** Transaction commitment level */
   commitment: SolanaCommitment
+  /** Gasless sponsorship config, if configured (e.g. a Kora relayer). */
+  sponsor?: SolanaSponsorConfig
 }
 
 const DEFAULT_RPC_URLS: Partial<Record<SolanaCluster, string>> = {
@@ -90,8 +92,10 @@ export function SolanaContextProvider({ config, children }: SolanaContextProvide
       cluster,
       rpcUrl,
       commitment: config.commitment ?? 'confirmed',
+      sponsor: config.sponsor,
     }),
-    [cluster, rpcUrl, config.commitment]
+    // Depend on the sponsor's primitive fields so an inline config object doesn't churn the memo.
+    [cluster, rpcUrl, config.commitment, config.sponsor?.kora?.rpcUrl, config.sponsor?.kora?.apiKey]
   )
 
   return <SolanaContext.Provider value={value}>{children}</SolanaContext.Provider>

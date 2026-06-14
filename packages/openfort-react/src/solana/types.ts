@@ -34,6 +34,22 @@ export type SolanaUIOptions = {
 }
 
 /**
+ * Gasless (sponsored) Solana transaction configuration.
+ *
+ * When set, `useSolanaTransaction` routes transactions through the relayer so the user
+ * pays no SOL for network fees. Only the Kora relayer is supported today.
+ */
+export type SolanaSponsorConfig = {
+  /** Kora relayer configuration. */
+  kora: {
+    /** Kora relayer RPC URL. */
+    rpcUrl: string
+    /** API key for the Kora relayer. */
+    apiKey: string
+  }
+}
+
+/**
  * Configuration for Solana support in OpenfortProvider
  *
  * @example
@@ -59,6 +75,8 @@ export type SolanaConfig = {
   commitment?: SolanaCommitment
   /** UI options for Solana-connected screens */
   ui?: SolanaUIOptions
+  /** Gasless transaction sponsorship (e.g. a Kora relayer). */
+  sponsor?: SolanaSponsorConfig
 }
 
 /**
