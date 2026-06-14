@@ -120,7 +120,7 @@ Supported themes: `light`, `dark`, or custom theme objects.
 
 ### Customizing the UI Theme
 
-1. Set `VITE_OPENFORT_THEME` in `.env.local`
+1. Set `VITE_OPENFORT_THEME` in `.env`
 2. Or provide custom theme object in `uiConfig`:
 
 ```typescript

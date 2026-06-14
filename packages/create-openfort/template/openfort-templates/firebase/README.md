@@ -17,7 +17,7 @@ npx gitpick openfort-xyz/openfort-react/tree/main/examples/quickstarts/firebase 
    ```
 
 2. **Configure environment**:
-   Create a `.env.local` file with your Openfort and Firebase configuration.
+   Copy `.env.example` to `.env` and fill in your Openfort and Firebase configuration.
 
 3. **Start development server**:
 

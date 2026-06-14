@@ -26,7 +26,6 @@ import {
 
 interface CliFlags {
   noGit: boolean;
-  noInstall: boolean;
   default: boolean;
 
   /** @internal Used in CI. */
@@ -74,11 +73,6 @@ export const runCli = async (): Promise<CliResults> => {
       false,
     )
     .option(
-      "--noInstall",
-      "Explicitly tell the CLI to not run the package manager's install command",
-      false,
-    )
-    .option(
       "-y, --default",
       "Bypass the CLI and use all default options to bootstrap a new Openfort app",
       false,
@@ -118,7 +112,6 @@ export const runCli = async (): Promise<CliResults> => {
     appName: cliProvidedName || DEFAULT_APP_NAME,
     flags: {
       noGit: opts.noGit || false,
-      noInstall: opts.noInstall || false,
       default: opts.default || false,
       CI: opts.CI || false,
       template: opts.template,

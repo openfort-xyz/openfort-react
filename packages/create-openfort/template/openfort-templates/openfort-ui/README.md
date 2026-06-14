@@ -17,7 +17,7 @@ npx gitpick openfort-xyz/openfort-react/tree/main/examples/quickstarts/openfort-
    ```
 
 2. **Configure environment**:
-   Create a `.env.local` file with your Openfort configuration.
+   Copy `.env.example` to `.env` and fill in your Openfort configuration.
 
 3. **Start development server**:
 
