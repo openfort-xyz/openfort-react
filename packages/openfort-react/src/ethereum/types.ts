@@ -11,7 +11,8 @@ import type {
   RecoveryMethod,
   RecoveryParams,
 } from '@openfort/openfort-js'
-import type { Hex } from 'viem'
+import type { Abi, Hex } from 'viem'
+import type { OpenfortError } from '../core/errors'
 import type {
   ConnectedWalletState,
   CreateEmbeddedWalletOptions,
@@ -20,6 +21,7 @@ import type {
   SetRecoveryOptions as SharedSetRecoveryOptions,
   WalletDerived,
 } from '../shared/types'
+import type { OpenfortHookOptions } from '../types'
 
 export type FeeSponsorshipConfig = string | Record<number, string>
 
@@ -173,4 +175,81 @@ export type UseEmbeddedEthereumWalletOptions = {
   chainId?: number
   /** Recovery params for wallet access */
   recoveryParams?: RecoveryParams
+}
+
+// ── Transactions (no wagmi required) ─────────────────────────────────────────
+
+/** Parameters for a native EVM transaction. */
+export type SendTransactionParams = {
+  to: `0x${string}`
+  /** Amount in wei. */
+  value?: bigint
+  /** Pre-encoded calldata. */
+  data?: `0x${string}`
+  /** Override the active chain for this transaction. */
+  chainId?: number
+}
+
+/** Parameters for an EVM contract write (encoded with viem). */
+export type WriteContractParams = {
+  address: `0x${string}`
+  abi: Abi
+  functionName: string
+  args?: readonly unknown[]
+  /** Amount in wei to send with the call. */
+  value?: bigint
+  /** Override the active chain for this transaction. */
+  chainId?: number
+}
+
+export type UseSendTransactionOptions = OpenfortHookOptions<{ hash: `0x${string}` }>
+
+type EvmSendStateFields = {
+  /** The transaction hash once sent. */
+  data: `0x${string}` | undefined
+  status: 'idle' | 'loading' | 'success' | 'error'
+  isIdle: boolean
+  isLoading: boolean
+  isSuccess: boolean
+  isError: boolean
+  error: OpenfortError | undefined
+  /** True when a fee-sponsorship policy resolves for the active chain (gas is sponsored). */
+  isSponsored: boolean
+  reset: () => void
+}
+
+export type SendTransactionResult = EvmSendStateFields & {
+  /** Send a transaction; resolves to the hash, or `undefined` on error (error surfaces via state/onError). */
+  sendTransaction: (params: SendTransactionParams) => Promise<`0x${string}` | undefined>
+  /** Send a transaction; resolves to the hash or throws on error. */
+  sendTransactionAsync: (params: SendTransactionParams) => Promise<`0x${string}`>
+}
+
+export type UseWriteContractResult = EvmSendStateFields & {
+  /** Write to a contract; resolves to the hash, or `undefined` on error. */
+  writeContract: (params: WriteContractParams) => Promise<`0x${string}` | undefined>
+  /** Write to a contract; resolves to the hash or throws on error. */
+  writeContractAsync: (params: WriteContractParams) => Promise<`0x${string}`>
+}
+
+export type UseEthereumBalanceOptions = {
+  /** Address to read (defaults to the active embedded EVM wallet). */
+  address?: `0x${string}`
+  /** Chain to read on (defaults to the active chain). */
+  chainId?: number
+  /** Enable/disable the query (defaults to enabled when an address is available). */
+  enabled?: boolean
+  /** Refetch interval in ms. */
+  refetchInterval?: number
+}
+
+export type UseEthereumBalanceResult = {
+  /** Native balance once loaded. */
+  data: { value: bigint; formatted: string; symbol: string; decimals: number } | undefined
+  isIdle: boolean
+  isLoading: boolean
+  isSuccess: boolean
+  isError: boolean
+  error: OpenfortError | undefined
+  refetch: () => void
 }

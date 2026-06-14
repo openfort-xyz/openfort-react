@@ -54,9 +54,9 @@
  * | Am I connected? (auth + wallet ready) | `useUser().isConnected` |
  * | EVM wallet (address, chainId, status, create, export) | `useEthereumEmbeddedWallet()` from `@openfort/react/ethereum` |
  * | Solana wallet (address, cluster, status, create) | `useSolanaEmbeddedWallet()` from `@openfort/react/solana` |
- * | Native token balance (EVM or Solana) | `useBalance({ chainType, address })` |
+ * | Native token balance | `useEthereumBalance()` (EVM) · `useBalance({ chainType, address })` (any chain) |
  * | Token + NFT inventory (EVM) | `useEthereumWalletAssets()` from `@openfort/react/ethereum` |
- * | Send ETH / write contract (EVM) | Use `wagmi` or `viem` directly with the embedded provider |
+ * | Send ETH / write contract (EVM) | `useSendTransaction()` / `useWriteContract()` from `@openfort/react/ethereum` (no wagmi needed; or use `wagmi`) |
  * | Sign message / send SOL (Solana) | Use `@solana/kit` with the embedded wallet provider |
  * | Connect/link wallet (SIWE) + list wallets | `useWalletAuth()` / `useConnectWithSiwe()` (from `@openfort/react/wagmi`) |
  * | Scoped store subscription (avoid whole-store re-renders) | `useOpenfortStore(selector)` |

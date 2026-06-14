@@ -12,8 +12,11 @@ export type {
   CreateEmbeddedWalletOptions,
   CreateEmbeddedWalletResult,
 } from '../shared/types'
+export { useEthereumBalance } from './hooks/useEthereumBalance'
 export { useEthereumEmbeddedWallet } from './hooks/useEthereumEmbeddedWallet'
 export { useEthereumWalletAssets } from './hooks/useEthereumWalletAssets'
+export { useSendTransaction } from './hooks/useSendTransaction'
+export { useWriteContract } from './hooks/useWriteContract'
 export type {
   ConnectedEmbeddedEthereumWallet,
   EthereumConfig,
@@ -21,6 +24,13 @@ export type {
   EthereumWalletState,
   FeeSponsorshipConfig,
   OpenfortEmbeddedEthereumWalletProvider,
+  SendTransactionParams,
+  SendTransactionResult,
   SetActiveEthereumWalletOptions,
   UseEmbeddedEthereumWalletOptions,
+  UseEthereumBalanceOptions,
+  UseEthereumBalanceResult,
+  UseSendTransactionOptions,
+  UseWriteContractResult,
+  WriteContractParams,
 } from './types'
