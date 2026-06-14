@@ -109,19 +109,18 @@ export type SolanaSignAllTransactionsRequest = {
  * Solana embedded wallet provider
  *
  * Provides signing capabilities for Solana transactions and messages.
- * Can be used directly or wrapped with Kit signers.
  *
- * @example Direct usage
+ * @example Sign a message
  * ```tsx
  * if (solana.status === 'connected') {
  *   const signature = await solana.provider.signMessage('Hello Solana!');
  * }
  * ```
  *
- * @example With Kit Signer (from @openfort/react/solana)
+ * @example Sign a transaction with @solana/kit
  * ```tsx
- * const signer = createTransactionSigner(provider);
- * // Use with @solana/kit
+ * // Sign the transaction's message bytes; returns a detached { signature, publicKey }.
+ * const { signature } = await solana.provider.signTransaction({ messageBytes });
  * ```
  */
 export interface OpenfortEmbeddedSolanaWalletProvider {

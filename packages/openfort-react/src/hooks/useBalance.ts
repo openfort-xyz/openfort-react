@@ -20,13 +20,13 @@ export function invalidateBalance(): void {
   }
 }
 
-type BalanceState =
+export type BalanceState =
   | { status: 'idle'; refetch: () => void }
   | { status: 'loading'; refetch: () => void }
   | { status: 'error'; error: Error; refetch: () => void }
   | { status: 'success'; value: bigint; formatted: string; symbol: string; decimals: number; refetch: () => void }
 
-interface UseBalanceOptions {
+export interface UseBalanceOptions {
   /** Address to fetch balance for */
   address: string
   /** Chain type */

@@ -24,6 +24,28 @@
  * }
  * ```
  *
+ * ## Provider setup
+ *
+ * **Ethereum + wagmi (external wallets, SIWE):** the providers must be nested in this exact
+ * order — getting it wrong silently disables embedded-wallet sync (a runtime failure, not a
+ * type error):
+ *
+ * ```tsx
+ * <QueryClientProvider client={queryClient}>
+ *   <WagmiProvider config={wagmiConfig}>
+ *     <OpenfortWagmiBridge>            // from "@openfort/react/wagmi"
+ *       <OpenfortProvider publishableKey="pk_..." walletConfig={{ shieldPublishableKey: "..." }}>
+ *         {children}
+ *       </OpenfortProvider>
+ *     </OpenfortWagmiBridge>
+ *   </WagmiProvider>
+ * </QueryClientProvider>
+ * ```
+ *
+ * **Headless / SDK-only (Solana, or EVM without wagmi):** no wagmi, no bridge — just wrap with
+ * `QueryClientProvider` (only if you use TanStack Query) and `OpenfortProvider`. The connect
+ * modal is lazy-loaded, so a headless app that never opens it does not pay for the UI at runtime.
+ *
  * ## Which hook should I use?
  *
  * | Need | Use |
@@ -32,9 +54,12 @@
  * | Am I connected? (auth + wallet ready) | `useUser().isConnected` |
  * | EVM wallet (address, chainId, status, create, export) | `useEthereumEmbeddedWallet()` from `@openfort/react/ethereum` |
  * | Solana wallet (address, cluster, status, create) | `useSolanaEmbeddedWallet()` from `@openfort/react/solana` |
- * | Send ETH / write contract / get balance (EVM) | Use `wagmi` or `viem` directly |
- * | Get SOL balance / sign message / send SOL (Solana) | Use `@solana/kit` with embedded wallet provider |
- * | Connect/link wallet (SIWE) + list wallets | `useWalletAuth()` (from `@openfort/react/wagmi`) |
+ * | Native token balance (EVM or Solana) | `useBalance({ chainType, address })` |
+ * | Token + NFT inventory (EVM) | `useEthereumWalletAssets()` from `@openfort/react/ethereum` |
+ * | Send ETH / write contract (EVM) | Use `wagmi` or `viem` directly with the embedded provider |
+ * | Sign message / send SOL (Solana) | Use `@solana/kit` with the embedded wallet provider |
+ * | Connect/link wallet (SIWE) + list wallets | `useWalletAuth()` / `useConnectWithSiwe()` (from `@openfort/react/wagmi`) |
+ * | Scoped store subscription (avoid whole-store re-renders) | `useOpenfortStore(selector)` |
  * | Grant session key permissions | `useGrantPermissions()` |
  * | Revoke session key permissions | `useRevokePermissions()` |
  */
@@ -92,7 +117,8 @@ export { useRevokePermissions } from './hooks/openfort/useRevokePermissions'
 export { useUI } from './hooks/openfort/useUI'
 export { useUser } from './hooks/openfort/useUser'
 export type { UserWallet } from './hooks/openfort/walletTypes'
-export { invalidateBalance } from './hooks/useBalance'
+export type { BalanceState, UseBalanceOptions } from './hooks/useBalance'
+export { invalidateBalance, useBalance } from './hooks/useBalance'
 export { StoreContext } from './openfort/context'
 // ── Store / selectors ────────────────────────────────────────────────────────
 export {
@@ -106,6 +132,7 @@ export {
 } from './openfort/selectors'
 export type { OpenfortStore, OpenfortStoreState } from './openfort/store'
 export { useOpenfortCore as useOpenfort, useOpenfortCore } from './openfort/useOpenfort'
+export { useOpenfortStore } from './openfort/useOpenfortStore'
 export { getEmbeddedAccountsQueryOptions, getUserQueryOptions, openfortKeys } from './query'
 export type {
   CreateEmbeddedWalletOptions,
@@ -126,17 +153,14 @@ export type {
   CustomAvatarProps,
   Languages,
   Mode,
+  OpenfortErrorOptions,
   OpenfortHookOptions,
   OpenfortOptions,
   OpenfortWalletConfig,
   PhoneConfig,
   Theme,
 } from './types'
-export {
-  OAuthProvider,
-  SDKOverrides,
-  ThirdPartyOAuthProvider,
-} from './types'
+export { createOpenfortError, ERROR_CODES, OAuthProvider, SDKOverrides, ThirdPartyOAuthProvider } from './types'
 export { formatAddress } from './utils/format'
 export { getDefaultSolanaRpcUrl } from './utils/rpc'
 export { OPENFORT_VERSION } from './version'

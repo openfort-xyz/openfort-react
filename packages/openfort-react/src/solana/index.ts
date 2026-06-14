@@ -8,6 +8,8 @@
  */
 
 export type { SolanaUserWallet } from '../hooks/openfort/walletTypes'
+export type { BalanceState, UseBalanceOptions } from '../hooks/useBalance'
+export { invalidateBalance, useBalance } from '../hooks/useBalance'
 export type {
   CreateEmbeddedWalletOptions,
   CreateEmbeddedWalletResult,
