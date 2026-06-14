@@ -314,7 +314,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
 
     // Skip if we already initialized with the same parameters
     const feeSponsorshipPolicy =
-      evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId)?.policy : undefined
+      evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId)?.feeSponsorship : undefined
     const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId, feeSponsorshipPolicy }
     const prev = lastInitRef.current
     if (
