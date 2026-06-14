@@ -150,6 +150,7 @@
     ],
     "ignoreDependencies": [
       "@solana/kit",
+      "magic-string",
       "rollup-plugin-peer-deps-external",
       "rollup-plugin-typescript2",
       "typescript-plugin-styled-components",

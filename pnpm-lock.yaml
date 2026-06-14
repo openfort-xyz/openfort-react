@@ -960,6 +960,9 @@ importers:
       jsdom:
         specifier: ^29.1.1
         version: 29.1.1(@noble/hashes@2.0.1)
+      magic-string:
+        specifier: 0.30.21
+        version: 0.30.21
       rollup-plugin-peer-deps-external:
         specifier: ^2.2.4
         version: 2.2.4(rollup@4.59.0)

@@ -116,6 +116,7 @@
     "@walletconnect/ethereum-provider": "^2.23.9",
     "happy-dom": "^20.10.2",
     "jsdom": "^29.1.1",
+    "magic-string": "0.30.21",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-typescript2": "^0.37.0",
     "typescript": "^5.9.3",
