@@ -10,6 +10,8 @@
  */
 
 import type { EmbeddedAccount } from '@openfort/openfort-js'
+import { OpenfortError, OpenfortReactErrorType } from '../core/errors'
+import { getTransactionBytes } from './operations'
 import type {
   OpenfortEmbeddedSolanaWalletProvider,
   SignedSolanaTransaction,
@@ -118,6 +120,32 @@ class OpenfortSolanaProvider implements OpenfortEmbeddedSolanaWalletProvider {
    */
   async signAllTransactions(transactions: SolanaTransaction[]): Promise<SignedSolanaTransaction[]> {
     return await this._signAllTransactions(transactions)
+  }
+
+  /**
+   * Sign a single-signer transaction and assemble a broadcast-ready, base64 wire transaction.
+   *
+   * @param transaction - Transaction to sign
+   * @returns The base64 wire transaction and the Base58 signature
+   */
+  async signTransactionWire(transaction: SolanaTransaction): Promise<{ wireTransaction: string; signature: string }> {
+    const { signature } = await this._signTransaction(transaction)
+    const messageBytes = getTransactionBytes(transaction)
+    // @solana/kit is loaded lazily to keep the /solana entry free of a static kit import.
+    const { getBase58Encoder, getBase64Decoder } = await import('@solana/kit')
+    const signatureBytes = new Uint8Array(getBase58Encoder().encode(signature))
+    if (signatureBytes.length !== 64) {
+      throw new OpenfortError(
+        `Invalid Ed25519 signature: expected 64 bytes, got ${signatureBytes.length}`,
+        OpenfortReactErrorType.WALLET_ERROR
+      )
+    }
+    // Wire format: [signature count = 1][64-byte signature][message bytes].
+    const wire = new Uint8Array(1 + 64 + messageBytes.length)
+    wire[0] = 1
+    wire.set(signatureBytes, 1)
+    wire.set(messageBytes, 65)
+    return { wireTransaction: getBase64Decoder().decode(wire), signature }
   }
 
   /**

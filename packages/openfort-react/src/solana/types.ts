@@ -135,10 +135,16 @@ export type SolanaSignAllTransactionsRequest = {
  * }
  * ```
  *
- * @example Sign a transaction with @solana/kit
+ * @example Use with @solana/kit
  * ```tsx
- * // Sign the transaction's message bytes; returns a detached { signature, publicKey }.
- * const { signature } = await solana.provider.signTransaction({ messageBytes });
+ * import { createSolanaSigner } from '@openfort/react/solana'
+ * const signer = createSolanaSigner(solana.provider); // a kit TransactionSigner
+ * ```
+ *
+ * @example Broadcast-ready transaction
+ * ```tsx
+ * // signTransaction returns a detached signature; signTransactionWire assembles the wire tx.
+ * const { wireTransaction } = await solana.provider.signTransactionWire({ messageBytes });
  * ```
  */
 export interface OpenfortEmbeddedSolanaWalletProvider {
@@ -165,6 +171,16 @@ export interface OpenfortEmbeddedSolanaWalletProvider {
    * @returns Array of signed transactions
    */
   signAllTransactions(transactions: SolanaTransaction[]): Promise<SignedSolanaTransaction[]>
+
+  /**
+   * Sign a single-signer transaction and assemble a broadcast-ready, base64-encoded wire
+   * transaction. Unlike {@link signTransaction} (which returns only a detached signature),
+   * the result can be submitted directly to an RPC `sendTransaction`.
+   *
+   * @param transaction - Transaction to sign
+   * @returns The base64 wire transaction and the Base58 signature
+   */
+  signTransactionWire?(transaction: SolanaTransaction): Promise<{ wireTransaction: string; signature: string }>
 
   /**
    * Request-based API (EIP-1193 style)

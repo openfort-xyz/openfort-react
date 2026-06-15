@@ -15,6 +15,7 @@ export type {
   CreateEmbeddedWalletResult,
 } from '../shared/types'
 export { useSolanaEmbeddedWallet } from './hooks/useSolanaEmbeddedWallet'
+export { createSolanaSigner } from './signer'
 export type {
   // Wallet types
   ConnectedEmbeddedSolanaWallet,
