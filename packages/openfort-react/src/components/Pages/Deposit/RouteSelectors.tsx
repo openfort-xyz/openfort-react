@@ -1,17 +1,15 @@
 'use client'
 
 import type { SyntheticEvent } from 'react'
+import type { FundingChain } from '../../../hooks/openfort/useFundingChains'
 import { bareSelect, field, logoImg, selectWrap, twoCol } from './formStyles'
-import { chainLogo, tokenLogo, tokensFor } from './sources'
 
 const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
   e.currentTarget.style.display = 'none'
 }
 
-type SourceChain = { id: string; name: string }
-
 type RouteSelectorsProps = {
-  chains: SourceChain[]
+  chains: FundingChain[]
   chain: string
   token: string
   /** Label above the chain selector ("Supported chain" vs "Network"). */
@@ -20,7 +18,7 @@ type RouteSelectorsProps = {
   onTokenChange: (token: string) => void
 }
 
-/** The source chain + token selectors shared by every deposit route. */
+/** The source chain + token selectors, populated from the live Relay chain list. */
 export function RouteSelectors({
   chains,
   chain,
@@ -29,14 +27,17 @@ export function RouteSelectors({
   onChainChange,
   onTokenChange,
 }: RouteSelectorsProps) {
-  const tokens = tokensFor(chain)
+  const activeChain = chains.find((c) => c.id === chain) ?? chains[0]
+  const tokens = activeChain?.tokens ?? []
+  const activeToken = tokens.find((t) => t.symbol === token) ?? tokens[0]
+
   return (
     <div style={twoCol}>
       <label style={field}>
         {chainLabel}
         <div style={selectWrap}>
-          <img src={chainLogo(chain)} alt="" style={logoImg} onError={hideBrokenLogo} />
-          <select style={bareSelect} value={chain} onChange={(e) => onChainChange(e.target.value)}>
+          {activeChain?.logo && <img src={activeChain.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
+          <select style={bareSelect} value={activeChain?.id ?? ''} onChange={(e) => onChainChange(e.target.value)}>
             {chains.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
@@ -48,10 +49,10 @@ export function RouteSelectors({
       <label style={field}>
         Token
         <div style={selectWrap}>
-          <img src={tokenLogo(chain, token)} alt="" style={logoImg} onError={hideBrokenLogo} />
-          <select style={bareSelect} value={token} onChange={(e) => onTokenChange(e.target.value)}>
+          {activeToken?.logo && <img src={activeToken.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
+          <select style={bareSelect} value={activeToken?.symbol ?? ''} onChange={(e) => onTokenChange(e.target.value)}>
             {tokens.map((t) => (
-              <option key={t.symbol} value={t.symbol}>
+              <option key={`${t.symbol}:${t.address}`} value={t.symbol}>
                 {t.symbol}
               </option>
             ))}

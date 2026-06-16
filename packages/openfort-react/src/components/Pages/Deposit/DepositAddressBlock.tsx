@@ -7,12 +7,12 @@ import { ModalBody } from '../../Common/Modal/styles'
 import { AssetChainLogo } from './AssetChainLogo'
 import { DepositDetails } from './Details'
 import { addressBox, codeStyle } from './formStyles'
-import { chainLogo, tokenLogo } from './sources'
 import { QRWrapper } from './styles'
 
 type DepositAddressBlockProps = {
-  chain: string
-  token: string
+  /** Logo URLs for the QR badge (token over chain). */
+  assetLogo: string | null
+  chainLogo: string | null
   receiverAddress: string | null
   pm: PaymentMethod | null
   /** Cross-chain routes carry a fee/min Details panel; same-chain transfers don't. */
@@ -22,8 +22,8 @@ type DepositAddressBlockProps = {
 
 /** The QR + copyable deposit address (plus cross-chain Details) for a route. */
 export function DepositAddressBlock({
-  chain,
-  token,
+  assetLogo,
+  chainLogo,
   receiverAddress,
   pm,
   sameChain,
@@ -39,7 +39,7 @@ export function DepositAddressBlock({
       <QRWrapper>
         <CustomQRCode
           value={receiverAddress}
-          image={<AssetChainLogo assetLogo={tokenLogo(chain, token)} chainLogo={chainLogo(chain)} />}
+          image={<AssetChainLogo assetLogo={assetLogo ?? ''} chainLogo={chainLogo ?? ''} />}
           imageBackground="#fff"
         />
       </QRWrapper>

@@ -66,8 +66,8 @@ const DepositCex = () => {
 
       <AddressToggle label="Or send to a deposit address">
         <DepositAddressBlock
-          chain={route.chain}
-          token={route.token}
+          assetLogo={route.activeToken?.logo ?? null}
+          chainLogo={route.activeChain?.logo ?? null}
           receiverAddress={route.receiverAddress}
           pm={route.pm}
           sameChain={route.sameChain}

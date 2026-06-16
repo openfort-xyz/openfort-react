@@ -37,9 +37,12 @@ const DepositCrypto = () => {
       />
 
       {!route.isAvailable && <ModalBody>Set uiConfig.fundingBaseUrl to enable transfers.</ModalBody>}
+      {route.chainsLoading && route.chains.length === 0 && (
+        <ModalBody style={{ marginTop: 12 }}>Loading chains…</ModalBody>
+      )}
       <DepositAddressBlock
-        chain={route.chain}
-        token={route.token}
+        assetLogo={route.activeToken?.logo ?? null}
+        chainLogo={route.activeChain?.logo ?? null}
         receiverAddress={route.receiverAddress}
         pm={route.pm}
         sameChain={route.sameChain}
