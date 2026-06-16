@@ -31,6 +31,7 @@ import CreateWallet from '../Pages/CreateWallet'
 import Deposit from '../Pages/Deposit'
 import DepositCex from '../Pages/DepositCex'
 import DepositCrypto from '../Pages/DepositCrypto'
+import DepositWallet from '../Pages/DepositWallet'
 import DownloadApp from '../Pages/DownloadApp'
 import EmailLogin from '../Pages/EmailLogin'
 import EmailOTP from '../Pages/EmailOTP'
@@ -104,6 +105,7 @@ function buildSharedPages(): RoutePages {
     buy: <Buy />,
     deposit: <Deposit />,
     depositCrypto: <DepositCrypto />,
+    depositWallet: <DepositWallet />,
     depositCex: <DepositCex />,
     exportKey: <ExportKey />,
     walletOverview: <Connected />,

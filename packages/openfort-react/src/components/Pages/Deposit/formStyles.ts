@@ -69,7 +69,7 @@ export const deeplinkBtn: CSSProperties = {
   border: '1px solid var(--ck-body-divider, #e4e4e7)',
 }
 
-/** Full-width wallet row for the one-column "Transfer crypto from wallet" sub-page. */
+/** Full-width wallet row for the one-column "Transfer from wallet" deeplink list. */
 export const walletListBtn: CSSProperties = {
   display: 'block',
   width: '100%',

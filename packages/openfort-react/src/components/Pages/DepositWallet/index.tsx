@@ -7,62 +7,52 @@ import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { AddressToggle } from '../Deposit/AddressToggle'
 import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
-import { deeplinkBtn, deeplinkRow } from '../Deposit/formStyles'
+import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 
-const PAY_EXCHANGES = ['coinbase', 'binance'] as const
-
-function titleCase(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1)
-}
-
 /**
- * Transfer from Exchange — leads with one-tap Coinbase Pay / Binance Pay. The
- * manual deposit-address / QR path (withdraw from any exchange) sits behind an
- * off-by-default toggle.
+ * Transfer from wallet — leads with prefilled deeplinks into the user's source
+ * wallet app (the route is picked above). The manual deposit-address / QR path
+ * is tucked behind an off-by-default toggle.
  */
-const DepositCex = () => {
+const DepositWallet = () => {
   const { triggerResize } = useOpenfort()
-  const route = useDepositRoute('cex')
+  const route = useDepositRoute('crypto')
+  const deeplinks = route.pm?.deeplinks ?? []
 
   useEffect(() => {
     triggerResize()
-  }, [route.receiverAddress, route.loading, triggerResize])
-
-  const openPay = (exchange: string) => {
-    if (!route.address) return
-    const w = window.open('about:blank', '_blank', 'noopener,noreferrer')
-    void route
-      .payLink({ exchange, address: route.address, asset: route.token, chain: route.target.chain, amount: '10' })
-      .then((url) => {
-        if (w) w.location.href = url
-      })
-      .catch(() => w?.close())
-  }
+  }, [route.receiverAddress, route.loading, deeplinks.length, triggerResize])
 
   return (
     <PageContent onBack={routes.DEPOSIT}>
-      <ModalHeading>Transfer from Exchange</ModalHeading>
+      <ModalHeading>Transfer from wallet</ModalHeading>
 
       <RouteSelectors
         chains={route.chains}
         chain={route.chain}
         token={route.token}
-        chainLabel="Network"
+        chainLabel="Supported chain"
         onChainChange={route.setChain}
         onTokenChange={route.setToken}
       />
 
       {!route.isAvailable && <ModalBody>Set uiConfig.fundingBaseUrl to enable transfers.</ModalBody>}
+      {route.loading && !route.pm && <ModalBody style={{ marginTop: 12 }}>Preparing wallet links…</ModalBody>}
 
-      <div style={deeplinkRow}>
-        {PAY_EXCHANGES.map((ex) => (
-          <button key={ex} type="button" style={deeplinkBtn} onClick={() => openPay(ex)}>
-            Open {titleCase(ex)} ↗
-          </button>
-        ))}
-      </div>
+      {deeplinks.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+          {deeplinks.map((d) => (
+            <a key={d.app} href={d.url} target="_blank" rel="noreferrer" style={walletListBtn}>
+              {d.label} ↗
+            </a>
+          ))}
+        </div>
+      )}
+      {route.isAvailable && !route.loading && route.sameChain && (
+        <ModalBody style={{ marginTop: 12 }}>Pick a different source chain to get wallet links.</ModalBody>
+      )}
 
       <AddressToggle label="Or send to a deposit address">
         <DepositAddressBlock
@@ -80,4 +70,4 @@ const DepositCex = () => {
   )
 }
 
-export default DepositCex
+export default DepositWallet

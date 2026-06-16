@@ -1,14 +1,18 @@
 import type { BuyProviderId } from '../../Openfort/types'
 
 /** The deposit methods surfaced in the hub. */
-type DepositMethodId = 'applePay' | 'card' | 'crypto' | 'cex'
+type DepositMethodId = 'applePay' | 'card' | 'crypto' | 'wallet' | 'cex'
 
 /**
  * What a row routes into:
  * - `buy`: the existing fiat onramp flow, with a rail (provider) preselected.
- * - `crypto` / `cex`: the new funding-session Pages.
+ * - `crypto` / `wallet` / `cex`: the new funding-session Pages.
  */
-export type DepositMethodTarget = { kind: 'buy'; providerId: BuyProviderId } | { kind: 'crypto' } | { kind: 'cex' }
+export type DepositMethodTarget =
+  | { kind: 'buy'; providerId: BuyProviderId }
+  | { kind: 'crypto' }
+  | { kind: 'wallet' }
+  | { kind: 'cex' }
 
 type DepositMethod = {
   id: DepositMethodId
@@ -54,8 +58,14 @@ const ALL_METHODS: DepositMethod[] = [
     target: { kind: 'buy', providerId: 'stripe' },
   },
   {
+    id: 'wallet',
+    title: 'Transfer from wallet',
+    subtitle: 'MetaMask, Phantom, …',
+    target: { kind: 'wallet' },
+  },
+  {
     id: 'crypto',
-    title: 'Transfer crypto',
+    title: 'Transfer from address',
     subtitle: 'from any chain',
     target: { kind: 'crypto' },
   },
@@ -92,7 +102,9 @@ export function getPaymentOptions(ctx: PaymentOptionsContext): ResolvedDepositOp
     if (isRegionBlocked(method, ctx.region)) {
       return { ...method, disabled: true, disabledReason: 'Not available in your region' }
     }
-    if ((method.target.kind === 'crypto' || method.target.kind === 'cex') && !ctx.fundingAvailable) {
+    const fundingRail =
+      method.target.kind === 'crypto' || method.target.kind === 'wallet' || method.target.kind === 'cex'
+    if (fundingRail && !ctx.fundingAvailable) {
       return { ...method, disabled: true, disabledReason: 'Coming soon' }
     }
     return { ...method, disabled: false }

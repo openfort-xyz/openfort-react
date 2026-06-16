@@ -55,6 +55,7 @@ export const routes = {
   RECEIVE: 'receive',
   DEPOSIT: 'deposit',
   DEPOSIT_CRYPTO: 'depositCrypto',
+  DEPOSIT_WALLET: 'depositWallet',
   DEPOSIT_CEX: 'depositCex',
   BUY: 'buy',
   BUY_TOKEN_SELECT: 'buyTokenSelect',
@@ -390,6 +391,15 @@ export type FundingUIOptions = {
    * @default USDC on Base
    */
   targetCurrency?: string
+  /**
+   * Destination wallet that receives the deposit. Overrides the active embedded
+   * wallet address — set this when funds should land somewhere other than the
+   * active address (e.g. a deployed smart account when the active address is its
+   * owner EOA). Must be a valid address on `targetChain`; for EVM it also receives
+   * cross-chain refunds on the source chain, so use an address valid across chains.
+   * @default the active embedded wallet address
+   */
+  targetAddress?: string
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED

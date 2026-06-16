@@ -25,6 +25,10 @@ const Deposit = () => {
       setRoute(routes.DEPOSIT_CRYPTO)
       return
     }
+    if (target.kind === 'wallet') {
+      setRoute(routes.DEPOSIT_WALLET)
+      return
+    }
     if (target.kind === 'cex') {
       setRoute(routes.DEPOSIT_CEX)
       return
