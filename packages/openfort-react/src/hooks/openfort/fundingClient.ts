@@ -49,7 +49,7 @@ export function createFetchFundingClient(baseUrl: string): FundingClient {
         return readJson<FundingSession>(res)
       },
       async setPaymentMethod(id, { clientSecret, paymentMethod }) {
-        const res = await fetch(`${baseUrl}/v1/funding/sessions/${id}/paymentMethods`, {
+        const res = await fetch(`${baseUrl}/v1/funding/sessions/${encodeURIComponent(id)}/paymentMethods`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ clientSecret, paymentMethod }),
@@ -57,8 +57,12 @@ export function createFetchFundingClient(baseUrl: string): FundingClient {
         return readJson<FundingSession>(res)
       },
       async get(id, params) {
-        const query = params?.clientSecret ? `?clientSecret=${encodeURIComponent(params.clientSecret)}` : ''
-        return readJson<FundingSession>(await fetch(`${baseUrl}/v1/funding/sessions/${id}${query}`))
+        // clientSecret goes in a header, never the URL — query strings leak into
+        // server logs, browser history, and Referer headers on outbound navigation.
+        const headers = params?.clientSecret ? { 'x-client-secret': params.clientSecret } : undefined
+        return readJson<FundingSession>(
+          await fetch(`${baseUrl}/v1/funding/sessions/${encodeURIComponent(id)}`, { headers })
+        )
       },
     },
     async payLink(params) {
