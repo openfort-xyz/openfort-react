@@ -423,6 +423,22 @@ export type FundingUIOptions = {
    * @example [FundingMethod.WALLET, FundingMethod.ADDRESS]
    */
   methods?: FundingMethod[]
+  /**
+   * Allowlist of source chains shown in the crypto/exchange pickers, by CAIP-2 id,
+   * in this order. Omit for the common defaults (Arbitrum, Base, BNB, Ethereum,
+   * Monad, Optimism, Polygon, Solana). Selections the rail doesn't support are
+   * skipped.
+   * @example ['eip155:8453', 'eip155:42161', 'eip155:137']
+   */
+  sourceChains?: string[]
+  /**
+   * Allowlist of source currencies shown, by symbol (case-insensitive). The
+   * sentinel `'native'` matches each chain's native currency (ETH, SOL, POL, …).
+   * Applied across every chain; chains left with none are hidden. Omit for the
+   * default `['native', 'USDC', 'USDT']`.
+   * @example ['native', 'USDC', 'USDT']
+   */
+  sourceCurrencies?: string[]
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED

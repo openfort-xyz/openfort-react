@@ -34,7 +34,7 @@ const DepositCex = () => {
     if (!route.address) return
     const w = window.open('about:blank', '_blank', 'noopener,noreferrer')
     void route
-      .payLink({ exchange, address: route.address, asset: route.token, chain: route.target.chain, amount: '10' })
+      .payLink({ exchange, address: route.address, asset: route.currency, chain: route.target.chain, amount: '10' })
       .then((url) => {
         if (w) w.location.href = url
       })
@@ -48,10 +48,10 @@ const DepositCex = () => {
       <RouteSelectors
         chains={route.chains}
         chain={route.chain}
-        token={route.token}
+        currency={route.currency}
         chainLabel="Network"
         onChainChange={route.setChain}
-        onTokenChange={route.setToken}
+        onCurrencyChange={route.setCurrency}
       />
 
       {!route.isAvailable && <ModalBody>Set uiConfig.fundingBaseUrl to enable transfers.</ModalBody>}
@@ -66,7 +66,7 @@ const DepositCex = () => {
 
       <AddressToggle label="Or send to a deposit address">
         <DepositAddressBlock
-          assetLogo={route.activeToken?.logo ?? null}
+          assetLogo={route.activeCurrency?.logo ?? null}
           chainLogo={route.activeChain?.logo ?? null}
           receiverAddress={route.receiverAddress}
           pm={route.pm}

@@ -11,25 +11,25 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
 type RouteSelectorsProps = {
   chains: FundingChain[]
   chain: string
-  token: string
+  currency: string
   /** Label above the chain selector ("Supported chain" vs "Network"). */
   chainLabel: string
   onChainChange: (chain: string) => void
-  onTokenChange: (token: string) => void
+  onCurrencyChange: (currency: string) => void
 }
 
-/** The source chain + token selectors, populated from the live Relay chain list. */
+/** The source chain + currency selectors, populated from the live Relay chain list. */
 export function RouteSelectors({
   chains,
   chain,
-  token,
+  currency,
   chainLabel,
   onChainChange,
-  onTokenChange,
+  onCurrencyChange,
 }: RouteSelectorsProps) {
   const activeChain = chains.find((c) => c.id === chain) ?? chains[0]
-  const tokens = activeChain?.tokens ?? []
-  const activeToken = tokens.find((t) => t.symbol === token) ?? tokens[0]
+  const currencies = activeChain?.currencies ?? []
+  const activeCurrency = currencies.find((c) => c.symbol === currency) ?? currencies[0]
 
   return (
     <div style={twoCol}>
@@ -47,13 +47,17 @@ export function RouteSelectors({
         </div>
       </label>
       <label style={field}>
-        Token
+        Currency
         <div style={selectWrap}>
-          {activeToken?.logo && <img src={activeToken.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
-          <select style={bareSelect} value={activeToken?.symbol ?? ''} onChange={(e) => onTokenChange(e.target.value)}>
-            {tokens.map((t) => (
-              <option key={`${t.symbol}:${t.address}`} value={t.symbol}>
-                {t.symbol}
+          {activeCurrency?.logo && <img src={activeCurrency.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
+          <select
+            style={bareSelect}
+            value={activeCurrency?.symbol ?? ''}
+            onChange={(e) => onCurrencyChange(e.target.value)}
+          >
+            {currencies.map((c) => (
+              <option key={`${c.symbol}:${c.address}`} value={c.symbol}>
+                {c.symbol}
               </option>
             ))}
           </select>

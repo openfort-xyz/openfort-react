@@ -30,10 +30,10 @@ const DepositCrypto = () => {
       <RouteSelectors
         chains={route.chains}
         chain={route.chain}
-        token={route.token}
+        currency={route.currency}
         chainLabel="Supported chain"
         onChainChange={route.setChain}
-        onTokenChange={route.setToken}
+        onCurrencyChange={route.setCurrency}
       />
 
       {!route.isAvailable && <ModalBody>Set uiConfig.fundingBaseUrl to enable transfers.</ModalBody>}
@@ -41,7 +41,7 @@ const DepositCrypto = () => {
         <ModalBody style={{ marginTop: 12 }}>Loading chains…</ModalBody>
       )}
       <DepositAddressBlock
-        assetLogo={route.activeToken?.logo ?? null}
+        assetLogo={route.activeCurrency?.logo ?? null}
         chainLogo={route.activeChain?.logo ?? null}
         receiverAddress={route.receiverAddress}
         pm={route.pm}
