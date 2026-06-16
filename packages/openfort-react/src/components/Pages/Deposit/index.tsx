@@ -14,11 +14,15 @@ import { DepositContent, OptionButton, OptionInfo, OptionList, OptionSubtitle, O
  * new funding-session Pages; fiat rows reuse the existing Buy flow.
  */
 const Deposit = () => {
-  const { setRoute, setBuyForm } = useOpenfort()
+  const { setRoute, setBuyForm, uiConfig } = useOpenfort()
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
 
-  const options = getPaymentOptions({ isMobile, fundingAvailable: isAvailable })
+  const options = getPaymentOptions({
+    isMobile,
+    fundingAvailable: isAvailable,
+    methods: uiConfig.funding?.methods,
+  })
 
   const go = (target: DepositMethodTarget) => {
     if (target.kind === 'crypto') {

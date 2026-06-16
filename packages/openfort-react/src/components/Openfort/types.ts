@@ -379,6 +379,23 @@ type WalletRecoveryOptionsExtended = {
   defaultMethod: RecoveryMethod
 }
 
+/**
+ * A funding method shown in the Deposit hub. Use `funding.methods` to choose
+ * which appear and in what order — like `authProviders` for the auth modal.
+ */
+export enum FundingMethod {
+  /** Apple Pay (fiat onramp; mobile only). */
+  APPLE_PAY = 'applePay',
+  /** Card (fiat onramp). */
+  CARD = 'card',
+  /** Transfer from wallet — prefilled wallet deeplinks. */
+  WALLET = 'wallet',
+  /** Transfer from address — cross-chain deposit address + QR. */
+  ADDRESS = 'crypto',
+  /** Transfer from Exchange — Coinbase / Binance on-ramp links + deposit address. */
+  EXCHANGE = 'cex',
+}
+
 /** Where Deposit-hub funding lands. Defaults to USDC on Base when omitted. */
 export type FundingUIOptions = {
   /**
@@ -400,6 +417,12 @@ export type FundingUIOptions = {
    * @default the active embedded wallet address
    */
   targetAddress?: string
+  /**
+   * Which funding methods the Deposit hub shows, and in what order. Omit to show
+   * all available methods (Apple Pay first on mobile). Mirrors `authProviders`.
+   * @example [FundingMethod.WALLET, FundingMethod.ADDRESS]
+   */
+  methods?: FundingMethod[]
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED

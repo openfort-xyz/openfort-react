@@ -60,7 +60,7 @@ export { default as ChainIcon } from './components/Common/Chain'
 export { OpenfortButton } from './components/ConnectButton'
 export { OpenfortProvider } from './components/Openfort/OpenfortProvider'
 export type { CustomizableRoutes, MultiChainAsset } from './components/Openfort/types'
-export { LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types'
+export { FundingMethod, LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types'
 export { embeddedWalletId } from './constants/openfort'
 export {
   OpenfortError,

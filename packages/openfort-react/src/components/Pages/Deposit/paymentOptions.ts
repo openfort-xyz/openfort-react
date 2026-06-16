@@ -1,7 +1,4 @@
-import type { BuyProviderId } from '../../Openfort/types'
-
-/** The deposit methods surfaced in the hub. */
-type DepositMethodId = 'applePay' | 'card' | 'crypto' | 'wallet' | 'cex'
+import { type BuyProviderId, FundingMethod } from '../../Openfort/types'
 
 /**
  * What a row routes into:
@@ -15,7 +12,7 @@ export type DepositMethodTarget =
   | { kind: 'cex' }
 
 type DepositMethod = {
-  id: DepositMethodId
+  id: FundingMethod
   title: string
   /** Speed/fee hint, e.g. "instant, ~4% fee". */
   subtitle: string
@@ -29,6 +26,11 @@ type PaymentOptionsContext = {
   isMobile: boolean
   /** When the funding backend is unavailable, crypto/CEX rows are disabled. */
   fundingAvailable: boolean
+  /**
+   * Integrator-selected methods, in display order. When set, only these show
+   * (still subject to device/availability gating). Omit to show all.
+   */
+  methods?: FundingMethod[]
   /**
    * ISO-3166 region of the user, when known. Used to disable region-blocked
    * rails with a reason.
@@ -45,32 +47,32 @@ type ResolvedDepositOption = DepositMethod & {
 
 const ALL_METHODS: DepositMethod[] = [
   {
-    id: 'applePay',
+    id: FundingMethod.APPLE_PAY,
     title: 'Apple Pay',
     subtitle: 'instant',
     target: { kind: 'buy', providerId: 'stripe' },
     mobileOnly: true,
   },
   {
-    id: 'card',
+    id: FundingMethod.CARD,
     title: 'Card',
     subtitle: 'instant, ~4% fee',
     target: { kind: 'buy', providerId: 'stripe' },
   },
   {
-    id: 'wallet',
+    id: FundingMethod.WALLET,
     title: 'Transfer from wallet',
     subtitle: 'MetaMask, Phantom, …',
     target: { kind: 'wallet' },
   },
   {
-    id: 'crypto',
+    id: FundingMethod.ADDRESS,
     title: 'Transfer from address',
     subtitle: 'from any chain',
     target: { kind: 'crypto' },
   },
   {
-    id: 'cex',
+    id: FundingMethod.EXCHANGE,
     title: 'Transfer from Exchange',
     subtitle: 'Binance, Coinbase',
     target: { kind: 'cex' },
@@ -79,7 +81,7 @@ const ALL_METHODS: DepositMethod[] = [
 
 // TODO(openfort-funding-backend): drive region blocks from a server-provided
 // availability map instead of this placeholder (no rails are blocked yet).
-const REGION_BLOCKED: Partial<Record<DepositMethodId, string[]>> = {}
+const REGION_BLOCKED: Partial<Record<FundingMethod, string[]>> = {}
 
 function isRegionBlocked(method: DepositMethod, region?: string | null): boolean {
   if (!region) return false
@@ -87,16 +89,25 @@ function isRegionBlocked(method: DepositMethod, region?: string | null): boolean
 }
 
 /**
- * Resolve the deposit rows for the current context: filter device-incompatible
- * rails, order them (Apple Pay first on mobile), and mark disabled rows with a
- * reason.
+ * Resolve the deposit rows for the current context: pick the integrator's
+ * `methods` (or all) in order, filter device-incompatible rails, default-order
+ * Apple Pay first on mobile when the order isn't explicit, and mark disabled
+ * rows with a reason.
  */
 export function getPaymentOptions(ctx: PaymentOptionsContext): ResolvedDepositOption[] {
-  const visible = ALL_METHODS.filter((m) => (m.mobileOnly ? ctx.isMobile : true))
+  const explicitMethods = ctx.methods && ctx.methods.length > 0 ? ctx.methods : null
+  const byId = new Map(ALL_METHODS.map((m) => [m.id, m]))
+  const base = explicitMethods
+    ? explicitMethods.map((id) => byId.get(id)).filter((m): m is DepositMethod => m !== undefined)
+    : ALL_METHODS
 
-  const ordered = ctx.isMobile
-    ? [...visible].sort((a, b) => Number(b.id === 'applePay') - Number(a.id === 'applePay'))
-    : visible
+  const visible = base.filter((m) => (m.mobileOnly ? ctx.isMobile : true))
+
+  // Honor the integrator's explicit order; otherwise float Apple Pay first on mobile.
+  const ordered =
+    !explicitMethods && ctx.isMobile
+      ? [...visible].sort((a, b) => Number(b.id === FundingMethod.APPLE_PAY) - Number(a.id === FundingMethod.APPLE_PAY))
+      : visible
 
   return ordered.map((method) => {
     if (isRegionBlocked(method, ctx.region)) {
