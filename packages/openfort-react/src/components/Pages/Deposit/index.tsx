@@ -79,8 +79,8 @@ const Deposit = () => {
     }
   }
 
-  // Fewer logos on mobile so the subtitle never gets crowded out.
-  const maxLogos = isMobile ? 3 : 5
+  // Keep the preview compact: at most 4 logos (fewer on mobile).
+  const maxLogos = isMobile ? 3 : 4
 
   /** The logos to preview on the right of a row. */
   const clusterFor = (id: FundingMethod): ReactNode[] => {
