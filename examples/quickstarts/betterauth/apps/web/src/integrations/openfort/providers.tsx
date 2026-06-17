@@ -39,35 +39,30 @@ const walletConfig = {
   // For AUTOMATIC embedded wallet recovery an encryption session is required.
   // See: https://www.openfort.io/docs/products/embedded-wallet/react-native/quickstart/automatic
   // For backend setup: https://github.com/openfort-xyz/openfort-backend-quickstart
-  getEncryptionSession: async (): Promise<string | null> => {
-    try {
-      const session = await authClient.getSession()
-      const token = session?.data?.session?.token
-      if (!token) {
-        console.error('Better Auth - No token available')
-        return null
-      }
-      const response = await fetch(
-        `${import.meta.env.VITE_BETTERAUTH_URL + import.meta.env.VITE_BETTERAUTH_BASE_PATH}/encryption-session`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        },
-      )
-      if (!response.ok) {
-        console.error('Better Auth - Failed to get encryption session:', response.status)
-        return null
-      }
-      const data = await response.json()
-      console.log('Better Auth - Retrieved encryption session:', data)
-      return data.sessionId ?? null
-    } catch (error) {
-      console.error('Better Auth - Error getting encryption session:', error)
-      return null
+  getEncryptionSession: async (): Promise<string> => {
+    const session = await authClient.getSession()
+    const token = session?.data?.session?.token
+    if (!token) {
+      throw new Error('Better Auth - No token available')
     }
+    const response = await fetch(
+      `${import.meta.env.VITE_BETTERAUTH_URL + import.meta.env.VITE_BETTERAUTH_BASE_PATH}/encryption-session`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      },
+    )
+    if (!response.ok) {
+      throw new Error(`Better Auth - Failed to get encryption session: ${response.status}`)
+    }
+    const data = await response.json()
+    if (!data.sessionId) {
+      throw new Error('Better Auth - No sessionId in encryption-session response')
+    }
+    return data.sessionId
   },
   connectOnLogin: true,
 }

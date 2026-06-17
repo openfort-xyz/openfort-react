@@ -4,12 +4,18 @@ import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import React, { useEffect } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
+import { useTimedOut } from '../../../hooks/useTimedOut'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Loader from '../../Common/Loading'
+import NotFoundFallback from '../../Common/NotFoundFallback'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+
+// Watchdog: if no state transition routes us away within this window, the modal
+// would otherwise spin forever (e.g. opened while signed out, or a misconfigured SDK).
+const LOADING_TIMEOUT_MS = 10_000
 
 const Loading: React.FC = () => {
   const { setRoute, walletConfig } = useOpenfort()
@@ -29,6 +35,7 @@ const Loading: React.FC = () => {
 
   const [isFirstFrame, setIsFirstFrame] = React.useState(true)
   const [retryCount, setRetryCount] = React.useState(0)
+  const timedOut = useTimedOut(LOADING_TIMEOUT_MS)
 
   useEffect(() => {
     if (isFirstFrame) return
@@ -63,6 +70,8 @@ const Loading: React.FC = () => {
     // UX: Wait a bit before showing the next page
     setTimeout(() => setIsFirstFrame(false), 400)
   }, [])
+
+  if (timedOut) return <NotFoundFallback />
 
   return (
     <PageContent>

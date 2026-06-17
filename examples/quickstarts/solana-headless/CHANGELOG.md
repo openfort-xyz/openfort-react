@@ -1,5 +1,19 @@
 # quickstart-solana-headless
 
+## 0.0.20
+
+### Patch Changes
+
+- Updated dependencies [[`bd90b66`](https://github.com/openfort-xyz/openfort-react/commit/bd90b6660cfdd9c4921af6607573884b3ed5ee1b)]:
+  - @openfort/react@1.1.4
+
+## 0.0.19
+
+### Patch Changes
+
+- Updated dependencies [[`eab044c`](https://github.com/openfort-xyz/openfort-react/commit/eab044cec690dd714ab1dde1d1600777a7b60bb7)]:
+  - @openfort/react@1.1.3
+
 ## 0.0.18
 
 ### Patch Changes

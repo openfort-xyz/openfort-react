@@ -5,11 +5,13 @@ import { useEffect, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
 import { toSolanaUserWallet } from '../../../hooks/openfort/walletTypes'
+import { useTimedOut } from '../../../hooks/useTimedOut'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types'
 import { logger } from '../../../utils/logger'
 import Loader from '../../Common/Loading'
+import NotFoundFallback from '../../Common/NotFoundFallback'
 import { createRoute, recoverRoute } from '../../Openfort/routeHelpers'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -49,6 +51,10 @@ const errorForChainRegistry: Record<
   }),
 }
 
+// Watchdog: if wallet loading never settles (hung fetch, unreachable state),
+// bail out to the not-found fallback instead of spinning forever.
+const LOADING_TIMEOUT_MS = 10_000
+
 const LoadWallets: React.FC = () => {
   const { chainType, user, isLoadingAccounts } = useOpenfortCore()
   const { triggerResize, setRoute, setConnector, walletConfig } = useOpenfort()
@@ -58,6 +64,7 @@ const LoadWallets: React.FC = () => {
   const connectOnLogin = walletConfig?.connectOnLogin ?? true
 
   const [loadingUX, setLoadingUX] = useState(true)
+  const timedOut = useTimedOut(LOADING_TIMEOUT_MS)
 
   const wallets = embeddedWallet.wallets
   const isLoadingWallets =
@@ -122,6 +129,9 @@ const LoadWallets: React.FC = () => {
   const { isError: isErrorFromChain, message: errorMessageFromChain } = errorForChainRegistry[chainType](errorWallets)
   const isError = !user || isErrorFromChain
   const errorMessage = !user ? undefined : errorMessageFromChain
+
+  // Only fall back while still spinning — real errors keep their own message
+  if (timedOut && !isError) return <NotFoundFallback />
 
   return (
     <PageContent onBack={!user ? 'back' : null}>

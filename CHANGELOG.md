@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.4
+
+### Patch Changes
+
+- [#275](https://github.com/openfort-xyz/openfort-react/pull/275) [`bd90b66`](https://github.com/openfort-xyz/openfort-react/commit/bd90b6660cfdd9c4921af6607573884b3ed5ee1b) Thanks [@isardmart](https://github.com/isardmart)! - fix iframe timeout error on strict origin
+
+## 1.1.3
+
+### Patch Changes
+
+- [#273](https://github.com/openfort-xyz/openfort-react/pull/273) [`eab044c`](https://github.com/openfort-xyz/openfort-react/commit/eab044cec690dd714ab1dde1d1600777a7b60bb7) Thanks [@isardmart](https://github.com/isardmart)! - Prevent SendConfirmation from submitting a duplicate transaction: the confirm button is now disabled and `handleConfirm` is guarded once a transaction is in flight, and a provider error is reliably shown in the error UI.
+
 ## 1.1.2
 
 ### Patch Changes

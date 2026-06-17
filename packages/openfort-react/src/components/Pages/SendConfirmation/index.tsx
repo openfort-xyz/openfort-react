@@ -312,7 +312,10 @@ const SendConfirmation = () => {
   }, [isPollingBalance, currentBalance])
 
   const handleConfirm = async () => {
-    if (submittingRef.current) return
+    // Block re-entry while submitting, and never submit when a tx already
+    // exists for this send — a second `eth_sendTransaction` is the duplicate
+    // transaction the customer hit after the wallet was slow to respond.
+    if (submittingRef.current || transactionHash) return
     if (!recipientAddress || !parsedAmount || parsedAmount <= BigInt(0) || insufficientBalance) return
 
     submittingRef.current = true
@@ -332,8 +335,10 @@ const SendConfirmation = () => {
           chainId,
         })
       }
-    } catch (_error) {
-      // Errors are surfaced through mutation hooks
+    } catch {
+      // The error is already recorded in nativeError/erc20Error (which drive
+      // firstError and the error UI) before being re-thrown — we only catch
+      // here to stop it becoming an unhandled rejection.
     } finally {
       submittingRef.current = false
     }
@@ -487,7 +492,14 @@ const SendConfirmation = () => {
           variant="primary"
           onClick={isSuccess ? handleOpenBlockExplorer : handleConfirm}
           disabled={
-            isSuccess ? false : !recipientAddress || !parsedAmount || parsedAmount <= BigInt(0) || insufficientBalance
+            isSuccess
+              ? false
+              : isLoading ||
+                Boolean(transactionHash) ||
+                !recipientAddress ||
+                !parsedAmount ||
+                parsedAmount <= BigInt(0) ||
+                insufficientBalance
           }
           waiting={isLoading}
           icon={isSuccess ? <TickIcon style={{ width: 18, height: 18 }} /> : undefined}

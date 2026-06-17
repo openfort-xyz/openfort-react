@@ -9,6 +9,7 @@ import { useExternalConnector } from '../../wallets/useExternalConnectors'
 import { CopyText } from '../Common/CopyToClipboard/CopyText'
 import Loader from '../Common/Loading'
 import { ModalBody } from '../Common/Modal/styles'
+import WalletConnectNotConfigured, { useHasWalletConnect } from '../Common/WalletConnectNotConfigured'
 import { routes } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
 import { PageContent } from '../PageContent'
@@ -61,6 +62,7 @@ const ConnectWithWalletConnect = () => {
   const { connector } = useOpenfort()
   const wallet = useExternalConnector(connector.id)
   const { open: openWalletConnectModal } = useWalletConnectModal()
+  const hasWalletConnect = useHasWalletConnect()
   const [error, setError] = useState<string | undefined>(undefined)
   const hasOpenedRef = useRef(false)
 
@@ -71,10 +73,13 @@ const ConnectWithWalletConnect = () => {
   }, [openWalletConnectModal])
 
   useEffect(() => {
+    if (!hasWalletConnect) return
     if (hasOpenedRef.current) return
     hasOpenedRef.current = true
     openModal()
-  }, [openModal])
+  }, [openModal, hasWalletConnect])
+
+  if (!hasWalletConnect) return <WalletConnectNotConfigured />
 
   return (
     <PageContent>
