@@ -56,7 +56,8 @@ export const Send = () => {
       : null
 
   const handleSend = async (gasless: boolean) => {
-    if (solana.status !== 'connected' || !address) return
+    if (solana.status !== 'connected') return
+    if (!address) return
     const form = document.getElementById('send-sol-form') as HTMLFormElement
     const recipient = (form.elements.namedItem('recipient') as HTMLInputElement)?.value?.trim()
     const amountStr = (form.elements.namedItem('amount') as HTMLInputElement)?.value
