@@ -41,7 +41,7 @@ export function createFetchFundingClient(baseUrl: string): FundingClient {
   return {
     sessions: {
       async create({ target }) {
-        const res = await fetch(`${baseUrl}/v1/funding/sessions`, {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ target }),
@@ -49,7 +49,7 @@ export function createFetchFundingClient(baseUrl: string): FundingClient {
         return readJson<FundingSession>(res)
       },
       async setPaymentMethod(id, { clientSecret, paymentMethod }) {
-        const res = await fetch(`${baseUrl}/v1/funding/sessions/${encodeURIComponent(id)}/paymentMethods`, {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/payment_methods`, {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ clientSecret, paymentMethod }),
@@ -57,16 +57,12 @@ export function createFetchFundingClient(baseUrl: string): FundingClient {
         return readJson<FundingSession>(res)
       },
       async get(id, params) {
-        // clientSecret goes in a header, never the URL — query strings leak into
-        // server logs, browser history, and Referer headers on outbound navigation.
-        const headers = params?.clientSecret ? { 'x-client-secret': params.clientSecret } : undefined
-        return readJson<FundingSession>(
-          await fetch(`${baseUrl}/v1/funding/sessions/${encodeURIComponent(id)}`, { headers })
-        )
+        const query = params?.clientSecret ? `?clientSecret=${encodeURIComponent(params.clientSecret)}` : ''
+        return readJson<FundingSession>(await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}${query}`))
       },
     },
     async payLink(params) {
-      const res = await fetch(`${baseUrl}/v1/funding/pay-link`, {
+      const res = await fetch(`${baseUrl}/v2/funding/pay_link`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(params),

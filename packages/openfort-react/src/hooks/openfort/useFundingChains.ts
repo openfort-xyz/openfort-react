@@ -54,7 +54,7 @@ export const DEFAULT_SOURCE_CURRENCIES = ['native', 'USDC', 'USDT']
 
 /**
  * The chains/currencies the funding backend supports, fetched from
- * `GET /v1/funding/chains` (a live passthrough of Relay's `/chains`), then
+ * `GET /v2/funding/chains` (a live passthrough of Relay's `/chains`), then
  * narrowed to a curated subset. The provider dictionary is dynamic; the client
  * just selects from it via `uiConfig.funding.{sourceChains,sourceCurrencies}`,
  * defaulting to {@link DEFAULT_SOURCE_CHAINS} / {@link DEFAULT_SOURCE_CURRENCIES}.
@@ -76,7 +76,7 @@ export function useFundingChains(): UseFundingChains {
     }
     let cancelled = false
     setState((s) => ({ ...s, loading: true }))
-    fetch(`${baseUrl}/v1/funding/chains`)
+    fetch(`${baseUrl}/v2/funding/chains`)
       .then((r) => {
         if (!r.ok) throw new Error(`Failed to load chains (${r.status})`)
         return r.json() as Promise<{ chains: FundingChain[] }>
