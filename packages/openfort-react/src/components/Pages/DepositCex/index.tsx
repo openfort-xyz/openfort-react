@@ -9,12 +9,16 @@ import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { AddressToggle } from '../Deposit/AddressToggle'
 import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
-import { deeplinkBtn, deeplinkRow } from '../Deposit/formStyles'
+import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
-import { ButtonLogo } from '../Deposit/styles'
+import { ButtonLogo, StepDivider } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 
-const PAY_EXCHANGES = ['coinbase', 'binance'] as const
+/** Exchange rails. Binance (Connect) is gated until its on-ramp lands. */
+const EXCHANGES = [
+  { id: 'coinbase', comingSoon: false },
+  { id: 'binance', comingSoon: true },
+] as const
 
 /** Exchange brand logos keyed by exchange id. */
 const EXCHANGE_LOGO: Record<string, ReactNode> = {
@@ -65,18 +69,39 @@ const DepositCex = () => {
 
       {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
-      <div style={deeplinkRow}>
-        {PAY_EXCHANGES.map((ex) => (
-          <button
-            key={ex}
-            type="button"
-            style={{ ...deeplinkBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            onClick={() => openPay(ex)}
-          >
-            <ButtonLogo>{EXCHANGE_LOGO[ex]}</ButtonLogo>
-            Open {titleCase(ex)} ↗
-          </button>
-        ))}
+      <StepDivider>Then open an exchange</StepDivider>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
+        {EXCHANGES.map((ex) =>
+          ex.comingSoon ? (
+            <button
+              key={ex.id}
+              type="button"
+              disabled
+              style={{
+                ...walletListBtn,
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                opacity: 0.55,
+                cursor: 'not-allowed',
+              }}
+            >
+              <ButtonLogo>{EXCHANGE_LOGO[ex.id]}</ButtonLogo>
+              <span>{titleCase(ex.id)}</span>
+              <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600 }}>Coming soon</span>
+            </button>
+          ) : (
+            <button
+              key={ex.id}
+              type="button"
+              style={{ ...walletListBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              onClick={() => openPay(ex.id)}
+            >
+              <ButtonLogo>{EXCHANGE_LOGO[ex.id]}</ButtonLogo>
+              Open {titleCase(ex.id)} ↗
+            </button>
+          )
+        )}
       </div>
 
       <AddressToggle label="Or send to a deposit address">

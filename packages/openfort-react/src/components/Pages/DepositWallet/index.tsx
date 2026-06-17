@@ -11,7 +11,7 @@ import { AddressToggle } from '../Deposit/AddressToggle'
 import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
-import { ButtonLogo, Skeleton } from '../Deposit/styles'
+import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 
 /** Wallet-app brand logos keyed by the deeplink `app` id. */
@@ -21,6 +21,7 @@ const WALLET_LOGO: Record<string, ReactNode> = {
   phantom: <logos.Phantom background />,
   trust: <logos.Trust />,
   rainbow: <logos.Rainbow round />,
+  rabby: <logos.Rabby />,
 }
 
 /**
@@ -51,6 +52,8 @@ const DepositWallet = () => {
       />
 
       {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
+
+      <StepDivider>Then open your wallet</StepDivider>
       {route.loading && !route.pm && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
           <Skeleton $h="44px" $r="10px" />

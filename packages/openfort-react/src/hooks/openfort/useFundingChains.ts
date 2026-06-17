@@ -40,7 +40,6 @@ export const DEFAULT_SOURCE_CHAINS = [
   'eip155:8453', // Base
   'eip155:56', // BNB Chain
   'eip155:1', // Ethereum
-  'eip155:143', // Monad
   'eip155:10', // Optimism
   'eip155:137', // Polygon
   'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp', // Solana

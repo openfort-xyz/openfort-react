@@ -46,23 +46,6 @@ export const orText: CSSProperties = { fontSize: 12, fontWeight: 500, color: 'va
 /** Chain + token selectors side by side. */
 export const twoCol: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }
 
-/** Wrapping row of wallet deeplink buttons at the bottom of the crypto flow. */
-export const deeplinkRow: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 16 }
-
-/** Themed (secondary-button) deeplink button — matches the hub options, visible in both modes. */
-export const deeplinkBtn: CSSProperties = {
-  flex: '1 1 130px',
-  textAlign: 'center',
-  padding: '10px 12px',
-  borderRadius: 10,
-  fontSize: 13,
-  fontWeight: 600,
-  textDecoration: 'none',
-  background: 'var(--ck-secondary-button-background, #f3f3f5)',
-  color: 'var(--ck-body-color, #1a1a2e)',
-  border: '1px solid var(--ck-body-divider, #e4e4e7)',
-}
-
 /** Full-width wallet row for the one-column "Transfer from wallet" deeplink list. */
 export const walletListBtn: CSSProperties = {
   display: 'block',

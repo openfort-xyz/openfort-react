@@ -12,6 +12,18 @@ const pulse = keyframes`
   50% { opacity: 0.45; }
 `
 
+/** Separates the chain/currency step (above) from the action buttons (below). */
+export const StepDivider = styled.div`
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ck-body-divider, #ededed);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--ck-body-color-muted, #6b7280);
+`
+
 /** Sizes a brand logo (svg/img) to 20px for use inside wallet/exchange buttons. */
 export const ButtonLogo = styled.span`
   display: inline-flex;
