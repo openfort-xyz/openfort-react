@@ -38,7 +38,7 @@ const DepositWallet = () => {
         onCurrencyChange={route.setCurrency}
       />
 
-      {!route.isAvailable && <ModalBody>Set uiConfig.fundingBaseUrl to enable transfers.</ModalBody>}
+      {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
       {route.loading && !route.pm && <ModalBody style={{ marginTop: 12 }}>Preparing wallet links…</ModalBody>}
 
       {deeplinks.length > 0 && (

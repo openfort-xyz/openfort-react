@@ -36,7 +36,7 @@ const DepositCrypto = () => {
         onCurrencyChange={route.setCurrency}
       />
 
-      {!route.isAvailable && <ModalBody>Set uiConfig.fundingBaseUrl to enable transfers.</ModalBody>}
+      {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
       {route.chainsLoading && route.chains.length === 0 && (
         <ModalBody style={{ marginTop: 12 }}>Loading chains…</ModalBody>
       )}

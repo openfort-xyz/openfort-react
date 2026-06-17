@@ -54,7 +54,7 @@ const DepositCex = () => {
         onCurrencyChange={route.setCurrency}
       />
 
-      {!route.isAvailable && <ModalBody>Set uiConfig.fundingBaseUrl to enable transfers.</ModalBody>}
+      {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
       <div style={deeplinkRow}>
         {PAY_EXCHANGES.map((ex) => (

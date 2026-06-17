@@ -21,7 +21,7 @@ type DepositMethod = {
   mobileOnly?: boolean
 }
 
-/** Context used to order/filter the rows for the current device + region. */
+/** Context used to order/filter the rows for the current device. */
 type PaymentOptionsContext = {
   isMobile: boolean
   /** When the funding backend is unavailable, crypto/CEX rows are disabled. */
@@ -31,12 +31,6 @@ type PaymentOptionsContext = {
    * (still subject to device/availability gating). Omit to show all.
    */
   methods?: FundingMethod[]
-  /**
-   * ISO-3166 region of the user, when known. Used to disable region-blocked
-   * rails with a reason.
-   * TODO(openfort-funding-backend): source this from the platform/geo config.
-   */
-  region?: string | null
 }
 
 /** A row ready to render: resolved order, plus disabled state + reason. */
@@ -79,15 +73,6 @@ const ALL_METHODS: DepositMethod[] = [
   },
 ]
 
-// TODO(openfort-funding-backend): drive region blocks from a server-provided
-// availability map instead of this placeholder (no rails are blocked yet).
-const REGION_BLOCKED: Partial<Record<FundingMethod, string[]>> = {}
-
-function isRegionBlocked(method: DepositMethod, region?: string | null): boolean {
-  if (!region) return false
-  return REGION_BLOCKED[method.id]?.includes(region) ?? false
-}
-
 /**
  * Resolve the deposit rows for the current context: pick the integrator's
  * `methods` (or all) in order, filter device-incompatible rails, default-order
@@ -110,9 +95,6 @@ export function getPaymentOptions(ctx: PaymentOptionsContext): ResolvedDepositOp
       : visible
 
   return ordered.map((method) => {
-    if (isRegionBlocked(method, ctx.region)) {
-      return { ...method, disabled: true, disabledReason: 'Not available in your region' }
-    }
     const fundingRail =
       method.target.kind === 'crypto' || method.target.kind === 'wallet' || method.target.kind === 'cex'
     if (fundingRail && !ctx.fundingAvailable) {
