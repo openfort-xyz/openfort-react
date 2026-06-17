@@ -188,9 +188,22 @@ const BuySelectProvider = () => {
   return (
     <PageContent onBack={handleBack}>
       <ModalHeading>Select Provider</ModalHeading>
-      <ModalBody>{formattedFiat && `Buying ${formattedFiat} of ${tokenSymbol}`}</ModalBody>
-      <ModalBody style={{ marginTop: 4, fontSize: '12px', opacity: 0.7 }}>
-        {isLoadingQuote ? 'Loading quotes...' : `Quotes refresh in ${quoteRefreshTimer}s`}
+
+      {/* Carry the first-screen selection into the quote screen so the user keeps context. */}
+      <div style={{ textAlign: 'center', margin: '6px 0 16px' }}>
+        <div style={{ fontSize: 13, color: 'var(--ck-body-color-muted)' }}>You pay</div>
+        <div style={{ fontSize: 30, fontWeight: 700, lineHeight: 1.1, color: 'var(--ck-body-color)' }}>
+          {formattedFiat || '—'}
+        </div>
+        {targetDestinationAmount !== null && (
+          <div style={{ fontSize: 14, fontWeight: 500, color: 'var(--ck-body-color-muted)', marginTop: 4 }}>
+            ≈ {targetDestinationAmount.toFixed(2)} {tokenSymbol}
+          </div>
+        )}
+      </div>
+
+      <ModalBody style={{ marginTop: 0, fontSize: '12px', opacity: 0.7 }}>
+        {isLoadingQuote ? 'Loading quotes…' : `Quotes refresh in ${quoteRefreshTimer}s`}
       </ModalBody>
 
       <ProviderList>

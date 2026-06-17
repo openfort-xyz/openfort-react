@@ -1,10 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { PaymentMethod } from '../../../hooks/openfort/useFunding'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { chevron, detailsBox, detailsLabel, detailsRow, detailsToggle, detailsValue } from './formStyles'
-import { formatUnits6 } from './sources'
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
@@ -15,16 +13,14 @@ function Row({ label, value }: { label: string; value: string }) {
   )
 }
 
-/** Collapsible details: minimum, Relay fee, processing time, max deposit. */
-export function DepositDetails({ pm }: { pm: PaymentMethod }) {
-  const [open, setOpen] = useState(false)
+/** Collapsible details: minimum amount, fee, time to receive, max deposit. */
+export function DepositDetails() {
+  const [open, setOpen] = useState(true)
   const { triggerResize } = useOpenfort()
   // Grow/shrink the modal to fit the expanded rows.
   useEffect(() => {
     triggerResize()
   }, [open, triggerResize])
-  const relayFee = pm.fees.find((f) => f.kind === 'relayerService')
-  const feeText = relayFee ? `≈ ${formatUnits6(relayFee.amount)} ${relayFee.currency}` : '—'
 
   return (
     <div style={detailsBox}>
@@ -34,10 +30,10 @@ export function DepositDetails({ pm }: { pm: PaymentMethod }) {
       </button>
       {open && (
         <div>
-          <Row label="Minimum transfer" value="$0.25" />
-          <Row label="Relay fee" value={feeText} />
-          <Row label="Processing time" value="< 1 min" />
-          <Row label="Max deposit" value="Unlimited" />
+          <Row label="Minimum amount" value="$1" />
+          <Row label="Fee" value="Free" />
+          <Row label="Time to receive" value="~10 sec" />
+          <Row label="Max deposit" value="No limit" />
         </div>
       )}
     </div>

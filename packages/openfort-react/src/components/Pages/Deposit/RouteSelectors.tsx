@@ -1,12 +1,9 @@
 'use client'
 
-import type { SyntheticEvent } from 'react'
 import type { FundingChain } from '../../../hooks/openfort/useFundingChains'
-import { bareSelect, field, logoImg, selectWrap, twoCol } from './formStyles'
-
-const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
-  e.currentTarget.style.display = 'none'
-}
+import { field, twoCol } from './formStyles'
+import { LogoSelect } from './LogoSelect'
+import { Skeleton } from './styles'
 
 type RouteSelectorsProps = {
   chains: FundingChain[]
@@ -18,7 +15,7 @@ type RouteSelectorsProps = {
   onCurrencyChange: (currency: string) => void
 }
 
-/** The source chain + currency selectors, populated from the live Relay chain list. */
+/** The source chain + currency selectors (logo-aware dropdowns), from the live Relay list. */
 export function RouteSelectors({
   chains,
   chain,
@@ -27,42 +24,43 @@ export function RouteSelectors({
   onChainChange,
   onCurrencyChange,
 }: RouteSelectorsProps) {
+  // Chains still loading — show placeholder selectors instead of empty dropdowns.
+  if (chains.length === 0) {
+    return (
+      <div style={twoCol}>
+        <div style={field}>
+          {chainLabel}
+          <Skeleton $h="40px" $r="8px" />
+        </div>
+        <div style={field}>
+          Currency
+          <Skeleton $h="40px" $r="8px" />
+        </div>
+      </div>
+    )
+  }
+
   const activeChain = chains.find((c) => c.id === chain) ?? chains[0]
   const currencies = activeChain?.currencies ?? []
-  const activeCurrency = currencies.find((c) => c.symbol === currency) ?? currencies[0]
 
   return (
     <div style={twoCol}>
-      <label style={field}>
+      <div style={field}>
         {chainLabel}
-        <div style={selectWrap}>
-          {activeChain?.logo && <img src={activeChain.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
-          <select style={bareSelect} value={activeChain?.id ?? ''} onChange={(e) => onChainChange(e.target.value)}>
-            {chains.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </label>
-      <label style={field}>
+        <LogoSelect
+          value={activeChain?.id ?? ''}
+          onChange={onChainChange}
+          options={chains.map((c) => ({ value: c.id, label: c.name, logo: c.logo }))}
+        />
+      </div>
+      <div style={field}>
         Currency
-        <div style={selectWrap}>
-          {activeCurrency?.logo && <img src={activeCurrency.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
-          <select
-            style={bareSelect}
-            value={activeCurrency?.symbol ?? ''}
-            onChange={(e) => onCurrencyChange(e.target.value)}
-          >
-            {currencies.map((c) => (
-              <option key={`${c.symbol}:${c.address}`} value={c.symbol}>
-                {c.symbol}
-              </option>
-            ))}
-          </select>
-        </div>
-      </label>
+        <LogoSelect
+          value={currency}
+          onChange={onCurrencyChange}
+          options={currencies.map((c) => ({ value: c.symbol, label: c.symbol, logo: c.logo }))}
+        />
+      </div>
     </div>
   )
 }

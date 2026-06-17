@@ -1,6 +1,8 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { useEffect } from 'react'
+import logos from '../../../assets/logos'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -9,7 +11,17 @@ import { AddressToggle } from '../Deposit/AddressToggle'
 import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
+import { ButtonLogo, Skeleton } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
+
+/** Wallet-app brand logos keyed by the deeplink `app` id. */
+const WALLET_LOGO: Record<string, ReactNode> = {
+  metamask: <logos.MetaMask background />,
+  coinbase: <logos.Coinbase background />,
+  phantom: <logos.Phantom background />,
+  trust: <logos.Trust />,
+  rainbow: <logos.Rainbow round />,
+}
 
 /**
  * Transfer from wallet — leads with prefilled deeplinks into the user's source
@@ -39,12 +51,25 @@ const DepositWallet = () => {
       />
 
       {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
-      {route.loading && !route.pm && <ModalBody style={{ marginTop: 12 }}>Preparing wallet links…</ModalBody>}
+      {route.loading && !route.pm && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+          <Skeleton $h="44px" $r="10px" />
+          <Skeleton $h="44px" $r="10px" />
+          <Skeleton $h="44px" $r="10px" />
+        </div>
+      )}
 
       {deeplinks.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
           {deeplinks.map((d) => (
-            <a key={d.app} href={d.url} target="_blank" rel="noreferrer" style={walletListBtn}>
+            <a
+              key={d.app}
+              href={d.url}
+              target="_blank"
+              rel="noreferrer"
+              style={{ ...walletListBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
               {d.label} ↗
             </a>
           ))}

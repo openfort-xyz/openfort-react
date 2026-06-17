@@ -4,31 +4,25 @@ import type { CSSProperties } from 'react'
 
 export const field: CSSProperties = { display: 'grid', gap: 6, fontSize: 13, textAlign: 'left' }
 
-/** A control-styled box holding a logo + a borderless select. */
-export const selectWrap: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: 8,
-  padding: '8px 10px',
-  borderRadius: 8,
-  border: '1px solid var(--ck-body-divider, #e4e4e7)',
-  background: 'var(--ck-body-background-secondary, #fafafa)',
-}
-
-// Native select keeps its dropdown arrow (no appearance:none).
-export const bareSelect: CSSProperties = {
+/** Deposit address — kept to a single line so the full address reads cleanly. */
+export const codeStyle: CSSProperties = {
   flex: 1,
-  border: 'none',
-  background: 'transparent',
-  color: 'inherit',
-  fontSize: 14,
-  outline: 'none',
-  cursor: 'pointer',
+  minWidth: 0,
+  fontSize: 12,
+  fontFamily: 'monospace',
+  whiteSpace: 'nowrap',
+  overflow: 'hidden',
+  textAlign: 'center',
 }
 
-export const logoImg: CSSProperties = { width: 20, height: 20, borderRadius: '50%', flexShrink: 0 }
-
-export const codeStyle: CSSProperties = { fontSize: 12, wordBreak: 'break-all' }
+/** "Your deposit address" label above the address box. */
+export const depositAddressLabel: CSSProperties = {
+  marginTop: 14,
+  fontSize: 13,
+  fontWeight: 600,
+  textAlign: 'left',
+  color: 'var(--ck-body-color, #1a1a2e)',
+}
 
 /** Shadow card around the deposit address + copy button. */
 export const addressBox: CSSProperties = {
@@ -36,7 +30,7 @@ export const addressBox: CSSProperties = {
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
-  marginTop: 12,
+  marginTop: 6,
   padding: '12px 14px',
   borderRadius: 12,
   background: 'var(--ck-body-background, #fff)',

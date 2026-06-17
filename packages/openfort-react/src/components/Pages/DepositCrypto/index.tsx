@@ -37,9 +37,6 @@ const DepositCrypto = () => {
       />
 
       {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
-      {route.chainsLoading && route.chains.length === 0 && (
-        <ModalBody style={{ marginTop: 12 }}>Loading chains…</ModalBody>
-      )}
       <DepositAddressBlock
         assetLogo={route.activeCurrency?.logo ?? null}
         chainLogo={route.activeChain?.logo ?? null}

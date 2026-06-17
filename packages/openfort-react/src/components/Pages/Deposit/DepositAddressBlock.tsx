@@ -3,11 +3,10 @@
 import type { PaymentMethod } from '../../../hooks/openfort/useFunding'
 import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton'
 import CustomQRCode from '../../Common/CustomQRCode'
-import { ModalBody } from '../../Common/Modal/styles'
 import { AssetChainLogo } from './AssetChainLogo'
 import { DepositDetails } from './Details'
-import { addressBox, codeStyle } from './formStyles'
-import { QRWrapper } from './styles'
+import { addressBox, codeStyle, depositAddressLabel } from './formStyles'
+import { QRWrapper, Skeleton } from './styles'
 
 type DepositAddressBlockProps = {
   /** Logo URLs for the QR badge (token over chain). */
@@ -30,7 +29,15 @@ export function DepositAddressBlock({
   loading,
 }: DepositAddressBlockProps) {
   if (loading && !sameChain && !pm) {
-    return <ModalBody style={{ marginTop: 12 }}>Fetching deposit address…</ModalBody>
+    return (
+      <>
+        <div style={{ display: 'flex', justifyContent: 'center', margin: '14px 0' }}>
+          <Skeleton $w="220px" $h="220px" $r="12px" />
+        </div>
+        <div style={depositAddressLabel}>Your deposit address</div>
+        <Skeleton $h="44px" $r="12px" />
+      </>
+    )
   }
   if (!receiverAddress) return null
 
@@ -43,11 +50,12 @@ export function DepositAddressBlock({
           imageBackground="#fff"
         />
       </QRWrapper>
+      <div style={depositAddressLabel}>Your deposit address</div>
       <div style={addressBox}>
         <code style={codeStyle}>{receiverAddress}</code>
-        <CopyIconButton value={receiverAddress} />
+        <CopyIconButton value={receiverAddress} size={28} />
       </div>
-      {!sameChain && pm && <DepositDetails pm={pm} />}
+      {!sameChain && pm && <DepositDetails />}
     </>
   )
 }

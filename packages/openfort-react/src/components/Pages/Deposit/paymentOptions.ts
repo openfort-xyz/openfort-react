@@ -43,32 +43,32 @@ const ALL_METHODS: DepositMethod[] = [
   {
     id: FundingMethod.APPLE_PAY,
     title: 'Apple Pay',
-    subtitle: 'instant',
+    subtitle: 'No min · ~3.5% fee · Instant',
     target: { kind: 'buy', providerId: 'stripe' },
     mobileOnly: true,
   },
   {
     id: FundingMethod.CARD,
     title: 'Card',
-    subtitle: 'instant, ~4% fee',
+    subtitle: 'Min $10 · ~4% fee · Instant',
     target: { kind: 'buy', providerId: 'stripe' },
   },
   {
     id: FundingMethod.WALLET,
     title: 'Transfer from wallet',
-    subtitle: 'MetaMask, Phantom, …',
+    subtitle: 'Min $1 · No fee · 10 sec',
     target: { kind: 'wallet' },
   },
   {
     id: FundingMethod.ADDRESS,
     title: 'Transfer from address',
-    subtitle: 'from any chain',
+    subtitle: 'Min $1 · No fee · 10 sec',
     target: { kind: 'crypto' },
   },
   {
     id: FundingMethod.EXCHANGE,
     title: 'Transfer from Exchange',
-    subtitle: 'Binance, Coinbase',
+    subtitle: 'Min $1 · Network fee · 2 min',
     target: { kind: 'cex' },
   },
 ]

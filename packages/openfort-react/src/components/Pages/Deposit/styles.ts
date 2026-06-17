@@ -1,16 +1,46 @@
+import { keyframes } from 'styled-components'
 import styled from '../../../styles/styled'
 
+/** Sizes to the content so short method lists don't leave a cut-looking gap. */
 export const DepositContent = styled.div`
-  min-height: 360px;
   display: flex;
   flex-direction: column;
+`
+
+const pulse = keyframes`
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+`
+
+/** Sizes a brand logo (svg/img) to 20px for use inside wallet/exchange buttons. */
+export const ButtonLogo = styled.span`
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  svg,
+  img {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+  }
+`
+
+/** Loading placeholder block. */
+export const Skeleton = styled.div<{ $w?: string; $h?: string; $r?: string }>`
+  width: ${(p) => p.$w ?? '100%'};
+  height: ${(p) => p.$h ?? '16px'};
+  border-radius: ${(p) => p.$r ?? '8px'};
+  background: var(--ck-body-divider, #ededed);
+  animation: ${pulse} 1.4s ease-in-out infinite;
 `
 
 export const OptionList = styled.div`
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-top: 12px;
 `
 
 export const OptionButton = styled.button`
@@ -18,9 +48,9 @@ export const OptionButton = styled.button`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  min-height: 64px;
+  min-height: 52px;
   box-sizing: border-box;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-radius: var(--ck-secondary-button-border-radius);
   border: 1px solid var(--ck-body-divider);
   background: var(--ck-secondary-button-background);
@@ -40,6 +70,58 @@ export const OptionButton = styled.button`
   }
 `
 
+/** Left group: action icon badge + the title/subtitle text. */
+export const OptionLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+`
+
+/** Holds the per-action icon on the left of each row (no background). */
+export const OptionIconBadge = styled.div`
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ck-body-color, #1a1a2e);
+`
+
+/** Overlapping strip of token/wallet/exchange logos on the right of each row. */
+export const LogoCluster = styled.div`
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding-left: 2px;
+
+  img,
+  svg {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    margin-left: -7px;
+    border: 1.5px solid var(--ck-secondary-button-background, #fff);
+    background: var(--ck-body-background, #fff);
+    object-fit: cover;
+    box-sizing: content-box;
+  }
+  img:first-child,
+  svg:first-child {
+    margin-left: 0;
+  }
+
+  @media (max-width: 420px) {
+    padding-left: 2px;
+    img,
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+`
+
 export const OptionInfo = styled.div`
   display: flex;
   flex-direction: column;
@@ -48,18 +130,26 @@ export const OptionInfo = styled.div`
 `
 
 export const OptionTitle = styled.span`
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ck-body-color);
+
+  @media (max-width: 420px) {
+    font-size: 13px;
+  }
 `
 
 export const OptionSubtitle = styled.span`
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--ck-body-color-muted);
   white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
+  text-overflow: clip;
+
+  @media (max-width: 420px) {
+    font-size: 10px;
+  }
 `
 
 /** Sized, centered wrapper so the QR (which sizes off its parent width) renders. */

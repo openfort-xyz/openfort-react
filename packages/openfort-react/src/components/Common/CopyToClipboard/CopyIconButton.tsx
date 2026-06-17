@@ -2,9 +2,9 @@ import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard'
 import styled from '../../../styles/styled'
 import { CopyIcon } from './CopyIcon'
 
-const StyledButton = styled.button`
-  width: 48px;
-  height: 48px;
+const StyledButton = styled.button<{ $size: number }>`
+  width: ${(p) => p.$size}px;
+  height: ${(p) => p.$size}px;
   padding: 0;
   border: none;
   border-radius: var(--ck-secondary-button-border-radius);
@@ -31,14 +31,16 @@ const StyledButton = styled.button`
 
 interface CopyIconButtonProps {
   value: string
+  /** Button edge length in px (default 48). The icon scales to half. */
+  size?: number
 }
 
-export const CopyIconButton = ({ value }: CopyIconButtonProps) => {
+export const CopyIconButton = ({ value, size = 48 }: CopyIconButtonProps) => {
   const { copied, copy } = useCopyToClipboard()
 
   return (
-    <StyledButton onClick={() => copy(value)} disabled={!value} type="button">
-      <CopyIcon copied={copied} size={24} />
+    <StyledButton $size={size} onClick={() => copy(value)} disabled={!value} type="button">
+      <CopyIcon copied={copied} size={Math.round(size / 2)} />
     </StyledButton>
   )
 }
