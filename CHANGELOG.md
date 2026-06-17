@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.4
+
+### Patch Changes
+
+- [#275](https://github.com/openfort-xyz/openfort-react/pull/275) [`bd90b66`](https://github.com/openfort-xyz/openfort-react/commit/bd90b6660cfdd9c4921af6607573884b3ed5ee1b) Thanks [@isardmart](https://github.com/isardmart)! - fix iframe timeout error on strict origin
+
 ## 1.1.3
 
 ### Patch Changes
