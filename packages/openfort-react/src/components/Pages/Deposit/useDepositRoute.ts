@@ -9,15 +9,20 @@ import {
   nominalUnits,
   useFundingChains,
 } from '../../../hooks/openfort/useFundingChains'
+import { logger } from '../../../utils/logger'
 import { isSolana } from './sources'
 import { useFundingTarget } from './useFundingTarget'
 
 /** Which rail the route feeds: self-custody wallet send vs exchange withdrawal. */
 export type DepositRouteKind = 'crypto' | 'cex'
 
-function paymentMethodFor(kind: DepositRouteKind, chain: string, currency: FundingCurrency): PaymentMethodInput {
+/** CAIP-2 chains Coinbase Onramp can deliver to — the only CEX rail today. */
+const COINBASE_CHAINS = new Set(['eip155:1', 'eip155:10', 'eip155:137', 'eip155:8453', 'eip155:42161', 'eip155:43114'])
+
+function paymentMethodFor(chain: string, currency: FundingCurrency): PaymentMethodInput {
   const source = { chain, currency: currency.address, amount: nominalUnits(currency.decimals, currency.native) }
-  if (kind === 'cex') return { type: 'cex', cex: 'binance', source }
+  // A CEX withdrawal is just an on-chain send to the Relay deposit address — the
+  // funding API has no separate 'cex' type, so every source resolves to evm/solana.
   return { type: isSolana(chain) ? 'solana' : 'evm', source }
 }
 
@@ -35,8 +40,9 @@ export function useDepositRoute(kind: DepositRouteKind) {
   // Drop the destination chain — funding is cross-chain; same-chain is a plain
   // transfer with no Relay route, so it shouldn't appear as a source option.
   const sourceChains = allChains.filter((c) => c.id !== target.chain)
-  // Exchanges withdraw to EVM networks; Solana CEX withdrawal isn't profiled yet.
-  const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => c.vmType === 'evm') : sourceChains
+  // The CEX rail rides Coinbase Onramp, which only delivers to a fixed set of EVM
+  // chains — offer those as the pay-with sources.
+  const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => COINBASE_CHAINS.has(c.id)) : sourceChains
   // Where funds land: the integrator's override, else the active embedded wallet.
   const walletAddress = wallet.status === 'connected' ? wallet.address : undefined
   const address = target.address ?? walletAddress
@@ -67,11 +73,23 @@ export function useDepositRoute(kind: DepositRouteKind) {
     const key = `${kind}:${activeChain.id}:${activeCurrency.symbol}`
     if (lastKey.current === key) return
     lastKey.current = key
+    logger.log('[funding:route] resolved', {
+      kind,
+      sourceChain: activeChain.id,
+      currency: activeCurrency.symbol,
+      destChain: target.chain,
+    })
     fund(
       { chain: target.chain, currency: target.currency, address },
-      paymentMethodFor(kind, activeChain.id, activeCurrency)
+      paymentMethodFor(activeChain.id, activeCurrency)
     ).catch(() => {})
   }, [address, activeChain, activeCurrency, isAvailable, sameChain, fund, reset, target.chain, target.currency, kind])
+
+  // Surface an empty source list (e.g. no Coinbase-deliverable chains) for diagnosis.
+  useEffect(() => {
+    if (!isAvailable || chainsLoading || chains.length > 0) return
+    logger.warn('[funding:route] no source chains available', { kind, destChain: target.chain })
+  }, [isAvailable, chainsLoading, chains.length, kind, target.chain])
 
   return {
     chains,

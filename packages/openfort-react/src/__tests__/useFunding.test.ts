@@ -159,27 +159,45 @@ describe('useFunding', () => {
     }
   })
 
-  it('resolves a pay link through the client', async () => {
+  it('creates a bare session without setting a payment method or polling', async () => {
+    const { client, create, setPaymentMethod, get } = makeClient()
+    create.mockResolvedValue(makeSession())
+
+    const { result } = renderHook(() => useFunding({ client }))
+    let created: FundingSession | undefined
+    await act(async () => {
+      created = await result.current.createSession(target)
+    })
+
+    expect(create).toHaveBeenCalledWith({ target })
+    expect(setPaymentMethod).not.toHaveBeenCalled()
+    expect(get).not.toHaveBeenCalled()
+    expect(created?.id).toBe('fnd_1')
+    // A bare session doesn't touch hook state — it's only used to mint a pay-link.
+    expect(result.current.session).toBeNull()
+  })
+
+  it('resolves a session-bound pay link through the client', async () => {
     const { client, payLink } = makeClient()
-    payLink.mockResolvedValue('https://pay.example/checkout')
+    payLink.mockResolvedValue('https://pay.coinbase.com/checkout')
 
     const { result } = renderHook(() => useFunding({ client }))
     let url = ''
     await act(async () => {
       url = await result.current.payLink({
-        exchange: 'coinbase',
-        address: '0xdest',
+        sessionId: 'fnd_1',
+        clientSecret: 'cs_1',
+        amount: '10',
         asset: 'USDC',
-        chain: 'eip155:8453',
       })
     })
 
-    expect(url).toBe('https://pay.example/checkout')
+    expect(url).toBe('https://pay.coinbase.com/checkout')
     expect(payLink).toHaveBeenCalledWith({
-      exchange: 'coinbase',
-      address: '0xdest',
+      sessionId: 'fnd_1',
+      clientSecret: 'cs_1',
+      amount: '10',
       asset: 'USDC',
-      chain: 'eip155:8453',
     })
   })
 

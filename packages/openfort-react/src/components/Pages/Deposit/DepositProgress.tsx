@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import type { SessionStatus } from '../../../hooks/openfort/useFunding'
 import styled from '../../../styles/styled'
+import { logger } from '../../../utils/logger'
 import Button from '../../Common/Button'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { Spinner } from '../../Common/Spinner'
@@ -99,6 +100,9 @@ export function DepositProgress({ status }: { status: SessionStatus | 'idle' }) 
   // Resize the modal whenever the visible step / screen changes.
   useEffect(() => {
     triggerResize()
+    // Correlate the perceived terminal (incl. the 1.2s delivering hold) with the
+    // data-layer terminal from useFunding; UI is unchanged.
+    logger.log('[funding:progress] render', { status, delivered })
   }, [status, delivered, triggerResize])
 
   if (status === 'succeeded' && delivered) return <DepositSuccess />

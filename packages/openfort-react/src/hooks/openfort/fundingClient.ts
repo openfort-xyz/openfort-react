@@ -1,3 +1,4 @@
+import { logger } from '../../utils/logger'
 import type { FundingSession, FundingTarget, PayLinkParams, PaymentMethodInput } from './useFunding'
 
 /**
@@ -32,6 +33,7 @@ async function readJson<T>(res: Response): Promise<T> {
     // surfaces instead of "[object Object]".
     const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } | string }
     const message = typeof body.error === 'string' ? body.error : body.error?.message
+    logger.error('[funding:client] request failed', { status: res.status, message })
     throw new Error(message ?? `Funding request failed (${res.status})`)
   }
   return res.json() as Promise<T>

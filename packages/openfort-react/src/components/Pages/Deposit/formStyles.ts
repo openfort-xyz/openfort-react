@@ -91,3 +91,16 @@ export const detailsRow: CSSProperties = {
 export const detailsLabel: CSSProperties = { color: 'var(--ck-body-color-muted, #6b7280)' }
 export const detailsValue: CSSProperties = { color: 'var(--ck-body-color, #1a1a2e)' }
 export const chevron: CSSProperties = { color: 'var(--ck-body-color-muted, #6b7280)', fontSize: 12 }
+
+/** Optional amount field on the exchange transfer form. */
+export const amountInput: CSSProperties = {
+  width: '100%',
+  boxSizing: 'border-box',
+  padding: '10px 12px',
+  borderRadius: 8,
+  border: '1px solid var(--ck-body-divider, #e4e4e7)',
+  background: 'var(--ck-body-background, #fff)',
+  color: 'var(--ck-body-color, #1a1a2e)',
+  fontSize: 14,
+  outline: 'none',
+}

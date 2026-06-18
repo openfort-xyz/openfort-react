@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { logger } from '../../utils/logger'
 import { createFetchFundingClient, type FundingClient } from './fundingClient'
 
 /** Pay-links aren't exposed by the SDK funding namespace yet (CEX is API-deferred). */
@@ -129,19 +130,28 @@ export type UseFunding = {
   isAvailable: boolean
   /** Create a session, set a payment method, and poll until terminal. */
   fund: (target: FundingTarget, paymentMethod: PaymentMethodInput) => Promise<FundingSession>
-  /** Resolve a prefilled exchange pay URL (Coinbase/Binance) from the backend. */
+  /** Create a bare session for a target (no payment method, no polling). Used by
+   * the Coinbase CEX rail, which only needs the session id + secret to mint a
+   * pay-link; the destination is bound to the session so the client can't redirect funds. */
+  createSession: (target: FundingTarget) => Promise<FundingSession>
+  /** Resolve a hosted Coinbase pay URL for an existing session. Coinbase delivers
+   * to the session's bound destination, so only the amount (and optional asset) is client-supplied. */
   payLink: (params: PayLinkParams) => Promise<string>
   /** Reset to the idle state (e.g. when leaving the Deposit flow). */
   reset: () => void
 }
 
-/** Parameters for an exchange pay-link request. */
+/** Parameters for a Coinbase pay-link request. The destination (chain, currency,
+ * address) is bound to the session server-side; the client only chooses how much. */
 export type PayLinkParams = {
-  exchange: string
-  address: string
-  asset: string
-  chain: string
-  amount?: string
+  /** Session the pay-link settles into — pins the destination so it can't be redirected. */
+  sessionId: string
+  /** Secret returned when the session was created; authorizes this pay-link. */
+  clientSecret: string
+  /** Amount in the destination asset's units (≈ USD for USDC). Coinbase enforces its own minimum. */
+  amount: string
+  /** Destination asset ticker. Optional — the backend defaults to USDC. */
+  asset?: string
 }
 
 /** Options for {@link useFunding}. */
@@ -190,11 +200,13 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
   useEffect(() => {
     return () => {
       generation.current += 1
+      logger.log('[funding] unmounted — poll loop stopped')
     }
   }, [])
 
   const reset = useCallback(() => {
     generation.current += 1
+    logger.log('[funding] reset')
     setSession(null)
     setError(null)
     setLoading(false)
@@ -207,11 +219,20 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
       const isCurrent = () => generation.current === gen
       setError(null)
       setLoading(true)
+      logger.log('[funding] fund() start', {
+        chain: target.chain,
+        currency: target.currency,
+        address: target.address,
+        paymentMethod: paymentMethod.type,
+        sourceChain: paymentMethod.source.chain,
+        amount: paymentMethod.source.amount,
+      })
       try {
         if (!client) {
           throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
         }
         const created = await client.sessions.create({ target })
+        logger.log('[funding] session created', { sessionId: created.id, status: created.status })
         let current = await client.sessions.setPaymentMethod(created.id, {
           clientSecret: created.clientSecret,
           paymentMethod,
@@ -219,6 +240,15 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         if (!isCurrent()) return current
         setSession(current)
         setLoading(false)
+        // The session status encodes both hops: waiting_payment (awaiting the source
+        // deposit, e.g. the Coinbase withdrawal) → processing (deposit arrived on-chain,
+        // Relay bridging) → succeeded / bounced (Relay refunded) / expired (no deposit).
+        let prev = current.status
+        logger.log('[funding] payment method set', {
+          sessionId: current.id,
+          status: current.status,
+          receiverAddress: current.paymentMethod?.receiverAddress,
+        })
 
         while (!TERMINAL.includes(current.status)) {
           await new Promise((resolve) => setTimeout(resolve, POLL_MS))
@@ -226,6 +256,22 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
           current = await client.sessions.get(current.id, { clientSecret: current.clientSecret })
           if (!isCurrent()) return current
           setSession(current)
+          if (current.status !== prev) {
+            // 'processing' is inferred to mean the source deposit landed (Coinbase
+            // delivered) and Relay is bridging — derived from the transition, not reported.
+            logger.log('[funding] status', { sessionId: current.id, prev, status: current.status })
+            prev = current.status
+          }
+        }
+        if (current.status === 'succeeded') {
+          logger.log('[funding] terminal: delivered', {
+            sessionId: current.id,
+            status: current.status,
+            txHash: current.metadata?.txHash ?? current.externalId ?? null,
+          })
+        } else {
+          // bounced = source delivered but Relay refunded; expired = nothing arrived in time.
+          logger.warn('[funding] terminal: failed', { sessionId: current.id, status: current.status })
         }
         return current
       } catch (e) {
@@ -233,9 +279,20 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         if (isCurrent()) {
           setError(err)
           setLoading(false)
+          logger.error('[funding] fund() failed', err)
         }
         throw err
       }
+    },
+    [client]
+  )
+
+  const createSession = useCallback(
+    async (target: FundingTarget): Promise<FundingSession> => {
+      if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
+      const created = await client.sessions.create({ target })
+      logger.log('[funding] session created (cex)', { sessionId: created.id, status: created.status })
+      return created
     },
     [client]
   )
@@ -248,5 +305,15 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
     [client]
   )
 
-  return { session, status: session?.status ?? 'idle', error, loading, isAvailable, fund, payLink, reset }
+  return {
+    session,
+    status: session?.status ?? 'idle',
+    error,
+    loading,
+    isAvailable,
+    fund,
+    createSession,
+    payLink,
+    reset,
+  }
 }

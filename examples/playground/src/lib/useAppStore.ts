@@ -54,6 +54,7 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
 
   uiConfig: {
     theme: 'auto',
+    fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL,
     mode: undefined,
     customTheme: undefined,
     authProviders: [
