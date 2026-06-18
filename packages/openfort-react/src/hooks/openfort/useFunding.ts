@@ -157,7 +157,7 @@ export type UseFundingOptions = {
  * @returns Session state plus `fund` (run the deposit flow) and `reset`.
  */
 export function useFunding(options?: UseFundingOptions): UseFunding {
-  const { uiConfig } = useOpenfort()
+  const { uiConfig, publishableKey } = useOpenfort()
   const { client: coreClient } = useOpenfortCore()
   const baseUrl = uiConfig.fundingBaseUrl ?? ''
   const injected = options?.client
@@ -170,12 +170,12 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
   const client = useMemo<FundingClient | null>(() => {
     if (injected) return injected
     const sdkFunding = (coreClient as unknown as { funding?: Pick<FundingClient, 'sessions'> } | undefined)?.funding
-    const fetchClient = baseUrl ? createFetchFundingClient(baseUrl) : null
+    const fetchClient = baseUrl ? createFetchFundingClient(baseUrl, publishableKey) : null
     if (sdkFunding) {
       return { sessions: sdkFunding.sessions, payLink: fetchClient?.payLink ?? sdkPayLinkUnavailable }
     }
     return fetchClient
-  }, [injected, coreClient, baseUrl])
+  }, [injected, coreClient, baseUrl, publishableKey])
   const isAvailable = client != null
 
   const [session, setSession] = useState<FundingSession | null>(null)

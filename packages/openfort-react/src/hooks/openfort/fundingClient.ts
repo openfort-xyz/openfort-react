@@ -27,8 +27,12 @@ export type FundingClient = {
 
 async function readJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    const body = (await res.json().catch(() => ({}))) as { error?: string }
-    throw new Error(body.error ?? `Funding request failed (${res.status})`)
+    // The API returns { error: { type, message } }; the standalone prototype
+    // returned a flat { error: string }. Handle both so the real rail message
+    // surfaces instead of "[object Object]".
+    const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } | string }
+    const message = typeof body.error === 'string' ? body.error : body.error?.message
+    throw new Error(message ?? `Funding request failed (${res.status})`)
   }
   return res.json() as Promise<T>
 }
@@ -37,13 +41,17 @@ async function readJson<T>(res: Response): Promise<T> {
  * Fetch-backed funding client against the standalone funding service at
  * `baseUrl`. Temporary: replaced by the SDK's `funding` namespace at cutover.
  */
-export function createFetchFundingClient(baseUrl: string): FundingClient {
+export function createFetchFundingClient(baseUrl: string, publishableKey?: string): FundingClient {
+  // The /v2/funding session API is publishable-key authenticated. The standalone
+  // prototype accepted no auth, so the key is optional and only attached when set.
+  const authHeaders = (): Record<string, string> =>
+    publishableKey ? { authorization: `Bearer ${publishableKey}` } : {}
   return {
     sessions: {
       async create({ target }) {
         const res = await fetch(`${baseUrl}/v2/funding/sessions`, {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ target }),
         })
         return readJson<FundingSession>(res)
@@ -51,20 +59,22 @@ export function createFetchFundingClient(baseUrl: string): FundingClient {
       async setPaymentMethod(id, { clientSecret, paymentMethod }) {
         const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/payment_methods`, {
           method: 'POST',
-          headers: { 'content-type': 'application/json' },
+          headers: { 'content-type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ clientSecret, paymentMethod }),
         })
         return readJson<FundingSession>(res)
       },
       async get(id, params) {
         const query = params?.clientSecret ? `?clientSecret=${encodeURIComponent(params.clientSecret)}` : ''
-        return readJson<FundingSession>(await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}${query}`))
+        return readJson<FundingSession>(
+          await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}${query}`, { headers: authHeaders() })
+        )
       },
     },
     async payLink(params) {
       const res = await fetch(`${baseUrl}/v2/funding/pay_link`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...authHeaders() },
         body: JSON.stringify(params),
       })
       const data = await readJson<{ url: string }>(res)
