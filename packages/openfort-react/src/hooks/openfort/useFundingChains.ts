@@ -25,7 +25,7 @@ export type FundingChain = {
   currencies: FundingCurrency[]
 }
 
-export type UseFundingChains = {
+type UseFundingChains = {
   chains: FundingChain[]
   loading: boolean
   error: Error | null
@@ -35,7 +35,7 @@ export type UseFundingChains = {
  * Sensible default source chains — the common funding origins. Override with
  * `uiConfig.funding.sourceChains`. Intersected with what the rail supports.
  */
-export const DEFAULT_SOURCE_CHAINS = [
+const DEFAULT_SOURCE_CHAINS = [
   'eip155:42161', // Arbitrum
   'eip155:8453', // Base
   'eip155:56', // BNB Chain
@@ -49,7 +49,7 @@ export const DEFAULT_SOURCE_CHAINS = [
  * Default source currencies: the chain's `'native'` currency plus the major
  * stablecoins. Override with `uiConfig.funding.sourceCurrencies`.
  */
-export const DEFAULT_SOURCE_CURRENCIES = ['native', 'USDC', 'USDT']
+const DEFAULT_SOURCE_CURRENCIES = ['native', 'USDC', 'USDT']
 
 /**
  * The chains/currencies the funding backend supports, fetched from

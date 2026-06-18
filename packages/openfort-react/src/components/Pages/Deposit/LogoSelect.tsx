@@ -3,7 +3,7 @@
 import { type SyntheticEvent, useEffect, useRef, useState } from 'react'
 import styled from '../../../styles/styled'
 
-export type LogoOption = { value: string; label: string; logo: string | null }
+type LogoOption = { value: string; label: string; logo: string | null }
 
 const Wrap = styled.div`
   position: relative;

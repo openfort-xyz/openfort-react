@@ -14,7 +14,7 @@ import { isSolana } from './sources'
 import { useFundingTarget } from './useFundingTarget'
 
 /** Which rail the route feeds: self-custody wallet send vs exchange withdrawal. */
-export type DepositRouteKind = 'crypto' | 'cex'
+type DepositRouteKind = 'crypto' | 'cex'
 
 /** CAIP-2 chains Coinbase Onramp can deliver to — the only CEX rail today. */
 const COINBASE_CHAINS = new Set(['eip155:1', 'eip155:10', 'eip155:137', 'eip155:8453', 'eip155:42161', 'eip155:43114'])

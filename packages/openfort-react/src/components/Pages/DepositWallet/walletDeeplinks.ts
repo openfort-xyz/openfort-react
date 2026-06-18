@@ -11,7 +11,7 @@
  * (the deployed `deposit.html`). Without it, no deeplinks are produced.
  */
 
-export type WalletDeeplink = { app: string; label: string; url: string }
+type WalletDeeplink = { app: string; label: string; url: string }
 
 export type VmType = 'evm' | 'svm'
 
