@@ -125,7 +125,9 @@ export function curateChains(
 }
 
 /** Nominal source amount (in base units) used only to mint an open, route-bound deposit address.
- * 10 whole units = 10 · 10^decimals = "1" followed by (decimals + 1) zeros. */
+ * 1 whole unit = 10^decimals = "1" followed by `decimals` zeros (e.g. 1 USDC). Clears mainnet
+ * stablecoin route minimums; the open address accepts any amount >= the route minimum afterward.
+ * Keep source currencies to stablecoins so this nominal isn't 1 whole ETH. */
 export function nominalUnits(decimals: number): string {
-  return `1${'0'.repeat(decimals + 1)}`
+  return `1${'0'.repeat(decimals)}`
 }
