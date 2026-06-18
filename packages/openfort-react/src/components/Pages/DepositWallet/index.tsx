@@ -3,6 +3,7 @@
 import type { ReactNode } from 'react'
 import { useEffect } from 'react'
 import logos from '../../../assets/logos'
+import useIsMobile from '../../../hooks/useIsMobile'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -13,6 +14,7 @@ import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
+import { DepositWalletDesktop } from './DepositWalletDesktop'
 import { buildWalletSendLinks } from './walletSendLinks'
 
 /** Wallet-app brand logos keyed by the deeplink `app` id. */
@@ -32,6 +34,7 @@ const WALLET_LOGO: Record<string, ReactNode> = {
  */
 const DepositWallet = () => {
   const { triggerResize } = useOpenfort()
+  const isMobile = useIsMobile()
   const route = useDepositRoute('crypto')
   // Backend leaves pm.deeplinks empty in the MVP; synthesise them client-side
   // from the session's prefilled address URI. Prefer backend links if present.
@@ -60,33 +63,42 @@ const DepositWallet = () => {
 
       {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
-      <StepDivider>Then open your wallet</StepDivider>
-      {route.loading && !route.pm && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
-          <Skeleton $h="44px" $r="10px" />
-          <Skeleton $h="44px" $r="10px" />
-          <Skeleton $h="44px" $r="10px" />
-        </div>
-      )}
+      <StepDivider>{isMobile ? 'Then open your wallet' : 'Then send from your wallet'}</StepDivider>
 
-      {deeplinks.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
-          {deeplinks.map((d) => (
-            <a
-              key={d.app}
-              href={d.url}
-              target="_blank"
-              rel="noreferrer"
-              style={{ ...walletListBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
-            >
-              {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
-              {d.label} ↗
-            </a>
-          ))}
-        </div>
-      )}
-      {route.isAvailable && !route.loading && route.sameChain && (
-        <ModalBody style={{ marginTop: 12 }}>Pick a different source chain to get wallet links.</ModalBody>
+      {isMobile ? (
+        <>
+          {route.loading && !route.pm && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+              <Skeleton $h="44px" $r="10px" />
+              <Skeleton $h="44px" $r="10px" />
+              <Skeleton $h="44px" $r="10px" />
+            </div>
+          )}
+
+          {deeplinks.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
+              {deeplinks.map((d) => (
+                <a
+                  key={d.app}
+                  href={d.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ ...walletListBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                >
+                  {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
+                  {d.label} ↗
+                </a>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <DepositWalletDesktop
+          receiverAddress={route.receiverAddress}
+          activeChain={route.activeChain}
+          activeCurrency={route.activeCurrency}
+          loading={route.loading}
+        />
       )}
 
       <AddressPageLink label="Or send to a deposit address" />
