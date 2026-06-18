@@ -1,9 +1,11 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { parseUnits } from 'viem'
 import logos from '../../../assets/logos'
 import useIsMobile from '../../../hooks/useIsMobile'
+import { isIOS } from '../../../utils'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -15,7 +17,13 @@ import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 import { DepositWalletDesktop } from './DepositWalletDesktop'
-import { buildWalletSendLinks } from './walletSendLinks'
+import {
+  buildDepositPageUrl,
+  buildOpenDappLinks,
+  caipToChainId,
+  OPENFORT_DEPOSIT_PAGE_URL,
+  type VmType,
+} from './walletDeeplinks'
 
 /** Wallet-app brand logos keyed by the deeplink `app` id. */
 const WALLET_LOGO: Record<string, ReactNode> = {
@@ -27,20 +35,67 @@ const WALLET_LOGO: Record<string, ReactNode> = {
   rabby: <logos.Rabby />,
 }
 
+const amountInputStyle: React.CSSProperties = {
+  width: '100%',
+  padding: '12px 14px',
+  borderRadius: 12,
+  border: '1px solid var(--ck-body-divider, #e4e4e7)',
+  background: 'var(--ck-body-background-secondary, #fafafa)',
+  color: 'var(--ck-body-color, #111)',
+  fontSize: 16,
+  outline: 'none',
+  marginTop: 14,
+}
+
+/** Keep only digits and a single decimal point. */
+function sanitizeAmount(v: string): string {
+  const cleaned = v.replace(/[^0-9.]/g, '')
+  const [whole, ...rest] = cleaned.split('.')
+  return rest.length ? `${whole}.${rest.join('')}` : cleaned
+}
+
 /**
- * Transfer from wallet — leads with prefilled deeplinks into the user's source
- * wallet app (the route is picked above). The manual deposit-address / QR path
- * is tucked behind an off-by-default toggle.
+ * Transfer from wallet. On mobile, leads with open-dApp deeplinks that send the
+ * user into their wallet app's in-app browser pointed at the hosted deposit page
+ * (with the address/chain/token/amount prefilled). On desktop, sends straight
+ * from the browser-extension wallet. Either way the manual deposit-address / QR
+ * path stays available below.
  */
 const DepositWallet = () => {
-  const { triggerResize } = useOpenfort()
+  const { triggerResize, uiConfig } = useOpenfort()
   const isMobile = useIsMobile()
   const route = useDepositRoute('crypto')
-  // Backend leaves pm.deeplinks empty in the MVP; synthesise them client-side
-  // from the session's prefilled address URI. Prefer backend links if present.
-  const deeplinks = route.pm?.deeplinks?.length
+  const [amount, setAmount] = useState('')
+
+  const depositPageUrl = uiConfig.funding?.depositPageUrl ?? OPENFORT_DEPOSIT_PAGE_URL
+  const srcChainId = caipToChainId(route.activeChain?.id)
+  const amountValid = Number.parseFloat(amount) > 0
+
+  // Open-dApp deeplinks: prefer backend-provided ones; otherwise build them from
+  // the hosted deposit page URL (if the integrator configured one) carrying the
+  // resolved transfer params. The hosted page sends via the wallet's injected
+  // provider, so no backend wiring is required for the link itself.
+  const pageUrl =
+    depositPageUrl && route.receiverAddress && route.activeCurrency && srcChainId
+      ? buildDepositPageUrl(depositPageUrl, {
+          to: route.receiverAddress,
+          chainId: srcChainId,
+          token: route.activeCurrency.native ? undefined : route.activeCurrency.address,
+          decimals: route.activeCurrency.decimals,
+          symbol: route.activeCurrency.symbol,
+          chain: route.activeChain?.name,
+          amount: amountValid ? parseUnits(amount, route.activeCurrency.decimals).toString() : undefined,
+        })
+      : null
+
+  const allDeeplinks = route.pm?.deeplinks?.length
     ? route.pm.deeplinks
-    : buildWalletSendLinks(route.pm?.addressUri, route.activeChain?.vmType ?? 'evm')
+    : pageUrl
+      ? buildOpenDappLinks(pageUrl, (route.activeChain?.vmType as VmType) ?? 'evm')
+      : []
+  // Trust's in-app dApp browser was removed on iOS (Apple, 2021) — the link
+  // dead-ends there, so hide it on iOS while keeping it on Android.
+  const deeplinks = isIOS() ? allDeeplinks.filter((d) => d.app !== 'trust') : allDeeplinks
 
   useEffect(() => {
     triggerResize()
@@ -67,6 +122,18 @@ const DepositWallet = () => {
 
       {isMobile ? (
         <>
+          <input
+            value={amount}
+            onChange={(e) => setAmount(sanitizeAmount(e.target.value))}
+            placeholder={`Amount${route.activeCurrency ? ` in ${route.activeCurrency.symbol}` : ''}`}
+            inputMode="decimal"
+            style={amountInputStyle}
+          />
+
+          {!depositPageUrl && (
+            <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
+          )}
+
           {route.loading && !route.pm && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
               <Skeleton $h="44px" $r="10px" />
@@ -80,10 +147,19 @@ const DepositWallet = () => {
               {deeplinks.map((d) => (
                 <a
                   key={d.app}
-                  href={d.url}
+                  href={amountValid ? d.url : undefined}
+                  aria-disabled={!amountValid}
                   target="_blank"
                   rel="noreferrer"
-                  style={{ ...walletListBtn, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                  style={{
+                    ...walletListBtn,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: 8,
+                    opacity: amountValid ? 1 : 0.55,
+                    pointerEvents: amountValid ? 'auto' : 'none',
+                  }}
                 >
                   {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
                   {d.label} ↗

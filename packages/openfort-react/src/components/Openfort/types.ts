@@ -439,6 +439,17 @@ export type FundingUIOptions = {
    * @example ['native', 'USDC', 'USDT']
    */
   sourceCurrencies?: string[]
+  /**
+   * URL of the standalone deposit "send" page. On mobile, wallet open-dApp
+   * deeplinks wrap this URL with the deposit address, chain, token and amount so
+   * the user confirms the transfer in their wallet's in-app browser. Defaults to
+   * the Openfort-hosted page (`https://deposit.openfort.io`); override to self-host,
+   * or set to an empty string to hide one-tap wallet deeplinks (the deposit-address
+   * / QR path still works).
+   * @default "https://deposit.openfort.io"
+   * @example "https://yourapp.com/deposit.html"
+   */
+  depositPageUrl?: string
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED

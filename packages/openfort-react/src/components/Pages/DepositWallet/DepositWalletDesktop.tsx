@@ -14,6 +14,7 @@ import { ModalBody } from '../../Common/Modal/styles'
 import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
 import { ButtonLogo } from '../Deposit/styles'
+import { caipToChainId } from './walletDeeplinks'
 
 /** Hardcoded brand logo for a connector, matched by id/name; falls back to its own icon, then a generic. */
 function brandLogo(connector: { id: string; name: string; icon?: string }): ReactNode {
@@ -34,13 +35,6 @@ type Props = {
   activeChain: FundingChain | undefined
   activeCurrency: FundingCurrency | undefined
   loading: boolean
-}
-
-/** "eip155:8453" -> 8453 */
-function caipToChainId(caip2?: string): number | undefined {
-  if (!caip2) return undefined
-  const n = Number(caip2.split(':')[1])
-  return Number.isFinite(n) ? n : undefined
 }
 
 /** Readable message from a wallet/provider error; null for a user rejection (4001). */
