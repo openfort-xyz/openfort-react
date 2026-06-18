@@ -82,7 +82,7 @@ const EthereumConnected: React.FC = () => {
   })
   const ensName = identity.status === 'success' ? identity.name : undefined
 
-  const { data: assets, isLoading, refetch } = useEthereumWalletAssets()
+  const { data: assets, isLoading } = useEthereumWalletAssets()
   const totalBalanceUsd = useMemo(() => {
     if (!assets) return 0
     return assets.reduce((acc, asset) => {
@@ -93,12 +93,6 @@ const EthereumConnected: React.FC = () => {
       return acc + price * balance
     }, 0)
   }, [assets])
-
-  useEffect(() => {
-    if (isConnected) {
-      refetch()
-    }
-  }, [isConnected, refetch])
 
   useEffect(() => {
     context.triggerResize()
@@ -134,7 +128,7 @@ const EthereumConnected: React.FC = () => {
   const locales = useLocales()
 
   const balanceNode =
-    !!assets && !isLoading ? (
+    assets && !isLoading ? (
       <TextLinkButton
         type="button"
         onClick={() => {

@@ -105,7 +105,7 @@ const SendConfirmation = () => {
     queryFn: async () => {
       if (!isErc20 || !address || !chainId) return { value: BigInt(0), decimals: 18, symbol: 'ERC20' }
       try {
-        const rpcUrl = getDefaultEthereumRpcUrl(chainId)
+        const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
         const publicClient = createPublicClient({ transport: http(rpcUrl) })
         const balance = await publicClient.readContract({
           address: token.address as `0x${string}`,
@@ -113,7 +113,7 @@ const SendConfirmation = () => {
           functionName: 'balanceOf',
           args: [address],
         })
-        return { value: balance as bigint, decimals: 18, symbol: getAssetSymbol(token) }
+        return { value: balance as bigint, decimals: getAssetDecimals(token) ?? 18, symbol: getAssetSymbol(token) }
       } catch (error) {
         logger.error('Failed to fetch ERC20 balance:', error)
         return { value: BigInt(0), decimals: 18, symbol: getAssetSymbol(token) }

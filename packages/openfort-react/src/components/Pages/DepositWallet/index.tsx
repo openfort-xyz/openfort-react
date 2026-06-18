@@ -7,12 +7,13 @@ import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AddressToggle } from '../Deposit/AddressToggle'
-import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
+import { AddressPageLink } from '../Deposit/AddressPageLink'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
+import { buildWalletSendLinks } from './walletSendLinks'
 
 /** Wallet-app brand logos keyed by the deeplink `app` id. */
 const WALLET_LOGO: Record<string, ReactNode> = {
@@ -32,11 +33,17 @@ const WALLET_LOGO: Record<string, ReactNode> = {
 const DepositWallet = () => {
   const { triggerResize } = useOpenfort()
   const route = useDepositRoute('crypto')
-  const deeplinks = route.pm?.deeplinks ?? []
+  // Backend leaves pm.deeplinks empty in the MVP; synthesise them client-side
+  // from the session's prefilled address URI. Prefer backend links if present.
+  const deeplinks = route.pm?.deeplinks?.length
+    ? route.pm.deeplinks
+    : buildWalletSendLinks(route.pm?.addressUri, route.activeChain?.vmType ?? 'evm')
 
   useEffect(() => {
     triggerResize()
-  }, [route.receiverAddress, route.loading, deeplinks.length, triggerResize])
+  }, [route.receiverAddress, route.loading, route.status, deeplinks.length, triggerResize])
+
+  if (isDepositFlowActive(route.status)) return <DepositProgress status={route.status} />
 
   return (
     <PageContent onBack={routes.DEPOSIT}>
@@ -82,16 +89,7 @@ const DepositWallet = () => {
         <ModalBody style={{ marginTop: 12 }}>Pick a different source chain to get wallet links.</ModalBody>
       )}
 
-      <AddressToggle label="Or send to a deposit address">
-        <DepositAddressBlock
-          assetLogo={route.activeCurrency?.logo ?? null}
-          chainLogo={route.activeChain?.logo ?? null}
-          receiverAddress={route.receiverAddress}
-          pm={route.pm}
-          sameChain={route.sameChain}
-          loading={route.loading}
-        />
-      </AddressToggle>
+      <AddressPageLink label="Or send to a deposit address" />
 
       {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
     </PageContent>

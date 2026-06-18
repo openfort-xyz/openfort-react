@@ -9,7 +9,7 @@ const hide = (e: SyntheticEvent<HTMLImageElement>) => {
 /**
  * Center logo for the deposit QR: the asset logo with the chain logo as a small
  * badge bottom-left, so scanners can confirm the right token + network at a glance.
- * Sized in % so it fills CustomQRCode's logo slot.
+ * Kept fully within the logo slot (no overflow) so it never covers QR data modules.
  */
 export function AssetChainLogo({ assetLogo, chainLogo }: { assetLogo: string; chainLogo: string }) {
   return (
@@ -21,9 +21,9 @@ export function AssetChainLogo({ assetLogo, chainLogo }: { assetLogo: string; ch
         onError={hide}
         style={{
           position: 'absolute',
-          bottom: '-8%',
-          left: '-8%',
-          width: '48%',
+          bottom: 0,
+          left: 0,
+          width: '42%',
           borderRadius: '50%',
           border: '2px solid #fff',
           background: '#fff',

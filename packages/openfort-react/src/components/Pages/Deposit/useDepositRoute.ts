@@ -16,7 +16,7 @@ import { useFundingTarget } from './useFundingTarget'
 export type DepositRouteKind = 'crypto' | 'cex'
 
 function paymentMethodFor(kind: DepositRouteKind, chain: string, currency: FundingCurrency): PaymentMethodInput {
-  const source = { chain, currency: currency.address, amount: nominalUnits(currency.decimals) }
+  const source = { chain, currency: currency.address, amount: nominalUnits(currency.decimals, currency.native) }
   if (kind === 'cex') return { type: 'cex', cex: 'binance', source }
   return { type: isSolana(chain) ? 'solana' : 'evm', source }
 }
@@ -29,11 +29,14 @@ function paymentMethodFor(kind: DepositRouteKind, chain: string, currency: Fundi
  */
 export function useDepositRoute(kind: DepositRouteKind) {
   const wallet = useEthereumEmbeddedWallet()
-  const { session, error, loading, isAvailable, fund, payLink, reset } = useFunding()
+  const { session, status, error, loading, isAvailable, fund, payLink, reset } = useFunding()
   const { chains: allChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
+  // Drop the destination chain — funding is cross-chain; same-chain is a plain
+  // transfer with no Relay route, so it shouldn't appear as a source option.
+  const sourceChains = allChains.filter((c) => c.id !== target.chain)
   // Exchanges withdraw to EVM networks; Solana CEX withdrawal isn't profiled yet.
-  const chains: FundingChain[] = kind === 'cex' ? allChains.filter((c) => c.vmType === 'evm') : allChains
+  const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => c.vmType === 'evm') : sourceChains
   // Where funds land: the integrator's override, else the active embedded wallet.
   const walletAddress = wallet.status === 'connected' ? wallet.address : undefined
   const address = target.address ?? walletAddress
@@ -85,6 +88,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
     pm,
     receiverAddress,
     sameChain,
+    status,
     loading,
     error,
     isAvailable,

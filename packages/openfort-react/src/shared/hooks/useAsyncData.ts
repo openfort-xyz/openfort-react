@@ -10,9 +10,29 @@ type UseAsyncDataOptions<T> = {
   staleTime?: number
 }
 
+type CacheEntry = { data: unknown; timestamp: number }
+
+/** Module-level cache shared across hook instances, so revisiting a view paints instantly. */
+const dataCache = new Map<string, CacheEntry>()
+
+/**
+ * Empty/absent results are NOT cached — only meaningful data is. This prevents a
+ * transient empty response (e.g. a cold/erroring asset call) from being pinned
+ * and shown as "no balance" on later mounts.
+ */
+function isEmptyResult(result: unknown): boolean {
+  if (result == null) return true
+  if (Array.isArray(result)) return result.length === 0
+  return false
+}
+
 /**
  * Simple fetch-with-cache hook. Replaces useQuery for internal SDK use.
  * No external dependency on TanStack Query.
+ *
+ * Stale-while-revalidate: a cached (non-empty) result for the same `queryKey` is
+ * painted synchronously on (re)mount — so navigating away and back is instant —
+ * then refreshed in the background (skipped while younger than `staleTime`).
  */
 export function useAsyncData<T>({
   queryFn,
@@ -27,7 +47,11 @@ export function useAsyncData<T>({
   isPending: boolean
   refetch: () => Promise<T | undefined>
 } {
-  const [data, setData] = useState<T | undefined>(undefined)
+  // Serialize queryKey to a stable string so the effect only re-runs when values change,
+  // not when array/object references change.
+  const queryKeyStr = JSON.stringify(queryKey)
+
+  const [data, setData] = useState<T | undefined>(() => dataCache.get(queryKeyStr)?.data as T | undefined)
   const [error, setError] = useState<Error | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const lastFetchRef = useRef<number>(0)
@@ -35,39 +59,47 @@ export function useAsyncData<T>({
   const queryFnRef = useRef(queryFn)
   queryFnRef.current = queryFn
 
-  // Serialize queryKey to a stable string so the effect only re-runs when values change,
-  // not when array/object references change.
-  const queryKeyStr = JSON.stringify(queryKey)
-
-  const fetchData = useCallback(async (): Promise<T | undefined> => {
-    if (!enabled) return undefined
-    setIsLoading(true)
-    setError(null)
-    try {
-      const result = await queryFnRef.current()
-      setData(result)
-      lastFetchRef.current = Date.now()
-      return result
-    } catch (err) {
-      const e = err instanceof Error ? err : new Error(String(err))
-      setError(e)
-      throw e
-    } finally {
-      setIsLoading(false)
-    }
-  }, [enabled])
+  const fetchData = useCallback(
+    async (showLoading = true): Promise<T | undefined> => {
+      if (!enabled) return undefined
+      if (showLoading) setIsLoading(true)
+      setError(null)
+      try {
+        const result = await queryFnRef.current()
+        if (!isEmptyResult(result)) dataCache.set(queryKeyStr, { data: result, timestamp: Date.now() })
+        lastFetchRef.current = Date.now()
+        setData(result)
+        return result
+      } catch (err) {
+        const e = err instanceof Error ? err : new Error(String(err))
+        setError(e)
+        throw e
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [enabled, queryKeyStr]
+  )
 
   useEffect(() => {
     if (!enabled) return
-    fetchData().catch(() => {})
-  }, [enabled, queryKeyStr])
+    const cached = dataCache.get(queryKeyStr)
+    if (cached) {
+      // Paint cached data immediately; revalidate in the background unless still fresh.
+      setData(cached.data as T)
+      const fresh = staleTime > 0 && Date.now() - cached.timestamp < staleTime
+      if (!fresh) fetchData(false).catch(() => {})
+    } else {
+      fetchData(true).catch(() => {})
+    }
+  }, [enabled, queryKeyStr, staleTime, fetchData])
 
   useEffect(() => {
     if (!enabled || !refetchInterval || refetchInterval <= 0) return
     intervalRef.current = setInterval(() => {
       const elapsed = Date.now() - lastFetchRef.current
       if (staleTime > 0 && elapsed < staleTime) return
-      fetchData().catch(() => {})
+      fetchData(false).catch(() => {})
     }, refetchInterval)
     return () => {
       if (intervalRef.current) {
@@ -82,6 +114,6 @@ export function useAsyncData<T>({
     error,
     isLoading,
     isPending: isLoading,
-    refetch: fetchData,
+    refetch: useCallback(() => fetchData(true), [fetchData]),
   }
 }

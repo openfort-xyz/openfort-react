@@ -7,8 +7,8 @@ import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AddressToggle } from '../Deposit/AddressToggle'
-import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
+import { AddressPageLink } from '../Deposit/AddressPageLink'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { ButtonLogo, StepDivider } from '../Deposit/styles'
@@ -41,7 +41,9 @@ const DepositCex = () => {
 
   useEffect(() => {
     triggerResize()
-  }, [route.receiverAddress, route.loading, triggerResize])
+  }, [route.receiverAddress, route.loading, route.status, triggerResize])
+
+  if (isDepositFlowActive(route.status)) return <DepositProgress status={route.status} />
 
   const openPay = (exchange: string) => {
     if (!route.address) return
@@ -104,16 +106,7 @@ const DepositCex = () => {
         )}
       </div>
 
-      <AddressToggle label="Or send to a deposit address">
-        <DepositAddressBlock
-          assetLogo={route.activeCurrency?.logo ?? null}
-          chainLogo={route.activeChain?.logo ?? null}
-          receiverAddress={route.receiverAddress}
-          pm={route.pm}
-          sameChain={route.sameChain}
-          loading={route.loading}
-        />
-      </AddressToggle>
+      <AddressPageLink label="Or send to a deposit address" />
 
       {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
     </PageContent>

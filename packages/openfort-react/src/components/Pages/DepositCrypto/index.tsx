@@ -6,6 +6,7 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 
@@ -21,7 +22,9 @@ const DepositCrypto = () => {
 
   useEffect(() => {
     triggerResize()
-  }, [route.receiverAddress, route.loading, triggerResize])
+  }, [route.receiverAddress, route.loading, route.status, triggerResize])
+
+  if (isDepositFlowActive(route.status)) return <DepositProgress status={route.status} />
 
   return (
     <PageContent onBack={routes.DEPOSIT}>
@@ -42,8 +45,12 @@ const DepositCrypto = () => {
         chainLogo={route.activeChain?.logo ?? null}
         receiverAddress={route.receiverAddress}
         pm={route.pm}
+        sourceCurrency={
+          route.activeCurrency ? { symbol: route.activeCurrency.symbol, decimals: route.activeCurrency.decimals } : null
+        }
         sameChain={route.sameChain}
         loading={route.loading}
+        status={route.status}
       />
       {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
     </PageContent>

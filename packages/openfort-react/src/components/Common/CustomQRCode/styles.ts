@@ -12,7 +12,7 @@ export const QRCodeContainer = styled(motion.div)`
   align-items: center;
   justify-content: center;
   margin: 1px 0 2px;
-  border-radius: var(--ck-qr-border-radius, 24px);
+  border-radius: var(--ck-qr-border-radius, 48px);
   background: var(--ck-qr-background, transparent);
   box-shadow: 0 0 0 1px var(--ck-qr-border-color);
   backface-visibility: hidden;
@@ -25,7 +25,7 @@ export const QRCodeContainer = styled(motion.div)`
 `
 export const QRCodeContent = styled(motion.div)`
   position: absolute;
-  inset: 13px;
+  inset: 16px;
   svg {
     width: 100% !important;
     height: auto !important;
@@ -116,11 +116,11 @@ export const LogoContainer = styled(motion.div)`
   height: 100%;
   transform: translateY(50%) scale(0.9999); // Shifting fix
 `
-export const LogoIcon = styled(motion.div)<{ $wcLogo?: boolean }>`
+export const LogoIcon = styled(motion.div)<{ $wcLogo?: boolean; $clip?: boolean }>`
   z-index: 6;
   position: absolute;
   left: 50%;
-  overflow: hidden;
+  overflow: ${(props) => (props.$clip === false ? 'visible' : 'hidden')};
 
   transform: translate(-50%, -50%) scale(0.9999); // Shifting fix
 
@@ -140,7 +140,7 @@ export const LogoIcon = styled(motion.div)<{ $wcLogo?: boolean }>`
       : css`
           width: 28%;
           height: 28%;
-          border-radius: 17px;
+          border-radius: ${props.$clip === false ? '50%' : '17px'};
           &:before {
             pointer-events: none;
             z-index: 2;

@@ -125,9 +125,10 @@ export function curateChains(
 }
 
 /** Nominal source amount (in base units) used only to mint an open, route-bound deposit address.
- * 1 whole unit = 10^decimals = "1" followed by `decimals` zeros (e.g. 1 USDC). Clears mainnet
- * stablecoin route minimums; the open address accepts any amount >= the route minimum afterward.
- * Keep source currencies to stablecoins so this nominal isn't 1 whole ETH. */
-export function nominalUnits(decimals: number): string {
-  return `1${'0'.repeat(decimals)}`
+ * The open address accepts any amount >= the route minimum afterward, so this is just a quote seed.
+ * Stablecoins use 1 whole unit (~$1, clears mainnet route minimums); native tokens are far pricier
+ * per unit (1 ETH ≈ thousands), so they use 0.01 of a unit to avoid minting/QR-prefilling 1 whole ETH. */
+export function nominalUnits(decimals: number, native = false): string {
+  const zeros = native ? Math.max(0, decimals - 2) : decimals
+  return `1${'0'.repeat(zeros)}`
 }
