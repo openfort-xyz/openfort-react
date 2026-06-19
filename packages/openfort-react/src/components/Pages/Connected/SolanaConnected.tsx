@@ -132,8 +132,8 @@ const SolanaConnected: React.FC = () => {
         avatar={avatar}
         balance={balanceNode}
         actions={
-          <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.SOL_RECEIVE)}>
-            Get
+          <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.DEPOSIT)}>
+            Deposit
           </ActionButton>
         }
         hideBalance={context?.uiConfig.hideBalance}

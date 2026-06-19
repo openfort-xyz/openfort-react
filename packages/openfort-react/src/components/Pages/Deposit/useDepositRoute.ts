@@ -1,5 +1,6 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
@@ -9,6 +10,8 @@ import {
   nominalUnits,
   useFundingChains,
 } from '../../../hooks/openfort/useFundingChains'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { logger } from '../../../utils/logger'
 import { isCexDeliverable } from './cexChains'
 import { isSolana } from './sources'
@@ -31,7 +34,11 @@ function paymentMethodFor(chain: string, currency: FundingCurrency): PaymentMeth
  * address" page build on this — they differ only in the lead buttons.
  */
 export function useDepositRoute(kind: DepositRouteKind) {
-  const wallet = useEthereumEmbeddedWallet()
+  const { chainType } = useOpenfortCore()
+  const ethWallet = useEthereumEmbeddedWallet()
+  const solWallet = useSolanaEmbeddedWallet()
+  // Funds land in the active chain's embedded wallet (EVM or Solana).
+  const wallet = chainType === ChainTypeEnum.SVM ? solWallet : ethWallet
   const { session, status, error, loading, isAvailable, fund, payLink, reset } = useFunding()
   const { chains: allChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
