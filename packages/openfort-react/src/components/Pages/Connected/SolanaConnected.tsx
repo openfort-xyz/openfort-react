@@ -10,7 +10,7 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
 import { useEffect } from 'react'
-import { ReceiveIcon, UserRoundIcon } from '../../../assets/icons'
+import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons'
 import { BALANCE_INVALIDATE_EVENT, fetchSolanaBalance } from '../../../hooks/useBalance'
 import useLocales from '../../../hooks/useLocales'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
@@ -132,9 +132,14 @@ const SolanaConnected: React.FC = () => {
         avatar={avatar}
         balance={balanceNode}
         actions={
-          <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.DEPOSIT)}>
-            Deposit
-          </ActionButton>
+          <>
+            <ActionButton icon={<SendIcon />} onClick={() => context.setRoute(routes.SOL_SEND)}>
+              Send
+            </ActionButton>
+            <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.DEPOSIT)}>
+              Deposit
+            </ActionButton>
+          </>
         }
         hideBalance={context?.uiConfig.hideBalance}
         isBalanceLoading={isBalanceLoading}
