@@ -116,7 +116,8 @@ const DepositCex = () => {
     let cancelled = false
     setSession(null)
     setError(null)
-    createSessionRef.current({ chain: target.chain, currency: target.currency, address })
+    createSessionRef
+      .current({ chain: target.chain, currency: target.currency, address })
       .then((s) => {
         if (!cancelled) setSession({ id: s.id, clientSecret: s.clientSecret })
       })
