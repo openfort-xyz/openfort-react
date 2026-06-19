@@ -9,14 +9,13 @@ interface PlaygroundEvmChain {
   viemChain: Chain
 }
 
+// Order matters: the first entry is wagmi's default chain (useChainId when not
+// connected), which is also the chain the embedded wallet is created on. Keep
+// Polygon Amoy first so guest-wallet creation works under the CI test API key
+// (a test key rejects mainnet chainIds) and the e2e can still switch *to* Base
+// Sepolia. Base mainnet stays available for the funding deposit demo
+// (funding.targetChain is independent of this order).
 export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
-  {
-    id: base.id,
-    name: 'Base',
-    rpcUrl: 'https://base-rpc.publicnode.com',
-    explorerUrl: 'https://basescan.org',
-    viemChain: base,
-  },
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
@@ -30,6 +29,13 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
     rpcUrl: 'https://sepolia.base.org',
     explorerUrl: 'https://sepolia.basescan.org',
     viemChain: baseSepolia,
+  },
+  {
+    id: base.id,
+    name: 'Base',
+    rpcUrl: 'https://base-rpc.publicnode.com',
+    explorerUrl: 'https://basescan.org',
+    viemChain: base,
   },
 ]
 
