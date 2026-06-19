@@ -5,7 +5,7 @@ import {
   type OpenfortWalletConfig,
   RecoveryMethod,
 } from '@openfort/react'
-import { polygonAmoy } from 'viem/chains'
+import { base, polygonAmoy } from 'viem/chains'
 import { create } from 'zustand'
 import { DEFAULT_EVM_CHAIN, PLAYGROUND_EVM_CHAINS, RPC_URLS, SOLANA_CLUSTER, SOLANA_DEFAULT_RPC } from '@/lib/chains'
 
@@ -19,7 +19,7 @@ const defaultWalletConfig: OpenfortWalletConfig = {
       PLAYGROUND_EVM_CHAINS.map((c) => [c.id, import.meta.env.VITE_FEE_SPONSORSHIP_ID!])
     ),
     assets: {
-      [DEFAULT_EVM_CHAIN.id]: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`], // USDC on Base
+      [base.id]: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`], // USDC on Base
       [polygonAmoy.id]: [import.meta.env.VITE_POLYGON_MINT_CONTRACT!],
     },
   },

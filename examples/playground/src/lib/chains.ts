@@ -33,7 +33,7 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
   },
 ]
 
-export const DEFAULT_EVM_CHAIN = PLAYGROUND_EVM_CHAINS.find((c) => c.id === base.id)!
+export const DEFAULT_EVM_CHAIN = PLAYGROUND_EVM_CHAINS.find((c) => c.id === baseSepolia.id)!
 
 export const EVM_CHAIN_BY_ID: Record<number, PlaygroundEvmChain> = Object.fromEntries(
   PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c])
