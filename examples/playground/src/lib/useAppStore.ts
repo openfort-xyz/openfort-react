@@ -69,9 +69,8 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
       sourceCurrencies: ['ETH', 'WETH', 'USDC', 'USDT', 'DAI'],
       targetChain: 'eip155:8453',
       targetCurrency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-      // Hosted deposit "send" page (served from public/deposit.html). Use the
-      // current origin so it works on localhost and over LAN (phone on same wifi).
-      depositPageUrl: typeof window !== 'undefined' ? `${window.location.origin}/deposit.html` : undefined,
+      // depositPageUrl omitted → uses the SDK default (https://deposit.openfort.io),
+      // the zero-config path a real integrator gets.
     },
     theme: 'auto',
     mode: undefined,
