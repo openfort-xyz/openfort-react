@@ -12,11 +12,11 @@ import { getDefaultConfig, getDefaultConnectors, OpenfortWagmiBridge } from '@op
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type React from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { createConfig, http, WagmiProvider } from 'wagmi'
+import { createConfig, http, useChainId, WagmiProvider } from 'wagmi'
 import { injected, metaMask } from 'wagmi/connectors'
 import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
-import { PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
+import { getFundingTargetForChain, PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
 import { useAppStore } from './lib/useAppStore'
 
 export type OpenfortPlaygroundMode = 'svm' | 'evm'
@@ -108,6 +108,33 @@ const wagmiConfig = createConfig(
 
 const MODE_TO_CHAIN = { evm: ChainTypeEnum.EVM, svm: ChainTypeEnum.SVM } as const
 
+/**
+ * Keeps the Deposit-hub funding target in sync with the active EVM chain, so
+ * switching networks in the OpenfortButton lands deposits on that chain's USDC.
+ * No-ops on chains without a configured USDC (testnets), keeping the prior target.
+ */
+function FundingTargetSync() {
+  const chainId = useChainId()
+  const providerOptions = useAppStore((s) => s.providerOptions)
+  const setProviderOptions = useAppStore((s) => s.setProviderOptions)
+
+  useEffect(() => {
+    const target = getFundingTargetForChain(chainId)
+    if (!target) return
+    const funding = providerOptions.uiConfig?.funding
+    if (funding?.targetChain === target.targetChain && funding?.targetCurrency === target.targetCurrency) return
+    setProviderOptions({
+      ...providerOptions,
+      uiConfig: {
+        ...providerOptions.uiConfig,
+        funding: { ...funding, ...target },
+      },
+    })
+  }, [chainId, providerOptions, setProviderOptions])
+
+  return null
+}
+
 function WagmiProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient())
   const { providerOptions } = useAppStore()
@@ -128,6 +155,7 @@ function WagmiProviders({ children }: { children: React.ReactNode }) {
         <WagmiProvider config={wagmiConfig}>
           <OpenfortWagmiBridge>
             <OpenfortProvider {...options}>
+              <FundingTargetSync />
               <EthereumAddressProviderWagmi>{children}</EthereumAddressProviderWagmi>
             </OpenfortProvider>
           </OpenfortWagmiBridge>

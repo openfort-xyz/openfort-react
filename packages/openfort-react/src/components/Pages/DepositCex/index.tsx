@@ -6,12 +6,15 @@ import logos from '../../../assets/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
+import { invalidateBalance } from '../../../hooks/useBalance'
 import { logger } from '../../../utils/logger'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
+import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
 import { DEST_USDC } from '../Deposit/sources'
 import { ButtonLogo, StepDivider } from '../Deposit/styles'
@@ -68,7 +71,7 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
 const DepositCex = () => {
   const { triggerResize } = useOpenfort()
   const target = useFundingTarget()
-  const { isAvailable, createSession, payLink } = useFunding()
+  const { isAvailable, createSession, track, payLink, status } = useFunding()
   const wallet = useEthereumEmbeddedWallet()
   const { chains } = useFundingChains()
 
@@ -132,6 +135,12 @@ const DepositCex = () => {
     triggerResize()
   }, [isAvailable, chainSupported, session, error, opened, amountTooLow, triggerResize])
 
+  // Once the bound session settles, refresh balances so delivered funds show
+  // without a manual reload.
+  useEffect(() => {
+    if (status === 'succeeded') invalidateBalance()
+  }, [status])
+
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
     if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
@@ -174,12 +183,19 @@ const DepositCex = () => {
         if (w) w.location.href = url
         else window.location.assign(url) // popup blocked — fall back to this tab
         setOpened(true)
+        // Watch the destination-bound session settle so the modal can show the
+        // success / failed outcome instead of stranding the user on the form.
+        if (session) void track({ id: session.id, clientSecret: session.clientSecret }).catch(() => {})
       })
       .catch((e) => {
         w?.close()
         setError(e instanceof Error ? e : new Error(String(e)))
       })
   }
+
+  // Once the deposit lands, the session-status flow takes over the modal with the
+  // success / refunded / expired screen (shared with the crypto rail).
+  if (isDepositFlowActive(status)) return <DepositProgress status={status} />
 
   return (
     <PageContent onBack={routes.DEPOSIT}>
@@ -271,11 +287,14 @@ const DepositCex = () => {
         )}
       </div>
 
-      {/* {opened && (
-        <ModalBody style={{ marginTop: 12 }}>
-          Finish in the Coinbase tab — funds arrive to your wallet automatically. status webhooks
-        </ModalBody>
-      )} */}
+      {opened &&
+        (status === 'waiting_payment' ? (
+          <DepositStatus status={status} />
+        ) : (
+          <ModalBody style={{ marginTop: 12 }}>
+            Finish in the Coinbase tab — we'll confirm here once your funds arrive.
+          </ModalBody>
+        ))}
     </PageContent>
   )
 }

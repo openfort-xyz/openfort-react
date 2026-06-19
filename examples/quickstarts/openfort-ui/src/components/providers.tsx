@@ -29,7 +29,7 @@ const walletConfig = {
 const uiConfig = {
   theme: import.meta.env.VITE_OPENFORT_THEME as Theme,
   // Point the Deposit hub's crypto/CEX rails at the local funding backend.
-  fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL ?? 'http://localhost:8787',
+  fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL ?? 'https://api.openfort.io',
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

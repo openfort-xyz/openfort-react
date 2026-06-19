@@ -120,6 +120,44 @@ export type FundingSession = {
 const TERMINAL: SessionStatus[] = ['succeeded', 'bounced', 'expired']
 const POLL_MS = 4000
 
+/**
+ * Poll a session until it reaches a terminal state, pushing each update through
+ * `onUpdate`. Shared by `fund` (after a payment method is set) and `track` (the
+ * CEX rail, watching a hosted Coinbase deposit settle). `isCurrent` guards a
+ * stale loop from clobbering newer state after reset/unmount.
+ */
+async function pollUntilTerminal(
+  client: FundingClient,
+  onUpdate: (session: FundingSession) => void,
+  start: FundingSession,
+  isCurrent: () => boolean
+): Promise<FundingSession> {
+  let current = start
+  let prev = current.status
+  while (!TERMINAL.includes(current.status)) {
+    await new Promise((resolve) => setTimeout(resolve, POLL_MS))
+    if (!isCurrent()) return current
+    current = await client.sessions.get(current.id, { clientSecret: current.clientSecret })
+    if (!isCurrent()) return current
+    onUpdate(current)
+    if (current.status !== prev) {
+      logger.log('[funding] status', { sessionId: current.id, prev, status: current.status })
+      prev = current.status
+    }
+  }
+  if (current.status === 'succeeded') {
+    logger.log('[funding] terminal: delivered', {
+      sessionId: current.id,
+      status: current.status,
+      txHash: current.metadata?.txHash ?? current.externalId ?? null,
+    })
+  } else {
+    // bounced = source delivered but Relay refunded; expired = nothing arrived in time.
+    logger.warn('[funding] terminal: failed', { sessionId: current.id, status: current.status })
+  }
+  return current
+}
+
 export type UseFunding = {
   session: FundingSession | null
   status: SessionStatus | 'idle'
@@ -134,6 +172,11 @@ export type UseFunding = {
    * the Coinbase CEX rail, which only needs the session id + secret to mint a
    * pay-link; the destination is bound to the session so the client can't redirect funds. */
   createSession: (target: FundingTarget) => Promise<FundingSession>
+  /** Poll an already-created session (id + clientSecret) until it reaches a
+   * terminal state, surfacing `status`/`session` updates as it goes. Used by the
+   * CEX rail, which hands off to a hosted Coinbase flow and then watches the
+   * bound session settle to drive the success/failed screen. */
+  track: (session: { id: string; clientSecret: string }) => Promise<FundingSession>
   /** Resolve a hosted Coinbase pay URL for an existing session. Coinbase delivers
    * to the session's bound destination, so only the amount (and optional asset) is client-supplied. */
   payLink: (params: PayLinkParams) => Promise<string>
@@ -240,40 +283,15 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         if (!isCurrent()) return current
         setSession(current)
         setLoading(false)
-        // The session status encodes both hops: waiting_payment (awaiting the source
-        // deposit, e.g. the Coinbase withdrawal) → processing (deposit arrived on-chain,
-        // Relay bridging) → succeeded / bounced (Relay refunded) / expired (no deposit).
-        let prev = current.status
         logger.log('[funding] payment method set', {
           sessionId: current.id,
           status: current.status,
           receiverAddress: current.paymentMethod?.receiverAddress,
         })
-
-        while (!TERMINAL.includes(current.status)) {
-          await new Promise((resolve) => setTimeout(resolve, POLL_MS))
-          if (!isCurrent()) return current
-          current = await client.sessions.get(current.id, { clientSecret: current.clientSecret })
-          if (!isCurrent()) return current
-          setSession(current)
-          if (current.status !== prev) {
-            // 'processing' is inferred to mean the source deposit landed (Coinbase
-            // delivered) and Relay is bridging — derived from the transition, not reported.
-            logger.log('[funding] status', { sessionId: current.id, prev, status: current.status })
-            prev = current.status
-          }
-        }
-        if (current.status === 'succeeded') {
-          logger.log('[funding] terminal: delivered', {
-            sessionId: current.id,
-            status: current.status,
-            txHash: current.metadata?.txHash ?? current.externalId ?? null,
-          })
-        } else {
-          // bounced = source delivered but Relay refunded; expired = nothing arrived in time.
-          logger.warn('[funding] terminal: failed', { sessionId: current.id, status: current.status })
-        }
-        return current
+        // The session status encodes both hops: waiting_payment (awaiting the source
+        // deposit, e.g. the Coinbase withdrawal) → processing (deposit arrived on-chain,
+        // Relay bridging) → succeeded / bounced (Relay refunded) / expired (no deposit).
+        return pollUntilTerminal(client, setSession, current, isCurrent)
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e))
         if (isCurrent()) {
@@ -297,6 +315,31 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
     [client]
   )
 
+  const track = useCallback(
+    async (toTrack: { id: string; clientSecret: string }): Promise<FundingSession> => {
+      if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
+      generation.current += 1
+      const gen = generation.current
+      const isCurrent = () => generation.current === gen
+      setError(null)
+      try {
+        const start = await client.sessions.get(toTrack.id, { clientSecret: toTrack.clientSecret })
+        if (!isCurrent()) return start
+        setSession(start)
+        logger.log('[funding] track() start', { sessionId: start.id, status: start.status })
+        return await pollUntilTerminal(client, setSession, start, isCurrent)
+      } catch (e) {
+        const err = e instanceof Error ? e : new Error(String(e))
+        if (isCurrent()) {
+          setError(err)
+          logger.error('[funding] track() failed', err)
+        }
+        throw err
+      }
+    },
+    [client]
+  )
+
   const payLink = useCallback(
     async (params: PayLinkParams): Promise<string> => {
       if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
@@ -313,6 +356,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
     isAvailable,
     fund,
     createSession,
+    track,
     payLink,
     reset,
   }
