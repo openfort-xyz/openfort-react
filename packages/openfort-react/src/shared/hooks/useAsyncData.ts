@@ -16,6 +16,22 @@ type CacheEntry = { data: unknown; timestamp: number }
 const dataCache = new Map<string, CacheEntry>()
 
 /**
+ * Drop cached entries so the next mount (or refetch) hits the network instead of
+ * painting stale data. Pass a substring matched against the serialized queryKey
+ * to target specific queries (e.g. `'walletAssets'`), or omit to clear everything.
+ * Used by balance-changing flows (deposit/mint/send) to force fresh balances.
+ */
+export function invalidateAsyncData(keyMatch?: string): void {
+  if (!keyMatch) {
+    dataCache.clear()
+    return
+  }
+  for (const key of Array.from(dataCache.keys())) {
+    if (key.includes(keyMatch)) dataCache.delete(key)
+  }
+}
+
+/**
  * Empty/absent results are NOT cached — only meaningful data is. This prevents a
  * transient empty response (e.g. a cold/erroring asset call) from being pinned
  * and shown as "no balance" on later mounts.

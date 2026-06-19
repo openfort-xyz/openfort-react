@@ -79,4 +79,16 @@ export function getPlaygroundRpcUrl(chainId?: number): string {
 export const SOLANA_CLUSTER = 'devnet' as const
 export const SOLANA_DEFAULT_RPC = 'https://api.devnet.solana.com'
 
+/**
+ * Deposit-hub funding target for Solana — mainnet USDC. The rail (Relay/Coinbase)
+ * settles on mainnet regardless of the wallet's devnet cluster; the embedded
+ * wallet address is the same across clusters, so deposits land in the same wallet.
+ */
+export const SOLANA_FUNDING_TARGET = {
+  // Solana mainnet CAIP-2 id, matching the rail's chain list (useFundingChains).
+  targetChain: 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+  // Native USDC mint on Solana mainnet.
+  targetCurrency: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+} as const
+
 export const AUTH_CALLBACK_PATH = '/auth/useAuthCallback'

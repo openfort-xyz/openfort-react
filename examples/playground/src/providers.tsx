@@ -8,6 +8,7 @@
  */
 
 import { ChainTypeEnum, OpenfortProvider } from '@openfort/react'
+import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { getDefaultConfig, getDefaultConnectors, OpenfortWagmiBridge } from '@openfort/react/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type React from 'react'
@@ -15,7 +16,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createConfig, http, useChainId, WagmiProvider } from 'wagmi'
 import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
-import { getFundingTargetForChain, PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
+import { getFundingTargetForChain, PLAYGROUND_EVM_CHAINS, SOLANA_FUNDING_TARGET } from '@/lib/chains'
 import { useAppStore } from './lib/useAppStore'
 
 export type OpenfortPlaygroundMode = 'svm' | 'evm'
@@ -111,6 +112,8 @@ const MODE_TO_CHAIN = { evm: ChainTypeEnum.EVM, svm: ChainTypeEnum.SVM } as cons
  * Keeps the Deposit-hub funding target in sync with the active EVM chain, so
  * switching networks in the OpenfortButton lands deposits on that chain's USDC.
  * No-ops on chains without a configured USDC (testnets), keeping the prior target.
+ * Drops any `targetAddress` so deposits land on the active EVM embedded wallet —
+ * clears a stale Solana address left by the SVM sync after a mode switch.
  */
 function FundingTargetSync() {
   const chainId = useChainId()
@@ -121,15 +124,55 @@ function FundingTargetSync() {
     const target = getFundingTargetForChain(chainId)
     if (!target) return
     const funding = providerOptions.uiConfig?.funding
-    if (funding?.targetChain === target.targetChain && funding?.targetCurrency === target.targetCurrency) return
+    if (
+      funding?.targetChain === target.targetChain &&
+      funding?.targetCurrency === target.targetCurrency &&
+      funding?.targetAddress === undefined
+    ) {
+      return
+    }
+    const { targetAddress: _drop, ...rest } = funding ?? {}
     setProviderOptions({
       ...providerOptions,
       uiConfig: {
         ...providerOptions.uiConfig,
-        funding: { ...funding, ...target },
+        funding: { ...rest, ...target },
       },
     })
   }, [chainId, providerOptions, setProviderOptions])
+
+  return null
+}
+
+/**
+ * SVM counterpart of {@link FundingTargetSync}: while in Solana mode, points the
+ * Deposit-hub target at Solana mainnet USDC and the active Solana embedded wallet,
+ * so a Coinbase/crypto deposit bridges and lands as USDC in that wallet.
+ */
+function SolanaFundingTargetSync() {
+  const solana = useSolanaEmbeddedWallet()
+  const providerOptions = useAppStore((s) => s.providerOptions)
+  const setProviderOptions = useAppStore((s) => s.setProviderOptions)
+  const address = solana.status === 'connected' ? solana.activeWallet?.address : undefined
+
+  useEffect(() => {
+    if (!address) return
+    const funding = providerOptions.uiConfig?.funding
+    if (
+      funding?.targetChain === SOLANA_FUNDING_TARGET.targetChain &&
+      funding?.targetCurrency === SOLANA_FUNDING_TARGET.targetCurrency &&
+      funding?.targetAddress === address
+    ) {
+      return
+    }
+    setProviderOptions({
+      ...providerOptions,
+      uiConfig: {
+        ...providerOptions.uiConfig,
+        funding: { ...funding, ...SOLANA_FUNDING_TARGET, targetAddress: address },
+      },
+    })
+  }, [address, providerOptions, setProviderOptions])
 
   return null
 }
@@ -181,6 +224,7 @@ function OpenfortOnlyProviders({ children }: { children: React.ReactNode }) {
     <ModeSwitchContext.Provider value={{}}>
       <QueryClientProvider client={queryClient}>
         <OpenfortProvider {...options}>
+          <SolanaFundingTargetSync />
           <EthereumAddressProviderEmbedded>{children}</EthereumAddressProviderEmbedded>
         </OpenfortProvider>
       </QueryClientProvider>

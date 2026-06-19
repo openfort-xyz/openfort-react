@@ -2,7 +2,7 @@ import styled from '../../../styles/styled'
 import { PageContent } from '../../PageContent'
 
 export const SelectTokenContent = styled(PageContent)`
-  min-height: 320px;
+  min-height: 400px;
   display: flex;
   flex-direction: column;
   padding-bottom: 16px;

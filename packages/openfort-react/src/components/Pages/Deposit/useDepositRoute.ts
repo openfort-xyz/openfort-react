@@ -10,14 +10,12 @@ import {
   useFundingChains,
 } from '../../../hooks/openfort/useFundingChains'
 import { logger } from '../../../utils/logger'
+import { isCexDeliverable } from './cexChains'
 import { isSolana } from './sources'
 import { useFundingTarget } from './useFundingTarget'
 
 /** Which rail the route feeds: self-custody wallet send vs exchange withdrawal. */
 type DepositRouteKind = 'crypto' | 'cex'
-
-/** CAIP-2 chains Coinbase Onramp can deliver to — the only CEX rail today. */
-const COINBASE_CHAINS = new Set(['eip155:1', 'eip155:10', 'eip155:137', 'eip155:8453', 'eip155:42161', 'eip155:43114'])
 
 function paymentMethodFor(chain: string, currency: FundingCurrency): PaymentMethodInput {
   const source = { chain, currency: currency.address, amount: nominalUnits(currency.decimals, currency.native) }
@@ -42,7 +40,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
   const sourceChains = allChains.filter((c) => c.id !== target.chain)
   // The CEX rail rides Coinbase Onramp, which only delivers to a fixed set of EVM
   // chains — offer those as the pay-with sources.
-  const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => COINBASE_CHAINS.has(c.id)) : sourceChains
+  const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => isCexDeliverable(c.id)) : sourceChains
   // Where funds land: the integrator's override, else the active embedded wallet.
   const walletAddress = wallet.status === 'connected' ? wallet.address : undefined
   const address = target.address ?? walletAddress

@@ -1,5 +1,6 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import type { ChangeEvent, CSSProperties, ReactNode, SyntheticEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import logos from '../../../assets/logos'
@@ -7,12 +8,14 @@ import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEm
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
 import { invalidateBalance } from '../../../hooks/useBalance'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { logger } from '../../../utils/logger'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
+import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
@@ -37,17 +40,6 @@ const EXCHANGE_LOGO: Record<string, ReactNode> = {
 const MIN_AMOUNT = 5
 const PRESETS = [10, 25, 50]
 
-/** CAIP-2 chains Coinbase can deliver to — the only chains the CEX rail supports. */
-const CHAIN_NAMES: Record<string, string> = {
-  'eip155:1': 'Ethereum',
-  'eip155:10': 'Optimism',
-  'eip155:137': 'Polygon',
-  'eip155:8453': 'Base',
-  'eip155:42161': 'Arbitrum',
-  'eip155:43114': 'Avalanche',
-}
-const COINBASE_CHAINS = new Set(Object.keys(CHAIN_NAMES))
-
 function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
 }
@@ -65,14 +57,16 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
  * a hosted Coinbase pay-link that delivers to the embedded wallet on the
  * destination chain. The destination (chain + currency + address) is bound to a
  * funding session created up-front, so the client can't redirect the funds — only
- * the amount is chosen here. No Relay routing and no live status tracking on this
- * rail (the hosted flow has no pollable id); Binance is gated until its rail lands.
+ * the amount is chosen here. After hand-off the bound session is polled until it
+ * settles (advanced by the Coinbase webhook on the backend), driving the
+ * success / failed screen. No Relay routing; Binance is gated until its rail lands.
  */
 const DepositCex = () => {
   const { triggerResize } = useOpenfort()
   const target = useFundingTarget()
   const { isAvailable, createSession, track, payLink, status } = useFunding()
   const wallet = useEthereumEmbeddedWallet()
+  const { embeddedAccounts } = useOpenfortCore()
   const { chains } = useFundingChains()
 
   const [amount, setAmount] = useState(String(MIN_AMOUNT))
@@ -81,14 +75,20 @@ const DepositCex = () => {
   const [error, setError] = useState<Error | null>(null)
   const [opened, setOpened] = useState(false)
 
-  const address = target.address ?? wallet.address
-  const chainSupported = COINBASE_CHAINS.has(target.chain)
+  // Resolve the destination by chain family: EVM targets use the EVM embedded
+  // wallet, Solana targets the Solana (SVM) embedded account — never cross families
+  // (an EVM address on a Solana target would be rejected / mis-delivered). Accounts
+  // come from the core store so EVM-only apps don't need the Solana React context.
+  const isEvmTarget = target.chain.startsWith('eip155:')
+  const solanaAddress = embeddedAccounts?.find((acc) => acc.chainType === ChainTypeEnum.SVM)?.address
+  const address = target.address ?? (isEvmTarget ? wallet.address : solanaAddress)
+  const chainSupported = isCexDeliverable(target.chain)
 
   // Resolve the destination asset + chain for the "Arrives as …" line. The live
   // chain list is curated for source selection, so the destination may be absent;
   // only claim a symbol we resolved, or USDC for the zero-config default.
   const destChain = chains.find((c) => c.id === target.chain)
-  const destChainName = destChain?.name ?? CHAIN_NAMES[target.chain] ?? target.chain
+  const destChainName = destChain?.name ?? CEX_CHAIN_NAMES[target.chain] ?? target.chain
   const destAsset = destChain?.currencies.find((c) => c.address.toLowerCase() === target.currency.toLowerCase())
   const isDefaultUsdc = target.currency.toLowerCase() === DEST_USDC.toLowerCase()
   const destAssetLabel = destAsset?.symbol ?? (isDefaultUsdc ? 'USDC' : null)
