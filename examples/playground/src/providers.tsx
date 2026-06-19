@@ -148,6 +148,12 @@ function FundingTargetSync() {
  * SVM counterpart of {@link FundingTargetSync}: while in Solana mode, points the
  * Deposit-hub target at Solana mainnet USDC and the active Solana embedded wallet,
  * so a Coinbase/crypto deposit bridges and lands as USDC in that wallet.
+ *
+ * Mirrors the EVM sync: flip the target chain/currency to Solana *immediately* on
+ * mount (this component only renders in SVM mode), not gated on the wallet being
+ * fully connected. `targetAddress` is set once the Solana wallet resolves; until
+ * then DepositCex falls back to the SVM embedded account, so the CEX page never
+ * strands on "Preparing…" while the wallet is still connecting.
  */
 function SolanaFundingTargetSync() {
   const solana = useSolanaEmbeddedWallet()
@@ -156,7 +162,6 @@ function SolanaFundingTargetSync() {
   const address = solana.status === 'connected' ? solana.activeWallet?.address : undefined
 
   useEffect(() => {
-    if (!address) return
     const funding = providerOptions.uiConfig?.funding
     if (
       funding?.targetChain === SOLANA_FUNDING_TARGET.targetChain &&

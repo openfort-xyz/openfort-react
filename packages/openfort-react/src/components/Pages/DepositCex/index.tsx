@@ -97,7 +97,17 @@ const DepositCex = () => {
 
   // Mint the destination-bound session up-front (per target wallet), so the click
   // that opens Coinbase is a single fast pay-link call and stays popup-safe.
+  //
+  // `createSession` is held in a ref and kept OUT of the effect deps: its identity
+  // churns whenever the core client re-memoizes (e.g. during Solana recovery
+  // retries, which re-render rapidly). If it were a dep, a churn mid-flight would
+  // re-run the effect, fire its cleanup (`cancelled = true`), then early-return on
+  // the unchanged sessionKey — so the in-flight create resolves but its result is
+  // dropped and never retried, stranding the page on "Preparing…". The effect must
+  // only re-run on a genuine destination change.
   const sessionKey = useRef('')
+  const createSessionRef = useRef(createSession)
+  createSessionRef.current = createSession
   useEffect(() => {
     if (!isAvailable || !address || !chainSupported) return
     const key = `${target.chain}|${target.currency}|${address}`
@@ -106,7 +116,7 @@ const DepositCex = () => {
     let cancelled = false
     setSession(null)
     setError(null)
-    createSession({ chain: target.chain, currency: target.currency, address })
+    createSessionRef.current({ chain: target.chain, currency: target.currency, address })
       .then((s) => {
         if (!cancelled) setSession({ id: s.id, clientSecret: s.clientSecret })
       })
@@ -115,8 +125,11 @@ const DepositCex = () => {
       })
     return () => {
       cancelled = true
+      // Clear the key so a genuine destination change re-creates the session;
+      // without this the guard above would block the retry after this cancel.
+      sessionKey.current = ''
     }
-  }, [isAvailable, address, chainSupported, target.chain, target.currency, createSession])
+  }, [isAvailable, address, chainSupported, target.chain, target.currency])
 
   const fiatAmount = useMemo(() => {
     const normalized = sanitizeForParsing(sanitizeAmountInput(amount))
