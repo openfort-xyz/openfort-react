@@ -13,7 +13,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type React from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { createConfig, http, useChainId, WagmiProvider } from 'wagmi'
-import { injected, metaMask } from 'wagmi/connectors'
 import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
 import { getFundingTargetForChain, PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
@@ -100,7 +99,7 @@ const wagmiConfig = createConfig(
     appName: 'Openfort demo',
     chains: wagmiChains,
     transports: wagmiTransports,
-    connectors: [metaMask(), injected(), ...defaultConnectors],
+    connectors: [...defaultConnectors],
   })
 )
 
