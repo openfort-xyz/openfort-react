@@ -70,7 +70,8 @@ const originOf = (u: string): string => {
 type WalletApp = {
   app: string
   label: string
-  vm: VmType
+  /** Chains this wallet handles. Phantom is multichain (EVM + Solana). */
+  vms: VmType[]
   build: (pageUrl: string) => string
 }
 
@@ -81,19 +82,19 @@ const WALLETS: WalletApp[] = [
   {
     app: 'metamask',
     label: 'Open MetaMask',
-    vm: 'evm',
+    vms: ['evm'],
     build: (u) => `https://link.metamask.io/dapp/${stripScheme(u)}`,
   },
   {
     app: 'coinbase',
     label: 'Open Coinbase Wallet',
-    vm: 'evm',
+    vms: ['evm'],
     build: (u) => `https://go.cb-w.com/dapp?cb_url=${enc(u)}`,
   },
   {
     app: 'trust',
     label: 'Open Trust Wallet',
-    vm: 'evm',
+    vms: ['evm'],
     // coin_id=60 = Ethereum (SLIP-44). In-app dApp browser is Android-only;
     // iOS shows "Deep Link not Supported" (Apple removed it in 2021).
     build: (u) => `https://link.trustwallet.com/open_url?coin_id=60&url=${enc(u)}`,
@@ -101,19 +102,19 @@ const WALLETS: WalletApp[] = [
   {
     app: 'rainbow',
     label: 'Open Rainbow',
-    vm: 'evm',
+    vms: ['evm'],
     build: (u) => `https://rainbow.me/dapp?url=${enc(u)}`,
   },
   {
     app: 'rabby',
     label: 'Open Rabby',
-    vm: 'evm',
+    vms: ['evm'],
     build: (u) => `https://go.rabby.io/mobile/?_cmd=open-dapp&dapp=${enc(u)}`,
   },
   {
     app: 'phantom',
     label: 'Open Phantom',
-    vm: 'svm',
+    vms: ['evm', 'svm'],
     build: (u) => `https://phantom.app/ul/browse/${enc(u)}?ref=${enc(originOf(u))}`,
   },
 ]
@@ -123,7 +124,7 @@ const WALLETS: WalletApp[] = [
  * deposit send page so it loads in that wallet's in-app browser.
  */
 export function buildOpenDappLinks(pageUrl: string, vmType: VmType): WalletDeeplink[] {
-  return WALLETS.filter((w) => w.vm === vmType).map((w) => ({
+  return WALLETS.filter((w) => w.vms.includes(vmType)).map((w) => ({
     app: w.app,
     label: w.label,
     url: w.build(pageUrl),

@@ -48,9 +48,9 @@ describe('buildDepositPageUrl', () => {
 })
 
 describe('buildOpenDappLinks', () => {
-  it('returns the five EVM wallets wrapping the encoded page url', () => {
+  it('returns the EVM wallets (including multichain Phantom) wrapping the encoded page url', () => {
     const links = buildOpenDappLinks(PAGE, 'evm')
-    expect(links.map((l) => l.app)).toEqual(['metamask', 'coinbase', 'trust', 'rainbow', 'rabby'])
+    expect(links.map((l) => l.app)).toEqual(['metamask', 'coinbase', 'trust', 'rainbow', 'rabby', 'phantom'])
   })
 
   it('returns only Phantom for SVM', () => {
