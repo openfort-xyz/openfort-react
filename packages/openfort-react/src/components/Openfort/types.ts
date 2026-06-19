@@ -409,15 +409,6 @@ export type FundingUIOptions = {
    */
   targetCurrency?: string
   /**
-   * Destination wallet that receives the deposit. Overrides the active embedded
-   * wallet address — set this when funds should land somewhere other than the
-   * active address (e.g. a deployed smart account when the active address is its
-   * owner EOA). Must be a valid address on `targetChain`; for EVM it also receives
-   * cross-chain refunds on the source chain, so use an address valid across chains.
-   * @default the active embedded wallet address
-   */
-  targetAddress?: string
-  /**
    * Which funding methods the Deposit hub shows, and in what order. Omit to show
    * all available methods (Apple Pay first on mobile). Mirrors `authProviders`.
    * @example [FundingMethod.WALLET, FundingMethod.ADDRESS]

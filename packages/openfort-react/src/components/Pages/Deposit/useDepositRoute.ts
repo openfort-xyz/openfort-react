@@ -48,9 +48,8 @@ export function useDepositRoute(kind: DepositRouteKind) {
   // The CEX rail rides Coinbase Onramp, which only delivers to a fixed set of EVM
   // chains — offer those as the pay-with sources.
   const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => isCexDeliverable(c.id)) : sourceChains
-  // Where funds land: the integrator's override, else the active embedded wallet.
-  const walletAddress = wallet.status === 'connected' ? wallet.address : undefined
-  const address = target.address ?? walletAddress
+  // Where funds land: the active embedded wallet (the Relay deposit recipient).
+  const address = wallet.status === 'connected' ? wallet.address : undefined
 
   const [chainId, setChainId] = useState('')
   const [currencySymbol, setCurrencySymbol] = useState('')
