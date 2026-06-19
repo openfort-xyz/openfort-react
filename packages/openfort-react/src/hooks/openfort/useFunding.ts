@@ -276,7 +276,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         }
         const created = await client.sessions.create({ target })
         logger.log('[funding] session created', { sessionId: created.id, status: created.status })
-        let current = await client.sessions.setPaymentMethod(created.id, {
+        const current = await client.sessions.setPaymentMethod(created.id, {
           clientSecret: created.clientSecret,
           paymentMethod,
         })

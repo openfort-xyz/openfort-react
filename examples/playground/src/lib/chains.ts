@@ -1,5 +1,5 @@
 import type { Chain } from 'viem/chains'
-import { base, baseSepolia, polygonAmoy } from 'viem/chains'
+import { base, baseSepolia, polygon, polygonAmoy } from 'viem/chains'
 
 interface PlaygroundEvmChain {
   id: number
@@ -7,6 +7,8 @@ interface PlaygroundEvmChain {
   rpcUrl: string
   explorerUrl: string
   viemChain: Chain
+  /** Native USDC on this chain — used as the Deposit-hub funding target currency. */
+  usdc?: string
 }
 
 // Order matters: the first entry is wagmi's default chain (useChainId when not
@@ -16,6 +18,22 @@ interface PlaygroundEvmChain {
 // Sepolia. Base mainnet stays available for the funding deposit demo
 // (funding.targetChain is independent of this order).
 export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
+  {
+    id: base.id,
+    name: 'Base',
+    rpcUrl: 'https://base-rpc.publicnode.com',
+    explorerUrl: 'https://basescan.org',
+    viemChain: base,
+    usdc: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  },
+  {
+    id: polygon.id,
+    name: 'Polygon',
+    rpcUrl: 'https://polygon-bor-rpc.publicnode.com',
+    explorerUrl: 'https://polygonscan.com',
+    viemChain: polygon,
+    usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
+  },
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
@@ -30,13 +48,6 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
     explorerUrl: 'https://sepolia.basescan.org',
     viemChain: baseSepolia,
   },
-  {
-    id: base.id,
-    name: 'Base',
-    rpcUrl: 'https://base-rpc.publicnode.com',
-    explorerUrl: 'https://basescan.org',
-    viemChain: base,
-  },
 ]
 
 export const DEFAULT_EVM_CHAIN = PLAYGROUND_EVM_CHAINS.find((c) => c.id === baseSepolia.id)!
@@ -46,6 +57,19 @@ export const EVM_CHAIN_BY_ID: Record<number, PlaygroundEvmChain> = Object.fromEn
 )
 
 export const RPC_URLS: Record<number, string> = Object.fromEntries(PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
+
+/**
+ * Deposit-hub funding target (CAIP-2 chain + USDC address) for an active chain.
+ * Returns undefined for chains without a configured USDC (e.g. testnets), so the
+ * caller keeps the previous target instead of routing to an unsupported chain.
+ */
+export function getFundingTargetForChain(
+  chainId?: number
+): { targetChain: string; targetCurrency: string } | undefined {
+  const chain = chainId != null ? EVM_CHAIN_BY_ID[chainId] : undefined
+  if (!chain?.usdc) return undefined
+  return { targetChain: `eip155:${chain.id}`, targetCurrency: chain.usdc }
+}
 
 export function getPlaygroundRpcUrl(chainId?: number): string {
   if (chainId != null && RPC_URLS[chainId]) return RPC_URLS[chainId]
