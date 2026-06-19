@@ -133,7 +133,14 @@ const SolanaConnected: React.FC = () => {
         balance={balanceNode}
         actions={
           <>
-            <ActionButton icon={<SendIcon />} onClick={() => context.setRoute(routes.SOL_SEND)}>
+            <ActionButton
+              icon={<SendIcon />}
+              onClick={() => {
+                // Nothing to send on an empty wallet — prompt to add funds first (mirrors EVM).
+                const hasBalance = lamports != null && BigInt(lamports) > BigInt(0)
+                context.setRoute(hasBalance ? routes.SOL_SEND : routes.NO_ASSETS_AVAILABLE)
+              }}
+            >
               Send
             </ActionButton>
             <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.DEPOSIT)}>
