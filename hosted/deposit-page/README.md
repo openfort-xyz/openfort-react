@@ -28,8 +28,32 @@ The link format and these params are produced by
 
 ## Deploy
 
-Static single file. Host `index.html` at the domain root (Vercel, Cloudflare
-Pages, S3, …). No build step.
+Static single file, no build step. Hosted on **Cloudflare Pages**, auto-deployed
+by `.github/workflows/deploy-deposit-page.yml` on push to `main` that touches
+`hosted/deposit-page/**`.
+
+### One-time setup
+
+1. **Create the Pages project** (named `openfort-deposit-page`, production branch `main`):
+   ```
+   wrangler pages project create openfort-deposit-page --production-branch=main
+   ```
+   (or via the Cloudflare dashboard → Workers & Pages → Create → Pages).
+2. **Add repo secrets** (Settings → Secrets and variables → Actions):
+   - `CLOUDFLARE_API_TOKEN` — token with the **Cloudflare Pages: Edit** permission.
+   - `CLOUDFLARE_ACCOUNT_ID` — the account id.
+3. **Custom domain**: in the Pages project → Custom domains → add `deposit.openfort.io`
+   (Cloudflare provisions the TLS cert). The workflow's `--branch=main` deploy is
+   the production deployment the domain serves.
+
+### Manual deploy
+
+`workflow_dispatch` (Actions tab → Deploy deposit page → Run), or locally:
+```
+wrangler pages deploy hosted/deposit-page --project-name=openfort-deposit-page --branch=main
+```
+
+If the project name changes, update it in both the workflow and these commands.
 
 ## Security
 
