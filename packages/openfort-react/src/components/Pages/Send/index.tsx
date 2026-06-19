@@ -1,7 +1,8 @@
 /**
  * Send page router
  *
- * Picks EthereumSend or SolanaSend based on chainType.
+ * Renders the EVM send form. Solana is reached via the dedicated `sol:send`
+ * route (registered in ConnectModal), so it isn't in this shared registry.
  */
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
@@ -11,7 +12,6 @@ import { EthereumSend } from './EthereumSend'
 
 const SEND_REGISTRY: Partial<Record<ChainTypeEnum, React.FC>> = {
   [ChainTypeEnum.EVM]: EthereumSend,
-  // [ChainTypeEnum.SVM]: SolanaSend,
 }
 
 const Send: React.FC = () => {
