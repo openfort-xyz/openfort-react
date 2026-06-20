@@ -1,6 +1,6 @@
 'use client'
 
-import type { ReactNode } from 'react'
+import type { ChangeEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
 import logos from '../../../assets/logos'
@@ -10,12 +10,14 @@ import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
 import { AddressPageLink } from '../Deposit/AddressPageLink'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
+import { sanitizeAmountInput } from '../Send/utils'
 import { DepositWalletDesktop } from './DepositWalletDesktop'
 import {
   buildDepositPageUrl,
@@ -35,41 +37,39 @@ const WALLET_LOGO: Record<string, ReactNode> = {
   rabby: <logos.Rabby />,
 }
 
-const amountInputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 14px',
-  borderRadius: 12,
-  border: '1px solid var(--ck-body-divider, #e4e4e7)',
-  background: 'var(--ck-body-background-secondary, #fafafa)',
-  color: 'var(--ck-body-color, #111)',
-  fontSize: 16,
-  outline: 'none',
-  marginTop: 14,
-}
-
-/** Keep only digits and a single decimal point. */
-function sanitizeAmount(v: string): string {
-  const cleaned = v.replace(/[^0-9.]/g, '')
-  const [whole, ...rest] = cleaned.split('.')
-  return rest.length ? `${whole}.${rest.join('')}` : cleaned
-}
+/** Preset deposit amounts, in the selected source token's units. */
+const PRESETS = [10, 25, 50]
 
 /**
- * Transfer from wallet. On mobile, leads with open-dApp deeplinks that send the
- * user into their wallet app's in-app browser pointed at the hosted deposit page
- * (with the address/chain/token/amount prefilled). On desktop, sends straight
- * from the browser-extension wallet. Either way the manual deposit-address / QR
- * path stays available below.
+ * Transfer from wallet. Pick a source chain/token and an amount, then choose the
+ * wallet to send from. On mobile that's open-dApp deeplinks into the wallet app's
+ * in-app browser (address/chain/token/amount prefilled); on desktop it's a direct
+ * send from a browser-extension wallet. The manual deposit-address / QR path stays
+ * available below.
  */
 const DepositWallet = () => {
   const { triggerResize, uiConfig } = useOpenfort()
   const isMobile = useIsMobile()
   const route = useDepositRoute('crypto')
   const [amount, setAmount] = useState('')
+  const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
   const depositPageUrl = uiConfig.funding?.depositPageUrl ?? OPENFORT_DEPOSIT_PAGE_URL
   const srcChainId = caipToChainId(route.activeChain?.id)
   const amountValid = Number.parseFloat(amount) > 0
+
+  const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const raw = sanitizeAmountInput(event.target.value)
+    if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
+      setPressedPreset(null)
+      setAmount(raw)
+    }
+  }
+
+  const handlePreset = (value: number) => {
+    setPressedPreset(value)
+    setAmount(String(value))
+  }
 
   // Open-dApp deeplinks: prefer backend-provided ones; otherwise build them from
   // the hosted deposit page URL (if the integrator configured one) carrying the
@@ -118,18 +118,36 @@ const DepositWallet = () => {
 
       {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
-      <StepDivider>{isMobile ? 'Then open your wallet' : 'Then send from your wallet'}</StepDivider>
+      <Section>
+        <SectionLabel>Amount</SectionLabel>
+        <AmountCard>
+          <CurrencySymbol>{route.activeCurrency?.symbol ?? ''}</CurrencySymbol>
+          <AmountInput
+            value={amount}
+            onChange={handleAmountChange}
+            placeholder="0.00"
+            inputMode="decimal"
+            autoComplete="off"
+          />
+        </AmountCard>
+        <PresetList>
+          {PRESETS.map((preset) => (
+            <PresetButton
+              key={preset}
+              type="button"
+              $active={pressedPreset === preset}
+              onClick={() => handlePreset(preset)}
+            >
+              {preset}
+            </PresetButton>
+          ))}
+        </PresetList>
+      </Section>
+
+      <StepDivider>Then select the wallet you want to use</StepDivider>
 
       {isMobile ? (
         <>
-          <input
-            value={amount}
-            onChange={(e) => setAmount(sanitizeAmount(e.target.value))}
-            placeholder={`Amount${route.activeCurrency ? ` in ${route.activeCurrency.symbol}` : ''}`}
-            inputMode="decimal"
-            style={amountInputStyle}
-          />
-
           {!depositPageUrl && (
             <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
           )}
@@ -174,6 +192,7 @@ const DepositWallet = () => {
           activeChain={route.activeChain}
           activeCurrency={route.activeCurrency}
           loading={route.loading}
+          amount={amount}
         />
       )}
 

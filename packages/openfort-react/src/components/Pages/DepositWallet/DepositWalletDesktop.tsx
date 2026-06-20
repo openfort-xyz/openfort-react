@@ -35,6 +35,9 @@ type Props = {
   activeChain: FundingChain | undefined
   activeCurrency: FundingCurrency | undefined
   loading: boolean
+  /** Amount to send, in the source token's units. Owned by the parent so the
+   * amount input + presets are shared with the mobile (deeplink) path. */
+  amount: string
 }
 
 /** Readable message from a wallet/provider error; null for a user rejection (4001). */
@@ -47,24 +50,6 @@ function walletErrorMessage(e: unknown): string | null {
   return typeof e === 'string' ? e : 'Transaction failed'
 }
 
-/** Keep only digits and a single decimal point. */
-function sanitizeAmount(v: string): string {
-  const cleaned = v.replace(/[^0-9.]/g, '')
-  const [whole, ...rest] = cleaned.split('.')
-  return rest.length ? `${whole}.${rest.join('')}` : cleaned
-}
-
-const inputStyle: React.CSSProperties = {
-  width: '100%',
-  padding: '12px 14px',
-  borderRadius: 12,
-  border: '1px solid var(--ck-body-divider, #e4e4e7)',
-  background: 'var(--ck-body-background-secondary, #fafafa)',
-  color: 'var(--ck-body-color, #111)',
-  fontSize: 16,
-  outline: 'none',
-}
-
 /**
  * Desktop "transfer from wallet": send the source token to the Relay deposit
  * address straight from the user's EXTERNAL browser-extension wallet
@@ -72,9 +57,8 @@ const inputStyle: React.CSSProperties = {
  * Openfort embedded account (that one is the destination, not the source).
  * Once the deposit lands, the funding session's status polling drives progress.
  */
-export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurrency, loading }: Props) {
+export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurrency, loading, amount }: Props) {
   const bridge = useEthereumBridge()
-  const [amount, setAmount] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
@@ -151,14 +135,6 @@ export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurre
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
-      <input
-        value={amount}
-        onChange={(e) => setAmount(sanitizeAmount(e.target.value))}
-        placeholder={`Amount${activeCurrency ? ` in ${activeCurrency.symbol}` : ''}`}
-        inputMode="decimal"
-        style={inputStyle}
-      />
-
       {connectors.length === 0 && <ModalBody>No browser wallet detected. Install MetaMask or Rabby.</ModalBody>}
 
       {connectors.map((c) => (
