@@ -73,7 +73,7 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
         'eip155:1',
         'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
       ],
-      sourceCurrencies: ['ETH', 'WETH', 'USDC', 'USDT', 'DAI'],
+      sourceCurrencies: ['ETH', 'USDC', 'USDT', 'DAI'],
       targetChain: 'eip155:8453',
       targetCurrency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
       // depositPageUrl omitted → uses the SDK default (https://deposit.openfort.io),
