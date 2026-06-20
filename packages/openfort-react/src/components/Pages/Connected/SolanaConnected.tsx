@@ -22,6 +22,7 @@ import { nFormatter, truncateSolanaAddress } from '../../../utils'
 import { logger } from '../../../utils/logger'
 import Avatar from '../../Common/Avatar'
 import Button from '../../Common/Button'
+import { TextLinkButton } from '../../Common/Button/styles'
 import { CopyText } from '../../Common/CopyToClipboard/CopyText'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
 import { routes } from '../../Openfort/types'
@@ -113,15 +114,17 @@ const SolanaConnected: React.FC = () => {
 
   const balanceNode =
     balanceSol != null && !isBalanceLoading ? (
-      <Balance
-        key="solana-balance"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {nFormatter(Number(balanceSol))} SOL
-      </Balance>
+      <TextLinkButton type="button" onClick={() => setRoute(routes.SOL_ASSET_INVENTORY)}>
+        <Balance
+          key="solana-balance"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {nFormatter(Number(balanceSol))} SOL
+        </Balance>
+      </TextLinkButton>
     ) : null
 
   return (

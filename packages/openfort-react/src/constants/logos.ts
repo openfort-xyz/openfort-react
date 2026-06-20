@@ -8,6 +8,7 @@ export const TOKEN_LOGO: Record<string, string> = {
   TBNB: `${TW}/smartchain/info/logo.png`,
   MATIC: `${TW}/polygon/info/logo.png`,
   POL: `${TW}/polygon/info/logo.png`,
+  SOL: `${TW}/solana/info/logo.png`,
   AVAX: `${TW}/avalanchec/info/logo.png`,
   FTM: `${TW}/fantom/info/logo.png`,
   CELO: `${TW}/celo/info/logo.png`,

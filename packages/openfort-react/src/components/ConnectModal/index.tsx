@@ -18,6 +18,7 @@ import { routes, type SetRouteOptions } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
 import About from '../Pages/About'
 import { AssetInventory } from '../Pages/AssetInventory'
+import { SolanaAssetInventory } from '../Pages/AssetInventory/SolanaAssetInventory'
 import Buy from '../Pages/Buy'
 import BuyComplete from '../Pages/BuyComplete'
 import BuyProcessing from '../Pages/BuyProcessing'
@@ -136,6 +137,7 @@ const CHAIN_PREFIXED_PAGES: Record<ChainTypeEnum, RoutePages> = {
     'sol:send': <SolanaSend />,
     'sol:sendConfirmation': <SolanaSendConfirmation />,
     'sol:receive': <Receive />,
+    'sol:assetInventory': <SolanaAssetInventory />,
     // 'sol:wallets': <SolanaWallets />,
   },
 }
