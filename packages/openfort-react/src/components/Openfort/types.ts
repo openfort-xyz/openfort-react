@@ -536,6 +536,12 @@ export type Asset =
         decimals: number
         symbol: string
         name: string
+        // Kept optional for union uniformity — `getUsdValue` reads `metadata.fiat`
+        // across all Asset variants. No SPL price feed sets it today.
+        fiat?: {
+          value: number
+          currency: string
+        }
       }
     }
 
