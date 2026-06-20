@@ -5,7 +5,7 @@ import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL } from '../compone
 
 // useFundingTarget reads uiConfig.funding from useOpenfort and chainType from
 // useOpenfortCore. Stub both so we can drive the chain-aware default selection.
-const mockUiConfig: { funding?: { targetChain?: string; targetCurrency?: string; targetAddress?: string } } = {}
+const mockUiConfig: { funding?: { targetChain?: string; targetCurrency?: string } } = {}
 let mockChainType: ChainTypeEnum = ChainTypeEnum.EVM
 
 vi.mock('../components/Openfort/useOpenfort', () => ({
@@ -25,23 +25,23 @@ describe('useFundingTarget', () => {
 
   it('defaults to USDC on Base for EVM wallets', () => {
     const { result } = renderHook(() => useFundingTarget())
-    expect(result.current).toEqual({ chain: DEST_CHAIN, currency: DEST_USDC, address: undefined })
+    expect(result.current).toEqual({ chain: DEST_CHAIN, currency: DEST_USDC })
   })
 
   it('defaults to USDC on Solana mainnet for SVM wallets', () => {
     mockChainType = ChainTypeEnum.SVM
     const { result } = renderHook(() => useFundingTarget())
-    expect(result.current).toEqual({ chain: DEST_CHAIN_SOL, currency: DEST_USDC_SOL, address: undefined })
+    expect(result.current).toEqual({ chain: DEST_CHAIN_SOL, currency: DEST_USDC_SOL })
   })
 
-  it('honors integrator overrides regardless of chain type', () => {
-    mockUiConfig.funding = { targetChain: 'eip155:1', targetCurrency: '0xabc', targetAddress: '0xdest' }
+  it('honors integrator chain/currency overrides regardless of chain type', () => {
+    mockUiConfig.funding = { targetChain: 'eip155:1', targetCurrency: '0xabc' }
 
     const evm = renderHook(() => useFundingTarget())
-    expect(evm.result.current).toEqual({ chain: 'eip155:1', currency: '0xabc', address: '0xdest' })
+    expect(evm.result.current).toEqual({ chain: 'eip155:1', currency: '0xabc' })
 
     mockChainType = ChainTypeEnum.SVM
     const svm = renderHook(() => useFundingTarget())
-    expect(svm.result.current).toEqual({ chain: 'eip155:1', currency: '0xabc', address: '0xdest' })
+    expect(svm.result.current).toEqual({ chain: 'eip155:1', currency: '0xabc' })
   })
 })
