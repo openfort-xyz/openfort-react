@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.2.0
+
+### Minor Changes
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`18b883d`](https://github.com/openfort-xyz/openfort-react/commit/18b883d300e0a31b6bed75d33813c41f3e3060dc) Thanks [@joalavedra](https://github.com/joalavedra)! - Source the Deposit chain/token pickers live from Relay instead of a hardcoded list.
+
+  `useFundingChains` fetches `GET /v1/funding/chains` (a passthrough of Relay's `/chains`) so the source chains and tokens always track what the rail actually supports — no more curated `sources.ts` registry. The CEX tab filters to EVM chains; selectors and the QR badge read logos straight from the chain/token data.
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`081b6fd`](https://github.com/openfort-xyz/openfort-react/commit/081b6fdd81418b9077878d3d141e8b7315706c51) Thanks [@joalavedra](https://github.com/joalavedra)! - Make Deposit funding methods configurable, like `authProviders`.
+
+  New `uiConfig.funding.methods` (a `FundingMethod[]`) chooses which methods the Deposit hub shows and in what order — `APPLE_PAY`, `CARD`, `WALLET`, `ADDRESS`, `EXCHANGE`. Omit it for the current default (all available, Apple Pay first on mobile). Device, region, and backend-availability gating still apply. `FundingMethod` is exported from the package root.
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`3807946`](https://github.com/openfort-xyz/openfort-react/commit/38079464054f088f1dce291bc88a37850ae2f4bc) Thanks [@joalavedra](https://github.com/joalavedra)! - Restructure the Deposit hub into three source-led tabs and add a destination-address override.
+
+  - **Transfer from wallet** (new) leads with prefilled wallet deeplinks; the deposit-address / QR path sits behind an off-by-default toggle.
+  - **Transfer from address** (renamed from "Transfer crypto") shows the cross-chain deposit address and QR.
+  - **Transfer from Exchange** leads with Coinbase / Binance pay links; the deposit-address path is behind the same toggle.
+  - `uiConfig.funding.targetAddress` overrides where deposits land (defaults to the active embedded wallet) — e.g. to fund a deployed smart account instead of its owner EOA.
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`8a010bc`](https://github.com/openfort-xyz/openfort-react/commit/8a010bc7476440a9152b839a8c4e347a764a26e0) Thanks [@joalavedra](https://github.com/joalavedra)! - Add one-tap mobile wallet deeplinks to the Deposit hub's "Transfer from wallet" step.
+
+  - Open-dApp universal links (MetaMask, Coinbase, Trust, Rainbow, Rabby, Phantom) open a hosted deposit send page in the wallet's in-app browser with the address, chain, token and amount prefilled.
+  - `uiConfig.funding.depositPageUrl` configures the send page; defaults to the Openfort-hosted `https://deposit.openfort.io`. Set it to self-host, or to an empty string to hide the deeplinks.
+  - Trust is hidden on iOS (no in-app dApp browser there).
+  - Replaces the raw `ethereum:` send-URI fallback, which only resolved for MetaMask.
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`c427d73`](https://github.com/openfort-xyz/openfort-react/commit/c427d7307224b3c41cf3f2fb1cf3dfaf8faea18e) Thanks [@joalavedra](https://github.com/joalavedra)! - Curate Deposit source chains/currencies, and standardize on "currency".
+
+  The Deposit pickers now show a curated subset of the rail's chains/currencies instead of everything. Defaults: a common set of source chains (Arbitrum, Base, BNB, Ethereum, Monad, Optimism, Polygon, Solana) and currencies (`['native', 'USDC', 'USDT']`, where `'native'` matches each chain's native asset). Override via `uiConfig.funding.sourceChains` (CAIP-2 allowlist + order) and `uiConfig.funding.sourceCurrencies` (symbol allowlist; `'native'` sentinel). Selections the rail doesn't route are skipped.
+
+  Vocabulary is now "currency" throughout (`FundingCurrency`, `chain.currencies`, the picker label) to match the rail and the destination shape, replacing "token".
+
+### Patch Changes
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`211c517`](https://github.com/openfort-xyz/openfort-react/commit/211c517815030583f28f9f365c94daa1e5278fe8) Thanks [@joalavedra](https://github.com/joalavedra)! - Polish the Deposit hub and pages: per-method left icons and right brand/currency logo clusters (wallets, Coinbase/Binance, Visa/Mastercard, token logos), logo-aware chain/currency dropdowns, tighter rows with consistent `min · fee · time` subtitles, skeleton loading states, content-fit modal sizing, a "Your deposit address" label with a single-line address and a compact copy button. The Card flow's Back returns to the Add funds hub, "Asset" is relabeled "Currency", and the provider/quote screen now carries the preselected amount/currency forward.
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`8727a63`](https://github.com/openfort-xyz/openfort-react/commit/8727a6328692123ab6f0c8ac9469ee2eee34992f) Thanks [@joalavedra](https://github.com/joalavedra)! - Align the funding client to the canonical `/v2/funding` contract: `/v2` paths, snake_case segments (`payment_methods`, `pay_link`), the chains endpoint at `/v2/funding/chains`, and `clientSecret` sent as a query param on the session GET (matching the API). Fixes the version/casing/transport drift between the SDK and the API.
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`d379f6a`](https://github.com/openfort-xyz/openfort-react/commit/d379f6aade1c26ae27a879df1794da3c3c3046ed) Thanks [@joalavedra](https://github.com/joalavedra)! - Show Phantom in the Deposit "transfer from wallet" mobile deeplinks for EVM chains, not just Solana. Phantom is multichain, and its open-dApp universal link is chain-agnostic, so it is now offered for both EVM and SVM source chains.
+
+- [#272](https://github.com/openfort-xyz/openfort-react/pull/272) [`fbe1629`](https://github.com/openfort-xyz/openfort-react/commit/fbe16293d90cc5c385f3b6f2ee53218549a01b13) Thanks [@joalavedra](https://github.com/joalavedra)! - Restore targeted injected connectors in the default wagmi connectors so browser-extension wallets surface individually.
+
+  `getDefaultConnectors` now adds `injected({ target: 'metaMask' })` and `injected({ target: 'phantom' })` instead of relying on a single generic injected provider. Phantom reappears in the Deposit hub's "Transfer from wallet" extension list (regressed in an earlier merge).
+
 ## 1.1.4
 
 ### Patch Changes
