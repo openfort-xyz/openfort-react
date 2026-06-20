@@ -4,7 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Drive the chain-aware receiver resolution by stubbing the boundary hooks.
 // The funding chains list is empty so the fund() effect short-circuits — we only
-// assert which embedded wallet supplies the destination address.
+// assert which embedded wallet supplies the destination address. The recipient is
+// resolved by the funding target's chain family (which tracks the active chain
+// type), so the target mock below mirrors useFundingTarget's chain-aware default.
 let mockChainType: ChainTypeEnum = ChainTypeEnum.EVM
 const mockEthWallet: { status: string; address?: string } = { status: 'disconnected' }
 const mockSolWallet: { status: string; address?: string } = { status: 'disconnected' }
@@ -34,7 +36,10 @@ vi.mock('../hooks/openfort/useFundingChains', () => ({
   nominalUnits: (decimals: number) => `1${'0'.repeat(decimals + 1)}`,
 }))
 vi.mock('../components/Pages/Deposit/useFundingTarget', () => ({
-  useFundingTarget: () => ({ chain: 'eip155:8453', currency: '0xUSDC', address: undefined }),
+  useFundingTarget: () => ({
+    chain: mockChainType === ChainTypeEnum.SVM ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'eip155:8453',
+    currency: '0xUSDC',
+  }),
 }))
 
 const { useDepositRoute } = await import('../components/Pages/Deposit/useDepositRoute')

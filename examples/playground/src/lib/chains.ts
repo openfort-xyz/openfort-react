@@ -71,6 +71,14 @@ export function getFundingTargetForChain(
   return { targetChain: `eip155:${chain.id}`, targetCurrency: chain.usdc }
 }
 
+/**
+ * Fallback EVM funding target (Base USDC) for chains without a configured USDC
+ * (testnets). Keeps the Deposit target on an EVM chain in EVM mode rather than
+ * leaving a stale Solana target from a prior SVM session — a Solana target with
+ * an EVM recipient makes Relay reject the route.
+ */
+export const DEFAULT_EVM_FUNDING_TARGET = getFundingTargetForChain(base.id)!
+
 export function getPlaygroundRpcUrl(chainId?: number): string {
   if (chainId != null && RPC_URLS[chainId]) return RPC_URLS[chainId]
   return DEFAULT_EVM_CHAIN.rpcUrl

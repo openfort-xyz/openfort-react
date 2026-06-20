@@ -15,7 +15,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { createConfig, http, useChainId, WagmiProvider } from 'wagmi'
 import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
-import { getFundingTargetForChain, PLAYGROUND_EVM_CHAINS, SOLANA_FUNDING_TARGET } from '@/lib/chains'
+import {
+  DEFAULT_EVM_FUNDING_TARGET,
+  getFundingTargetForChain,
+  PLAYGROUND_EVM_CHAINS,
+  SOLANA_FUNDING_TARGET,
+} from '@/lib/chains'
 import { useAppStore } from './lib/useAppStore'
 
 export type OpenfortPlaygroundMode = 'svm' | 'evm'
@@ -110,8 +115,10 @@ const MODE_TO_CHAIN = { evm: ChainTypeEnum.EVM, svm: ChainTypeEnum.SVM } as cons
 /**
  * Keeps the Deposit-hub funding target in sync with the active EVM chain, so
  * switching networks in the OpenfortButton lands deposits on that chain's USDC.
- * No-ops on chains without a configured USDC (testnets), keeping the prior target.
- * Deposits land on the active EVM embedded wallet, resolved by the Deposit hub.
+ * Chains without a configured USDC (testnets) fall back to Base USDC, so EVM mode
+ * never keeps a stale Solana target from a prior SVM session (which would make the
+ * EVM recipient invalid for the Solana destination). Deposits land on the active
+ * EVM embedded wallet, resolved by the Deposit hub.
  */
 function FundingTargetSync() {
   const chainId = useChainId()
@@ -119,8 +126,7 @@ function FundingTargetSync() {
   const setProviderOptions = useAppStore((s) => s.setProviderOptions)
 
   useEffect(() => {
-    const target = getFundingTargetForChain(chainId)
-    if (!target) return
+    const target = getFundingTargetForChain(chainId) ?? DEFAULT_EVM_FUNDING_TARGET
     const funding = providerOptions.uiConfig?.funding
     if (funding?.targetChain === target.targetChain && funding?.targetCurrency === target.targetCurrency) {
       return
