@@ -56,19 +56,19 @@ const ALL_METHODS: DepositMethod[] = [
   {
     id: FundingMethod.WALLET,
     title: 'Transfer from wallet',
-    subtitle: 'Min $1 · No fee · 10 sec',
+    subtitle: 'Min $1 · Bridge fee · 10 sec',
     target: { kind: 'wallet' },
   },
   {
     id: FundingMethod.ADDRESS,
     title: 'Transfer from address',
-    subtitle: 'Min $1 · No fee · 10 sec',
+    subtitle: 'Min $1 · Bridge fee · 10 sec',
     target: { kind: 'crypto' },
   },
   {
     id: FundingMethod.EXCHANGE,
     title: 'Transfer from Exchange',
-    subtitle: 'Min $1 · Network fee · 2 min',
+    subtitle: 'Min $5 · Network fee · 2 min',
     target: { kind: 'cex' },
   },
 ]
