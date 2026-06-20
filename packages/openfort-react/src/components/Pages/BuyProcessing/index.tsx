@@ -15,6 +15,8 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { createCoinbaseSession } from '../Buy/coinbaseApi'
+import { resolveOnrampNetwork } from '../Buy/onrampApi'
+import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { createStripeSession } from '../Buy/stripeApi'
 import { ContinueButtonWrapper, PendingContainer, StackedButtonWrapper } from '../Buy/styles'
 import { isSameToken } from '../Send/utils'
@@ -31,13 +33,15 @@ const BuyProcessing = () => {
   const isConnected = wallet.status === 'connected'
   const address = isConnected ? wallet.address : undefined
   const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
+  const network = resolveOnrampNetwork(chainType, chainId)
 
   const [popupWindow, setPopupWindow] = useState<Window | null>(null)
   const [showContinueButton, setShowContinueButton] = useState(false)
   const [isCreatingSession, setIsCreatingSession] = useState(true)
   const [sessionError, setSessionError] = useState(false)
 
-  const { data: assets } = useEthereumWalletAssets()
+  const { data: ethAssets } = useEthereumWalletAssets()
+  const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
 
   const matchedToken = useMemo(
     () => assets?.find((asset) => isSameToken(asset, buyForm.asset)),
@@ -58,7 +62,7 @@ const BuyProcessing = () => {
   // Create session and open popup once wallet is ready
   const sessionStartedRef = useRef(false)
   useEffect(() => {
-    if (!address || !chainId) return
+    if (!address || !network) return
     if (sessionStartedRef.current) return
     sessionStartedRef.current = true
 
@@ -78,7 +82,7 @@ const BuyProcessing = () => {
         if (buyForm.providerId === 'coinbase') {
           const session = await createCoinbaseSession({
             token: selectedToken,
-            chainId,
+            network,
             publishableKey,
             destinationAddress: address,
             sourceAmount: fiatAmount.toFixed(2),
@@ -89,7 +93,7 @@ const BuyProcessing = () => {
         } else if (buyForm.providerId === 'stripe') {
           const session = await createStripeSession({
             token: selectedToken,
-            chainId,
+            network,
             publishableKey,
             destinationAddress: address,
             sourceAmount: fiatAmount.toFixed(2),
@@ -148,7 +152,7 @@ const BuyProcessing = () => {
     }
 
     createSessionAndOpenPopup()
-  }, [address, chainId]) // Run when wallet becomes ready
+  }, [address, network]) // Run when wallet becomes ready
 
   // Trigger resize on mount and when state changes
   useEffect(() => {
