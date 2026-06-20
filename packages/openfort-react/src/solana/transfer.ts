@@ -18,7 +18,7 @@ const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
 const SEND_TIMEOUT_MS = 60_000
 
 /** Decimal SOL → lamports, without floating-point loss. */
-export function solToLamports(amountSol: number): bigint {
+function solToLamports(amountSol: number): bigint {
   const [whole, frac = ''] = amountSol.toString().split('.')
   const padded = (frac + '0'.repeat(9)).slice(0, 9)
   return BigInt(`${whole || '0'}${padded}`)
@@ -38,7 +38,7 @@ function deriveWssUrl(rpcUrl: string): string {
   return rpcUrl.replace(/^https?:\/\//, 'wss://')
 }
 
-export type SendSolParams = {
+type SendSolParams = {
   from: string
   to: string
   amountSol: number
@@ -115,7 +115,7 @@ export async function sendSol({
   return kit.getSignatureFromTransaction(signedTransaction)
 }
 
-export type SendSolGaslessParams = {
+type SendSolGaslessParams = {
   from: string
   to: string
   amountSol: number

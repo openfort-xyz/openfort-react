@@ -7,7 +7,7 @@ import { useSolanaContext } from '../SolanaContext'
 import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet'
 
 /** A holding in the connected Solana wallet: native SOL or an SPL token. */
-export type SolanaAsset = {
+type SolanaAsset = {
   /** Mint address, or 'native' for SOL. */
   mint: string
   symbol: string
