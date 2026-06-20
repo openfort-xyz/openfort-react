@@ -19,6 +19,13 @@ interface PlaygroundEvmChain {
 // (funding.targetChain is independent of this order).
 export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
   {
+    id: polygonAmoy.id,
+    name: 'Polygon Amoy',
+    rpcUrl: 'https://rpc-amoy.polygon.technology',
+    explorerUrl: 'https://amoy.polygonscan.com',
+    viemChain: polygonAmoy,
+  },
+  {
     id: base.id,
     name: 'Base',
     rpcUrl: 'https://base-rpc.publicnode.com',
@@ -33,13 +40,6 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
     explorerUrl: 'https://polygonscan.com',
     viemChain: polygon,
     usdc: '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359',
-  },
-  {
-    id: polygonAmoy.id,
-    name: 'Polygon Amoy',
-    rpcUrl: 'https://rpc-amoy.polygon.technology',
-    explorerUrl: 'https://amoy.polygonscan.com',
-    viemChain: polygonAmoy,
   },
   {
     id: baseSepolia.id,
