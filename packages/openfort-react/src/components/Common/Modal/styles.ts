@@ -303,8 +303,11 @@ export const ControllerContainer = styled(motion.div)`
 
 export const InnerContainer = styled(motion.div)`
   position: relative;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
   height: var(--height);
+  /* Cap at the viewport so a tall page scrolls instead of running off-screen. */
+  max-height: 88vh;
   transition: 0.2s ease height;
   @media only screen and (max-width: ${defaultTheme.mobileWidth}px) {
     transition: 0ms height cubic-bezier(0.15, 1.15, 0.6, 1);

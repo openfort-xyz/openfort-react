@@ -10,7 +10,7 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
 import { useEffect } from 'react'
-import { ReceiveIcon, UserRoundIcon } from '../../../assets/icons'
+import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons'
 import { BALANCE_INVALIDATE_EVENT, fetchSolanaBalance } from '../../../hooks/useBalance'
 import useLocales from '../../../hooks/useLocales'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
@@ -22,6 +22,7 @@ import { nFormatter, truncateSolanaAddress } from '../../../utils'
 import { logger } from '../../../utils/logger'
 import Avatar from '../../Common/Avatar'
 import Button from '../../Common/Button'
+import { TextLinkButton } from '../../Common/Button/styles'
 import { CopyText } from '../../Common/CopyToClipboard/CopyText'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
 import { routes } from '../../Openfort/types'
@@ -113,15 +114,17 @@ const SolanaConnected: React.FC = () => {
 
   const balanceNode =
     balanceSol != null && !isBalanceLoading ? (
-      <Balance
-        key="solana-balance"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {nFormatter(Number(balanceSol))} SOL
-      </Balance>
+      <TextLinkButton type="button" onClick={() => setRoute(routes.SOL_ASSET_INVENTORY)}>
+        <Balance
+          key="solana-balance"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {nFormatter(Number(balanceSol))} SOL
+        </Balance>
+      </TextLinkButton>
     ) : null
 
   return (
@@ -132,9 +135,21 @@ const SolanaConnected: React.FC = () => {
         avatar={avatar}
         balance={balanceNode}
         actions={
-          <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.SOL_RECEIVE)}>
-            Get
-          </ActionButton>
+          <>
+            <ActionButton
+              icon={<SendIcon />}
+              onClick={() => {
+                // Nothing to send on an empty wallet — prompt to add funds first (mirrors EVM).
+                const hasBalance = lamports != null && BigInt(lamports) > BigInt(0)
+                context.setRoute(hasBalance ? routes.SOL_SEND : routes.NO_ASSETS_AVAILABLE)
+              }}
+            >
+              Send
+            </ActionButton>
+            <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.DEPOSIT)}>
+              Deposit
+            </ActionButton>
+          </>
         }
         hideBalance={context?.uiConfig.hideBalance}
         isBalanceLoading={isBalanceLoading}

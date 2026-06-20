@@ -53,6 +53,10 @@ export const routes = {
   SEND_TOKEN_SELECT: 'sendTokenSelect',
   SEND_CONFIRMATION: 'sendConfirmation',
   RECEIVE: 'receive',
+  DEPOSIT: 'deposit',
+  DEPOSIT_CRYPTO: 'depositCrypto',
+  DEPOSIT_WALLET: 'depositWallet',
+  DEPOSIT_CEX: 'depositCex',
   BUY: 'buy',
   BUY_TOKEN_SELECT: 'buyTokenSelect',
   BUY_SELECT_PROVIDER: 'buySelectProvider',
@@ -353,6 +357,17 @@ export type ConnectUIOptions = {
   buyWithCardUrl?: string
   buyFromExchangeUrl?: string
   buyTroubleshootingUrl?: string
+  /**
+   * Base URL of the openfort-funding backend (e.g. `https://funding.openfort.io`).
+   * Powers the Deposit hub's crypto/CEX rails (session API). When omitted, those
+   * rails are unavailable and the network layer is a no-op.
+   *
+   * TODO(openfort-funding-backend): default this from the platform config once the
+   * backend ships, so integrators don't have to set it manually.
+   */
+  fundingBaseUrl?: string
+  /** Deposit-hub funding options (destination chain/token for incoming deposits). */
+  funding?: FundingUIOptions
   phoneConfig?: PhoneConfig
   customPageComponents?: {
     [key in CustomizableRoutes]?: React.ReactElement
@@ -362,6 +377,75 @@ export type ConnectUIOptions = {
 type WalletRecoveryOptionsExtended = {
   allowedMethods: RecoveryMethod[]
   defaultMethod: RecoveryMethod
+}
+
+/**
+ * A funding method shown in the Deposit hub. Use `funding.methods` to choose
+ * which appear and in what order — like `authProviders` for the auth modal.
+ */
+export enum FundingMethod {
+  /** Apple Pay (fiat onramp; mobile only). */
+  APPLE_PAY = 'applePay',
+  /** Card (fiat onramp). */
+  CARD = 'card',
+  /** Transfer from wallet — prefilled wallet deeplinks. */
+  WALLET = 'wallet',
+  /** Transfer from address — cross-chain deposit address + QR. */
+  ADDRESS = 'crypto',
+  /** Transfer from Exchange — Coinbase / Binance on-ramp links + deposit address. */
+  EXCHANGE = 'cex',
+}
+
+/** Where Deposit-hub funding lands. Defaults to USDC on Base when omitted. */
+export type FundingUIOptions = {
+  /**
+   * Destination CAIP-2 chain id for deposits.
+   * @default "eip155:8453" (Base)
+   */
+  targetChain?: string
+  /**
+   * Destination token contract on the target chain (or the zero address for native).
+   * @default USDC on Base
+   */
+  targetCurrency?: string
+  /**
+   * Destination wallet that receives the deposit. Optional integrator override;
+   * when unset, deposits land on the active embedded wallet for the target chain.
+   */
+  targetAddress?: string
+  /**
+   * Which funding methods the Deposit hub shows, and in what order. Omit to show
+   * all available methods (Apple Pay first on mobile). Mirrors `authProviders`.
+   * @example [FundingMethod.WALLET, FundingMethod.ADDRESS]
+   */
+  methods?: FundingMethod[]
+  /**
+   * Allowlist of source chains shown in the crypto/exchange pickers, by CAIP-2 id,
+   * in this order. Omit for the common defaults (Arbitrum, Base, BNB, Ethereum,
+   * Monad, Optimism, Polygon, Solana). Selections the rail doesn't support are
+   * skipped.
+   * @example ['eip155:8453', 'eip155:42161', 'eip155:137']
+   */
+  sourceChains?: string[]
+  /**
+   * Allowlist of source currencies shown, by symbol (case-insensitive). The
+   * sentinel `'native'` matches each chain's native currency (ETH, SOL, POL, …).
+   * Applied across every chain; chains left with none are hidden. Omit for the
+   * default `['native', 'USDC', 'USDT']`.
+   * @example ['native', 'USDC', 'USDT']
+   */
+  sourceCurrencies?: string[]
+  /**
+   * URL of the standalone deposit "send" page. On mobile, wallet open-dApp
+   * deeplinks wrap this URL with the deposit address, chain, token and amount so
+   * the user confirms the transfer in their wallet's in-app browser. Defaults to
+   * the Openfort-hosted page (`https://deposit.openfort.io`); override to self-host,
+   * or set to an empty string to hide one-tap wallet deeplinks (the deposit-address
+   * / QR path still works).
+   * @default "https://deposit.openfort.io"
+   * @example "https://yourapp.com/deposit.html"
+   */
+  depositPageUrl?: string
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED
@@ -399,6 +483,10 @@ export type OpenfortUIOptionsExtended = {
   buyWithCardUrl?: string
   buyFromExchangeUrl?: string
   buyTroubleshootingUrl?: string
+  /** Base URL of the openfort-funding backend. See {@link ConnectUIOptions.fundingBaseUrl}. */
+  fundingBaseUrl?: string
+  /** Deposit-hub funding options. See {@link ConnectUIOptions.funding}. */
+  funding?: FundingUIOptions
   walletRecovery: WalletRecoveryOptionsExtended
   phoneConfig?: PhoneConfig
   customPageComponents?: {

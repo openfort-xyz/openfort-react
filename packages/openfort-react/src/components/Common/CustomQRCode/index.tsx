@@ -6,7 +6,14 @@ import { QRCode } from './QRCode'
 import { LogoContainer, LogoIcon, QRCodeContainer, QRCodeContent, QRPlaceholder } from './styles'
 import type { CustomQRCodeProps } from './types'
 
-function CustomQRCode({ value, image, imageBackground, imagePosition = 'center', tooltipMessage }: CustomQRCodeProps) {
+function CustomQRCode({
+  value,
+  image,
+  imageBackground,
+  imageClip = true,
+  imagePosition = 'center',
+  tooltipMessage,
+}: CustomQRCodeProps) {
   const windowSize = useWindowSize()
 
   const Logo =
@@ -25,6 +32,7 @@ function CustomQRCode({ value, image, imageBackground, imagePosition = 'center',
           <LogoContainer>
             <LogoIcon
               $wcLogo={imagePosition !== 'center'}
+              $clip={imageClip}
               style={{
                 background: imagePosition === 'center' ? imageBackground : undefined,
               }}
@@ -45,7 +53,7 @@ function CustomQRCode({ value, image, imageBackground, imagePosition = 'center',
                 duration: 0.2,
               }}
             >
-              <QRCode uri={value} size={288} ecl="M" clearArea={!!(imagePosition === 'center' && image)} />
+              <QRCode uri={value} size={288} ecl="H" clearArea={!!(imagePosition === 'center' && image)} />
             </motion.div>
           ) : (
             <QRPlaceholder

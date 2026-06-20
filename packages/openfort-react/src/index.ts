@@ -60,7 +60,7 @@ export { default as ChainIcon } from './components/Common/Chain'
 export { OpenfortButton } from './components/ConnectButton'
 export { OpenfortProvider } from './components/Openfort/OpenfortProvider'
 export type { CustomizableRoutes, MultiChainAsset } from './components/Openfort/types'
-export { LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types'
+export { FundingMethod, LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types'
 export { embeddedWalletId } from './constants/openfort'
 export {
   OpenfortError,
@@ -82,11 +82,21 @@ export type { StoreCredentialsResult } from './hooks/openfort/auth/useOAuth'
 export { useOAuth } from './hooks/openfort/auth/useOAuth'
 export { usePhoneOtpAuth } from './hooks/openfort/auth/usePhoneOtpAuth'
 export { useSignOut } from './hooks/openfort/auth/useSignOut'
+export type { FundingClient } from './hooks/openfort/fundingClient'
 export {
   type SignAuthorizationParameters,
   type SignAuthorizationReturnType,
   use7702Authorization,
 } from './hooks/openfort/use7702Authorization'
+export type {
+  FundingSession,
+  FundingTarget,
+  PaymentMethod,
+  PaymentMethodInput,
+  UseFunding,
+  UseFundingOptions,
+} from './hooks/openfort/useFunding'
+export { useFunding } from './hooks/openfort/useFunding'
 export { useGrantPermissions } from './hooks/openfort/useGrantPermissions'
 export { useRevokePermissions } from './hooks/openfort/useRevokePermissions'
 export { useUI } from './hooks/openfort/useUI'

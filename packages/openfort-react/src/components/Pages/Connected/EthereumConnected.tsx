@@ -8,11 +8,10 @@
  */
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { AnimatePresence, motion } from 'framer-motion'
 import type React from 'react'
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { formatUnits } from 'viem'
-import { BuyIcon, ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons'
+import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
@@ -26,7 +25,6 @@ import Button from '../../Common/Button'
 import { TextLinkButton } from '../../Common/Button/styles'
 import Chain from '../../Common/Chain'
 import { CopyText } from '../../Common/CopyToClipboard/CopyText'
-import { ModalBody } from '../../Common/Modal/styles'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
 import { defaultSendFormState, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -84,7 +82,7 @@ const EthereumConnected: React.FC = () => {
   })
   const ensName = identity.status === 'success' ? identity.name : undefined
 
-  const { data: assets, isLoading, refetch } = useEthereumWalletAssets()
+  const { data: assets, isLoading } = useEthereumWalletAssets()
   const totalBalanceUsd = useMemo(() => {
     if (!assets) return 0
     return assets.reduce((acc, asset) => {
@@ -97,33 +95,8 @@ const EthereumConnected: React.FC = () => {
   }, [assets])
 
   useEffect(() => {
-    if (isConnected) {
-      refetch()
-    }
-  }, [isConnected, refetch])
-
-  const isTestnet = chain?.testnet ?? false
-  const [showTestnetMessage, setShowTestnetMessage] = useState(false)
-
-  useEffect(() => {
     context.triggerResize()
-
-    if (showTestnetMessage) {
-      const timer = setTimeout(() => {
-        setShowTestnetMessage(false)
-      }, 2000)
-      return () => clearTimeout(timer)
-    }
-  }, [showTestnetMessage, context.triggerResize])
-
-  const handleBuyClick = (e: React.MouseEvent) => {
-    if (!chain || isTestnet) {
-      e.preventDefault()
-      setShowTestnetMessage(true)
-    } else {
-      context.setRoute(routes.BUY)
-    }
-  }
+  }, [context.triggerResize])
 
   useEffect(() => {
     if (!address) {
@@ -155,7 +128,7 @@ const EthereumConnected: React.FC = () => {
   const locales = useLocales()
 
   const balanceNode =
-    !!assets && !isLoading ? (
+    assets && !isLoading ? (
       <TextLinkButton
         type="button"
         onClick={() => {
@@ -247,37 +220,14 @@ const EthereumConnected: React.FC = () => {
             >
               Send
             </ActionButton>
-            <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.RECEIVE)}>
-              Get
-            </ActionButton>
-            <ActionButton
-              icon={<BuyIcon />}
-              onClick={handleBuyClick}
-              style={isTestnet ? { cursor: 'not-allowed', opacity: 0.4, pointerEvents: 'auto' } : undefined}
-            >
-              Buy
+            <ActionButton icon={<ReceiveIcon />} onClick={() => context.setRoute(routes.DEPOSIT)}>
+              Deposit
             </ActionButton>
           </>
         }
         hideBalance={context?.uiConfig.hideBalance}
         isBalanceLoading={isLoading}
         noWalletFallback={noWalletFallback}
-        afterActions={
-          <AnimatePresence onExitComplete={() => context.triggerResize()}>
-            {showTestnetMessage && (
-              <ModalBody
-                as={motion.div}
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 0.7, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.2 }}
-                style={{ marginTop: 12, fontSize: 14, textAlign: 'center' }}
-              >
-                Buy is only available on mainnet chains
-              </ModalBody>
-            )}
-          </AnimatePresence>
-        }
       />
     </PageContent>
   )

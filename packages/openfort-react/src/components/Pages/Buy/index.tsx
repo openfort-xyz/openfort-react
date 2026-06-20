@@ -105,7 +105,8 @@ const Buy = () => {
   }
 
   const handleBack = () => {
-    setRoute(routes.CONNECTED)
+    // Card/Apple Pay is reached via the Add funds hub — back returns there.
+    setRoute(routes.DEPOSIT)
   }
 
   const isPresetSelected = (value: number) => pressedPreset === value
@@ -144,10 +145,10 @@ const Buy = () => {
       </Section>
 
       <Section>
-        <SectionLabel>Asset</SectionLabel>
+        <SectionLabel>Currency</SectionLabel>
         <SelectorButton type="button" onClick={handleOpenTokenSelector}>
           <SelectorContent>
-            <SelectorTitle>{tokenSymbol || 'Select asset'}</SelectorTitle>
+            <SelectorTitle>{tokenSymbol || 'Select currency'}</SelectorTitle>
             <SelectorSubtitle>{tokenName}</SelectorSubtitle>
           </SelectorContent>
           <SelectorRight>

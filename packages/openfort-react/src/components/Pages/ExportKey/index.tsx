@@ -13,7 +13,16 @@ import { PageContent } from '../../PageContent'
 // TODO: Localize
 
 const ExportKey: React.FC = () => {
-  const { exportPrivateKey } = useEthereumEmbeddedWallet()
+  const wallet = useEthereumEmbeddedWallet()
+  const { exportPrivateKey } = wallet
+  // A smart account is a contract (no private key); the exportable key is its
+  // owner/signer EOA — a different address that won't show the account's funds
+  // when imported into another wallet.
+  const accountAddress = wallet.activeWallet?.address
+  const ownerAddress = wallet.activeWallet?.ownerAddress
+  const isSmartAccount = Boolean(
+    ownerAddress && accountAddress && ownerAddress.toLowerCase() !== accountAddress.toLowerCase()
+  )
 
   const [exportedKey, setExportedKey] = useState<string | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
@@ -55,9 +64,18 @@ const ExportKey: React.FC = () => {
       />
       <ModalContent>
         <ModalBody>
-          <p style={{ marginBottom: 6 }}>
-            With your private key, you can access your account outside this application.
-          </p>
+          {isSmartAccount ? (
+            <p style={{ marginBottom: 6 }}>
+              This is your account's <strong>owner (signer) key</strong> — not the account itself. Your smart account
+              {accountAddress ? ` (${accountAddress.slice(0, 6)}…${accountAddress.slice(-4)})` : ''} is a contract with
+              no private key, so importing this key into another wallet shows the owner address,{' '}
+              <strong>not your funds</strong>. To move funds, use Send to withdraw to another wallet.
+            </p>
+          ) : (
+            <p style={{ marginBottom: 6 }}>
+              With your private key, you can access your account outside this application.
+            </p>
+          )}
           <p>Keep it safe and never share it with anyone you don't trust.</p>
         </ModalBody>
         {!showExportedKey ? (

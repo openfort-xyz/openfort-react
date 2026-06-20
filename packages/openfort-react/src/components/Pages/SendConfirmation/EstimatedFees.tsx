@@ -5,6 +5,7 @@ import { useAsyncData } from '../../../shared/hooks/useAsyncData'
 import { logger } from '../../../utils/logger'
 import { getDefaultEthereumRpcUrl } from '../../../utils/rpc'
 import Tooltip from '../../Common/Tooltip'
+import { useOpenfort } from '../../Openfort/useOpenfort'
 import { formatBalance } from '../Send/utils'
 import { InfoIconWrapper } from './styles'
 
@@ -43,6 +44,7 @@ export const EstimatedFees = ({
   enabled = true,
   hideInfoIcon = false,
 }: EstimatedFeesProps) => {
+  const { walletConfig } = useOpenfort()
   const { data: assets } = useEthereumWalletAssets()
   const pricePerToken = assets?.find((a) => a.type === 'native')?.metadata?.fiat?.value as number | undefined
 
@@ -51,7 +53,7 @@ export const EstimatedFees = ({
     queryFn: async () => {
       if (!account || !to || !chainId) return null
       try {
-        const rpcUrl = getDefaultEthereumRpcUrl(chainId)
+        const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
         const publicClient = createPublicClient({ transport: http(rpcUrl) })
         const [gasEstimate, feesPerGas] = await Promise.all([
           publicClient.estimateGas({

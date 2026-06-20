@@ -5,7 +5,7 @@ import {
   type OpenfortWalletConfig,
   RecoveryMethod,
 } from '@openfort/react'
-import { polygonAmoy } from 'viem/chains'
+import { base, polygonAmoy } from 'viem/chains'
 import { create } from 'zustand'
 import { DEFAULT_EVM_CHAIN, PLAYGROUND_EVM_CHAINS, RPC_URLS, SOLANA_CLUSTER, SOLANA_DEFAULT_RPC } from '@/lib/chains'
 
@@ -19,6 +19,7 @@ const defaultWalletConfig: OpenfortWalletConfig = {
       PLAYGROUND_EVM_CHAINS.map((c) => [c.id, import.meta.env.VITE_FEE_SPONSORSHIP_ID!])
     ),
     assets: {
+      [base.id]: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`], // USDC on Base
       [polygonAmoy.id]: [import.meta.env.VITE_POLYGON_MINT_CONTRACT!],
     },
   },
@@ -53,6 +54,24 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
   publishableKey: import.meta.env.VITE_OPENFORT_PUBLISHABLE_KEY,
 
   uiConfig: {
+    // Funding rail backend (independent of the auth/wallet api): drives the
+    // Deposit widget while auth/wallet use the real Openfort api. Drives
+    // useFunding().isAvailable. Defaults to the hosted funding api; set
+    // VITE_FUNDING_BASE_URL (see .env.local) to point at a local backend.
+    fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL || 'https://funding.openfort.io',
+    // Mainnet e2e: source major tokens from mainnet chains, land on Base mainnet
+    // USDC (the live embedded wallet's chain). Explicit symbols (not the 'native'
+    // sentinel) so only Relay-supported deposit-address tokens show — e.g. ETH is
+    // routable but Polygon's POL isn't ("major tokens" only). ETH uses a 0.01-unit
+    // mint nominal so it isn't 1 whole ETH (see nominalUnits).
+    funding: {
+      sourceChains: ['eip155:42161', 'eip155:8453', 'eip155:10', 'eip155:137', 'eip155:1'],
+      sourceCurrencies: ['ETH', 'WETH', 'USDC', 'USDT', 'DAI'],
+      targetChain: 'eip155:8453',
+      targetCurrency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+      // depositPageUrl omitted → uses the SDK default (https://deposit.openfort.io),
+      // the zero-config path a real integrator gets.
+    },
     theme: 'auto',
     mode: undefined,
     customTheme: undefined,

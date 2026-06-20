@@ -1,0 +1,135 @@
+'use client'
+
+import type { ReactNode, SyntheticEvent } from 'react'
+import { BuyIcon, DollarIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
+import logos from '../../../assets/logos'
+import { useFunding } from '../../../hooks/openfort/useFunding'
+import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
+import useIsMobile from '../../../hooks/useIsMobile'
+import { ModalHeading } from '../../Common/Modal/styles'
+import { FundingMethod, routes } from '../../Openfort/types'
+import { useOpenfort } from '../../Openfort/useOpenfort'
+import { PageContent } from '../../PageContent'
+import { type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
+import {
+  DepositContent,
+  LogoCluster,
+  OptionButton,
+  OptionIconBadge,
+  OptionInfo,
+  OptionLeft,
+  OptionList,
+  OptionSubtitle,
+  OptionTitle,
+} from './styles'
+
+/** The action icon shown in each row's left badge (icons default to 20×20). */
+const METHOD_ICON: Record<FundingMethod, ReactNode> = {
+  [FundingMethod.APPLE_PAY]: <DollarIcon />,
+  [FundingMethod.CARD]: <BuyIcon />,
+  [FundingMethod.WALLET]: <WalletIcon />,
+  [FundingMethod.ADDRESS]: <ReceiveIcon />,
+  [FundingMethod.EXCHANGE]: <ExternalLinkIcon />,
+}
+
+/** Brand logos previewed on the right of each row (vendored SVGs, no external URLs). */
+const BRAND_LOGOS: Partial<Record<FundingMethod, ReactNode[]>> = {
+  [FundingMethod.WALLET]: [
+    <logos.MetaMask key="mm" background />,
+    <logos.Phantom key="ph" background />,
+    <logos.Coinbase key="cb" background />,
+    <logos.Trust key="tw" />,
+    <logos.Rainbow key="rb" round />,
+  ],
+  [FundingMethod.EXCHANGE]: [<logos.Coinbase key="cb" background />, <logos.Binance key="bn" />],
+  [FundingMethod.CARD]: [<logos.Visa key="visa" />, <logos.Mastercard key="mc" />],
+  [FundingMethod.APPLE_PAY]: [<logos.Apple key="apple" />],
+}
+
+const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
+  e.currentTarget.style.display = 'none'
+}
+
+/**
+ * Deposit hub — one entry point, a method selector. Each row shows an action
+ * icon on the left and the tokens/wallets/exchanges it covers on the right.
+ * Crypto/CEX route into the funding-session Pages; fiat rows reuse the Buy flow.
+ */
+const Deposit = () => {
+  const { setRoute, setBuyForm, uiConfig } = useOpenfort()
+  const isMobile = useIsMobile()
+  const { isAvailable } = useFunding()
+  const { chains } = useFundingChains()
+
+  const options = getPaymentOptions({
+    isMobile,
+    fundingAvailable: isAvailable,
+    methods: uiConfig.funding?.methods,
+  })
+
+  // Distinct source-currency logos (USDC, USDT, ETH, …) for the "from address" row.
+  const currencyLogos: string[] = []
+  const seenSymbols = new Set<string>()
+  for (const c of chains) {
+    for (const cur of c.currencies) {
+      if (cur.logo && !seenSymbols.has(cur.symbol)) {
+        seenSymbols.add(cur.symbol)
+        currencyLogos.push(cur.logo)
+      }
+    }
+  }
+
+  // Keep the preview compact: at most 4 logos (fewer on mobile).
+  const maxLogos = isMobile ? 3 : 4
+
+  /** The logos to preview on the right of a row. */
+  const clusterFor = (id: FundingMethod): ReactNode[] => {
+    if (id === FundingMethod.ADDRESS) {
+      return currencyLogos.slice(0, maxLogos).map((src) => <img key={src} src={src} alt="" onError={hideBrokenLogo} />)
+    }
+    return (BRAND_LOGOS[id] ?? []).slice(0, maxLogos)
+  }
+
+  const go = (target: DepositMethodTarget) => {
+    if (target.kind === 'crypto') {
+      setRoute(routes.DEPOSIT_CRYPTO)
+      return
+    }
+    if (target.kind === 'wallet') {
+      setRoute(routes.DEPOSIT_WALLET)
+      return
+    }
+    if (target.kind === 'cex') {
+      setRoute(routes.DEPOSIT_CEX)
+      return
+    }
+    // Fiat rails reuse the existing Buy flow; preselect the chosen provider so
+    // Apple Pay / Card land on the right rail.
+    setBuyForm((prev) => ({ ...prev, providerId: target.providerId }))
+    setRoute(routes.BUY)
+  }
+
+  return (
+    <PageContent onBack={routes.CONNECTED}>
+      <ModalHeading>Add funds</ModalHeading>
+      <DepositContent>
+        <OptionList>
+          {options.map((option) => (
+            <OptionButton key={option.id} type="button" disabled={option.disabled} onClick={() => go(option.target)}>
+              <OptionLeft>
+                <OptionIconBadge>{METHOD_ICON[option.id]}</OptionIconBadge>
+                <OptionInfo>
+                  <OptionTitle>{option.title}</OptionTitle>
+                  <OptionSubtitle>{option.disabledReason ?? option.subtitle}</OptionSubtitle>
+                </OptionInfo>
+              </OptionLeft>
+              <LogoCluster>{clusterFor(option.id)}</LogoCluster>
+            </OptionButton>
+          ))}
+        </OptionList>
+      </DepositContent>
+    </PageContent>
+  )
+}
+
+export default Deposit

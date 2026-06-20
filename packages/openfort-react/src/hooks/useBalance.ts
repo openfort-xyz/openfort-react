@@ -5,7 +5,7 @@ import { useEffect } from 'react'
 import { createPublicClient, formatEther, http } from 'viem'
 import { useOpenfort } from '../components/Openfort/useOpenfort'
 import { DEFAULT_TESTNET_CHAIN_ID } from '../core/ConnectionStrategy'
-import { useAsyncData } from '../shared/hooks/useAsyncData'
+import { invalidateAsyncData, useAsyncData } from '../shared/hooks/useAsyncData'
 import { formatSol } from '../solana/hooks/utils'
 import type { SolanaCluster } from '../solana/types'
 import { getDefaultEthereumRpcUrl, getDefaultSolanaRpcUrl, getNativeCurrency } from '../utils/rpc'
@@ -15,6 +15,11 @@ export const BALANCE_INVALIDATE_EVENT = 'openfort:balance-invalidate'
 
 /** Dispatches balance invalidation so all useBalance instances refetch. Call after mint/send. */
 export function invalidateBalance(): void {
+  // Token/asset balances come from useEthereumWalletAssets → useAsyncData, which
+  // doesn't listen to the event below. Drop their cache too so the next render
+  // (e.g. landing on the asset inventory after a deposit) refetches fresh.
+  invalidateAsyncData('walletAssets')
+  invalidateAsyncData('wallet-assets')
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new CustomEvent(BALANCE_INVALIDATE_EVENT))
   }

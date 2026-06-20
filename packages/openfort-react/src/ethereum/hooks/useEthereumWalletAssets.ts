@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import type { Transport } from 'viem'
-import { createWalletClient, custom, formatUnits, numberToHex } from 'viem'
+import type { Chain, Transport } from 'viem'
+import { createPublicClient, createWalletClient, custom, erc20Abi, formatUnits, http, numberToHex } from 'viem'
 import { erc7811Actions } from 'viem/experimental'
 import type { getAssets } from 'viem/experimental/erc7811'
 import type { Asset, MultiChainAsset } from '../../components/Openfort/types'
@@ -12,6 +12,7 @@ import type { EthereumConfig } from '../../ethereum/types'
 import { useUser } from '../../hooks/openfort/useUser'
 import { openfortKeys } from '../../query/queryKeys'
 import { useAsyncData } from '../../shared/hooks/useAsyncData'
+import { getDefaultEthereumRpcUrl } from '../../utils/rpc'
 import { useEthereumEmbeddedWallet } from './useEthereumEmbeddedWallet'
 
 type UseEthereumWalletAssetsOptions = {
@@ -40,6 +41,94 @@ function getUsdValue(asset: Asset): number {
   const decimals = asset.metadata?.decimals ?? 18
   const amount = Number.parseFloat(formatUnits(asset.balance, decimals))
   return Number.isFinite(amount) ? amount * fiat.value : 0
+}
+
+/** Stablecoins approximated at $1 in fallback mode (no price feed available). */
+const STABLECOIN_SYMBOLS = new Set(['USDC', 'USDT', 'DAI'])
+
+/**
+ * Canonical Multicall3 address — same on every major chain. Passed explicitly so
+ * multicall works even when the SDK's chain config doesn't declare a multicall3.
+ */
+const MULTICALL3_ADDRESS = '0xcA11bde05977b3631167028862bE2a173976CA11' as const
+
+/**
+ * Reads native + configured ERC-20 balances directly from the chain RPC.
+ *
+ * Fallback for when Openfort's ERC-7811 asset proxy is unavailable: the widget
+ * still shows on-chain balances (no fiat valuation — that comes from the proxy,
+ * except stablecoins which are approximated at $1). Tokens that don't exist on
+ * the chain are skipped.
+ */
+async function readEvmAssetsViaRpc(args: {
+  address: `0x${string}`
+  chain: Chain
+  rpcUrl: string
+  tokens: readonly `0x${string}`[]
+}): Promise<Asset[]> {
+  const { address, chain, rpcUrl, tokens } = args
+  const client = createPublicClient({ chain, transport: http(rpcUrl) })
+  const out: Asset[] = []
+
+  // Native balance — one call. Skipped silently if it fails (best-effort).
+  try {
+    const native = await client.getBalance({ address })
+    out.push({
+      type: 'native',
+      address: 'native',
+      balance: native,
+      metadata: {
+        symbol: chain.nativeCurrency.symbol,
+        decimals: chain.nativeCurrency.decimals,
+        fiat: { value: 0, currency: 'USD' },
+      },
+    })
+  } catch {
+    // native read failed for this chain — skip it
+  }
+
+  if (tokens.length === 0) return out
+
+  // Batch every token's balanceOf/decimals/symbol/name into ONE multicall request
+  // (via Multicall3) instead of 4 calls per token — keeps us well under public-RPC
+  // rate limits (429s) that previously broke the fallback.
+  const contracts = tokens.flatMap((token) => [
+    { address: token, abi: erc20Abi, functionName: 'balanceOf', args: [address] } as const,
+    { address: token, abi: erc20Abi, functionName: 'decimals' } as const,
+    { address: token, abi: erc20Abi, functionName: 'symbol' } as const,
+    { address: token, abi: erc20Abi, functionName: 'name' } as const,
+  ])
+
+  try {
+    const results = await client.multicall({ contracts, allowFailure: true, multicallAddress: MULTICALL3_ADDRESS })
+    tokens.forEach((token, i) => {
+      const balance = results[i * 4]
+      const decimals = results[i * 4 + 1]
+      const symbol = results[i * 4 + 2]
+      const name = results[i * 4 + 3]
+      if (balance?.status !== 'success' || decimals?.status !== 'success' || symbol?.status !== 'success') return
+
+      const sym = symbol.result as string
+      out.push({
+        type: 'erc20',
+        address: token,
+        balance: balance.result as bigint,
+        metadata: {
+          name: (name?.status === 'success' ? name.result : sym) as string,
+          symbol: sym,
+          decimals: decimals.result as number,
+          // No price feed in fallback mode; approximate stablecoins at $1 so the
+          // USD total isn't blank. Other tokens show their amount without a value.
+          fiat: STABLECOIN_SYMBOLS.has(sym.toUpperCase()) ? { value: 1, currency: 'USD' } : undefined,
+        },
+      })
+    })
+  } catch {
+    // Multicall request itself failed (RPC throttled, or no Multicall3 on the chain).
+    // Return whatever we have (native) rather than throwing away the whole fetch.
+  }
+
+  return out
 }
 
 /**
@@ -184,6 +273,17 @@ export const useEthereumWalletAssets = ({
           : null
         const responses = await Promise.all([defaultRequest, customRequest].filter(Boolean) as Promise<Response>[])
         const [defaultData, customData] = await Promise.all(responses.map((r) => r.json()))
+        if (defaultData?.error) {
+          // ERC-7811 asset proxy failed — fall back to per-chain RPC reads.
+          const out: MultiChainAsset[] = []
+          for (const c of chains) {
+            const tokens = (walletConfig?.ethereum?.assets?.[c.id] ?? []) as `0x${string}`[]
+            const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[c.id] ?? getDefaultEthereumRpcUrl(c.id)
+            const rpcAssets = await readEvmAssetsViaRpc({ address: address as `0x${string}`, chain: c, rpcUrl, tokens })
+            for (const a of rpcAssets) out.push({ ...a, chainId: c.id })
+          }
+          return out as readonly MultiChainAsset[]
+        }
         const result: Record<string, unknown[]> = { ...(defaultData.result ?? {}) }
         if (customData?.result && typeof customData.result === 'object') {
           for (const [chainKey, assets] of Object.entries(customData.result)) {
@@ -255,107 +355,131 @@ export const useEthereumWalletAssets = ({
         })
       }
 
-      const customClient = createWalletClient({
-        account: address as `0x${string}`,
-        chain,
-        transport: customTransport(),
-      })
+      try {
+        const customClient = createWalletClient({
+          account: address as `0x${string}`,
+          chain,
+          transport: customTransport(),
+        })
 
-      const extendedClient = customClient.extend(erc7811Actions())
+        const extendedClient = customClient.extend(erc7811Actions())
 
-      const defaultAssetsPromise = extendedClient.getAssets({
-        chainIds: [chainId],
-      })
+        const defaultAssetsPromise = extendedClient.getAssets({
+          chainIds: [chainId],
+        })
 
-      const hexChainId = numberToHex(chainId)
-      const customAssetsPromise =
-        customAssetsToFetch.length > 0
-          ? extendedClient.getAssets({
-              chainIds: [chainId],
-              assets: {
-                [hexChainId]: customAssetsToFetch.map((a) => ({
-                  address: a,
-                  type: 'erc20' as const,
-                })),
+        const hexChainId = numberToHex(chainId)
+        const customAssetsPromise =
+          customAssetsToFetch.length > 0
+            ? extendedClient.getAssets({
+                chainIds: [chainId],
+                assets: {
+                  [hexChainId]: customAssetsToFetch.map((a) => ({
+                    address: a,
+                    type: 'erc20' as const,
+                  })),
+                },
+              })
+            : Promise.resolve({ [hexChainId]: [] as getAssets.Asset<false>[] })
+
+        const [defaultAssetsRaw, customAssets] = await Promise.all([defaultAssetsPromise, customAssetsPromise])
+
+        // ERC-7811 response keys may be hex (e.g. "0x14a34") or numeric depending on the RPC
+        const rawByChain = defaultAssetsRaw as unknown as Record<string, getAssets.Asset<false>[]>
+        const customByChain = customAssets as unknown as Record<string, getAssets.Asset<false>[]>
+
+        const rawChainAssets = rawByChain[hexChainId] ?? rawByChain[String(chainId)] ?? []
+        const customChainAssets = customByChain[hexChainId] ?? customByChain[String(chainId)] ?? []
+
+        const defaultAssets = rawChainAssets.map<Asset>((a) => {
+          let asset: Asset
+          if (a.type === 'erc20') {
+            type ExtendedMeta = {
+              name?: string
+              symbol?: string
+              decimals?: number
+              fiat?: Asset['metadata'] extends { fiat?: infer F } ? F : never
+            }
+            const meta = a.metadata as ExtendedMeta | undefined
+            asset = {
+              type: 'erc20' as const,
+              address: a.address,
+              balance: a.balance,
+              metadata: {
+                name: meta?.name || 'Unknown Token',
+                symbol: meta?.symbol || 'UNKNOWN',
+                decimals: meta?.decimals,
+                fiat: meta?.fiat,
               },
-            })
-          : Promise.resolve({ [hexChainId]: [] as getAssets.Asset<false>[] })
-
-      const [defaultAssetsRaw, customAssets] = await Promise.all([defaultAssetsPromise, customAssetsPromise])
-
-      // ERC-7811 response keys may be hex (e.g. "0x14a34") or numeric depending on the RPC
-      const rawByChain = defaultAssetsRaw as unknown as Record<string, getAssets.Asset<false>[]>
-      const customByChain = customAssets as unknown as Record<string, getAssets.Asset<false>[]>
-
-      const rawChainAssets = rawByChain[hexChainId] ?? rawByChain[String(chainId)] ?? []
-      const customChainAssets = customByChain[hexChainId] ?? customByChain[String(chainId)] ?? []
-
-      const defaultAssets = rawChainAssets.map<Asset>((a) => {
-        let asset: Asset
-        if (a.type === 'erc20') {
-          type ExtendedMeta = {
-            name?: string
-            symbol?: string
-            decimals?: number
-            fiat?: Asset['metadata'] extends { fiat?: infer F } ? F : never
+              raw: a,
+            }
+          } else if (a.type === 'native') {
+            type ExtendedNativeMeta = { symbol?: string; decimals?: number; fiat?: { value: number; currency: string } }
+            const meta = a.metadata as ExtendedNativeMeta | undefined
+            asset = {
+              type: 'native' as const,
+              address: 'native',
+              balance: a.balance,
+              metadata: meta?.fiat
+                ? { symbol: meta.symbol ?? '', decimals: meta.decimals, fiat: meta.fiat }
+                : undefined,
+              raw: a,
+            }
+          } else {
+            throw new OpenfortError('Unsupported asset type', OpenfortReactErrorType.UNEXPECTED_ERROR, { error: a })
           }
-          const meta = a.metadata as ExtendedMeta | undefined
-          asset = {
-            type: 'erc20' as const,
-            address: a.address,
-            balance: a.balance,
-            metadata: {
-              name: meta?.name || 'Unknown Token',
-              symbol: meta?.symbol || 'UNKNOWN',
-              decimals: meta?.decimals,
-              fiat: meta?.fiat,
-            },
-            raw: a,
+          return asset
+        })
+
+        const mergedAssets = [...defaultAssets]
+        const customAssetsForChain: Asset[] = customChainAssets.flatMap((asset: getAssets.Asset<false>) => {
+          if (asset.type !== 'erc20') return []
+          if (!walletConfig?.ethereum?.assets) return [{ ...asset, raw: asset }]
+
+          const configAsset = walletConfig.ethereum.assets[chainId]?.find(
+            (a) => a.toLowerCase() === asset.address.toLowerCase()
+          )
+          if (!configAsset) return [{ ...asset, raw: asset }]
+
+          return [
+            {
+              type: 'erc20' as const,
+              address: asset.address,
+              balance: asset.balance,
+              metadata: asset.metadata,
+              raw: asset,
+            } satisfies Asset,
+          ]
+        })
+
+        customAssetsForChain.forEach((asset) => {
+          if (!mergedAssets.find((a) => a.address === asset.address)) {
+            mergedAssets.push(asset)
           }
-        } else if (a.type === 'native') {
-          type ExtendedNativeMeta = { symbol?: string; decimals?: number; fiat?: { value: number; currency: string } }
-          const meta = a.metadata as ExtendedNativeMeta | undefined
-          asset = {
-            type: 'native' as const,
-            address: 'native',
-            balance: a.balance,
-            metadata: meta?.fiat ? { symbol: meta.symbol ?? '', decimals: meta.decimals, fiat: meta.fiat } : undefined,
-            raw: a,
-          }
-        } else {
-          throw new OpenfortError('Unsupported asset type', OpenfortReactErrorType.UNEXPECTED_ERROR, { error: a })
+        })
+
+        if (mergedAssets.length === 0 && customAssetsToFetch.length > 0) {
+          // Proxy succeeded but returned nothing while we expect tokens — read direct.
+          const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+          const fb = await readEvmAssetsViaRpc({
+            address: address as `0x${string}`,
+            chain,
+            rpcUrl,
+            tokens: customAssetsToFetch as `0x${string}`[],
+          })
+          if (fb.length > 0) return fb as readonly Asset[]
         }
-        return asset
-      })
-
-      const mergedAssets = [...defaultAssets]
-      const customAssetsForChain: Asset[] = customChainAssets.flatMap((asset: getAssets.Asset<false>) => {
-        if (asset.type !== 'erc20') return []
-        if (!walletConfig?.ethereum?.assets) return [{ ...asset, raw: asset }]
-
-        const configAsset = walletConfig.ethereum.assets[chainId]?.find(
-          (a) => a.toLowerCase() === asset.address.toLowerCase()
-        )
-        if (!configAsset) return [{ ...asset, raw: asset }]
-
-        return [
-          {
-            type: 'erc20' as const,
-            address: asset.address,
-            balance: asset.balance,
-            metadata: asset.metadata,
-            raw: asset,
-          } satisfies Asset,
-        ]
-      })
-
-      customAssetsForChain.forEach((asset) => {
-        if (!mergedAssets.find((a) => a.address === asset.address)) {
-          mergedAssets.push(asset)
-        }
-      })
-
-      return mergedAssets as readonly Asset[]
+        return mergedAssets as readonly Asset[]
+      } catch {
+        // ERC-7811 asset proxy failed — fall back to direct chain-RPC balance reads.
+        const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+        return (await readEvmAssetsViaRpc({
+          address: address as `0x${string}`,
+          chain,
+          rpcUrl,
+          tokens: customAssetsToFetch as `0x${string}`[],
+        })) as readonly Asset[]
+      }
     },
     enabled: multiChain ? isConnected && !!address : isConnected && !!chainId && !!chain && !!address,
     staleTime,

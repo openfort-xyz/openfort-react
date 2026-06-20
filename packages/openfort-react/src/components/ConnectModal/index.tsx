@@ -18,6 +18,7 @@ import { routes, type SetRouteOptions } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
 import About from '../Pages/About'
 import { AssetInventory } from '../Pages/AssetInventory'
+import { SolanaAssetInventory } from '../Pages/AssetInventory/SolanaAssetInventory'
 import Buy from '../Pages/Buy'
 import BuyComplete from '../Pages/BuyComplete'
 import BuyProcessing from '../Pages/BuyProcessing'
@@ -28,6 +29,10 @@ import ConnectedSuccess from '../Pages/ConnectedSuccess'
 import Connectors from '../Pages/Connectors'
 import CreateGuestUserPage from '../Pages/CreateGuestUserPage'
 import CreateWallet from '../Pages/CreateWallet'
+import Deposit from '../Pages/Deposit'
+import DepositCex from '../Pages/DepositCex'
+import DepositCrypto from '../Pages/DepositCrypto'
+import DepositWallet from '../Pages/DepositWallet'
 import DownloadApp from '../Pages/DownloadApp'
 import EmailLogin from '../Pages/EmailLogin'
 import EmailOTP from '../Pages/EmailOTP'
@@ -51,7 +56,9 @@ import RemoveLinkedProvider from '../Pages/RemoveLinkedProvider'
 import SelectToken from '../Pages/SelectToken'
 import SelectWalletToRecover from '../Pages/SelectWalletToRecover'
 import Send from '../Pages/Send'
+import { SolanaSend } from '../Pages/Send/SolanaSend'
 import SendConfirmation from '../Pages/SendConfirmation'
+import { SolanaSendConfirmation } from '../Pages/SendConfirmation/SolanaSendConfirmation'
 import SocialProviders from '../Pages/SocialProviders'
 import ConnectUsing from './ConnectUsing'
 import ConnectWithMobile from './ConnectWithMobile'
@@ -99,6 +106,10 @@ function buildSharedPages(): RoutePages {
     buyProviderSelect: <BuyProviderSelect />,
     receive: <Receive />,
     buy: <Buy />,
+    deposit: <Deposit />,
+    depositCrypto: <DepositCrypto />,
+    depositWallet: <DepositWallet />,
+    depositCex: <DepositCex />,
     exportKey: <ExportKey />,
     walletOverview: <Connected />,
   }
@@ -123,9 +134,10 @@ const CHAIN_PREFIXED_PAGES: Record<ChainTypeEnum, RoutePages> = {
     'sol:connected': <Connected />,
     'sol:createWallet': <CreateWallet />,
     'sol:recoverWallet': <RecoverPage />,
-    // 'sol:send': <SolanaSend />,
-    // 'sol:sendConfirmation': <SolanaSendConfirmation />,
+    'sol:send': <SolanaSend />,
+    'sol:sendConfirmation': <SolanaSendConfirmation />,
     'sol:receive': <Receive />,
+    'sol:assetInventory': <SolanaAssetInventory />,
     // 'sol:wallets': <SolanaWallets />,
   },
 }

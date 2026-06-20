@@ -1256,6 +1256,42 @@ const Apple = ({ ...props }) => (
   </svg>
 );
 
+const Binance = ({ ...props }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <circle cx="12" cy="12" r="12" fill="#F3BA2F" />
+    <path
+      fill="#fff"
+      d="M12 6.6l1.86 1.86L12 10.32 10.14 8.46 12 6.6zM8.46 10.14 10.32 12l-1.86 1.86L6.6 12l1.86-1.86zm7.08 0L17.4 12l-1.86 1.86L13.68 12l1.86-1.86zM12 13.68l1.86 1.86L12 17.4l-1.86-1.86L12 13.68zM12 10.32 13.68 12 12 13.68 10.32 12 12 10.32z"
+    />
+  </svg>
+)
+
+const Visa = ({ ...props }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <rect width="24" height="24" rx="4" fill="#1A1F71" />
+    <text
+      x="12"
+      y="15.5"
+      textAnchor="middle"
+      fontFamily="Arial, Helvetica, sans-serif"
+      fontStyle="italic"
+      fontWeight="700"
+      fontSize="7"
+      fill="#fff"
+    >
+      VISA
+    </text>
+  </svg>
+)
+
+const Mastercard = ({ ...props }) => (
+  <svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" {...props}>
+    <rect width="24" height="24" rx="4" fill="#fff" />
+    <circle cx="9.5" cy="12" r="5.5" fill="#EB001B" />
+    <circle cx="14.5" cy="12" r="5.5" fill="#F79E1B" fillOpacity="0.9" />
+  </svg>
+)
+
 export const OtherSocials = ({ ...props }) => {
   const column: React.CSSProperties = {
     position: 'relative',
@@ -1342,4 +1378,8 @@ export default {
   Openfort,
   Stripe,
   CoinbasePay,
+  Apple,
+  Binance,
+  Visa,
+  Mastercard,
 };

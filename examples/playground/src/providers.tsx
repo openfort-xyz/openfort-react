@@ -8,14 +8,15 @@
  */
 
 import { ChainTypeEnum, OpenfortProvider } from '@openfort/react'
+import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { getDefaultConfig, getDefaultConnectors, OpenfortWagmiBridge } from '@openfort/react/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type React from 'react'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { createConfig, http, WagmiProvider } from 'wagmi'
+import { createConfig, http, useChainId, WagmiProvider } from 'wagmi'
 import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
-import { PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
+import { getFundingTargetForChain, PLAYGROUND_EVM_CHAINS, SOLANA_FUNDING_TARGET } from '@/lib/chains'
 import { useAppStore } from './lib/useAppStore'
 
 export type OpenfortPlaygroundMode = 'svm' | 'evm'
@@ -107,6 +108,80 @@ const wagmiConfig = createConfig(
 
 const MODE_TO_CHAIN = { evm: ChainTypeEnum.EVM, svm: ChainTypeEnum.SVM } as const
 
+/**
+ * Keeps the Deposit-hub funding target in sync with the active EVM chain, so
+ * switching networks in the OpenfortButton lands deposits on that chain's USDC.
+ * No-ops on chains without a configured USDC (testnets), keeping the prior target.
+ * Drops any `targetAddress` so deposits land on the active EVM embedded wallet —
+ * clears a stale Solana address left by the SVM sync after a mode switch.
+ */
+function FundingTargetSync() {
+  const chainId = useChainId()
+  const providerOptions = useAppStore((s) => s.providerOptions)
+  const setProviderOptions = useAppStore((s) => s.setProviderOptions)
+
+  useEffect(() => {
+    const target = getFundingTargetForChain(chainId)
+    if (!target) return
+    const funding = providerOptions.uiConfig?.funding
+    if (
+      funding?.targetChain === target.targetChain &&
+      funding?.targetCurrency === target.targetCurrency &&
+      funding?.targetAddress === undefined
+    ) {
+      return
+    }
+    const { targetAddress: _drop, ...rest } = funding ?? {}
+    setProviderOptions({
+      ...providerOptions,
+      uiConfig: {
+        ...providerOptions.uiConfig,
+        funding: { ...rest, ...target },
+      },
+    })
+  }, [chainId, providerOptions, setProviderOptions])
+
+  return null
+}
+
+/**
+ * SVM counterpart of {@link FundingTargetSync}: while in Solana mode, points the
+ * Deposit-hub target at Solana mainnet USDC and the active Solana embedded wallet,
+ * so a Coinbase/crypto deposit bridges and lands as USDC in that wallet.
+ *
+ * Mirrors the EVM sync: flip the target chain/currency to Solana *immediately* on
+ * mount (this component only renders in SVM mode), not gated on the wallet being
+ * fully connected. `targetAddress` is set once the Solana wallet resolves; until
+ * then DepositCex falls back to the SVM embedded account, so the CEX page never
+ * strands on "Preparing…" while the wallet is still connecting.
+ */
+function SolanaFundingTargetSync() {
+  const solana = useSolanaEmbeddedWallet()
+  const providerOptions = useAppStore((s) => s.providerOptions)
+  const setProviderOptions = useAppStore((s) => s.setProviderOptions)
+  const address = solana.status === 'connected' ? solana.activeWallet?.address : undefined
+
+  useEffect(() => {
+    const funding = providerOptions.uiConfig?.funding
+    if (
+      funding?.targetChain === SOLANA_FUNDING_TARGET.targetChain &&
+      funding?.targetCurrency === SOLANA_FUNDING_TARGET.targetCurrency &&
+      funding?.targetAddress === address
+    ) {
+      return
+    }
+    setProviderOptions({
+      ...providerOptions,
+      uiConfig: {
+        ...providerOptions.uiConfig,
+        funding: { ...funding, ...SOLANA_FUNDING_TARGET, targetAddress: address },
+      },
+    })
+  }, [address, providerOptions, setProviderOptions])
+
+  return null
+}
+
 function WagmiProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient())
   const { providerOptions } = useAppStore()
@@ -127,6 +202,7 @@ function WagmiProviders({ children }: { children: React.ReactNode }) {
         <WagmiProvider config={wagmiConfig}>
           <OpenfortWagmiBridge>
             <OpenfortProvider {...options}>
+              <FundingTargetSync />
               <EthereumAddressProviderWagmi>{children}</EthereumAddressProviderWagmi>
             </OpenfortProvider>
           </OpenfortWagmiBridge>
@@ -153,6 +229,7 @@ function OpenfortOnlyProviders({ children }: { children: React.ReactNode }) {
     <ModeSwitchContext.Provider value={{}}>
       <QueryClientProvider client={queryClient}>
         <OpenfortProvider {...options}>
+          <SolanaFundingTargetSync />
           <EthereumAddressProviderEmbedded>{children}</EthereumAddressProviderEmbedded>
         </OpenfortProvider>
       </QueryClientProvider>

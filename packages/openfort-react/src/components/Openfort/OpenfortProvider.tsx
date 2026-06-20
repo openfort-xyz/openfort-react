@@ -93,7 +93,10 @@ export const OpenfortProvider = ({
 }: OpenfortProviderProps) => {
   const bridge = useContext(OpenfortEthereumBridgeContext)
   const hasWagmi = !!bridge
-  const hasExternalWallets = bridge?.connectors?.some((c) => c.id === 'walletConnect') ?? false
+  // External wallet sign-in is available via any connector — WalletConnect (QR)
+  // or an injected/MetaMask browser extension — not WalletConnect alone.
+  const EXTERNAL_WALLET_CONNECTOR_IDS = ['walletConnect', 'injected', 'metaMask', 'metaMaskSDK', 'io.metamask']
+  const hasExternalWallets = bridge?.connectors?.some((c) => EXTERNAL_WALLET_CONNECTOR_IDS.includes(c.id)) ?? false
   const hasSolana = !!walletConfig?.solana
 
   // Only allow for mounting OpenfortProvider once, so we avoid weird global
