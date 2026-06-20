@@ -54,6 +54,7 @@ import Receive from '../Pages/Receive'
 import RecoverPage from '../Pages/Recover'
 import RemoveLinkedProvider from '../Pages/RemoveLinkedProvider'
 import SelectToken from '../Pages/SelectToken'
+import { SolanaSelectToken } from '../Pages/SelectToken/SolanaSelectToken'
 import SelectWalletToRecover from '../Pages/SelectWalletToRecover'
 import Send from '../Pages/Send'
 import { SolanaSend } from '../Pages/Send/SolanaSend'
@@ -135,6 +136,7 @@ const CHAIN_PREFIXED_PAGES: Record<ChainTypeEnum, RoutePages> = {
     'sol:createWallet': <CreateWallet />,
     'sol:recoverWallet': <RecoverPage />,
     'sol:send': <SolanaSend />,
+    'sol:sendTokenSelect': <SolanaSelectToken />,
     'sol:sendConfirmation': <SolanaSendConfirmation />,
     'sol:receive': <Receive />,
     'sol:assetInventory': <SolanaAssetInventory />,

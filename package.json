@@ -157,6 +157,7 @@
     "ignoreDependencies": [
       "@solana/kit",
       "@solana-program/system",
+      "@solana-program/token",
       "@solana/kora",
       "rollup-plugin-peer-deps-external",
       "rollup-plugin-typescript2",

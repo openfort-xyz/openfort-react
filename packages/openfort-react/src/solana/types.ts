@@ -57,6 +57,14 @@ export type SolanaConfig = {
   rpcUrls?: Partial<Record<'mainnet-beta' | 'devnet' | 'testnet', string>>
   /** Commitment level for transactions (default: 'confirmed') */
   commitment?: SolanaCommitment
+  /**
+   * Sponsor network fees for Solana sends through the Openfort paymaster (Kora).
+   * The SVM counterpart of `ethereum.ethereumFeeSponsorshipId`: when `true`, sends
+   * are routed gaslessly and the confirm screen marks the network fee as sponsored.
+   * Requires a `sponsorSolTransaction` policy on the project (resolved server-side
+   * from the publishable key). Defaults to `false` (user pays the fee).
+   */
+  sponsorFees?: boolean
   /** UI options for Solana-connected screens */
   ui?: SolanaUIOptions
 }
