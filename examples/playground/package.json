@@ -21,6 +21,7 @@
     "@radix-ui/react-tooltip": "^1.2.7",
     "@solana-program/compute-budget": "^0.12.0",
     "@solana-program/system": "^0.10.0",
+    "@solana-program/token": "^0.9.0",
     "@solana/kit": "^5.4.0",
     "@solana/kora": "^0.1.1",
     "@tanstack/react-query": "^5.90.3",

@@ -41,9 +41,12 @@ export const formatBalanceWithSymbol = (value: bigint | undefined, decimals: num
 export const isSameToken = (a: Asset, b: Asset) => {
   if (a.type !== b.type) return false
   if (a.type === 'native') return true
-  // At this point, a.type === 'erc20' and b.type === 'erc20'
   if (a.type === 'erc20' && b.type === 'erc20') {
     return a.address.toLowerCase() === b.address.toLowerCase()
+  }
+  // SPL mints are base58 and case-sensitive — compare verbatim.
+  if (a.type === 'spl' && b.type === 'spl') {
+    return a.address === b.address
   }
   return false
 }

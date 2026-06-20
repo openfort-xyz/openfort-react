@@ -1,17 +1,21 @@
 'use client'
 
 /**
- * Solana SOL transfer helpers.
+ * Solana transfer helpers — native SOL and SPL tokens, each with an optional
+ * sponsored (gasless) path through the Openfort paymaster (Kora).
  *
- * Builds, signs, and broadcasts a native SOL transfer with `@solana/kit`, signing
- * the message bytes through the embedded wallet provider (Ed25519). Mirrors the
- * documented `createOpenfortSigner` pattern. `@solana/kit`, `@solana-program/system`,
- * and `@solana/kora` are loaded lazily so the EVM bundle and the kit `^2 || ^5`
- * range stay untouched — only a Solana send pulls them in at runtime.
+ * Builds, signs, and broadcasts with `@solana/kit`, signing the message bytes
+ * through the embedded wallet provider (Ed25519). Mirrors the documented
+ * `createOpenfortSigner` pattern. `@solana/kit`, `@solana-program/system`,
+ * `@solana-program/token`, and `@solana/kora` are loaded lazily so the EVM
+ * bundle and the kit `^2 || ^5` range stay untouched — only a Solana send pulls
+ * them in at runtime.
  */
 
 import type { Address, SignatureBytes, SignatureDictionary, TransactionSigner } from '@solana/kit'
 import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster } from './types'
+
+type Kit = typeof import('@solana/kit')
 
 /** The System program id — the "token" for a native SOL transfer through Kora. */
 const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
@@ -36,6 +40,30 @@ function toEd25519Signature(raw: Uint8Array): SignatureBytes {
 /** Solana confirmation needs a wss endpoint; public cluster RPCs serve one at the same host. */
 function deriveWssUrl(rpcUrl: string): string {
   return rpcUrl.replace(/^https?:\/\//, 'wss://')
+}
+
+/**
+ * A `TransactionSigner` that signs message bytes through the embedded wallet
+ * provider (Ed25519). Shared by the native and SPL non-sponsored paths.
+ */
+function createEmbeddedSigner(
+  kit: Kit,
+  provider: OpenfortEmbeddedSolanaWalletProvider,
+  fromAddress: Address
+): TransactionSigner {
+  return {
+    address: fromAddress,
+    signTransactions: async (transactions): Promise<readonly SignatureDictionary[]> =>
+      Promise.all(
+        transactions.map(async (transaction) => {
+          const { signature } = await provider.signTransaction({
+            messageBytes: new Uint8Array(transaction.messageBytes),
+          })
+          const bytes = toEd25519Signature(new Uint8Array(kit.getBase58Encoder().encode(signature)))
+          return Object.freeze({ [fromAddress]: bytes })
+        })
+      ),
+  }
 }
 
 type SendSolParams = {
@@ -66,20 +94,7 @@ export async function sendSol({
   const fromAddress = kit.address(from)
   const rpc = kit.createSolanaRpc(rpcUrl)
   const rpcSubscriptions = kit.createSolanaRpcSubscriptions(deriveWssUrl(rpcUrl))
-
-  const signer: TransactionSigner = {
-    address: fromAddress,
-    signTransactions: async (transactions): Promise<readonly SignatureDictionary[]> =>
-      Promise.all(
-        transactions.map(async (transaction) => {
-          const { signature } = await provider.signTransaction({
-            messageBytes: new Uint8Array(transaction.messageBytes),
-          })
-          const bytes = toEd25519Signature(new Uint8Array(kit.getBase58Encoder().encode(signature)))
-          return Object.freeze({ [fromAddress]: bytes })
-        })
-      ),
-  }
+  const signer = createEmbeddedSigner(kit, provider, fromAddress)
 
   const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
 
@@ -115,14 +130,100 @@ export async function sendSol({
   return kit.getSignatureFromTransaction(signedTransaction)
 }
 
-type SendSolGaslessParams = {
+type SendSplTokenParams = {
   from: string
   to: string
-  amountSol: number
+  /** SPL mint address (base58). */
+  mint: string
+  /** Amount in token base units (already scaled by `decimals`). */
+  amount: bigint
+  decimals: number
   provider: OpenfortEmbeddedSolanaWalletProvider
-  cluster: SolanaCluster
-  /** Project publishable key; sent to the Openfort Solana paymaster (Kora) as a Bearer token. */
-  publishableKey: string
+  rpcUrl: string
+  commitment?: 'processed' | 'confirmed' | 'finalized'
+}
+
+/**
+ * Build, sign, and broadcast an SPL token transfer. Creates the recipient's
+ * associated token account if it doesn't exist yet (idempotent — a no-op when it
+ * already holds the token; the sender pays the small rent). The wallet pays the
+ * network fee — use {@link sendSplTokenGasless} to sponsor it. Returns the
+ * transaction signature (base58).
+ */
+export async function sendSplToken({
+  from,
+  to,
+  mint,
+  amount,
+  decimals,
+  provider,
+  rpcUrl,
+  commitment = 'confirmed',
+}: SendSplTokenParams): Promise<string> {
+  const kit = await import('@solana/kit')
+  const token = await import('@solana-program/token')
+
+  const fromAddress = kit.address(from)
+  const toAddress = kit.address(to)
+  const mintAddress = kit.address(mint)
+  const rpc = kit.createSolanaRpc(rpcUrl)
+  const rpcSubscriptions = kit.createSolanaRpcSubscriptions(deriveWssUrl(rpcUrl))
+  const signer = createEmbeddedSigner(kit, provider, fromAddress)
+
+  const [sourceAta] = await token.findAssociatedTokenPda({
+    owner: fromAddress,
+    tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+    mint: mintAddress,
+  })
+  const [destinationAta] = await token.findAssociatedTokenPda({
+    owner: toAddress,
+    tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+    mint: mintAddress,
+  })
+
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+  const message = kit.pipe(
+    kit.createTransactionMessage({ version: 0 }),
+    (tx) => kit.setTransactionMessageFeePayer(fromAddress, tx),
+    (tx) => kit.setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+    (tx) =>
+      kit.appendTransactionMessageInstructions(
+        [
+          token.getCreateAssociatedTokenIdempotentInstruction({
+            payer: signer,
+            ata: destinationAta,
+            owner: toAddress,
+            mint: mintAddress,
+          }),
+          token.getTransferCheckedInstruction({
+            source: sourceAta,
+            mint: mintAddress,
+            destination: destinationAta,
+            authority: signer,
+            amount,
+            decimals,
+          }),
+        ],
+        tx
+      )
+  )
+
+  const signedTransaction = await kit.signTransactionMessageWithSigners(message)
+
+  const sendAndConfirm = kit.sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
+  const abortController = new AbortController()
+  const timeout = setTimeout(() => abortController.abort(), SEND_TIMEOUT_MS)
+  try {
+    await sendAndConfirm(signedTransaction as Parameters<typeof sendAndConfirm>[0], {
+      commitment,
+      abortSignal: abortController.signal,
+    })
+  } finally {
+    clearTimeout(timeout)
+  }
+
+  return kit.getSignatureFromTransaction(signedTransaction)
 }
 
 /** The Openfort Solana paymaster (Kora) endpoint for a cluster. */
@@ -131,20 +232,33 @@ function koraRpcUrl(cluster: SolanaCluster): string {
   return `https://api.openfort.io/rpc/solana/${segment}`
 }
 
+type KoraTransferParams = {
+  from: string
+  to: string
+  /** Amount in base units — lamports for SOL, token base units for an SPL mint. */
+  amountBaseUnits: bigint
+  /** System program id for native SOL, or the SPL mint address. */
+  token: string
+  provider: OpenfortEmbeddedSolanaWalletProvider
+  cluster: SolanaCluster
+  publishableKey: string
+}
+
 /**
- * Send a native SOL transfer with fees sponsored by the Openfort Solana paymaster
- * (Kora): Kora is the fee payer, the user signs their part with the embedded wallet,
- * and Kora co-signs + broadcasts. Requires a `sponsorSolTransaction` policy on the
+ * Sponsor a transfer through the Openfort Solana paymaster (Kora): Kora is the
+ * fee payer, the user signs their part with the embedded wallet, and Kora
+ * co-signs + broadcasts. Requires a `sponsorSolTransaction` policy on the
  * project. Returns the transaction signature (base58).
  */
-export async function sendSolGasless({
+async function sendViaKora({
   from,
   to,
-  amountSol,
+  amountBaseUnits,
+  token,
   provider,
   cluster,
   publishableKey,
-}: SendSolGaslessParams): Promise<string> {
+}: KoraTransferParams): Promise<string> {
   const kit = await import('@solana/kit')
   const { KoraClient } = await import('@solana/kora')
 
@@ -154,10 +268,10 @@ export async function sendSolGasless({
   const { signer_address } = await client.getPayerSigner()
   const feePayer = kit.createNoopSigner(signer_address as Address)
 
-  // 2. A sponsored native SOL transfer, with Kora as the fee payer.
+  // 2. A sponsored transfer (native or SPL), with Kora as the fee payer.
   const { instructions } = await client.transferTransaction({
-    amount: Number(solToLamports(amountSol)),
-    token: SYSTEM_PROGRAM_ID,
+    amount: Number(amountBaseUnits),
+    token,
     source: from,
     destination: to,
     signer_key: signer_address,
@@ -206,4 +320,68 @@ export async function sendSolGasless({
     return kit.getBase58Decoder().decode(wireBytes.slice(1, 65))
   }
   throw new Error('Failed to extract transaction signature from the Kora response')
+}
+
+type SendSolGaslessParams = {
+  from: string
+  to: string
+  amountSol: number
+  provider: OpenfortEmbeddedSolanaWalletProvider
+  cluster: SolanaCluster
+  /** Project publishable key; sent to the Openfort Solana paymaster (Kora) as a Bearer token. */
+  publishableKey: string
+}
+
+/** Send a native SOL transfer with fees sponsored by the Openfort paymaster (Kora). */
+export async function sendSolGasless({
+  from,
+  to,
+  amountSol,
+  provider,
+  cluster,
+  publishableKey,
+}: SendSolGaslessParams): Promise<string> {
+  return sendViaKora({
+    from,
+    to,
+    amountBaseUnits: solToLamports(amountSol),
+    token: SYSTEM_PROGRAM_ID,
+    provider,
+    cluster,
+    publishableKey,
+  })
+}
+
+type SendSplTokenGaslessParams = {
+  from: string
+  to: string
+  /** SPL mint address (base58). */
+  mint: string
+  /** Amount in token base units (already scaled by `decimals`). */
+  amount: bigint
+  provider: OpenfortEmbeddedSolanaWalletProvider
+  cluster: SolanaCluster
+  /** Project publishable key; sent to the Openfort Solana paymaster (Kora) as a Bearer token. */
+  publishableKey: string
+}
+
+/** Send an SPL token transfer with fees sponsored by the Openfort paymaster (Kora). */
+export async function sendSplTokenGasless({
+  from,
+  to,
+  mint,
+  amount,
+  provider,
+  cluster,
+  publishableKey,
+}: SendSplTokenGaslessParams): Promise<string> {
+  return sendViaKora({
+    from,
+    to,
+    amountBaseUnits: amount,
+    token: mint,
+    provider,
+    cluster,
+    publishableKey,
+  })
 }

@@ -3,16 +3,19 @@
 /**
  * Solana Send confirmation page
  *
- * Reviews the SOL transfer from `sendForm`, optionally sponsors the fee through
- * the Openfort Solana paymaster (Kora), submits via `sendSol` / `sendSolGasless`,
- * and shows the signature + explorer link on success.
+ * Reviews the transfer from `sendForm` (native SOL or an SPL token) and submits
+ * it. Network fees are sponsored through the Openfort paymaster (Kora) when
+ * `walletConfig.solana.sponsorFees` is set — mirroring the EVM
+ * `ethereumFeeSponsorshipId` flow — otherwise the wallet pays. Shows the
+ * signature + explorer link on success.
  */
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
+import { parseUnits } from 'viem'
 import { getExplorerUrl } from '../../../shared/utils/explorer'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { sendSol, sendSolGasless } from '../../../solana/transfer'
+import { sendSol, sendSolGasless, sendSplToken, sendSplTokenGasless } from '../../../solana/transfer'
 import { truncateSolanaAddress } from '../../../utils'
 import Button from '../../Common/Button'
 import { CopyText } from '../../Common/CopyToClipboard/CopyText'
@@ -28,15 +31,16 @@ import {
   ErrorContainer,
   ErrorMessage,
   ErrorTitle,
-  GaslessRow,
-  GaslessToggle,
+  FeesValue,
   SummaryItem,
   SummaryLabel,
   SummaryList,
 } from './styles'
 
+const SOL_DECIMALS = 9
+
 export const SolanaSendConfirmation = () => {
-  const { sendForm, setRoute, publishableKey, triggerResize } = useOpenfort()
+  const { sendForm, setRoute, publishableKey, triggerResize, walletConfig } = useOpenfort()
   const wallet = useSolanaEmbeddedWallet()
 
   const address = wallet.status === 'connected' ? wallet.address : undefined
@@ -46,8 +50,13 @@ export const SolanaSendConfirmation = () => {
 
   const recipient = sendForm.recipient
   const amount = sendForm.amount
+  const asset = sendForm.asset
+  const symbol = asset.type === 'spl' ? asset.metadata.symbol : 'SOL'
+  const decimals = asset.type === 'spl' ? asset.metadata.decimals : SOL_DECIMALS
 
-  const [gasless, setGasless] = useState(false)
+  // Fees are sponsored from config (the SVM counterpart of ethereumFeeSponsorshipId).
+  const isSponsored = Boolean(walletConfig?.solana?.sponsorFees)
+
   const [isLoading, setIsLoading] = useState(false)
   const [signature, setSignature] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -60,21 +69,52 @@ export const SolanaSendConfirmation = () => {
 
   const handleConfirm = async () => {
     if (!address || !provider || isLoading) return
-    const amountSol = Number(amount)
-    if (!Number.isFinite(amountSol) || amountSol <= 0) {
+    const amountNum = Number(amount)
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
       setError('Enter a valid amount.')
       return
     }
-    if (!gasless && !rpcUrl) {
+    if (!isSponsored && !rpcUrl) {
       setError('No Solana RPC is configured for this network.')
       return
     }
     setIsLoading(true)
     setError(null)
     try {
-      const sig = gasless
-        ? await sendSolGasless({ from: address, to: recipient, amountSol, provider, cluster, publishableKey })
-        : await sendSol({ from: address, to: recipient, amountSol, provider, rpcUrl: rpcUrl ?? '' })
+      let sig: string
+      if (asset.type === 'spl') {
+        const baseUnits = parseUnits(amount, decimals)
+        sig = isSponsored
+          ? await sendSplTokenGasless({
+              from: address,
+              to: recipient,
+              mint: asset.address,
+              amount: baseUnits,
+              provider,
+              cluster,
+              publishableKey,
+            })
+          : await sendSplToken({
+              from: address,
+              to: recipient,
+              mint: asset.address,
+              amount: baseUnits,
+              decimals,
+              provider,
+              rpcUrl: rpcUrl ?? '',
+            })
+      } else {
+        sig = isSponsored
+          ? await sendSolGasless({
+              from: address,
+              to: recipient,
+              amountSol: amountNum,
+              provider,
+              cluster,
+              publishableKey,
+            })
+          : await sendSol({ from: address, to: recipient, amountSol: amountNum, provider, rpcUrl: rpcUrl ?? '' })
+      }
       setSignature(sig)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Transaction failed')
@@ -92,7 +132,7 @@ export const SolanaSendConfirmation = () => {
   if (signature) {
     return (
       <PageContent>
-        <Loader isSuccess header="Transfer sent" description={`${amount} SOL sent successfully`} />
+        <Loader isSuccess header="Transfer sent" description={`${amount} ${symbol} sent successfully`} />
         <ButtonRow>
           <Button variant="primary" onClick={handleViewExplorer}>
             View on Explorer
@@ -113,7 +153,9 @@ export const SolanaSendConfirmation = () => {
       <SummaryList>
         <SummaryItem>
           <SummaryLabel>Sending</SummaryLabel>
-          <AmountValue>{amount || '0'} SOL</AmountValue>
+          <AmountValue>
+            {amount || '0'} {symbol}
+          </AmountValue>
         </SummaryItem>
         <SummaryItem>
           <SummaryLabel>From</SummaryLabel>
@@ -139,27 +181,13 @@ export const SolanaSendConfirmation = () => {
             )}
           </AddressValue>
         </SummaryItem>
+        {isSponsored && (
+          <SummaryItem>
+            <SummaryLabel>Network fee</SummaryLabel>
+            <FeesValue $completed>Sponsored</FeesValue>
+          </SummaryItem>
+        )}
       </SummaryList>
-
-      <GaslessRow>
-        <div>
-          <SummaryLabel>Sponsor network fee</SummaryLabel>
-          <div style={{ fontSize: 12, color: 'var(--ck-body-color-muted)', marginTop: 2 }}>
-            Pay no SOL fee (requires a sponsorship policy)
-          </div>
-        </div>
-        <GaslessToggle
-          type="button"
-          role="switch"
-          aria-checked={gasless}
-          aria-label="Sponsor network fee"
-          $on={gasless}
-          onClick={() => setGasless((v) => !v)}
-          disabled={isLoading}
-        >
-          <span />
-        </GaslessToggle>
-      </GaslessRow>
 
       {error && (
         <ErrorContainer>

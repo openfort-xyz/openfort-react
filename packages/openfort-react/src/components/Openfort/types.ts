@@ -77,6 +77,7 @@ export const routes = {
   SOL_CREATE_WALLET: 'sol:createWallet',
   SOL_RECOVER_WALLET: 'sol:recoverWallet',
   SOL_SEND: 'sol:send',
+  SOL_SEND_TOKEN_SELECT: 'sol:sendTokenSelect',
   SOL_SEND_CONFIRMATION: 'sol:sendConfirmation',
   SOL_RECEIVE: 'sol:receive',
   SOL_ASSET_INVENTORY: 'sol:assetInventory',
@@ -524,6 +525,22 @@ export type Asset =
         }
       }
       raw?: getAssets.Erc20Asset
+    }
+  | {
+      // Solana SPL token (and Token-2022). `address` is the base58 mint, not a Hex,
+      // so it can't reuse the `erc20` variant.
+      type: 'spl'
+      address: string
+      balance: bigint
+      metadata: {
+        decimals: number
+        symbol: string
+        name: string
+        fiat?: {
+          value: number
+          currency: string
+        }
+      }
     }
 
 export type MultiChainAsset = Asset & { chainId: number }

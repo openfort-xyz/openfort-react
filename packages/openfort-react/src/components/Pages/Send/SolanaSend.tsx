@@ -3,23 +3,34 @@
 /**
  * Solana Send page
  *
- * Native SOL transfer form. Single fixed asset (SOL) — no token picker. Mirrors
- * EthereumSend's validation/Max behaviour; the actual transfer happens on the
+ * Native SOL + SPL token transfer form with a token picker. Mirrors EthereumSend's
+ * validation/Max behaviour; the actual transfer happens on the
  * SolanaSendConfirmation page.
  */
 
 import { useMemo } from 'react'
 import { formatUnits, parseUnits } from 'viem'
-import { fetchSolanaBalance } from '../../../hooks/useBalance'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
+import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
 import Button from '../../Common/Button'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles'
 import Input from '../../Common/Input'
 import { ModalHeading } from '../../Common/Modal/styles'
-import { routes, type SendFormState } from '../../Openfort/types'
+import { type Asset, routes, type SendFormState } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AmountInputWrapper, ErrorText, Field, FieldLabel, Form, HelperText, MaxButton } from './styles'
+import {
+  AmountInputWrapper,
+  ErrorText,
+  Field,
+  FieldLabel,
+  Form,
+  HelperText,
+  MaxButton,
+  TokenSelectorButton,
+  TokenSelectorContent,
+  TokenSelectorRight,
+  TokenSelectorValue,
+} from './styles'
 import { formatBalance, sanitizeAmountInput, sanitizeForParsing } from './utils'
 
 const SOL_DECIMALS = 9
@@ -29,55 +40,61 @@ function isLikelySolanaAddress(value: string): boolean {
   return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value)
 }
 
+/** A native SOL asset with the canonical metadata (the default form asset has none). */
+function solAsset(balance: bigint): Asset {
+  return {
+    type: 'native',
+    balance,
+    metadata: { symbol: 'SOL', decimals: SOL_DECIMALS, fiat: { value: 0, currency: 'USD' } },
+  }
+}
+
 export const SolanaSend = () => {
   const { sendForm, setSendForm, setRoute } = useOpenfort()
-  const wallet = useSolanaEmbeddedWallet()
-  const address = wallet.status === 'connected' ? wallet.address : undefined
-  const rpcUrl = wallet.rpcUrl
+  const { data: assets } = useSolanaWalletAssets()
 
-  const balanceResult = useAsyncData({
-    queryKey: ['solana-balance', address, rpcUrl],
-    queryFn: async () => {
-      if (!address || !rpcUrl) return null
-      const { value } = await fetchSolanaBalance(address, rpcUrl, 'confirmed')
-      return value
-    },
-    enabled: Boolean(address && rpcUrl),
-  })
-  const balanceLamports = balanceResult.data ?? undefined
+  const asset = sendForm.asset
+  const selected =
+    asset.type === 'spl'
+      ? { isSpl: true as const, mint: asset.address, decimals: asset.metadata.decimals, symbol: asset.metadata.symbol }
+      : { isSpl: false as const, mint: 'native', decimals: SOL_DECIMALS, symbol: 'SOL' }
+
+  // Live balance (base units) for the selected token, matched by mint.
+  const liveToken = assets?.find((t) => (selected.isSpl ? t.mint === selected.mint : t.isNative))
+  const balanceBase = liveToken?.amount
 
   const parsedAmount = useMemo(() => {
     const raw = sanitizeForParsing(sendForm.amount)
     if (!raw) return null
     try {
-      return parseUnits(raw, SOL_DECIMALS)
+      return parseUnits(raw, selected.decimals)
     } catch {
       return null
     }
-  }, [sendForm.amount])
+  }, [sendForm.amount, selected.decimals])
 
   const recipientValid = isLikelySolanaAddress(sendForm.recipient.trim())
-  const insufficientBalance =
-    parsedAmount !== null && balanceLamports !== undefined ? parsedAmount > balanceLamports : false
+  const insufficientBalance = parsedAmount !== null && balanceBase !== undefined ? parsedAmount > balanceBase : false
   const amountValid = parsedAmount !== null && parsedAmount > BigInt(0) && !insufficientBalance
   const canProceed = recipientValid && amountValid
 
-  const availableLabel = formatBalance(balanceLamports, SOL_DECIMALS)
+  const availableLabel = formatBalance(balanceBase, selected.decimals)
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (!canProceed) return
     const normalized = sanitizeForParsing(sendForm.amount)
     if (!normalized) return
+    // Persist the selected token with its live balance so the confirmation reads it.
+    const nextAsset: Asset =
+      asset.type === 'spl'
+        ? { type: 'spl', address: asset.address, balance: balanceBase ?? asset.balance, metadata: asset.metadata }
+        : solAsset(balanceBase ?? BigInt(0))
     setSendForm((prev: SendFormState) => ({
       ...prev,
       recipient: prev.recipient.trim(),
       amount: normalized,
-      asset: {
-        type: 'native',
-        balance: balanceLamports ?? BigInt(0),
-        metadata: { symbol: 'SOL', decimals: SOL_DECIMALS, fiat: { value: 0, currency: 'USD' } },
-      },
+      asset: nextAsset,
     }))
     setRoute(routes.SOL_SEND_CONFIRMATION)
   }
@@ -90,14 +107,38 @@ export const SolanaSend = () => {
   }
 
   const handleMax = () => {
-    if (balanceLamports === undefined) return
-    setSendForm((prev) => ({ ...prev, amount: formatUnits(balanceLamports, SOL_DECIMALS) }))
+    if (balanceBase === undefined) return
+    setSendForm((prev) => ({ ...prev, amount: formatUnits(balanceBase, selected.decimals) }))
   }
+
+  const handleOpenTokenSelector = () => setRoute(routes.SOL_SEND_TOKEN_SELECT)
 
   return (
     <PageContent onBack={routes.SOL_CONNECTED}>
-      <ModalHeading>Send SOL</ModalHeading>
+      <ModalHeading>Send assets</ModalHeading>
       <Form onSubmit={handleSubmit}>
+        <Field>
+          <FieldLabel>Asset</FieldLabel>
+          <TokenSelectorButton type="button" onClick={handleOpenTokenSelector}>
+            <TokenSelectorContent>
+              <TokenSelectorValue $primary>{selected.symbol}</TokenSelectorValue>
+            </TokenSelectorContent>
+            <TokenSelectorRight>
+              <TokenSelectorValue>
+                {availableLabel === '--' ? '--' : `${availableLabel} ${selected.symbol}`}
+              </TokenSelectorValue>
+              <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ArrowChevron
+                  stroke="currentColor"
+                  d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </Arrow>
+            </TokenSelectorRight>
+          </TokenSelectorButton>
+        </Field>
+
         <Field>
           <FieldLabel>Amount</FieldLabel>
           <AmountInputWrapper>
@@ -109,13 +150,15 @@ export const SolanaSend = () => {
               autoComplete="off"
               style={{ paddingRight: '86px' }}
             />
-            <MaxButton type="button" onClick={handleMax} disabled={balanceLamports === undefined}>
+            <MaxButton type="button" onClick={handleMax} disabled={balanceBase === undefined}>
               Max
             </MaxButton>
           </AmountInputWrapper>
-          <HelperText>Available: {availableLabel} SOL</HelperText>
+          <HelperText>
+            Available: {availableLabel} {selected.symbol}
+          </HelperText>
           {sendForm.amount && parsedAmount === null && <ErrorText>Enter a valid amount.</ErrorText>}
-          {insufficientBalance && <ErrorText>Insufficient SOL balance for this transfer.</ErrorText>}
+          {insufficientBalance && <ErrorText>Insufficient {selected.symbol} balance for this transfer.</ErrorText>}
         </Field>
 
         <Field>
