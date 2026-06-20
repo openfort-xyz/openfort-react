@@ -13,6 +13,7 @@ import PoweredByFooter from '../../Common/PoweredByFooter'
 import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
 import {
@@ -113,9 +114,11 @@ const Deposit = () => {
     setBuyForm((prev) => ({
       ...prev,
       providerId: target.providerId,
-      // Default the Solana card-buy to USDC — the native-asset default would
-      // otherwise resolve to SOL (isSameToken treats any two natives as equal).
-      ...(chainType === ChainTypeEnum.SVM ? { asset: SOLANA_BUY_CURRENCIES[0] } : {}),
+      // Default the card-buy to USDC per chain family. Without this the EVM default
+      // resolves to the wallet's (often empty) asset list — "no supported tokens" —
+      // and the Solana native default would resolve to SOL (isSameToken treats any
+      // two natives as equal).
+      asset: chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES[0] : EVM_BUY_CURRENCIES[0],
     }))
     setRoute(routes.BUY)
   }

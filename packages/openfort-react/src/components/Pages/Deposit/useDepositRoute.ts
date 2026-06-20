@@ -1,6 +1,5 @@
 'use client'
 
-import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
@@ -10,7 +9,6 @@ import {
   nominalUnits,
   useFundingChains,
 } from '../../../hooks/openfort/useFundingChains'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { logger } from '../../../utils/logger'
 import { isCexDeliverable } from './cexChains'
@@ -34,20 +32,21 @@ function paymentMethodFor(chain: string, currency: FundingCurrency): PaymentMeth
  * address" page build on this — they differ only in the lead buttons.
  */
 export function useDepositRoute(kind: DepositRouteKind) {
-  const { chainType } = useOpenfortCore()
   const ethWallet = useEthereumEmbeddedWallet()
   const solWallet = useSolanaEmbeddedWallet()
-  // Funds land in the active chain's embedded wallet (EVM or Solana).
-  const wallet = chainType === ChainTypeEnum.SVM ? solWallet : ethWallet
   const { session, status, error, loading, isAvailable, fund, payLink, reset } = useFunding()
   const { chains: allChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
-  // Drop the destination chain — funding is cross-chain; same-chain is a plain
-  // transfer with no Relay route, so it shouldn't appear as a source option.
-  const sourceChains = allChains.filter((c) => c.id !== target.chain)
-  // The CEX rail rides Coinbase Onramp, which only delivers to a fixed set of EVM
-  // chains — offer those as the pay-with sources.
-  const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => isCexDeliverable(c.id)) : sourceChains
+  // The deposit recipient must live on the TARGET chain, so resolve the wallet by
+  // the target's family — not the active chainType, which can disagree with the
+  // target (e.g. an EVM session whose funding target is still Solana) and would
+  // send an EVM address as the recipient for a Solana destination.
+  const wallet = isSolana(target.chain) ? solWallet : ethWallet
+  // Sources are the full Relay list, including the destination chain itself so
+  // same-chain deposits (e.g. Solana → Solana) are offered as a plain transfer to
+  // the wallet address, alongside the cross-chain bridge routes. The CEX rail rides
+  // Coinbase Onramp, which only delivers to a fixed set of EVM chains.
+  const chains: FundingChain[] = kind === 'cex' ? allChains.filter((c) => isCexDeliverable(c.id)) : allChains
   // Where funds land: the active embedded wallet (the Relay deposit recipient).
   const address = wallet.status === 'connected' ? wallet.address : undefined
 

@@ -54,15 +54,12 @@ describe('useFunding', () => {
     mockUiConfig.fundingBaseUrl = undefined
   })
 
-  it('is unavailable and refuses to fund when no client is configured', async () => {
+  it('is available by default — fundingBaseUrl falls back to the backend', () => {
+    // No fundingBaseUrl set and no SDK backend configured in tests, so it resolves
+    // to the hardcoded api.openfort.io default and the rail is available.
     const { result } = renderHook(() => useFunding())
-    expect(result.current.isAvailable).toBe(false)
+    expect(result.current.isAvailable).toBe(true)
     expect(result.current.status).toBe('idle')
-
-    await act(async () => {
-      await expect(result.current.fund(target, paymentMethod)).rejects.toThrow('not configured')
-    })
-    expect(result.current.error?.message).toMatch('not configured')
   })
 
   it('creates a session, sets the payment method, and surfaces a terminal status without polling', async () => {

@@ -23,11 +23,13 @@ export type VmType = 'evm' | 'svm'
 export const OPENFORT_DEPOSIT_PAGE_URL = 'https://deposit.openfort.io'
 
 type DepositPageParams = {
-  /** Relay deposit address the source funds go to. */
+  /** Source VM family. `evm` drives a window.ethereum send; `svm` a Solana Pay request. */
+  vm: VmType
+  /** Relay deposit address the source funds go to (0x for EVM, base58 for Solana). */
   to: string
-  /** Numeric source chain id (e.g. 42161). */
-  chainId: number
-  /** ERC-20 contract, or empty/undefined for the chain's native token. */
+  /** Numeric source chain id (e.g. 42161). EVM only. */
+  chainId?: number
+  /** ERC-20 contract / SPL mint, or empty/undefined for the chain's native token. */
   token?: string
   decimals: number
   symbol: string
@@ -40,8 +42,9 @@ type DepositPageParams = {
 /** Build the deposit "send" page URL with the transfer params encoded. */
 export function buildDepositPageUrl(baseUrl: string, p: DepositPageParams): string {
   const url = new URL(baseUrl)
+  url.searchParams.set('vm', p.vm)
   url.searchParams.set('to', p.to)
-  url.searchParams.set('chainId', String(p.chainId))
+  if (p.vm === 'evm' && p.chainId !== undefined) url.searchParams.set('chainId', String(p.chainId))
   if (p.token) url.searchParams.set('token', p.token)
   url.searchParams.set('decimals', String(p.decimals))
   url.searchParams.set('symbol', p.symbol)

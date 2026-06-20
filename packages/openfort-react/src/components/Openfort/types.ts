@@ -359,12 +359,9 @@ export type ConnectUIOptions = {
   buyFromExchangeUrl?: string
   buyTroubleshootingUrl?: string
   /**
-   * Base URL of the openfort-funding backend (e.g. `https://funding.openfort.io`).
-   * Powers the Deposit hub's crypto/CEX rails (session API). When omitted, those
-   * rails are unavailable and the network layer is a no-op.
-   *
-   * TODO(openfort-funding-backend): default this from the platform config once the
-   * backend ships, so integrators don't have to set it manually.
+   * Base URL of the funding JSON API serving `/v2/funding/*` (chains + sessions).
+   * Defaults to the SDK's backend URL (`https://api.openfort.io`); set this only to
+   * point the Deposit hub's crypto rails at a custom funding service.
    */
   fundingBaseUrl?: string
   /** Deposit-hub funding options (destination chain/token for incoming deposits). */
@@ -409,11 +406,6 @@ export type FundingUIOptions = {
    * @default USDC on Base
    */
   targetCurrency?: string
-  /**
-   * Destination wallet that receives the deposit. Optional integrator override;
-   * when unset, deposits land on the active embedded wallet for the target chain.
-   */
-  targetAddress?: string
   /**
    * Which funding methods the Deposit hub shows, and in what order. Omit to show
    * all available methods (Apple Pay first on mobile). Mirrors `authProviders`.

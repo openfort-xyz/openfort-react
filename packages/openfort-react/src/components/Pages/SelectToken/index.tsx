@@ -9,6 +9,7 @@ import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
+import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { formatBalanceWithSymbol, getAssetDecimals, getAssetSymbol } from '../Send/utils'
 import {
@@ -42,9 +43,14 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
   const { chainType } = useOpenfortCore()
   const { data: walletAssets, isLoading: isBalancesLoading } = useEthereumWalletAssets()
 
-  // Solana buys pick from a fixed currency list (USDC, SOL); everything else reads
-  // the EVM wallet's assets. (Solana send doesn't use this picker.)
-  const selectableTokens = isBuyFlow && chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : walletAssets || []
+  // Buys pick from a fixed buyable-currency list (USDC first, then native) per
+  // chain family, so the picker always has options even for a fresh wallet with no
+  // indexed balances. The send flow reads the EVM wallet's actual assets.
+  const selectableTokens = isBuyFlow
+    ? chainType === ChainTypeEnum.SVM
+      ? SOLANA_BUY_CURRENCIES
+      : EVM_BUY_CURRENCIES
+    : walletAssets || []
 
   const handleSelect = (asset: Asset) => {
     // In send flow, don't allow selecting tokens with 0 balance

@@ -219,11 +219,11 @@ export type UseFundingOptions = {
 export function useFunding(options?: UseFundingOptions): UseFunding {
   const { uiConfig, publishableKey } = useOpenfort()
   const { client: coreClient } = useOpenfortCore()
-  // The CEX rail (DepositCex) is served by the Openfort API; everything else uses
-  // the standalone funding service at uiConfig.fundingBaseUrl.
-  const baseUrl = options?.useBackendUrl
-    ? SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
-    : (uiConfig.fundingBaseUrl ?? '')
+  // The funding JSON API defaults to the Openfort backend (api.openfort.io);
+  // integrators can point the crypto rails at a custom service via
+  // uiConfig.fundingBaseUrl. The CEX rail always uses the backend (Coinbase pay-link).
+  const backendUrl = SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
+  const baseUrl = options?.useBackendUrl ? backendUrl : uiConfig.fundingBaseUrl || backendUrl
   const injected = options?.client
   // Resolve the client, in order of preference:
   //   1. an explicitly injected client (tests / custom backends),

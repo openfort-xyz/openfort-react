@@ -1,5 +1,6 @@
 'use client'
 
+import { SDKConfiguration } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 
@@ -63,16 +64,13 @@ const DEFAULT_SOURCE_CURRENCIES = ['native', 'USDC', 'USDT']
  */
 export function useFundingChains(): UseFundingChains {
   const { uiConfig } = useOpenfort()
-  const baseUrl = uiConfig.fundingBaseUrl ?? ''
+  // Defaults to the SDK backend (api.openfort.io); override for a custom funding service.
+  const baseUrl = uiConfig.fundingBaseUrl || SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
   const sourceChains = uiConfig.funding?.sourceChains ?? DEFAULT_SOURCE_CHAINS
   const sourceCurrencies = uiConfig.funding?.sourceCurrencies ?? DEFAULT_SOURCE_CURRENCIES
-  const [state, setState] = useState<UseFundingChains>({ chains: [], loading: Boolean(baseUrl), error: null })
+  const [state, setState] = useState<UseFundingChains>({ chains: [], loading: true, error: null })
 
   useEffect(() => {
-    if (!baseUrl) {
-      setState({ chains: [], loading: false, error: null })
-      return
-    }
     let cancelled = false
     setState((s) => ({ ...s, loading: true }))
     fetch(`${baseUrl}/v2/funding/chains`)
