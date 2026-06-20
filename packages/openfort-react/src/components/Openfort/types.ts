@@ -358,12 +358,13 @@ export type ConnectUIOptions = {
   buyFromExchangeUrl?: string
   buyTroubleshootingUrl?: string
   /**
-   * Base URL of the openfort-funding backend (e.g. `https://funding.openfort.io`).
-   * Powers the Deposit hub's crypto/CEX rails (session API). When omitted, those
-   * rails are unavailable and the network layer is a no-op.
+   * Base URL of the funding JSON API serving `/v2/funding/*` (e.g.
+   * `https://api.openfort.io`). Powers the Deposit hub's crypto/CEX rails (chains +
+   * session API). When omitted, those rails are unavailable and the network layer
+   * is a no-op.
    *
-   * TODO(openfort-funding-backend): default this from the platform config once the
-   * backend ships, so integrators don't have to set it manually.
+   * TODO(openfort-funding-backend): default this from the platform config so
+   * integrators don't have to set it manually.
    */
   fundingBaseUrl?: string
   /** Deposit-hub funding options (destination chain/token for incoming deposits). */

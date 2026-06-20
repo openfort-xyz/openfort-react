@@ -54,11 +54,11 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
   publishableKey: import.meta.env.VITE_OPENFORT_PUBLISHABLE_KEY,
 
   uiConfig: {
-    // Funding rail backend (independent of the auth/wallet api): drives the
-    // Deposit widget while auth/wallet use the real Openfort api. Drives
-    // useFunding().isAvailable. Defaults to the hosted funding api; set
-    // VITE_FUNDING_BASE_URL (see .env.local) to point at a local backend.
-    fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL || 'https://funding.openfort.io',
+    // Funding rail JSON API: serves /v2/funding/* (chains + sessions) and drives
+    // the Deposit widget / useFunding().isAvailable. Consolidated into the main
+    // Openfort api; set VITE_FUNDING_BASE_URL (see .env.local) to point at a local
+    // backend. Not to be confused with depositPageUrl (the hosted Deposit page).
+    fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL || 'https://api.openfort.io',
     // Mainnet e2e: source major tokens from mainnet chains, land on Base mainnet
     // USDC (the live embedded wallet's chain). Explicit symbols (not the 'native'
     // sentinel) so only Relay-supported deposit-address tokens show — e.g. ETH is
