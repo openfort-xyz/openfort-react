@@ -536,10 +536,6 @@ export type Asset =
         decimals: number
         symbol: string
         name: string
-        fiat?: {
-          value: number
-          currency: string
-        }
       }
     }
 

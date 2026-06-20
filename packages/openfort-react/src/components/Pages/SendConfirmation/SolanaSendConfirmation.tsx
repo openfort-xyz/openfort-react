@@ -69,6 +69,12 @@ export const SolanaSendConfirmation = () => {
 
   const handleConfirm = async () => {
     if (!address || !provider || isLoading) return
+    // The Send screen validates these before navigating here; re-guard in case
+    // this page is reached directly with an unvalidated form.
+    if (!recipient.trim()) {
+      setError('Enter a recipient address.')
+      return
+    }
     const amountNum = Number(amount)
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
       setError('Enter a valid amount.')

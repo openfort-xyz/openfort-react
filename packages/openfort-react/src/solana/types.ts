@@ -60,7 +60,7 @@ export type SolanaConfig = {
   /**
    * Sponsor network fees for Solana sends through the Openfort paymaster (Kora).
    * The SVM counterpart of `ethereum.ethereumFeeSponsorshipId`: when `true`, sends
-   * are routed gaslessly and the Send screen shows a "Sponsored transaction" label.
+   * are routed gaslessly and the confirm screen marks the network fee as sponsored.
    * Requires a `sponsorSolTransaction` policy on the project (resolved server-side
    * from the publishable key). Defaults to `false` (user pays the fee).
    */

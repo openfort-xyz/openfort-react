@@ -7,9 +7,9 @@
  * Builds, signs, and broadcasts with `@solana/kit`, signing the message bytes
  * through the embedded wallet provider (Ed25519). Mirrors the documented
  * `createOpenfortSigner` pattern. `@solana/kit`, `@solana-program/system`,
- * `@solana-program/token`, and `@solana/kora` are loaded lazily so the EVM
- * bundle and the kit `^2 || ^5` range stay untouched — only a Solana send pulls
- * them in at runtime.
+ * `@solana-program/token`, and `@solana/kora` are loaded lazily so an EVM-only
+ * consumer never has to install them — only a Solana send pulls them in at
+ * runtime.
  */
 
 import type { Address, SignatureBytes, SignatureDictionary, TransactionSigner } from '@solana/kit'
@@ -238,7 +238,7 @@ type KoraTransferParams = {
   /** Amount in base units — lamports for SOL, token base units for an SPL mint. */
   amountBaseUnits: bigint
   /** System program id for native SOL, or the SPL mint address. */
-  token: string
+  tokenMint: string
   provider: OpenfortEmbeddedSolanaWalletProvider
   cluster: SolanaCluster
   publishableKey: string
@@ -254,11 +254,17 @@ async function sendViaKora({
   from,
   to,
   amountBaseUnits,
-  token,
+  tokenMint,
   provider,
   cluster,
   publishableKey,
 }: KoraTransferParams): Promise<string> {
+  // Kora's request takes a JS number; fail loudly rather than silently corrupt
+  // an amount that can't be represented exactly.
+  if (amountBaseUnits > BigInt(Number.MAX_SAFE_INTEGER)) {
+    throw new Error('Amount is too large to sponsor through the paymaster.')
+  }
+
   const kit = await import('@solana/kit')
   const { KoraClient } = await import('@solana/kora')
 
@@ -271,7 +277,7 @@ async function sendViaKora({
   // 2. A sponsored transfer (native or SPL), with Kora as the fee payer.
   const { instructions } = await client.transferTransaction({
     amount: Number(amountBaseUnits),
-    token,
+    token: tokenMint,
     source: from,
     destination: to,
     signer_key: signer_address,
@@ -345,7 +351,7 @@ export async function sendSolGasless({
     from,
     to,
     amountBaseUnits: solToLamports(amountSol),
-    token: SYSTEM_PROGRAM_ID,
+    tokenMint: SYSTEM_PROGRAM_ID,
     provider,
     cluster,
     publishableKey,
@@ -379,7 +385,7 @@ export async function sendSplTokenGasless({
     from,
     to,
     amountBaseUnits: amount,
-    token: mint,
+    tokenMint: mint,
     provider,
     cluster,
     publishableKey,
