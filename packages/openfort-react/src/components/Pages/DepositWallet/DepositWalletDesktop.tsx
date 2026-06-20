@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { type Address, type EIP1193Provider, encodeFunctionData, erc20Abi, formatUnits, parseUnits } from 'viem'
 import { WalletIcon } from '../../../assets/icons'
 import logos from '../../../assets/logos'
@@ -11,6 +11,7 @@ import {
 } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import type { FundingChain, FundingCurrency } from '../../../hooks/openfort/useFundingChains'
 import { ModalBody } from '../../Common/Modal/styles'
+import { useOpenfort } from '../../Openfort/useOpenfort'
 import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
 import { ButtonLogo } from '../Deposit/styles'
@@ -59,9 +60,17 @@ function walletErrorMessage(e: unknown): string | null {
  */
 export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurrency, loading, amount }: Props) {
   const bridge = useEthereumBridge()
+  const { triggerResize } = useOpenfort()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [sent, setSent] = useState(false)
+
+  // Grow the modal when the busy / error / sent feedback toggles, so the "Confirm
+  // in your wallet…" and insufficient-balance messages are revealed instead of
+  // clipped below the fold (which reads as "nothing happened" after a click).
+  useEffect(() => {
+    triggerResize()
+  }, [busyId, error, sent, triggerResize])
 
   if (!bridge) return null // EVM-only (no wagmi) — nothing to send through
 
