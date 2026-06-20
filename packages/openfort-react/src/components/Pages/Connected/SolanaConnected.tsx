@@ -24,12 +24,13 @@ import Avatar from '../../Common/Avatar'
 import Button from '../../Common/Button'
 import { TextLinkButton } from '../../Common/Button/styles'
 import { CopyText } from '../../Common/CopyToClipboard/CopyText'
+import SolanaChain from '../../Common/SolanaChain'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ConnectedPageLayout } from './ConnectedPageLayout'
-import { ActionButton, Balance, LinkedProvidersToggle } from './styles'
+import { ActionButton, Balance, ChainSelectorContainer, LinkedProvidersToggle } from './styles'
 
 const SolanaConnected: React.FC = () => {
   const context = useOpenfort()
@@ -133,6 +134,11 @@ const SolanaConnected: React.FC = () => {
         address={address ?? ''}
         displayName={<CopyText value={address ?? ''}>{truncateSolanaAddress(address ?? '', separator)}</CopyText>}
         avatar={avatar}
+        beforeAvatar={
+          <ChainSelectorContainer initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
+            <SolanaChain />
+          </ChainSelectorContainer>
+        }
         balance={balanceNode}
         actions={
           <>

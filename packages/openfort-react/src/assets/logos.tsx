@@ -640,6 +640,37 @@ const Phantom = ({ background = false, ...props }) => (
   </svg>
 );
 
+const Solana = ({ ...props }) => (
+  <svg {...props} viewBox="0 0 398 312" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <title>Solana</title>
+    <defs>
+      <linearGradient
+        id="openfort-solana-gradient"
+        x1="360.879"
+        y1="-37.455"
+        x2="141.213"
+        y2="383.294"
+        gradientUnits="userSpaceOnUse"
+      >
+        <stop stopColor="#00FFA3" />
+        <stop offset="1" stopColor="#DC1FFF" />
+      </linearGradient>
+    </defs>
+    <path
+      fill="url(#openfort-solana-gradient)"
+      d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H15.5c-5.8 0-8.7-7-4.6-11.1L64.6 237.9z"
+    />
+    <path
+      fill="url(#openfort-solana-gradient)"
+      d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H15.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"
+    />
+    <path
+      fill="url(#openfort-solana-gradient)"
+      d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1L333.1 120.1z"
+    />
+  </svg>
+);
+
 const PlaceHolder = () => {
   return <div style={{ width: 80, height: 80, background: '#555' }}></div>;
 };
@@ -1363,6 +1394,7 @@ export default {
   Frontier,
   Zerion,
   Phantom,
+  Solana,
   PlaceHolder,
   Frame,
   Dawn,
