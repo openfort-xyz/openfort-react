@@ -1,5 +1,6 @@
 'use client'
 
+import { SDKConfiguration } from '@openfort/openfort-js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
@@ -202,6 +203,12 @@ export type UseFundingOptions = {
   /** Inject a funding client (tests, or a custom backend). Defaults to the
    * fetch adapter over `uiConfig.fundingBaseUrl`. */
   client?: FundingClient
+  /**
+   * Resolve the base URL from the Openfort API backend (`SDKConfiguration.backendUrl`)
+   * instead of `uiConfig.fundingBaseUrl`. The CEX (Coinbase pay-link) rail is served
+   * by the API, not the standalone funding service — `DepositCex` opts in.
+   */
+  useBackendUrl?: boolean
 }
 
 /**
@@ -212,7 +219,11 @@ export type UseFundingOptions = {
 export function useFunding(options?: UseFundingOptions): UseFunding {
   const { uiConfig, publishableKey } = useOpenfort()
   const { client: coreClient } = useOpenfortCore()
-  const baseUrl = uiConfig.fundingBaseUrl ?? ''
+  // The CEX rail (DepositCex) is served by the Openfort API; everything else uses
+  // the standalone funding service at uiConfig.fundingBaseUrl.
+  const baseUrl = options?.useBackendUrl
+    ? SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
+    : (uiConfig.fundingBaseUrl ?? '')
   const injected = options?.client
   // Resolve the client, in order of preference:
   //   1. an explicitly injected client (tests / custom backends),

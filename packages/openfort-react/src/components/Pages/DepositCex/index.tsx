@@ -64,7 +64,9 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
 const DepositCex = () => {
   const { triggerResize } = useOpenfort()
   const target = useFundingTarget()
-  const { isAvailable, createSession, track, payLink, status } = useFunding()
+  // CEX (Coinbase pay-link + session) is served by the Openfort API, not the
+  // standalone funding service — resolve this rail's base URL from the API backend.
+  const { isAvailable, createSession, track, payLink, status } = useFunding({ useBackendUrl: true })
   const wallet = useEthereumEmbeddedWallet()
   const { embeddedAccounts } = useOpenfortCore()
   const { chains } = useFundingChains()
