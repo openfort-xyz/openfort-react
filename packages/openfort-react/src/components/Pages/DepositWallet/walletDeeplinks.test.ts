@@ -3,6 +3,7 @@ import { buildDepositPageUrl, buildOpenDappLinks, caipToChainId } from './wallet
 
 const PAGE = 'https://app.example.com/deposit.html'
 const PARAMS = {
+  vm: 'evm' as const,
   to: '0xCb1cC9ddb3FF9532F9cF6cf7365327EeA52d68b3',
   chainId: 42161,
   token: '0xaf88d065e77c8cC2239327C5EDb3A432268e5831',
@@ -27,12 +28,30 @@ describe('buildDepositPageUrl', () => {
   it('encodes the transfer params as query string', () => {
     const url = new URL(buildDepositPageUrl(PAGE, PARAMS))
     expect(url.origin + url.pathname).toBe(PAGE)
+    expect(url.searchParams.get('vm')).toBe('evm')
     expect(url.searchParams.get('to')).toBe(PARAMS.to)
     expect(url.searchParams.get('chainId')).toBe('42161')
     expect(url.searchParams.get('token')).toBe(PARAMS.token)
     expect(url.searchParams.get('decimals')).toBe('6')
     expect(url.searchParams.get('symbol')).toBe('USDC')
     expect(url.searchParams.get('chain')).toBe('Arbitrum')
+  })
+
+  it('builds a Solana (svm) request with no numeric chainId', () => {
+    const url = new URL(
+      buildDepositPageUrl(PAGE, {
+        vm: 'svm',
+        to: '5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+        token: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+        decimals: 6,
+        symbol: 'USDC',
+        chain: 'Solana',
+      })
+    )
+    expect(url.searchParams.get('vm')).toBe('svm')
+    expect(url.searchParams.has('chainId')).toBe(false)
+    expect(url.searchParams.get('to')).toBe('5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp')
+    expect(url.searchParams.get('token')).toBe('EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v')
   })
 
   it('omits token for a native asset and amount when not given', () => {

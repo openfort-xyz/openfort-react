@@ -15,6 +15,7 @@ import { AddressPageLink } from '../Deposit/AddressPageLink'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
+import { isSolana } from '../Deposit/sources'
 import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 import { sanitizeAmountInput } from '../Send/utils'
@@ -55,6 +56,10 @@ const DepositWallet = () => {
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
   const depositPageUrl = uiConfig.funding?.depositPageUrl ?? OPENFORT_DEPOSIT_PAGE_URL
+  // Solana sources have no numeric chain id and no desktop EVM-extension send, so
+  // they route through the deeplink (Phantom) on every platform instead of the
+  // wagmi-bridge desktop path.
+  const isSolanaSrc = isSolana(route.activeChain?.id ?? '')
   const srcChainId = caipToChainId(route.activeChain?.id)
   const amountValid = Number.parseFloat(amount) > 0
 
@@ -76,10 +81,11 @@ const DepositWallet = () => {
   // resolved transfer params. The hosted page sends via the wallet's injected
   // provider, so no backend wiring is required for the link itself.
   const pageUrl =
-    depositPageUrl && route.receiverAddress && route.activeCurrency && srcChainId
+    depositPageUrl && route.receiverAddress && route.activeCurrency && (isSolanaSrc || srcChainId)
       ? buildDepositPageUrl(depositPageUrl, {
+          vm: isSolanaSrc ? 'svm' : 'evm',
           to: route.receiverAddress,
-          chainId: srcChainId,
+          chainId: isSolanaSrc ? undefined : srcChainId,
           token: route.activeCurrency.native ? undefined : route.activeCurrency.address,
           decimals: route.activeCurrency.decimals,
           symbol: route.activeCurrency.symbol,
@@ -146,7 +152,7 @@ const DepositWallet = () => {
 
       <StepDivider>Then select the wallet you want to use</StepDivider>
 
-      {isMobile ? (
+      {isMobile || isSolanaSrc ? (
         <>
           {!depositPageUrl && (
             <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
