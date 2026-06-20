@@ -1,16 +1,19 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import type { ReactNode, SyntheticEvent } from 'react'
 import { BuyIcon, DollarIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
 import logos from '../../../assets/logos'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
 import useIsMobile from '../../../hooks/useIsMobile'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { ModalHeading } from '../../Common/Modal/styles'
 import PoweredByFooter from '../../Common/PoweredByFooter'
 import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
 import {
   DepositContent,
@@ -58,6 +61,7 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
  */
 const Deposit = () => {
   const { setRoute, setBuyForm, uiConfig } = useOpenfort()
+  const { chainType } = useOpenfortCore()
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
   const { chains } = useFundingChains()
@@ -106,7 +110,13 @@ const Deposit = () => {
     }
     // Fiat rails reuse the existing Buy flow; preselect the chosen provider so
     // Apple Pay / Card land on the right rail.
-    setBuyForm((prev) => ({ ...prev, providerId: target.providerId }))
+    setBuyForm((prev) => ({
+      ...prev,
+      providerId: target.providerId,
+      // Default the Solana card-buy to USDC — the native-asset default would
+      // otherwise resolve to SOL (isSameToken treats any two natives as equal).
+      ...(chainType === ChainTypeEnum.SVM ? { asset: SOLANA_BUY_CURRENCIES[0] } : {}),
+    }))
     setRoute(routes.BUY)
   }
 

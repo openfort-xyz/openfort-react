@@ -40,18 +40,6 @@ type CreateCoinbaseSessionParams = {
   clientIp?: string
 }
 
-// Map chain IDs to Coinbase network names
-const getNetworkName = (chainId: number): string => {
-  const networkMap: Record<number, string> = {
-    1: 'ethereum',
-    8453: 'base',
-    137: 'polygon',
-    42161: 'arbitrum',
-    10: 'optimism',
-  }
-  return networkMap[chainId] || 'base'
-}
-
 // Coinbase supported currencies (more extensive than Stripe)
 const COINBASE_SUPPORTED_CURRENCIES = [
   'btc',
@@ -106,11 +94,11 @@ const getCurrencyCode = (token: Asset): string => {
 export const createCoinbaseSession = async (
   params: Omit<CreateCoinbaseSessionParams, 'destinationCurrency' | 'destinationNetwork'> & {
     token: Asset
-    chainId: number
+    network: string
     publishableKey: string
   }
 ): Promise<CoinbaseOnrampResponse> => {
-  const { token, chainId, publishableKey, ...rest } = params
+  const { token, network, publishableKey, ...rest } = params
 
   if (!publishableKey) {
     throw new Error('Publishable key is required for authentication')
@@ -120,7 +108,7 @@ export const createCoinbaseSession = async (
   const requestBody: CreateCoinbaseSessionParams & { provider: string } = {
     provider: 'coinbase',
     destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: getNetworkName(chainId),
+    destinationNetwork: network,
     destinationAddress: rest.destinationAddress,
   }
 
@@ -167,11 +155,11 @@ type GetCoinbaseQuoteParams = {
 const _getCoinbaseQuote = async (
   params: Omit<GetCoinbaseQuoteParams, 'destinationCurrency' | 'destinationNetwork'> & {
     token: Asset
-    chainId: number
+    network: string
     publishableKey: string
   }
 ): Promise<CoinbaseQuoteResponse> => {
-  const { token, chainId, publishableKey, ...rest } = params
+  const { token, network, publishableKey, ...rest } = params
 
   if (!publishableKey) {
     throw new Error('Publishable key is required for authentication')
@@ -181,7 +169,7 @@ const _getCoinbaseQuote = async (
   const requestBody: GetCoinbaseQuoteParams & { provider: string } = {
     provider: 'coinbase',
     destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: getNetworkName(chainId),
+    destinationNetwork: network,
     sourceCurrency: rest.sourceCurrency,
     sourceAmount: rest.sourceAmount,
     paymentMethod: rest.paymentMethod,

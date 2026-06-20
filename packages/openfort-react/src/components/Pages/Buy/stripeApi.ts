@@ -39,18 +39,6 @@ type CreateStripeSessionParams = {
   redirectUrl?: string
 }
 
-// Map chain IDs to Stripe network names
-const getNetworkName = (chainId: number): string => {
-  const networkMap: Record<number, string> = {
-    1: 'ethereum',
-    8453: 'base',
-    137: 'polygon',
-    42161: 'arbitrum',
-    10: 'optimism',
-  }
-  return networkMap[chainId] || 'base'
-}
-
 // Stripe supported currencies
 const STRIPE_SUPPORTED_CURRENCIES = ['btc', 'eth', 'xlm', 'matic', 'pol', 'sol', 'usdc', 'avax', 'wld'] as const
 
@@ -82,18 +70,18 @@ const getCurrencyCode = (token: Asset): string => {
 export const createStripeSession = async (
   params: Omit<CreateStripeSessionParams, 'destinationCurrency' | 'destinationNetwork'> & {
     token: Asset
-    chainId: number
+    network: string
     publishableKey: string
   }
 ): Promise<StripeOnrampResponse> => {
-  const { token, chainId, publishableKey, destinationAddress, sourceAmount, sourceCurrency, redirectUrl } = params
+  const { token, network, publishableKey, destinationAddress, sourceAmount, sourceCurrency, redirectUrl } = params
 
   if (!publishableKey) {
     throw new Error('Publishable key is required for authentication')
   }
 
   const destinationCurrency = getCurrencyCode(token)
-  const destinationNetwork = getNetworkName(chainId)
+  const destinationNetwork = network
 
   // Build request body for backend API
   const requestBody: CreateStripeSessionParams & { provider: string } = {
@@ -138,11 +126,11 @@ type GetStripeQuoteParams = {
 const _getStripeQuote = async (
   params: Omit<GetStripeQuoteParams, 'destinationCurrency' | 'destinationNetwork'> & {
     token: Asset
-    chainId: number
+    network: string
     publishableKey: string
   }
 ): Promise<StripeQuote> => {
-  const { token, chainId, publishableKey, ...rest } = params
+  const { token, network, publishableKey, ...rest } = params
 
   if (!publishableKey) {
     throw new Error('Publishable key is required for authentication')
@@ -152,7 +140,7 @@ const _getStripeQuote = async (
   const requestBody: GetStripeQuoteParams & { provider: string } = {
     provider: 'stripe',
     destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: getNetworkName(chainId),
+    destinationNetwork: network,
     sourceCurrency: rest.sourceCurrency.toLowerCase(),
     sourceAmount: rest.sourceAmount,
   }

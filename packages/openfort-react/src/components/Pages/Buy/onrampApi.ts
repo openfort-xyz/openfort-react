@@ -1,4 +1,4 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
+import { ChainTypeEnum, SDKConfiguration } from '@openfort/openfort-js'
 import type { Asset } from '../../Openfort/types'
 import { getAssetSymbol } from '../Send/utils'
 
@@ -23,16 +23,24 @@ export type OnrampQuote = {
   exchangeRate: string
 }
 
-// Map chain IDs to network names
-const getNetworkName = (chainId: number): string => {
-  const networkMap: Record<number, string> = {
-    1: 'ethereum',
-    8453: 'base',
-    137: 'polygon',
-    42161: 'arbitrum',
-    10: 'optimism',
-  }
-  return networkMap[chainId] || 'base'
+/** EVM chain id → onramp network name. */
+const EVM_NETWORK_MAP: Record<number, string> = {
+  1: 'ethereum',
+  8453: 'base',
+  137: 'polygon',
+  42161: 'arbitrum',
+  10: 'optimism',
+}
+
+/**
+ * Resolve the onramp destination network for the active chain. Solana always
+ * resolves to `solana`; an EVM wallet whose `chainId` hasn't loaded yet returns
+ * `undefined`, so callers stay gated until the chain is ready.
+ */
+export function resolveOnrampNetwork(chainType: ChainTypeEnum, chainId?: number): string | undefined {
+  if (chainType === ChainTypeEnum.SVM) return 'solana'
+  if (chainId == null) return undefined
+  return EVM_NETWORK_MAP[chainId] ?? 'base'
 }
 
 // Map token symbol to currency code
@@ -42,7 +50,7 @@ const getCurrencyCode = (token: Asset): string => {
 
 type GetAllQuotesParams = {
   token: Asset
-  chainId: number
+  network: string
   publishableKey: string
   sourceCurrency: string
   sourceAmount: string
@@ -53,7 +61,7 @@ type GetAllQuotesParams = {
  * Calls the backend without specifying a provider to get quotes from all providers
  */
 export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQuote[]> => {
-  const { token, chainId, publishableKey, sourceCurrency, sourceAmount } = params
+  const { token, network, publishableKey, sourceCurrency, sourceAmount } = params
 
   if (!publishableKey) {
     throw new Error('Publishable key is required for authentication')
@@ -62,7 +70,7 @@ export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQu
   // Build request body WITHOUT provider to get all quotes
   const requestBody = {
     destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: getNetworkName(chainId),
+    destinationNetwork: network,
     sourceCurrency: sourceCurrency.toLowerCase(),
     sourceAmount,
   }

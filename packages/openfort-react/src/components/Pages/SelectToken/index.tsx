@@ -1,12 +1,15 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
+import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { formatBalanceWithSymbol, getAssetDecimals, getAssetSymbol } from '../Send/utils'
 import {
   EmptyState,
@@ -36,10 +39,12 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
     triggerResize()
   }, [viewAllAssets])
 
+  const { chainType } = useOpenfortCore()
   const { data: walletAssets, isLoading: isBalancesLoading } = useEthereumWalletAssets()
 
-  // Show all tokens for both buy and send flows
-  const selectableTokens = walletAssets || []
+  // Solana buys pick from a fixed currency list (USDC, SOL); everything else reads
+  // the EVM wallet's assets. (Solana send doesn't use this picker.)
+  const selectableTokens = isBuyFlow && chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : walletAssets || []
 
   const handleSelect = (asset: Asset) => {
     // In send flow, don't allow selecting tokens with 0 balance

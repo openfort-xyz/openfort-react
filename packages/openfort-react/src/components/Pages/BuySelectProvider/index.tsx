@@ -13,8 +13,9 @@ import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { isCoinbaseSupported } from '../Buy/coinbaseApi'
 import type { OnrampQuote } from '../Buy/onrampApi'
-import { getAllQuotes } from '../Buy/onrampApi'
+import { getAllQuotes, resolveOnrampNetwork } from '../Buy/onrampApi'
 import { getProviders } from '../Buy/providers'
+import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { isStripeSupported } from '../Buy/stripeApi'
 import {
   ContinueButtonWrapper,
@@ -44,6 +45,9 @@ const BuySelectProvider = () => {
   const isConnected = wallet.status === 'connected'
   const address = isConnected ? wallet.address : undefined
   const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
+  // The onramp destination network: 'solana' for SVM, else the EVM network (undefined
+  // until the EVM chainId resolves, which keeps quote fetching gated as before).
+  const network = resolveOnrampNetwork(chainType, chainId)
 
   const [quotes, setQuotes] = useState<Record<string, OnrampQuote>>({})
   const [isLoadingQuote, setIsLoadingQuote] = useState(false)
@@ -60,7 +64,8 @@ const BuySelectProvider = () => {
     return numeric
   }, [buyForm.amount])
 
-  const { data: assets } = useEthereumWalletAssets()
+  const { data: ethAssets } = useEthereumWalletAssets()
+  const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
 
   const matchedToken = useMemo(
     () => assets?.find((asset) => isSameToken(asset, buyForm.asset)),
@@ -105,7 +110,7 @@ const BuySelectProvider = () => {
   // Fetch quotes from all providers
   useEffect(() => {
     const fetchQuotes = async () => {
-      if (!address || !chainId || !fiatAmount || fiatAmount <= 0) {
+      if (!address || !network || !fiatAmount || fiatAmount <= 0) {
         setQuotes({})
         setCoinbaseError(false)
         setStripeError(false)
@@ -119,7 +124,7 @@ const BuySelectProvider = () => {
       try {
         const allQuotes = await getAllQuotes({
           token: selectedToken,
-          chainId,
+          network,
           publishableKey,
           sourceAmount: fiatAmount.toFixed(2),
           sourceCurrency: buyForm.currency,
@@ -151,7 +156,7 @@ const BuySelectProvider = () => {
     selectedToken.metadata,
     selectedToken.type,
     buyForm.currency,
-    chainId,
+    network,
     address,
     publishableKey,
     refetchTrigger,

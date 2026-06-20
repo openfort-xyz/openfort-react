@@ -48,7 +48,13 @@ const BuyComplete = () => {
     setRoute(routes.CONNECTED)
   }
 
-  const blockExplorerUrl = address && chainId ? getExplorerUrl(ChainTypeEnum.EVM, { chainId, address }) : ''
+  const blockExplorerUrl = !address
+    ? ''
+    : chainType === ChainTypeEnum.SVM
+      ? getExplorerUrl(ChainTypeEnum.SVM, { address, cluster: solanaWallet.cluster })
+      : chainId
+        ? getExplorerUrl(ChainTypeEnum.EVM, { chainId, address })
+        : ''
 
   return (
     <PageContent onBack={handleBack}>

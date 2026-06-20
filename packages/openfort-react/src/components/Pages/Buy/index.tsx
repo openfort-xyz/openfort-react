@@ -1,8 +1,10 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import useLocales from '../../../hooks/useLocales'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
@@ -10,6 +12,7 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
+import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
 import {
   AmountCard,
   AmountInput,
@@ -32,7 +35,11 @@ const amountPresets = [10, 20, 50]
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
   const locales = useLocales()
-  const { data: assets } = useEthereumWalletAssets()
+  const { chainType } = useOpenfortCore()
+  const { data: ethAssets } = useEthereumWalletAssets()
+  // Solana wallets buy Solana currencies (USDC default, then SOL); EVM reads its
+  // own assets. Both hooks run unconditionally; the active chain picks the list.
+  const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
 
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
