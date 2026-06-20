@@ -42,13 +42,11 @@ export function useDepositRoute(kind: DepositRouteKind) {
   // target (e.g. an EVM session whose funding target is still Solana) and would
   // send an EVM address as the recipient for a Solana destination.
   const wallet = isSolana(target.chain) ? solWallet : ethWallet
-  // Source chains: the full Relay list, including the destination chain itself so
+  // Sources are the full Relay list, including the destination chain itself so
   // same-chain deposits (e.g. Solana → Solana) are offered as a plain transfer to
-  // the wallet address, alongside the cross-chain bridge routes.
-  const sourceChains = allChains
-  // The CEX rail rides Coinbase Onramp, which only delivers to a fixed set of EVM
-  // chains — offer those as the pay-with sources.
-  const chains: FundingChain[] = kind === 'cex' ? sourceChains.filter((c) => isCexDeliverable(c.id)) : sourceChains
+  // the wallet address, alongside the cross-chain bridge routes. The CEX rail rides
+  // Coinbase Onramp, which only delivers to a fixed set of EVM chains.
+  const chains: FundingChain[] = kind === 'cex' ? allChains.filter((c) => isCexDeliverable(c.id)) : allChains
   // Where funds land: the active embedded wallet (the Relay deposit recipient).
   const address = wallet.status === 'connected' ? wallet.address : undefined
 

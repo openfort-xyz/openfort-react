@@ -19,7 +19,7 @@ import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
-import { DEST_USDC } from '../Deposit/sources'
+import { DEST_USDC, isSolana } from '../Deposit/sources'
 import { ButtonLogo, StepDivider } from '../Deposit/styles'
 import { useFundingTarget } from '../Deposit/useFundingTarget'
 import { sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
@@ -81,9 +81,8 @@ const DepositCex = () => {
   // wallet, Solana targets the Solana (SVM) embedded account — never cross families
   // (an EVM address on a Solana target would be rejected / mis-delivered). Accounts
   // come from the core store so EVM-only apps don't need the Solana React context.
-  const isEvmTarget = target.chain.startsWith('eip155:')
   const solanaAddress = embeddedAccounts?.find((acc) => acc.chainType === ChainTypeEnum.SVM)?.address
-  const address = isEvmTarget ? wallet.address : solanaAddress
+  const address = isSolana(target.chain) ? solanaAddress : wallet.address
   const chainSupported = isCexDeliverable(target.chain)
 
   // Resolve the destination asset + chain for the "Arrives as …" line. The live
