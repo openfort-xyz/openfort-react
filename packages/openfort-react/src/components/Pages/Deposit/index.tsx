@@ -7,6 +7,7 @@ import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
 import useIsMobile from '../../../hooks/useIsMobile'
 import { ModalHeading } from '../../Common/Modal/styles'
+import PoweredByFooter from '../../Common/PoweredByFooter'
 import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -128,6 +129,7 @@ const Deposit = () => {
           ))}
         </OptionList>
       </DepositContent>
+      <PoweredByFooter />
     </PageContent>
   )
 }

@@ -6,6 +6,7 @@ import styled from '../../../styles/styled'
 import { logger } from '../../../utils/logger'
 import Button from '../../Common/Button'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import PoweredByFooter from '../../Common/PoweredByFooter'
 import { Spinner } from '../../Common/Spinner'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -116,6 +117,7 @@ export function DepositProgress({ status }: { status: SessionStatus | 'idle' }) 
         <Button variant="primary" onClick={() => setRoute(status === 'expired' ? routes.DEPOSIT : routes.CONNECTED)}>
           {status === 'expired' ? 'Start over' : 'See balance'}
         </Button>
+        <PoweredByFooter />
       </PageContent>
     )
   }
@@ -138,6 +140,7 @@ export function DepositProgress({ status }: { status: SessionStatus | 'idle' }) 
           )
         })}
       </StepList>
+      <PoweredByFooter />
     </PageContent>
   )
 }
