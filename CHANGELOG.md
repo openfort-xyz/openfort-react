@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.3.0
+
+### Minor Changes
+
+- [#285](https://github.com/openfort-xyz/openfort-react/pull/285) [`590185a`](https://github.com/openfort-xyz/openfort-react/commit/590185a44883dcd0a0e7cadbe06183a38fe9a3e7) Thanks [@joalavedra](https://github.com/joalavedra)! - Bring the Solana send flow to parity with EVM:
+
+  - **Config-driven fee sponsorship.** Added `walletConfig.solana.sponsorFees`, the SVM counterpart of `ethereum.ethereumFeeSponsorshipId`. When set, Solana sends are routed gaslessly through the Openfort paymaster and the confirm screen shows a "Sponsored" network-fee row. This replaces the per-transaction gasless toggle, which has been removed.
+  - **Token selection.** The Solana send screen now has a token picker (native SOL + SPL tokens such as USDC), matching the EVM ERC-20 send. SPL transfers are supported in both fee modes; the non-sponsored path creates the recipient's associated token account when needed.
+
+### Patch Changes
+
+- [#282](https://github.com/openfort-xyz/openfort-react/pull/282) [`9a0a4ba`](https://github.com/openfort-xyz/openfort-react/commit/9a0a4ba384571173fb70e7420327980a7786c2c4) Thanks [@joalavedra](https://github.com/joalavedra)! - Fix white screen when sending a native token (e.g. ETH) from the wallet balance. The gas-estimate query keyed on the bigint send amount, and `useAsyncData` serialized its key with `JSON.stringify`, which throws on a BigInt and crashed the confirm modal. Query keys are now serialized bigint-safely.
+
+- [#286](https://github.com/openfort-xyz/openfort-react/pull/286) [`09fb729`](https://github.com/openfort-xyz/openfort-react/commit/09fb729f8ac866bebf5ddfacd976ae3e9633fb73) Thanks [@joalavedra](https://github.com/joalavedra)! - Default `uiConfig.fundingBaseUrl` to the SDK's backend URL (`api.openfort.io`). The Deposit hub's crypto rails (`useFunding`, `useFundingChains`) previously required `fundingBaseUrl` to be set or they stayed hidden, while the CEX rail already fell back to the backend — an inconsistency. Both now resolve to `uiConfig.fundingBaseUrl || backendUrl`, so the funding rails work out of the box; set `fundingBaseUrl` only to point at a custom funding service.
+
+- [#286](https://github.com/openfort-xyz/openfort-react/pull/286) [`09fb729`](https://github.com/openfort-xyz/openfort-react/commit/09fb729f8ac866bebf5ddfacd976ae3e9633fb73) Thanks [@joalavedra](https://github.com/joalavedra)! - Deposit hub fixes:
+
+  - Resolve the deposit recipient by the funding target's chain family, not the active chain type. A target/wallet family mismatch (e.g. an EVM session whose funding target is still Solana) previously sent an EVM address as the recipient for a Solana destination, which Relay rejected.
+  - Offer the destination chain itself as a source, so same-chain deposits (e.g. Solana → Solana) show as a plain transfer to the wallet address alongside the cross-chain bridge routes.
+  - Default the card / Apple Pay buy to USDC on EVM (matching Solana). The picker now lists buyable currencies (USDC, native) instead of the wallet's indexed balances, so a freshly created wallet no longer shows "No supported tokens found".
+  - Update Deposit method subtitles: "Bridge fee" (was "No fee") for the wallet/address rails, and a $5 minimum for the exchange rail.
+
+- [#286](https://github.com/openfort-xyz/openfort-react/pull/286) [`09fb729`](https://github.com/openfort-xyz/openfort-react/commit/09fb729f8ac866bebf5ddfacd976ae3e9633fb73) Thanks [@joalavedra](https://github.com/joalavedra)! - Drop the `uiConfig.funding.targetAddress` override. Deposits always settle into the user's active embedded wallet (the address the SDK already resolves and sends to Relay as the recipient), so the override was a no-op on the deposit-address and CEX rails. `useFundingTarget` now returns `{ chain, currency }` and `FundingUIOptions` no longer accepts `targetAddress`.
+
+- [#279](https://github.com/openfort-xyz/openfort-react/pull/279) [`92ce0d2`](https://github.com/openfort-xyz/openfort-react/commit/92ce0d205ee16c40486eb97f3ce495054138d453) Thanks [@joalavedra](https://github.com/joalavedra)! - Show a "Powered by Openfort" footer on the deposit screens (the Add funds hub, deposit progress, deposit success, and the CEX deposit page).
+
+- [#286](https://github.com/openfort-xyz/openfort-react/pull/286) [`09fb729`](https://github.com/openfort-xyz/openfort-react/commit/09fb729f8ac866bebf5ddfacd976ae3e9633fb73) Thanks [@joalavedra](https://github.com/joalavedra)! - Show Phantom in "Transfer from wallet" for Solana sources. Solana sources have no numeric chain id and no desktop EVM-extension send, so they previously rendered no wallets at all. The deposit deeplink is now VM-aware (`buildDepositPageUrl` emits `vm=svm` with the SPL mint and base58 recipient instead of a numeric `chainId`), and Solana sources route through the deeplink (Phantom) on every platform. Pairs with the deposit page's new Solana Pay path.
+
+- [#286](https://github.com/openfort-xyz/openfort-react/pull/286) [`09fb729`](https://github.com/openfort-xyz/openfort-react/commit/09fb729f8ac866bebf5ddfacd976ae3e9633fb73) Thanks [@joalavedra](https://github.com/joalavedra)! - Add an amount input with preset buttons to the Deposit hub's "Transfer from wallet" rail, matching the exchange rail. Pick a source chain and token, enter (or tap a preset for) an amount, then choose the wallet — the amount prefills the wallet deeplink (mobile) and the direct send (desktop). The amount is owned by the page and shared across both paths, replacing the two separate per-path inputs.
+
+- [#286](https://github.com/openfort-xyz/openfort-react/pull/286) [`09fb729`](https://github.com/openfort-xyz/openfort-react/commit/09fb729f8ac866bebf5ddfacd976ae3e9633fb73) Thanks [@joalavedra](https://github.com/joalavedra)! - Reveal the desktop "Transfer from wallet" send feedback. `DepositWalletDesktop` never triggered a modal resize, so the "Confirm in your wallet…" status and the insufficient-balance message ("Not enough X — you have Y") were clipped below the fold — a click on a wallet with too little balance read as "nothing happened". The modal now resizes when that feedback toggles.
+
+- [#283](https://github.com/openfort-xyz/openfort-react/pull/283) [`fd94a93`](https://github.com/openfort-xyz/openfort-react/commit/fd94a93f1192a4d5131506521085acd08ea90fa9) Thanks [@joalavedra](https://github.com/joalavedra)! - Adapt the Add funds → Card (fiat onramp) flow for Solana wallets: buy USDC (default) or SOL, resolve the onramp `destinationNetwork` to `solana`, seed the Solana card-buy with USDC, and link the Solana explorer on completion. EVM card-buy is unchanged.
+
+- [#281](https://github.com/openfort-xyz/openfort-react/pull/281) [`f0fddba`](https://github.com/openfort-xyz/openfort-react/commit/f0fddbab7fa85236dacb0bc62700046c9fb39840) Thanks [@joalavedra](https://github.com/joalavedra)! - Show a Solana network indicator in the Connected modal, mirroring the EVM chain badge. The cluster is fixed by `walletConfig.solana` and the indicator is read-only — switching between Solana and EVM is not offered.
+
 ## 1.2.0
 
 ### Minor Changes
