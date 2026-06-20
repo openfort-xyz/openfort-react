@@ -83,7 +83,7 @@ const DepositCex = () => {
   // come from the core store so EVM-only apps don't need the Solana React context.
   const isEvmTarget = target.chain.startsWith('eip155:')
   const solanaAddress = embeddedAccounts?.find((acc) => acc.chainType === ChainTypeEnum.SVM)?.address
-  const address = target.address ?? (isEvmTarget ? wallet.address : solanaAddress)
+  const address = isEvmTarget ? wallet.address : solanaAddress
   const chainSupported = isCexDeliverable(target.chain)
 
   // Resolve the destination asset + chain for the "Arrives as …" line. The live
