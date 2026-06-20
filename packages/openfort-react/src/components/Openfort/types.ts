@@ -409,6 +409,11 @@ export type FundingUIOptions = {
    */
   targetCurrency?: string
   /**
+   * Destination wallet that receives the deposit. Optional integrator override;
+   * when unset, deposits land on the active embedded wallet for the target chain.
+   */
+  targetAddress?: string
+  /**
    * Which funding methods the Deposit hub shows, and in what order. Omit to show
    * all available methods (Apple Pay first on mobile). Mirrors `authProviders`.
    * @example [FundingMethod.WALLET, FundingMethod.ADDRESS]
