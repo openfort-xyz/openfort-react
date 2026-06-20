@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 import Button from '../../Common/Button'
 import Loader from '../../Common/Loading'
+import PoweredByFooter from '../../Common/PoweredByFooter'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -26,6 +27,7 @@ export function DepositSuccess() {
       <Button variant="primary" onClick={() => setRoute(routes.ASSET_INVENTORY)}>
         See balance
       </Button>
+      <PoweredByFooter />
     </PageContent>
   )
 }
