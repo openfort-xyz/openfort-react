@@ -16,6 +16,20 @@ type CacheEntry = { data: unknown; timestamp: number }
 const dataCache = new Map<string, CacheEntry>()
 
 /**
+ * Serialize a queryKey to a stable cache string.
+ *
+ * `JSON.stringify` throws `TypeError: Do not know how to serialize a BigInt`,
+ * and queryKeys legitimately carry bigints (token amounts, balances, gas
+ * values — e.g. a native ETH send keys its gas estimate on the bigint amount).
+ * Without this replacer such a key crashes the whole modal render. A bigint is
+ * encoded as its decimal digits with an `n` suffix so distinct values stay
+ * distinct keys.
+ */
+function serializeQueryKey(queryKey: readonly unknown[]): string {
+  return JSON.stringify(queryKey, (_key, value) => (typeof value === 'bigint' ? `${value}n` : value))
+}
+
+/**
  * Drop cached entries so the next mount (or refetch) hits the network instead of
  * painting stale data. Pass a substring matched against the serialized queryKey
  * to target specific queries (e.g. `'walletAssets'`), or omit to clear everything.
@@ -64,8 +78,8 @@ export function useAsyncData<T>({
   refetch: () => Promise<T | undefined>
 } {
   // Serialize queryKey to a stable string so the effect only re-runs when values change,
-  // not when array/object references change.
-  const queryKeyStr = JSON.stringify(queryKey)
+  // not when array/object references change. Bigint-safe (see serializeQueryKey).
+  const queryKeyStr = serializeQueryKey(queryKey)
 
   const [data, setData] = useState<T | undefined>(() => dataCache.get(queryKeyStr)?.data as T | undefined)
   const [error, setError] = useState<Error | null>(null)
