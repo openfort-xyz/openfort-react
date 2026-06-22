@@ -7,6 +7,7 @@ import logos from '../../../assets/logos'
 import useIsMobile from '../../../hooks/useIsMobile'
 import { isIOS } from '../../../utils'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import { ScrollArea } from '../../Common/ScrollArea'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -167,28 +168,32 @@ const DepositWallet = () => {
           )}
 
           {deeplinks.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
-              {deeplinks.map((d) => (
-                <a
-                  key={d.app}
-                  href={amountValid ? d.url : undefined}
-                  aria-disabled={!amountValid}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    ...walletListBtn,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    opacity: amountValid ? 1 : 0.55,
-                    pointerEvents: amountValid ? 'auto' : 'none',
-                  }}
-                >
-                  {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
-                  {d.label} ↗
-                </a>
-              ))}
+            <div style={{ marginTop: 14 }}>
+              <ScrollArea height={220}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {deeplinks.map((d) => (
+                    <a
+                      key={d.app}
+                      href={amountValid ? d.url : undefined}
+                      aria-disabled={!amountValid}
+                      target="_blank"
+                      rel="noreferrer"
+                      style={{
+                        ...walletListBtn,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                        opacity: amountValid ? 1 : 0.55,
+                        pointerEvents: amountValid ? 'auto' : 'none',
+                      }}
+                    >
+                      {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
+                      {d.label} ↗
+                    </a>
+                  ))}
+                </div>
+              </ScrollArea>
             </div>
           )}
         </>

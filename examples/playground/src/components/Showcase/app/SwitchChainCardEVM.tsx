@@ -7,7 +7,7 @@ import { HookBadge } from '@/components/HookBadge'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
+import { getEvmChainsForKey, PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
 import { delegatedImplLabel, isDelegatedAccountUsableOnChain } from '@/lib/delegation'
 import { toError } from '@/lib/errors'
 
@@ -28,6 +28,10 @@ export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
       ? embedded.chainId
       : undefined
   const canSwitch = isExternalWallet || embedded.status === 'connected' || !!core.activeEmbeddedAddress
+
+  // Match the chain list to the publishable key: test keys (`pk_test_…`) only
+  // list testnet chains, live keys (`pk_live_…`) only mainnet chains.
+  const visibleChains = getEvmChainsForKey(core.publishableKey)
 
   // Implementation type of the active embedded (delegated) account, if any. Used to inform
   // — never block — when the current wallet can't transact on a target chain (e.g. a legacy
@@ -86,7 +90,7 @@ export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
-          {PLAYGROUND_EVM_CHAINS.map((chain) => {
+          {visibleChains.map((chain) => {
             const usableOnChain = isDelegatedAccountUsableOnChain(activeImplType, chain.id)
             return (
               <div key={chain.id}>

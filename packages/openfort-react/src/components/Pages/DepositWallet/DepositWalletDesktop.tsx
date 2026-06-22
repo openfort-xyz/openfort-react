@@ -11,6 +11,7 @@ import {
 } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import type { FundingChain, FundingCurrency } from '../../../hooks/openfort/useFundingChains'
 import { ModalBody } from '../../Common/Modal/styles'
+import { ScrollArea } from '../../Common/ScrollArea'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
@@ -146,25 +147,31 @@ export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurre
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
       {connectors.length === 0 && <ModalBody>No browser wallet detected. Install MetaMask or Rabby.</ModalBody>}
 
-      {connectors.map((c) => (
-        <button
-          key={c.id}
-          type="button"
-          disabled={!amountValid || busyId !== null || loading}
-          style={{
-            ...walletListBtn,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'flex-start',
-            gap: 10,
-            opacity: !amountValid || busyId !== null ? 0.55 : 1,
-          }}
-          onClick={() => sendVia(c)}
-        >
-          <ButtonLogo>{brandLogo(c)}</ButtonLogo>
-          <span>{busyId === c.id ? 'Confirm in your wallet…' : `Send via ${c.name}`}</span>
-        </button>
-      ))}
+      {connectors.length > 0 && (
+        <ScrollArea height={220}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {connectors.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                disabled={!amountValid || busyId !== null || loading}
+                style={{
+                  ...walletListBtn,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-start',
+                  gap: 10,
+                  opacity: !amountValid || busyId !== null ? 0.55 : 1,
+                }}
+                onClick={() => sendVia(c)}
+              >
+                <ButtonLogo>{brandLogo(c)}</ButtonLogo>
+                <span>{busyId === c.id ? 'Confirm in your wallet…' : `Send via ${c.name}`}</span>
+              </button>
+            ))}
+          </div>
+        </ScrollArea>
+      )}
 
       {sent && <DepositStatus status="waiting_payment" />}
       {error && <ModalBody style={{ color: '#dc2626' }}>{error}</ModalBody>}

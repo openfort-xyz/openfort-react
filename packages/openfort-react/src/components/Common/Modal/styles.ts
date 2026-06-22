@@ -260,6 +260,9 @@ export const BoxContainer = styled(motion.div)`
     left: 50%;
     width: var(--width);
     height: var(--height);
+    /* Match InnerContainer's viewport cap so a tall page's card background
+       doesn't run off-screen while the content scrolls inside. */
+    max-height: 88vh;
     transform: translateX(-50%);
     backface-visibility: hidden;
     transition: all 200ms ease;

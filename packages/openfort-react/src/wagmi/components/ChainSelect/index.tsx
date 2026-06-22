@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import type React from 'react'
 import { useEffect, useState } from 'react'
 import { css } from 'styled-components'
-import { useChainId, useSwitchChain } from 'wagmi'
+import { useChainId } from 'wagmi'
 import Chain from '../../../components/Common/Chain'
 import Tooltip from '../../../components/Common/Tooltip'
 import { routes } from '../../../components/Openfort/types'
@@ -13,6 +13,7 @@ import defaultTheme from '../../../constants/defaultTheme'
 import useLocales from '../../../hooks/useLocales'
 import styled from '../../../styles/styled'
 import { flattenChildren, isMobile } from '../../../utils'
+import { useSwitchChainFiltered } from '../../useSwitchChainFiltered'
 import ChainSelectDropdown from '../ChainSelectDropdown'
 
 const Container = styled(motion.div)``
@@ -129,7 +130,7 @@ const ChainSelector: React.FC = () => {
   const { open, triggerResize, setRoute } = useOpenfort()
   const [isOpen, setIsOpen] = useState(false)
   const chainId = useChainId()
-  const { chains } = useSwitchChain()
+  const { chains } = useSwitchChainFiltered()
 
   const chain = chains.find((c) => c.id === chainId)
 
