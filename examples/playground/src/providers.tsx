@@ -114,11 +114,12 @@ const MODE_TO_CHAIN = { evm: ChainTypeEnum.EVM, svm: ChainTypeEnum.SVM } as cons
 
 /**
  * Keeps the Deposit-hub funding target in sync with the active EVM chain, so
- * switching networks in the OpenfortButton lands deposits on that chain's USDC.
- * Chains without a configured USDC (testnets) fall back to Base USDC, so EVM mode
- * never keeps a stale Solana target from a prior SVM session (which would make the
- * EVM recipient invalid for the Solana destination). Deposits land on the active
- * EVM embedded wallet, resolved by the Deposit hub.
+ * switching networks in the OpenfortButton lands deposits on that chain. Mainnet
+ * chains target their USDC; testnet chains target native ETH (Relay's testnet rail
+ * bridges same-asset but can't swap into a stablecoin — see getFundingTargetForChain).
+ * Unknown chains fall back to Base USDC, so EVM mode never keeps a stale Solana
+ * target from a prior SVM session (which would make the EVM recipient invalid for
+ * the Solana destination). Deposits land on the active EVM embedded wallet.
  */
 function FundingTargetSync() {
   const chainId = useChainId()

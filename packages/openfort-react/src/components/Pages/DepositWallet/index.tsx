@@ -20,6 +20,8 @@ import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { isSolana } from '../Deposit/sources'
 import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
+import { TestnetNotice } from '../Deposit/TestnetNotice'
+import { UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 import { sanitizeAmountInput } from '../Send/utils'
 import { DepositWalletDesktop } from './DepositWalletDesktop'
@@ -90,7 +92,9 @@ const DepositWallet = () => {
   // In Solana-only mode there's no wagmi provider, so fall back to the open-dApp
   // deeplinks for EVM sources too — otherwise the wallet list renders empty.
   const bridge = useEthereumBridge()
-  const [amount, setAmount] = useState('')
+  // Prefill a sensible default so the wallet deeplinks are immediately actionable
+  // (the funding deposit-address mint uses a fixed nominal amount regardless).
+  const [amount, setAmount] = useState('1')
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
   const depositPageUrl = uiConfig.funding?.depositPageUrl ?? OPENFORT_DEPOSIT_PAGE_URL
@@ -151,108 +155,116 @@ const DepositWallet = () => {
     <PageContent onBack={routes.DEPOSIT}>
       <ModalHeading>Transfer from wallet</ModalHeading>
 
-      <Layout>
-        <TopFixed>
-          <RouteSelectors
-            chains={route.chains}
-            chain={route.chain}
-            currency={route.currency}
-            chainLabel="Supported chain"
-            onChainChange={route.setChain}
-            onCurrencyChange={route.setCurrency}
-          />
+      <TestnetNotice />
 
-          {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
+      {route.targetUnsupported && (
+        <UnsupportedNetworkNotice targetChain={route.target.chain} railChains={route.railChains} />
+      )}
 
-          <Section>
-            <SectionLabel>Amount</SectionLabel>
-            <AmountCard>
-              <CurrencySymbol>{route.activeCurrency?.symbol ?? ''}</CurrencySymbol>
-              <AmountInput
-                value={amount}
-                onChange={handleAmountChange}
-                placeholder="0.00"
-                inputMode="decimal"
-                autoComplete="off"
-              />
-            </AmountCard>
-            <PresetList>
-              {PRESETS.map((preset) => (
-                <PresetButton
-                  key={preset}
-                  type="button"
-                  $active={pressedPreset === preset}
-                  onClick={() => handlePreset(preset)}
-                >
-                  {preset}
-                </PresetButton>
-              ))}
-            </PresetList>
-          </Section>
-
-          <StepDivider>Then select the wallet you want to use</StepDivider>
-        </TopFixed>
-
-        <ProvidersRegion>
-          {isMobile || isSolanaSrc || !bridge ? (
-            <>
-              {!depositPageUrl && (
-                <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
-              )}
-
-              {route.loading && !route.pm && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <Skeleton $h="44px" $r="10px" />
-                  <Skeleton $h="44px" $r="10px" />
-                  <Skeleton $h="44px" $r="10px" />
-                </div>
-              )}
-
-              {deeplinks.length > 0 && (
-                <ScrollArea fill>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    {deeplinks.map((d) => (
-                      <a
-                        key={d.app}
-                        href={amountValid ? d.url : undefined}
-                        aria-disabled={!amountValid}
-                        target="_blank"
-                        rel="noreferrer"
-                        style={{
-                          ...walletListBtn,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          gap: 8,
-                          opacity: amountValid ? 1 : 0.55,
-                          pointerEvents: amountValid ? 'auto' : 'none',
-                        }}
-                      >
-                        {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
-                        {d.label} ↗
-                      </a>
-                    ))}
-                  </div>
-                </ScrollArea>
-              )}
-            </>
-          ) : (
-            <DepositWalletDesktop
-              receiverAddress={route.receiverAddress}
-              activeChain={route.activeChain}
-              activeCurrency={route.activeCurrency}
-              loading={route.loading}
-              amount={amount}
+      {!route.targetUnsupported && (
+        <Layout>
+          <TopFixed>
+            <RouteSelectors
+              chains={route.chains}
+              chain={route.chain}
+              currency={route.currency}
+              chainLabel="Supported chain"
+              onChainChange={route.setChain}
+              onCurrencyChange={route.setCurrency}
             />
-          )}
-        </ProvidersRegion>
 
-        <FixedFooter>
-          <AddressPageLink label="Or send to a deposit address" />
+            {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
-          {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
-        </FixedFooter>
-      </Layout>
+            <Section>
+              <SectionLabel>Amount</SectionLabel>
+              <AmountCard>
+                <CurrencySymbol>{route.activeCurrency?.symbol ?? ''}</CurrencySymbol>
+                <AmountInput
+                  value={amount}
+                  onChange={handleAmountChange}
+                  placeholder="0.00"
+                  inputMode="decimal"
+                  autoComplete="off"
+                />
+              </AmountCard>
+              <PresetList>
+                {PRESETS.map((preset) => (
+                  <PresetButton
+                    key={preset}
+                    type="button"
+                    $active={pressedPreset === preset}
+                    onClick={() => handlePreset(preset)}
+                  >
+                    {preset}
+                  </PresetButton>
+                ))}
+              </PresetList>
+            </Section>
+
+            <StepDivider>Then select the wallet you want to use</StepDivider>
+          </TopFixed>
+
+          <ProvidersRegion>
+            {isMobile || isSolanaSrc || !bridge ? (
+              <>
+                {!depositPageUrl && (
+                  <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
+                )}
+
+                {route.loading && !route.pm && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Skeleton $h="44px" $r="10px" />
+                    <Skeleton $h="44px" $r="10px" />
+                    <Skeleton $h="44px" $r="10px" />
+                  </div>
+                )}
+
+                {deeplinks.length > 0 && (
+                  <ScrollArea fill>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      {deeplinks.map((d) => (
+                        <a
+                          key={d.app}
+                          href={amountValid ? d.url : undefined}
+                          aria-disabled={!amountValid}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{
+                            ...walletListBtn,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 8,
+                            opacity: amountValid ? 1 : 0.55,
+                            pointerEvents: amountValid ? 'auto' : 'none',
+                          }}
+                        >
+                          {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
+                          {d.label} ↗
+                        </a>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </>
+            ) : (
+              <DepositWalletDesktop
+                receiverAddress={route.receiverAddress}
+                activeChain={route.activeChain}
+                activeCurrency={route.activeCurrency}
+                loading={route.loading}
+                amount={amount}
+              />
+            )}
+          </ProvidersRegion>
+
+          <FixedFooter>
+            <AddressPageLink label="Or send to a deposit address" />
+
+            {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
+          </FixedFooter>
+        </Layout>
+      )}
     </PageContent>
   )
 }

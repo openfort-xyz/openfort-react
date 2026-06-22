@@ -45,28 +45,28 @@ export const chainConfigs: Chain[] = [
   {
     id: 37111,
     name: 'Lens Chain Testnet',
-    logo: <Logos.LensChain testnet />,
+    logo: <Logos.LensChain />,
   },
   {
     id: 3,
     name: 'Rinkeby',
-    logo: <Logos.Ethereum testnet />,
+    logo: <Logos.Ethereum />,
     rpcUrls: {},
   },
   {
     id: 4,
     name: 'Ropsten',
-    logo: <Logos.Ethereum testnet />,
+    logo: <Logos.Ethereum />,
   },
   {
     id: 5,
     name: 'Görli',
-    logo: <Logos.Ethereum testnet />,
+    logo: <Logos.Ethereum />,
   },
   {
     id: 42,
     name: 'Kovan',
-    logo: <Logos.Ethereum testnet />,
+    logo: <Logos.Ethereum />,
   },
   {
     id: 10,
@@ -76,17 +76,17 @@ export const chainConfigs: Chain[] = [
   {
     id: 69, // nice
     name: 'Optimism Kovan',
-    logo: <Logos.Optimism testnet />,
+    logo: <Logos.Optimism />,
   },
   {
     id: 420, // nice
     name: 'Optimism Goerli',
-    logo: <Logos.Optimism testnet />,
+    logo: <Logos.Optimism />,
   },
   {
     id: 11155420,
     name: 'Optimism Sepolia',
-    logo: <Logos.Optimism testnet />,
+    logo: <Logos.Optimism />,
   },
   {
     id: 137,
@@ -96,27 +96,27 @@ export const chainConfigs: Chain[] = [
   {
     id: 80001,
     name: 'Polygon Mumbai',
-    logo: <Logos.Polygon testnet />,
+    logo: <Logos.Polygon />,
   },
   {
     id: 80002,
     name: 'Polygon Amoy',
-    logo: <Logos.Polygon testnet />,
+    logo: <Logos.Polygon />,
   },
   {
     id: 13337,
     name: 'Beam Testnet',
-    logo: <Logos.Avalanche testnet />,
+    logo: <Logos.Avalanche />,
   },
   {
     id: 31337,
     name: 'Hardhat',
-    logo: <Logos.Ethereum testnet />,
+    logo: <Logos.Ethereum />,
   },
   {
     id: 1337,
     name: 'Localhost',
-    logo: <Logos.Ethereum testnet />,
+    logo: <Logos.Ethereum />,
   },
   {
     id: 42161,
@@ -136,12 +136,12 @@ export const chainConfigs: Chain[] = [
   {
     id: 421611,
     name: 'Arbitrum Rinkeby',
-    logo: <Logos.Arbitrum testnet />,
+    logo: <Logos.Arbitrum />,
   },
   {
     id: 421613,
     name: 'Arbitrum Goerli',
-    logo: <Logos.Arbitrum testnet />,
+    logo: <Logos.Arbitrum />,
     rpcUrls: {
       alchemy: {
         http: ['https://arb-goerli.g.alchemy.com/v2'],
@@ -161,7 +161,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 41,
     name: 'Telos Testnet',
-    logo: <Logos.Telos testnet />,
+    logo: <Logos.Telos />,
   },
   {
     id: 1313161554,
@@ -171,7 +171,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 1313161555,
     name: 'Aurora Testnet',
-    logo: <Logos.Aurora testnet />,
+    logo: <Logos.Aurora />,
   },
   {
     id: 43_114,
@@ -181,12 +181,12 @@ export const chainConfigs: Chain[] = [
   {
     id: 43_113,
     name: 'Avalanche Fuji',
-    logo: <Logos.Avalanche testnet />,
+    logo: <Logos.Avalanche />,
   },
   {
     id: 31337,
     name: 'Foundry',
-    logo: <Logos.Foundry testnet />,
+    logo: <Logos.Foundry />,
   },
   {
     id: 100,
@@ -201,7 +201,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 9000,
     name: 'Evmos Testnet',
-    logo: <Logos.Evmos testnet />,
+    logo: <Logos.Evmos />,
   },
   {
     id: 56,
@@ -211,7 +211,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 97,
     name: 'Binance Smart Chain Testnet',
-    logo: <Logos.BinanceSmartChain testnet />,
+    logo: <Logos.BinanceSmartChain />,
   },
   {
     id: 11155111,
@@ -226,7 +226,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 842,
     name: 'Taraxa Testnet',
-    logo: <Logos.Taraxa testnet />,
+    logo: <Logos.Taraxa />,
   },
   {
     id: 324,
@@ -236,7 +236,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 280,
     name: 'zkSync Testnet',
-    logo: <Logos.zkSync testnet />,
+    logo: <Logos.zkSync />,
   },
   {
     id: 42_220,
@@ -246,7 +246,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 44_787,
     name: 'Celo Alfajores',
-    logo: <Logos.Celo testnet />,
+    logo: <Logos.Celo />,
   },
   {
     id: 7_700,
@@ -271,12 +271,12 @@ export const chainConfigs: Chain[] = [
   {
     id: 314_1,
     name: 'Filecoin Hyperspace',
-    logo: <Logos.Filecoin testnet />,
+    logo: <Logos.Filecoin />,
   },
   {
     id: 314_159,
     name: 'Filecoin Calibration',
-    logo: <Logos.Filecoin testnet />,
+    logo: <Logos.Filecoin />,
   },
   {
     id: 1_088,
@@ -286,7 +286,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 599,
     name: 'Metis Goerli',
-    logo: <Logos.Metis testnet />,
+    logo: <Logos.Metis />,
   },
   {
     id: 4_689,
@@ -296,7 +296,7 @@ export const chainConfigs: Chain[] = [
   {
     id: 4_690,
     name: 'IoTeX Testnet',
-    logo: <Logos.IoTeX testnet />,
+    logo: <Logos.IoTeX />,
   },
   {
     id: 8_453,
@@ -306,12 +306,12 @@ export const chainConfigs: Chain[] = [
   {
     id: 84_531,
     name: 'Base Goerli',
-    logo: <Logos.Base testnet />,
+    logo: <Logos.Base />,
   },
   {
     id: 84_532,
     name: 'Base Sepolia',
-    logo: <Logos.Base testnet />,
+    logo: <Logos.Base />,
   },
   {
     id: 7777777,
@@ -321,11 +321,11 @@ export const chainConfigs: Chain[] = [
   {
     id: 999999999,
     name: 'Zora Sepolia',
-    logo: <Logos.Zora testnet />,
+    logo: <Logos.Zora />,
   },
   {
     id: 999,
     name: 'Zora Goerli Testnet',
-    logo: <Logos.Zora testnet />,
+    logo: <Logos.Zora />,
   },
 ]

@@ -174,17 +174,27 @@ const ConnectModal: React.FC<{
   const chainId = strategy?.getChainId()
   const chainIsSupported = chainId != null && context.chains.some((c) => c.id === chainId)
 
-  // Auto-close when the user goes from not-connected → connected while the modal is open.
-  // Using a ref to track the previous value so we only react to the false → true transition,
-  // not when the modal is opened while already connected (e.g. user opens profile).
+  // Auto-close only when the connect/auth flow completes: the modal was opened while
+  // disconnected and then became connected. We latch the "opened-while-connected" state
+  // on each open transition, so a chain switch — which briefly drops and restores the
+  // connection while the modal is already open and connected — never triggers a close.
+  const prevOpenRef = useRef(context.open)
+  const openedConnectedRef = useRef(isConnected)
   const prevIsConnectedRef = useRef(isConnected)
   useEffect(() => {
+    const justOpened = context.open && !prevOpenRef.current
+    prevOpenRef.current = context.open
+    if (justOpened) {
+      openedConnectedRef.current = isConnected
+      prevIsConnectedRef.current = isConnected
+      return
+    }
     const wasConnected = prevIsConnectedRef.current
     prevIsConnectedRef.current = isConnected
-    if (!wasConnected && isConnected && context.open) {
+    if (!openedConnectedRef.current && !wasConnected && isConnected && context.open) {
       context.setOpen(false)
     }
-  }, [isConnected])
+  }, [isConnected, context.open])
 
   //if chain is unsupported we enforce a "switch chain" prompt
   const closeable = !(context.uiConfig.enforceSupportedChains && isConnected && !chainIsSupported)
