@@ -3,6 +3,7 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { getPublishableKeyEnvironment } from '../../utils/validation'
 
 /** A source currency available on a chain (sourced live from Relay via the backend). */
 export type FundingCurrency = {
@@ -28,6 +29,12 @@ export type FundingChain = {
 
 type UseFundingChains = {
   chains: FundingChain[]
+  /**
+   * The rail's full deliverable chain list (uncurated). Used to check whether a
+   * funding TARGET chain is supported, independent of the source allowlist that
+   * narrows {@link chains}.
+   */
+  railChains: FundingChain[]
   loading: boolean
   error: Error | null
 }
@@ -63,17 +70,25 @@ const DEFAULT_SOURCE_CURRENCIES = ['native', 'USDC', 'USDT']
  * Returns an empty list when funding isn't configured.
  */
 export function useFundingChains(): UseFundingChains {
-  const { uiConfig } = useOpenfort()
+  const { uiConfig, publishableKey } = useOpenfort()
   // Defaults to the SDK backend (api.openfort.io); override for a custom funding service.
   const baseUrl = uiConfig.fundingBaseUrl || SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
   const sourceChains = uiConfig.funding?.sourceChains ?? DEFAULT_SOURCE_CHAINS
   const sourceCurrencies = uiConfig.funding?.sourceCurrencies ?? DEFAULT_SOURCE_CURRENCIES
-  const [state, setState] = useState<UseFundingChains>({ chains: [], loading: true, error: null })
+  // Match the rail host to the key environment: test keys (`pk_test_…`) list the
+  // testnet rail, everything else the mainnet rail. The backend picks the same
+  // host from the request livemode for the authenticated session endpoints.
+  const livemode = getPublishableKeyEnvironment(publishableKey) !== 'test'
+  const [state, setState] = useState<{ chains: FundingChain[]; loading: boolean; error: Error | null }>({
+    chains: [],
+    loading: true,
+    error: null,
+  })
 
   useEffect(() => {
     let cancelled = false
     setState((s) => ({ ...s, loading: true }))
-    fetch(`${baseUrl}/v2/funding/chains`)
+    fetch(`${baseUrl}/v2/funding/chains?livemode=${livemode}`)
       .then((r) => {
         if (!r.ok) throw new Error(`Failed to load chains (${r.status})`)
         return r.json() as Promise<{ chains: FundingChain[] }>
@@ -87,10 +102,15 @@ export function useFundingChains(): UseFundingChains {
     return () => {
       cancelled = true
     }
-  }, [baseUrl])
+  }, [baseUrl, livemode])
 
   // Narrow the provider dictionary to the selected subset (cheap, O(chains)).
-  return { ...state, chains: curateChains(state.chains, sourceChains, sourceCurrencies) }
+  return {
+    chains: curateChains(state.chains, sourceChains, sourceCurrencies),
+    railChains: state.chains,
+    loading: state.loading,
+    error: state.error,
+  }
 }
 
 /**

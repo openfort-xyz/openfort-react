@@ -56,3 +56,30 @@ export function symbolToColor(symbol: string): string {
   const h = ((hash % 360) + 360) % 360
   return `hsl(${h}, 55%, 50%)`
 }
+
+// EVM chain id -> network logo URL. Testnet ids reuse their mainnet brand. Used
+// instead of the funding rail's icon CDN, which serves a generic prism for
+// testnets and a blank square for some mainnets.
+const CHAIN_LOGO: Record<number, string> = {
+  1: `${TW}/ethereum/info/logo.png`,
+  11155111: `${TW}/ethereum/info/logo.png`, // Sepolia
+  8453: `${TW}/base/info/logo.png`,
+  84532: `${TW}/base/info/logo.png`, // Base Sepolia
+  10: `${TW}/optimism/info/logo.png`,
+  11155420: `${TW}/optimism/info/logo.png`, // OP Sepolia
+  42161: `${TW}/arbitrum/info/logo.png`,
+  421614: `${TW}/arbitrum/info/logo.png`, // Arbitrum Sepolia
+  137: `${TW}/polygon/info/logo.png`,
+  80002: `${TW}/polygon/info/logo.png`, // Polygon Amoy
+  56: `${TW}/smartchain/info/logo.png`,
+}
+
+/** Network logo for a chain: the curated brand first (clean + testnet-aware), then the backend value. */
+export function chainLogoUrl(chainId?: number, apiLogo?: string | null): string | null {
+  return (chainId !== undefined && CHAIN_LOGO[chainId]) || apiLogo || null
+}
+
+/** Token logo for a symbol: the backend value first, then the curated map (covers native ETH/SOL/… which the rail returns null for). */
+export function currencyLogoUrl(symbol?: string, apiLogo?: string | null): string | null {
+  return apiLogo || (symbol && TOKEN_LOGO[symbol.toUpperCase()]) || null
+}

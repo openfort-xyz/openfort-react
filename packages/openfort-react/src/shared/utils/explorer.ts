@@ -53,19 +53,19 @@ type ExplorerUrlBuilder = (options: ExplorerUrlOptions) => string
 
 const explorerRegistry: Record<ChainTypeEnum, ExplorerUrlBuilder> = {
   [ChainTypeEnum.EVM]: (options) => {
+    // Never fall back to an unrelated chain's explorer — a valid hash on the wrong
+    // explorer reads as "transaction not found". Return '' so callers hide the link.
     if (!options.chainId) {
-      logger.warn(
-        'No chain ID provided. Configure explorerUrls in OpenfortProvider for better reliability and rate limits.'
-      )
-      return polygonAmoy.blockExplorers.default.url
+      logger.warn('No chain ID provided; cannot build an explorer URL for this transaction.')
+      return ''
     }
     const chain = EVM_CHAINS_BY_ID[options.chainId as keyof typeof EVM_CHAINS_BY_ID]
     const explorerUrl = chain?.blockExplorers?.default.url
     if (!explorerUrl) {
       logger.warn(
-        `No explorer URL found for chain ${options.chainId}. Configure explorerUrls in OpenfortProvider for better reliability and rate limits.`
+        `No explorer URL known for chain ${options.chainId}. Configure explorerUrls in OpenfortProvider to enable the link.`
       )
-      return polygonAmoy.blockExplorers.default.url
+      return ''
     }
     return appendPath(explorerUrl, options)
   },

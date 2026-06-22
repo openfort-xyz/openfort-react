@@ -32,7 +32,7 @@ vi.mock('../hooks/openfort/useFunding', () => ({
   }),
 }))
 vi.mock('../hooks/openfort/useFundingChains', () => ({
-  useFundingChains: () => ({ chains: [], loading: false, error: null }),
+  useFundingChains: () => ({ chains: [], railChains: [], loading: false, error: null }),
   nominalUnits: (decimals: number) => `1${'0'.repeat(decimals + 1)}`,
 }))
 vi.mock('../components/Pages/Deposit/useFundingTarget', () => ({

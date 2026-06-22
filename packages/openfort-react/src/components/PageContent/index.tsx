@@ -15,9 +15,17 @@ type PageContentProps = {
   onBack?: SetOnBackFunction
   logoutOnBack?: boolean
   header?: string
+  className?: string
 }
 
-export const PageContent = ({ children, width, onBack = 'back', logoutOnBack, header }: PageContentProps) => {
+export const PageContent = ({
+  children,
+  width,
+  onBack = 'back',
+  logoutOnBack,
+  header,
+  className,
+}: PageContentProps) => {
   const { setOnBack, setRoute, setPreviousRoute, setRouteHistory } = useOpenfort()
   const { signOut } = useSignOut()
 
@@ -57,7 +65,7 @@ export const PageContent = ({ children, width, onBack = 'back', logoutOnBack, he
   }, [!!onBack, !!logoutOnBack])
 
   return (
-    <PageContentStyle style={{ width }}>
+    <PageContentStyle className={className} style={{ width }}>
       {header && <ModalHeading>{header}</ModalHeading>}
       {children}
     </PageContentStyle>

@@ -344,6 +344,24 @@ export const useEthereumWalletAssets = ({
             }
           }
         }
+        // The ERC-7811 proxy indexes mainnet; testnet natives (e.g. Base Sepolia ETH)
+        // come back missing or stale. For configured testnet chains, read the native
+        // balance straight from RPC — the same source Rabby uses — and upsert it.
+        const testnetChains = chains.filter((c) => c.testnet === true)
+        const rpcNatives = await Promise.all(
+          testnetChains.map(async (c) => {
+            const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[c.id] ?? getDefaultEthereumRpcUrl(c.id)
+            const read = await readEvmAssetsViaRpc({ address: address as `0x${string}`, chain: c, rpcUrl, tokens: [] })
+            const native = read.find((a) => a.type === 'native')
+            return native ? ({ ...native, chainId: c.id } as MultiChainAsset) : null
+          })
+        )
+        for (const native of rpcNatives) {
+          if (!native) continue
+          const idx = allAssets.findIndex((a) => a.type === 'native' && a.chainId === native.chainId)
+          if (idx >= 0) allAssets[idx] = native
+          else allAssets.push(native)
+        }
         allAssets.sort((a, b) => getUsdValue(b) - getUsdValue(a))
         return allAssets as readonly MultiChainAsset[]
       }
@@ -457,6 +475,21 @@ export const useEthereumWalletAssets = ({
             mergedAssets.push(asset)
           }
         })
+
+        // The ERC-7811 proxy indexes mainnet; a testnet native (e.g. Base Sepolia
+        // ETH) comes back missing or stale, so the single-chain path would report
+        // "no assets" while the multi-chain inventory shows the balance. Read the
+        // native straight from RPC and upsert it to keep the two consistent.
+        if (chain.testnet === true) {
+          const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+          const read = await readEvmAssetsViaRpc({ address: address as `0x${string}`, chain, rpcUrl, tokens: [] })
+          const native = read.find((a) => a.type === 'native')
+          if (native) {
+            const idx = mergedAssets.findIndex((a) => a.type === 'native')
+            if (idx >= 0) mergedAssets[idx] = native
+            else mergedAssets.unshift(native)
+          }
+        }
 
         if (mergedAssets.length === 0 && customAssetsToFetch.length > 0) {
           // Proxy succeeded but returned nothing while we expect tokens — read direct.

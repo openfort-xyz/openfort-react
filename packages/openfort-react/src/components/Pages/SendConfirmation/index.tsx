@@ -390,9 +390,11 @@ const SendConfirmation = () => {
       <PageContent>
         <Loader isSuccess header="Transfer Sent" description={`${successAmount} ${successSymbol} sent successfully`} />
         <ButtonRow>
-          <Button variant="primary" onClick={handleOpenBlockExplorer}>
-            View on Explorer
-          </Button>
+          {blockExplorerUrl && (
+            <Button variant="primary" onClick={handleOpenBlockExplorer}>
+              View on Explorer
+            </Button>
+          )}
           <Button variant="secondary" onClick={handleFinish}>
             Back to profile
           </Button>
