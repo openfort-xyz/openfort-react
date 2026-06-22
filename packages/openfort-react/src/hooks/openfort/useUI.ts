@@ -27,6 +27,12 @@ const safeRoutes: {
     { route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' },
     routes.ETH_SWITCH_NETWORK,
     routes.PROVIDERS,
+    routes.PROFILE,
+    routes.SEND,
+    routes.RECEIVE,
+    routes.DEPOSIT,
+    routes.BUY,
+    routes.EXPORT_KEY,
   ],
 }
 
@@ -63,8 +69,14 @@ function isAccountId(id: string): boolean {
  *
  * ui.open(); // Opens modal with default route
  * ui.close(); // Closes modal
- * ui.openProfile(); // Opens user profile screen
+ * ui.openProfile(); // Opens the connected wallet overview
+ * ui.openSend(); // Opens the Send flow
+ * ui.openFunding(); // Opens the Deposit (funding) hub
  * ```
+ *
+ * The `open*` navigation helpers target connected-only screens. When called while
+ * the user is not connected they fall back to the login screen, so a caller can
+ * fire them directly and let the modal route the user through auth first.
  */
 export function useUI() {
   const { open, setOpen, setRoute, setConnector, connector, chainType } = useOpenfort()
@@ -132,5 +144,12 @@ export function useUI() {
     openSwitchNetworks: () => gotoAndOpen(routes.ETH_SWITCH_NETWORK),
     openProviders: () => gotoAndOpen(routes.PROVIDERS),
     openWallets: () => gotoAndOpen({ route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' }),
+
+    openSend: () => gotoAndOpen(routes.SEND),
+    openReceive: () => gotoAndOpen(routes.RECEIVE),
+    openFunding: () => gotoAndOpen(routes.DEPOSIT),
+    openBuy: () => gotoAndOpen(routes.BUY),
+    openExportKey: () => gotoAndOpen(routes.EXPORT_KEY),
+    openSettings: () => gotoAndOpen(routes.PROFILE),
   }
 }
