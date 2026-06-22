@@ -4,6 +4,7 @@ import type { ChangeEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
 import logos from '../../../assets/logos'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import useIsMobile from '../../../hooks/useIsMobile'
 import styled from '../../../styles/styled'
 import { isIOS } from '../../../utils'
@@ -87,6 +88,10 @@ const DepositWallet = () => {
   const { triggerResize, uiConfig } = useOpenfort()
   const isMobile = useIsMobile()
   const route = useDepositRoute('crypto')
+  // The desktop send path goes through the wagmi bridge (browser-extension wallets).
+  // In Solana-only mode there's no wagmi provider, so fall back to the open-dApp
+  // deeplinks for EVM sources too — otherwise the wallet list renders empty.
+  const bridge = useEthereumBridge()
   // Prefill a sensible default so the wallet deeplinks are immediately actionable
   // (the funding deposit-address mint uses a fixed nominal amount regardless).
   const [amount, setAmount] = useState('1')
@@ -200,7 +205,7 @@ const DepositWallet = () => {
           </TopFixed>
 
           <ProvidersRegion>
-            {isMobile || isSolanaSrc ? (
+            {isMobile || isSolanaSrc || !bridge ? (
               <>
                 {!depositPageUrl && (
                   <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
