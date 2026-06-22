@@ -22,11 +22,16 @@ export const ScrollArea = ({
   height,
   backgroundColor,
   mobileDirection,
+  fill,
 }: {
   children: React.ReactNode
   height?: number
   backgroundColor?: string
   mobileDirection?: 'horizontal' | 'vertical'
+  /** Grow to fill a flex parent and scroll internally, instead of capping at a
+   * fixed pixel height. Use inside a bounded flex column to keep siblings (e.g.
+   * a footer) pinned while only this region scrolls. */
+  fill?: boolean
 }) => {
   const ref = useRef<HTMLDivElement>(null)
   const moreRef = useRef<HTMLDivElement>(null)
@@ -75,13 +80,14 @@ export const ScrollArea = ({
   }, [ref.current])
 
   return (
-    <ScrollContainer>
+    <ScrollContainer $fill={fill}>
       <ScrollAreaContainer
         ref={ref}
         $mobile={isMobile}
         $height={height}
         $backgroundColor={backgroundColor}
         $mobileDirection={mobileDirection}
+        $fill={fill}
       >
         {children}
       </ScrollAreaContainer>

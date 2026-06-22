@@ -50,6 +50,21 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
   },
 ]
 
+/**
+ * Restrict the EVM chains to those matching the publishable key environment:
+ * `pk_test_…` keys expose only testnet chains, `pk_live_…` keys only mainnet
+ * chains. Unknown key prefixes (or a filter that would empty the list) fall back
+ * to the full list.
+ */
+export function getEvmChainsForKey(publishableKey?: string): PlaygroundEvmChain[] {
+  const env = publishableKey?.startsWith('pk_live_') ? 'live' : publishableKey?.startsWith('pk_test_') ? 'test' : null
+  if (!env) return PLAYGROUND_EVM_CHAINS
+  const filtered = PLAYGROUND_EVM_CHAINS.filter((c) =>
+    env === 'live' ? c.viemChain.testnet !== true : c.viemChain.testnet === true
+  )
+  return filtered.length > 0 ? filtered : PLAYGROUND_EVM_CHAINS
+}
+
 export const DEFAULT_EVM_CHAIN = PLAYGROUND_EVM_CHAINS.find((c) => c.id === baseSepolia.id)!
 
 export const EVM_CHAIN_BY_ID: Record<number, PlaygroundEvmChain> = Object.fromEntries(
