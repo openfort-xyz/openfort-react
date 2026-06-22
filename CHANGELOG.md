@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.4.0
+
+### Minor Changes
+
+- [#290](https://github.com/openfort-xyz/openfort-react/pull/290) [`4287ef5`](https://github.com/openfort-xyz/openfort-react/commit/4287ef5fe45693c5293a937f43ee2048015935a9) Thanks [@isardmart](https://github.com/isardmart)! - Add testnet funding support: the deposit flow now uses Relay's testnet rail for
+  `pk_test_…` keys (native ETH on Base Sepolia / Sepolia), explains testnet limits,
+  disables unsupported rails, detects same-chain arrivals, and shows testnet native
+  balances. Also fixes chain/currency logos and the explorer link.
+
+### Patch Changes
+
+- [#288](https://github.com/openfort-xyz/openfort-react/pull/288) [`041a2f4`](https://github.com/openfort-xyz/openfort-react/commit/041a2f4b7b2765e69fb3a05ca9ed7e6d9d5e7da9) Thanks [@isardmart](https://github.com/isardmart)! - ui funding modal improvements + chain filter by live mode
+
+- [#287](https://github.com/openfort-xyz/openfort-react/pull/287) [`1aa20e7`](https://github.com/openfort-xyz/openfort-react/commit/1aa20e75b4a2b8a157f9c367a592920daa3bd71e) Thanks [@joalavedra](https://github.com/joalavedra)! - Fix the empty wallet list in "Transfer from wallet" for EVM sources when the active wallet is Solana-only. In Solana mode there's no wagmi bridge, so the desktop browser-extension send (`DepositWalletDesktop`) renders nothing — no wallet was offered for an EVM source. The hub now falls back to the open-dApp deeplinks (MetaMask, Phantom, …) whenever the wagmi bridge is absent, matching the mobile and same-chain Solana paths.
+
 ## 1.3.0
 
 ### Minor Changes
