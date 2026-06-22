@@ -7,7 +7,14 @@ import {
 } from '@openfort/react'
 import { base, polygonAmoy } from 'viem/chains'
 import { create } from 'zustand'
-import { DEFAULT_EVM_CHAIN, PLAYGROUND_EVM_CHAINS, RPC_URLS, SOLANA_CLUSTER, SOLANA_DEFAULT_RPC } from '@/lib/chains'
+import {
+  DEFAULT_EVM_CHAIN,
+  getFundingConfigForKey,
+  PLAYGROUND_EVM_CHAINS,
+  RPC_URLS,
+  SOLANA_CLUSTER,
+  SOLANA_DEFAULT_RPC,
+} from '@/lib/chains'
 
 const defaultWalletConfig: OpenfortWalletConfig = {
   shieldPublishableKey: import.meta.env.VITE_SHIELD_PUBLISHABLE_KEY,
@@ -64,21 +71,11 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
     // sentinel) so only Relay-supported deposit-address tokens show — e.g. ETH is
     // routable but Polygon's POL isn't ("major tokens" only). ETH uses a 0.01-unit
     // mint nominal so it isn't 1 whole ETH (see nominalUnits).
-    funding: {
-      sourceChains: [
-        'eip155:42161',
-        'eip155:8453',
-        'eip155:10',
-        'eip155:137',
-        'eip155:1',
-        'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
-      ],
-      sourceCurrencies: ['ETH', 'USDC', 'USDT', 'DAI'],
-      targetChain: 'eip155:8453',
-      targetCurrency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
-      // depositPageUrl omitted → uses the SDK default (https://deposit.openfort.io),
-      // the zero-config path a real integrator gets.
-    },
+    // Funding SOURCE chains/currencies matched to the key environment (testnet vs
+    // mainnet). The funding TARGET is owned by FundingTargetSync, which follows the
+    // active chain — not set here. depositPageUrl omitted → SDK default
+    // (https://deposit.openfort.io), the zero-config path a real integrator gets.
+    funding: getFundingConfigForKey(import.meta.env.VITE_OPENFORT_PUBLISHABLE_KEY),
     theme: 'auto',
     mode: undefined,
     customTheme: undefined,

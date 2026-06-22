@@ -55,7 +55,9 @@ export function DepositAddressBlock({
           // Encode the EIP-681 / Solana Pay URI (address + amount + network) so a
           // scanner prefills the send; fall back to the bare address same-chain.
           value={pm?.addressUri ?? receiverAddress}
-          image={<AssetChainLogo assetLogo={assetLogo ?? ''} chainLogo={chainLogo ?? ''} />}
+          image={
+            <AssetChainLogo assetLogo={assetLogo ?? ''} chainLogo={chainLogo ?? ''} symbol={sourceCurrency?.symbol} />
+          }
           imageClip={false}
         />
       </QRWrapper>

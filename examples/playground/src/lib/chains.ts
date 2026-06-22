@@ -65,6 +65,40 @@ export function getEvmChainsForKey(publishableKey?: string): PlaygroundEvmChain[
   return filtered.length > 0 ? filtered : PLAYGROUND_EVM_CHAINS
 }
 
+/** Native-asset sentinel: the zero address denotes a chain's native currency (ETH, …). */
+const NATIVE_CURRENCY = '0x0000000000000000000000000000000000000000'
+
+/**
+ * Deposit-hub SOURCE config (the chains + currencies a user can fund FROM), matched
+ * to the publishable key environment. The funding TARGET is deliberately NOT set
+ * here — it's owned solely by {@link FundingTargetSync}, which follows the active
+ * chain via {@link getFundingTargetForChain}. Test keys use Relay's testnet rail
+ * (Base Sepolia / Sepolia; native ETH only, since testnets have no DEX liquidity to
+ * swap into a stablecoin); live keys expose the major mainnet sources.
+ */
+export function getFundingConfigForKey(publishableKey?: string): {
+  sourceChains: string[]
+  sourceCurrencies: string[]
+} {
+  if (publishableKey?.startsWith('pk_test_')) {
+    return {
+      sourceChains: ['eip155:84532', 'eip155:11155111'], // Base Sepolia, Sepolia
+      sourceCurrencies: ['native'], // ETH only — testnet swaps have no liquidity
+    }
+  }
+  return {
+    sourceChains: [
+      'eip155:42161',
+      'eip155:8453',
+      'eip155:10',
+      'eip155:137',
+      'eip155:1',
+      'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp',
+    ],
+    sourceCurrencies: ['ETH', 'USDC', 'USDT', 'DAI'],
+  }
+}
+
 export const DEFAULT_EVM_CHAIN = PLAYGROUND_EVM_CHAINS.find((c) => c.id === baseSepolia.id)!
 
 export const EVM_CHAIN_BY_ID: Record<number, PlaygroundEvmChain> = Object.fromEntries(
@@ -74,15 +108,22 @@ export const EVM_CHAIN_BY_ID: Record<number, PlaygroundEvmChain> = Object.fromEn
 export const RPC_URLS: Record<number, string> = Object.fromEntries(PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
 
 /**
- * Deposit-hub funding target (CAIP-2 chain + USDC address) for an active chain.
- * Returns undefined for chains without a configured USDC (e.g. testnets), so the
- * caller keeps the previous target instead of routing to an unsupported chain.
+ * Deposit-hub funding target (CAIP-2 chain + currency) for an active chain.
+ *
+ * Mainnet chains fund their USDC. Testnet chains fund their NATIVE asset (ETH):
+ * Relay's testnet rail bridges same-asset but has no DEX liquidity to swap into a
+ * stablecoin, so a USDC target would fail — native ETH is the route that works.
+ * Returns undefined only for unknown chains (caller falls back).
  */
 export function getFundingTargetForChain(
   chainId?: number
 ): { targetChain: string; targetCurrency: string } | undefined {
   const chain = chainId != null ? EVM_CHAIN_BY_ID[chainId] : undefined
-  if (!chain?.usdc) return undefined
+  if (!chain) return undefined
+  if (chain.viemChain.testnet) {
+    return { targetChain: `eip155:${chain.id}`, targetCurrency: NATIVE_CURRENCY }
+  }
+  if (!chain.usdc) return undefined
   return { targetChain: `eip155:${chain.id}`, targetCurrency: chain.usdc }
 }
 

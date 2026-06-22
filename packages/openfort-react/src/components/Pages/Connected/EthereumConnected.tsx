@@ -83,16 +83,20 @@ const EthereumConnected: React.FC = () => {
   const ensName = identity.status === 'success' ? identity.name : undefined
 
   const { data: assets, isLoading } = useEthereumWalletAssets()
+  // Total is summed from the multi-chain assets so the headline matches the
+  // "Your assets" breakdown. The single-chain path omits fiat for native ETH,
+  // which would otherwise drop it from the total.
+  const { data: multiChainAssets } = useEthereumWalletAssets({ multiChain: true })
   const totalBalanceUsd = useMemo(() => {
-    if (!assets) return 0
-    return assets.reduce((acc, asset) => {
+    if (!multiChainAssets) return 0
+    return multiChainAssets.reduce((acc, asset) => {
       if (!asset.metadata || !asset.balance) return acc
       const price: number = asset.metadata?.fiat?.value ?? 0
       if (!price) return acc
       const balance = Number(formatUnits(asset.balance ?? BigInt(0), getAssetDecimals(asset)))
       return acc + price * balance
     }, 0)
-  }, [assets])
+  }, [multiChainAssets])
 
   useEffect(() => {
     context.triggerResize()

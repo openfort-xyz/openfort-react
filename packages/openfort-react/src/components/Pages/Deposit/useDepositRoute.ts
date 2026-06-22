@@ -35,7 +35,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
   const ethWallet = useEthereumEmbeddedWallet()
   const solWallet = useSolanaEmbeddedWallet()
   const { session, status, error, loading, isAvailable, fund, payLink, reset } = useFunding()
-  const { chains: allChains, loading: chainsLoading } = useFundingChains()
+  const { chains: allChains, railChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
   // The deposit recipient must live on the TARGET chain, so resolve the wallet by
   // the target's family — not the active chainType, which can disagree with the
@@ -61,6 +61,11 @@ export function useDepositRoute(kind: DepositRouteKind) {
   const activeCurrency = currencies.find((c) => c.symbol === currencySymbol) ?? currencies[0]
   const chain = activeChain?.id ?? target.chain
   const sameChain = chain === target.chain
+  // The rail only delivers to chains in its list; if the active funding TARGET (the
+  // embedded wallet's chain — e.g. Polygon Amoy or a Solana testnet) isn't one of
+  // them, there's no route. Don't call Relay (it would 400 with a cryptic "invalid
+  // currency"); the page prompts a switch to a supported chain instead.
+  const targetUnsupported = !chainsLoading && railChains.length > 0 && !railChains.some((c) => c.id === target.chain)
   const receiverAddress: string | null = sameChain
     ? (address ?? null)
     : (session?.paymentMethod?.receiverAddress ?? null)
@@ -68,6 +73,11 @@ export function useDepositRoute(kind: DepositRouteKind) {
 
   useEffect(() => {
     if (!address || !isAvailable || !activeChain || !activeCurrency) return
+    if (targetUnsupported) {
+      lastKey.current = ''
+      reset()
+      return
+    }
     if (sameChain) {
       lastKey.current = ''
       reset()
@@ -86,7 +96,19 @@ export function useDepositRoute(kind: DepositRouteKind) {
       { chain: target.chain, currency: target.currency, address },
       paymentMethodFor(activeChain.id, activeCurrency)
     ).catch(() => {})
-  }, [address, activeChain, activeCurrency, isAvailable, sameChain, fund, reset, target.chain, target.currency, kind])
+  }, [
+    address,
+    activeChain,
+    activeCurrency,
+    isAvailable,
+    sameChain,
+    targetUnsupported,
+    fund,
+    reset,
+    target.chain,
+    target.currency,
+    kind,
+  ])
 
   // Surface an empty source list (e.g. no Coinbase-deliverable chains) for diagnosis.
   useEffect(() => {
@@ -109,6 +131,8 @@ export function useDepositRoute(kind: DepositRouteKind) {
     pm,
     receiverAddress,
     sameChain,
+    targetUnsupported,
+    railChains,
     status,
     loading,
     error,

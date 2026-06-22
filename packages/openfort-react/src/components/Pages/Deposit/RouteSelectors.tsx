@@ -1,6 +1,8 @@
 'use client'
 
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
 import type { FundingChain } from '../../../hooks/openfort/useFundingChains'
+import { caipToChainId } from '../DepositWallet/walletDeeplinks'
 import { field, twoCol } from './formStyles'
 import { LogoSelect } from './LogoSelect'
 import { Skeleton } from './styles'
@@ -50,7 +52,11 @@ export function RouteSelectors({
         <LogoSelect
           value={activeChain?.id ?? ''}
           onChange={onChainChange}
-          options={chains.map((c) => ({ value: c.id, label: c.name, logo: c.logo }))}
+          options={chains.map((c) => ({
+            value: c.id,
+            label: c.name,
+            logo: chainLogoUrl(caipToChainId(c.id), c.logo),
+          }))}
         />
       </div>
       <div style={field}>
@@ -58,7 +64,11 @@ export function RouteSelectors({
         <LogoSelect
           value={currency}
           onChange={onCurrencyChange}
-          options={currencies.map((c) => ({ value: c.symbol, label: c.symbol, logo: c.logo }))}
+          options={currencies.map((c) => ({
+            value: c.symbol,
+            label: c.symbol,
+            logo: currencyLogoUrl(c.symbol, c.logo),
+          }))}
         />
       </div>
     </div>
