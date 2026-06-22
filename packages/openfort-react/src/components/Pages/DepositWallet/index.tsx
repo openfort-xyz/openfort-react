@@ -6,8 +6,10 @@ import { parseUnits } from 'viem'
 import logos from '../../../assets/logos'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import useIsMobile from '../../../hooks/useIsMobile'
+import styled from '../../../styles/styled'
 import { isIOS } from '../../../utils'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import { ScrollArea } from '../../Common/ScrollArea'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -28,6 +30,37 @@ import {
   OPENFORT_DEPOSIT_PAGE_URL,
   type VmType,
 } from './walletDeeplinks'
+
+// Flex column capped at the modal viewport so the page never overflows
+// InnerContainer (which caps at 88vh and would otherwise scroll the footer off
+// screen). The 112px accounts for the chrome wrapping this element inside the
+// measured PageContents: PageContentStyle's 48px top padding + PageContents'
+// 29px/24px padding (~101px), plus a small safety margin. The providers region
+// is the only part that shrinks/scrolls, which keeps the footer visible.
+const Layout = styled.div`
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  max-height: calc(88vh - 112px);
+`
+
+const TopFixed = styled.div`
+  flex-shrink: 0;
+`
+
+// Grows to fill the space between the fixed top and footer; its ScrollArea
+// scrolls internally when the wallet list is taller than the available room.
+const ProvidersRegion = styled.div`
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: 14px;
+`
+
+const FixedFooter = styled.div`
+  flex-shrink: 0;
+`
 
 /** Wallet-app brand logos keyed by the deeplink `app` id. */
 const WALLET_LOGO: Record<string, ReactNode> = {
@@ -118,98 +151,108 @@ const DepositWallet = () => {
     <PageContent onBack={routes.DEPOSIT}>
       <ModalHeading>Transfer from wallet</ModalHeading>
 
-      <RouteSelectors
-        chains={route.chains}
-        chain={route.chain}
-        currency={route.currency}
-        chainLabel="Supported chain"
-        onChainChange={route.setChain}
-        onCurrencyChange={route.setCurrency}
-      />
-
-      {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
-
-      <Section>
-        <SectionLabel>Amount</SectionLabel>
-        <AmountCard>
-          <CurrencySymbol>{route.activeCurrency?.symbol ?? ''}</CurrencySymbol>
-          <AmountInput
-            value={amount}
-            onChange={handleAmountChange}
-            placeholder="0.00"
-            inputMode="decimal"
-            autoComplete="off"
+      <Layout>
+        <TopFixed>
+          <RouteSelectors
+            chains={route.chains}
+            chain={route.chain}
+            currency={route.currency}
+            chainLabel="Supported chain"
+            onChainChange={route.setChain}
+            onCurrencyChange={route.setCurrency}
           />
-        </AmountCard>
-        <PresetList>
-          {PRESETS.map((preset) => (
-            <PresetButton
-              key={preset}
-              type="button"
-              $active={pressedPreset === preset}
-              onClick={() => handlePreset(preset)}
-            >
-              {preset}
-            </PresetButton>
-          ))}
-        </PresetList>
-      </Section>
 
-      <StepDivider>Then select the wallet you want to use</StepDivider>
+          {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
-      {isMobile || isSolanaSrc || !bridge ? (
-        <>
-          {!depositPageUrl && (
-            <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
-          )}
-
-          {route.loading && !route.pm && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
-              <Skeleton $h="44px" $r="10px" />
-              <Skeleton $h="44px" $r="10px" />
-              <Skeleton $h="44px" $r="10px" />
-            </div>
-          )}
-
-          {deeplinks.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 14 }}>
-              {deeplinks.map((d) => (
-                <a
-                  key={d.app}
-                  href={amountValid ? d.url : undefined}
-                  aria-disabled={!amountValid}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    ...walletListBtn,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                    opacity: amountValid ? 1 : 0.55,
-                    pointerEvents: amountValid ? 'auto' : 'none',
-                  }}
+          <Section>
+            <SectionLabel>Amount</SectionLabel>
+            <AmountCard>
+              <CurrencySymbol>{route.activeCurrency?.symbol ?? ''}</CurrencySymbol>
+              <AmountInput
+                value={amount}
+                onChange={handleAmountChange}
+                placeholder="0.00"
+                inputMode="decimal"
+                autoComplete="off"
+              />
+            </AmountCard>
+            <PresetList>
+              {PRESETS.map((preset) => (
+                <PresetButton
+                  key={preset}
+                  type="button"
+                  $active={pressedPreset === preset}
+                  onClick={() => handlePreset(preset)}
                 >
-                  {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
-                  {d.label} ↗
-                </a>
+                  {preset}
+                </PresetButton>
               ))}
-            </div>
+            </PresetList>
+          </Section>
+
+          <StepDivider>Then select the wallet you want to use</StepDivider>
+        </TopFixed>
+
+        <ProvidersRegion>
+          {isMobile || isSolanaSrc || !bridge ? (
+            <>
+              {!depositPageUrl && (
+                <ModalBody style={{ marginTop: 12 }}>Use a deposit address below to fund from your wallet.</ModalBody>
+              )}
+
+              {route.loading && !route.pm && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <Skeleton $h="44px" $r="10px" />
+                  <Skeleton $h="44px" $r="10px" />
+                  <Skeleton $h="44px" $r="10px" />
+                </div>
+              )}
+
+              {deeplinks.length > 0 && (
+                <ScrollArea fill>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    {deeplinks.map((d) => (
+                      <a
+                        key={d.app}
+                        href={amountValid ? d.url : undefined}
+                        aria-disabled={!amountValid}
+                        target="_blank"
+                        rel="noreferrer"
+                        style={{
+                          ...walletListBtn,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: 8,
+                          opacity: amountValid ? 1 : 0.55,
+                          pointerEvents: amountValid ? 'auto' : 'none',
+                        }}
+                      >
+                        {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
+                        {d.label} ↗
+                      </a>
+                    ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </>
+          ) : (
+            <DepositWalletDesktop
+              receiverAddress={route.receiverAddress}
+              activeChain={route.activeChain}
+              activeCurrency={route.activeCurrency}
+              loading={route.loading}
+              amount={amount}
+            />
           )}
-        </>
-      ) : (
-        <DepositWalletDesktop
-          receiverAddress={route.receiverAddress}
-          activeChain={route.activeChain}
-          activeCurrency={route.activeCurrency}
-          loading={route.loading}
-          amount={amount}
-        />
-      )}
+        </ProvidersRegion>
 
-      <AddressPageLink label="Or send to a deposit address" />
+        <FixedFooter>
+          <AddressPageLink label="Or send to a deposit address" />
 
-      {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
+          {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
+        </FixedFooter>
+      </Layout>
     </PageContent>
   )
 }

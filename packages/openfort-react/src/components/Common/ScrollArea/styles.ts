@@ -1,8 +1,16 @@
 import { css, keyframes } from 'styled-components'
 import styled from '../../../styles/styled'
 
-export const ScrollContainer = styled.div`
+export const ScrollContainer = styled.div<{ $fill?: boolean }>`
   position: relative;
+  ${({ $fill }) =>
+    $fill &&
+    css`
+      display: flex;
+      flex-direction: column;
+      flex: 1 1 auto;
+      min-height: 0;
+    `}
 `
 const fadeIn = keyframes`
 0%{ opacity:0; }
@@ -61,13 +69,14 @@ export const ScrollAreaContainer = styled.div<{
   $height?: number
   $backgroundColor?: string
   $mobileDirection?: 'horizontal' | 'vertical'
+  $fill?: boolean
 }>`
   --bg: ${({ $backgroundColor }) => $backgroundColor || 'var(--ck-body-background)'};
   --fade-height: 1px;
   position: relative;
   z-index: 1;
 
-  ${({ $mobile, $height, $mobileDirection }) =>
+  ${({ $mobile, $height, $mobileDirection, $fill }) =>
     $mobile && $mobileDirection === 'horizontal'
       ? css`
           overflow-x: scroll;
@@ -111,8 +120,18 @@ export const ScrollAreaContainer = styled.div<{
           }
         `
       : css`
-          max-height: ${$height ? `${$height}px` : '310px'};
-          overflow-y: scroll;
+          ${
+            $fill
+              ? css`
+                flex: 1 1 auto;
+                min-height: 0;
+                overflow-y: scroll;
+              `
+              : css`
+                max-height: ${$height ? `${$height}px` : '310px'};
+                overflow-y: scroll;
+              `
+          }
           padding: 0 10px;
           margin: calc(var(--fade-height) * -1) -16px 0 -10px;
 

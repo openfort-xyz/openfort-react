@@ -2,13 +2,14 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useId, useState } from 'react'
-import { useAccount, useChainId, useSwitchChain } from 'wagmi'
+import { useAccount, useChainId } from 'wagmi'
 import ChainIcons from '../../../assets/chains'
 import Alert from '../../../components/Common/Alert'
 import { useOpenfort } from '../../../components/Openfort/useOpenfort'
 import { chainConfigs } from '../../../constants/chainConfigs'
 import useLocales from '../../../hooks/useLocales'
 import { isCoinbaseWalletConnector, isMobile } from '../../../utils'
+import { useSwitchChainFiltered } from '../../useSwitchChainFiltered'
 import {
   ChainButton,
   ChainButtonBg,
@@ -51,7 +52,12 @@ const Spinner = () => {
 const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => {
   const { connector } = useAccount()
   const activeChainId = useChainId()
-  const { chains, isPending: bridgeIsPending, switchChain: switchChainFn, error: bridgeError } = useSwitchChain()
+  const {
+    chains,
+    isPending: bridgeIsPending,
+    switchChain: switchChainFn,
+    error: bridgeError,
+  } = useSwitchChainFiltered()
   const [pendingChainId, setPendingChainId] = useState<number | undefined>(undefined)
   const locales = useLocales({})
   const mobile = isMobile()
