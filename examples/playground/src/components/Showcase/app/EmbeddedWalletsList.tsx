@@ -474,8 +474,10 @@ export function EmbeddedWalletsList({
   // Chain filter for the deduped wallet list:
   // - EOAs are chain-agnostic and always render.
   // - Smart Accounts/Delegated entries only render on their deployment chain.
+  // - With no active chain, only EOAs render — chain-scoped accounts are hidden
+  //   rather than dumping every chain's Smart/Delegated entries at once.
   const wallets = useMemo(() => {
-    if (currentChainId == null) return ethereum.wallets
+    if (currentChainId == null) return ethereum.wallets.filter((w) => w.accountType === AccountTypeEnum.EOA)
     return ethereum.wallets.filter((w) => {
       if (w.accountType === AccountTypeEnum.EOA) return true
       const chainScopedAccounts = w.accounts?.filter((a) => a.chainId != null) ?? []

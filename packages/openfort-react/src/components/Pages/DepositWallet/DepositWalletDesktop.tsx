@@ -144,11 +144,11 @@ export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurre
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10, flex: '1 1 auto', minHeight: 0 }}>
       {connectors.length === 0 && <ModalBody>No browser wallet detected. Install MetaMask or Rabby.</ModalBody>}
 
       {connectors.length > 0 && (
-        <ScrollArea height={220}>
+        <ScrollArea fill>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {connectors.map((c) => (
               <button

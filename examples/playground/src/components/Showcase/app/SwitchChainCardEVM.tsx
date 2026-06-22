@@ -30,8 +30,10 @@ export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
   const canSwitch = isExternalWallet || embedded.status === 'connected' || !!core.activeEmbeddedAddress
 
   // Match the chain list to the publishable key: test keys (`pk_test_…`) only
-  // list testnet chains, live keys (`pk_live_…`) only mainnet chains.
-  const visibleChains = getEvmChainsForKey(core.publishableKey)
+  // list testnet chains, live keys (`pk_live_…`) only mainnet chains. The key is
+  // public (it ships to the client), so reading it from env here mirrors how the
+  // other showcase cards source it.
+  const visibleChains = getEvmChainsForKey(import.meta.env.VITE_OPENFORT_PUBLISHABLE_KEY)
 
   // Implementation type of the active embedded (delegated) account, if any. Used to inform
   // — never block — when the current wallet can't transact on a target chain (e.g. a legacy
