@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.0
+
+### Minor Changes
+
+- [#292](https://github.com/openfort-xyz/openfort-react/pull/292) [`d07e006`](https://github.com/openfort-xyz/openfort-react/commit/d07e006c8793b7e9a5b2f7ba82f246797c4471b3) Thanks [@joalavedra](https://github.com/joalavedra)! - useUI: add deep-link navigation helpers (openSend, openReceive, openFunding, openBuy, openExportKey, openSettings) so callers can open a specific wallet screen directly. Each targets a connected-only screen and falls back to the login screen when the user is not connected.
+
 ## 1.4.0
 
 ### Minor Changes
