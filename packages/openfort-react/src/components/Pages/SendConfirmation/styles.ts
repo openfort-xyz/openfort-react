@@ -111,29 +111,6 @@ export const PayWithBadge = styled.span`
   background: var(--ck-body-background, rgba(22, 163, 74, 0.12));
 `
 
-export const CheckIconWrapper = styled.span`
-  color: var(--ck-body-color);
-  line-height: 0;
-  display: inline-flex;
-  align-items: center;
-  
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-`
-
-// export const BalanceSpinnerWrapper = styled.span`
-//   display: inline-flex;
-//   align-items: center;
-//   margin-left: 8px;
-
-//   svg {
-//     width: 14px;
-//     height: 14px;
-//   }
-// `
-
 export const InfoIconWrapper = styled.span`
   color: var(--ck-body-color-muted);
   opacity: 0.6;

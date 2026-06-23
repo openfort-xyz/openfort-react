@@ -16,7 +16,7 @@ import {
   SummaryList,
 } from './styles'
 
-export type ConfirmationAddress = { display: string; value: string }
+type ConfirmationAddress = { display: string; value: string }
 
 interface ConfirmationSummaryProps {
   /** Total being sent, e.g. "0.5" + "ETH". */
