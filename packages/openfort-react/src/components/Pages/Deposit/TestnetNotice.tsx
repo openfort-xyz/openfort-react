@@ -1,8 +1,12 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import styled from '../../../styles/styled'
-import { getPublishableKeyEnvironment } from '../../../utils/validation'
+import { isTestnetChainId } from '../../../utils/rpc'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 
 /** Relay's own testnet guide — the authoritative explanation of the limitation. */
@@ -139,7 +143,10 @@ const DocsLink = styled.a`
  * Renders nothing on live keys.
  */
 export function TestnetNotice() {
-  const { publishableKey, triggerResize } = useOpenfort()
+  const { triggerResize } = useOpenfort()
+  const { chainType } = useOpenfortCore()
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
   const [open, setOpen] = useState(false)
 
   // Re-measure the modal when the details expand/collapse so it grows/shrinks to fit.
@@ -147,7 +154,14 @@ export function TestnetNotice() {
     triggerResize()
   }, [open, triggerResize])
 
-  if (getPublishableKeyEnvironment(publishableKey) !== 'test') return null
+  // Testnet is a property of the active chain, not the publishable key — read it
+  // from the connected embedded wallet so the notice tracks the real deposit network.
+  const isTestnet =
+    chainType === ChainTypeEnum.SVM
+      ? solanaWallet.status === 'connected' && solanaWallet.cluster !== 'mainnet-beta'
+      : ethereumWallet.status === 'connected' && isTestnetChainId(ethereumWallet.chainId)
+
+  if (!isTestnet) return null
 
   return (
     <Card>

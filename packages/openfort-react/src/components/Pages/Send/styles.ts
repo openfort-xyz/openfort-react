@@ -70,20 +70,8 @@ export const TokenSelectorRight = styled.div`
   color: var(--ck-body-color-muted);
 `
 
-export const AmountInputWrapper = styled.div`
-  position: relative;
-  margin-top: 12px;
-
-  > div {
-    margin: 0;
-  }
-`
-
 export const MaxButton = styled.button`
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  flex-shrink: 0;
   padding: 6px 14px;
   border-radius: 16px;
   border: 1px solid var(--ck-body-divider);

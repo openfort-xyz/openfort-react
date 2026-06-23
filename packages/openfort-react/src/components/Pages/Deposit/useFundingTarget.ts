@@ -1,23 +1,38 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useOpenfort } from '../../Openfort/useOpenfort'
-import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL } from './sources'
+import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL, NATIVE_TOKEN_ADDRESS } from './sources'
 
 /**
  * The destination route Deposit-hub funding settles into. Integrators override the
- * chain and currency via `uiConfig.funding.{targetChain,targetCurrency}`; both
- * default to USDC on the active chain type (Base for EVM, Solana mainnet for SVM)
- * so the flow works with zero configuration. The deposit recipient is always the
- * active embedded wallet for the destination chain family — callers resolve it.
+ * chain and currency via `uiConfig.funding.{targetChain,targetCurrency}`. With no
+ * override the destination follows the wallet's ACTIVE chain — so a testnet wallet
+ * funds on its own network instead of being told "funding isn't available on Base".
+ * Currency defaults to USDC where we ship its address (Base, Solana mainnet) and to
+ * the native asset otherwise, so the destination currency is always valid on-chain.
+ * The deposit recipient is always the active embedded wallet — callers resolve it.
  */
 export function useFundingTarget(): { chain: string; currency: string } {
   const { uiConfig } = useOpenfort()
   const { chainType } = useOpenfortCore()
+  const ethereumWallet = useEthereumEmbeddedWallet()
   const isSolana = chainType === ChainTypeEnum.SVM
+
+  const activeChain = isSolana
+    ? DEST_CHAIN_SOL
+    : ethereumWallet.status === 'connected'
+      ? `eip155:${ethereumWallet.chainId}`
+      : DEST_CHAIN
+  const chain = uiConfig.funding?.targetChain ?? activeChain
+
+  const defaultCurrency =
+    chain === DEST_CHAIN ? DEST_USDC : chain === DEST_CHAIN_SOL ? DEST_USDC_SOL : NATIVE_TOKEN_ADDRESS
+
   return {
-    chain: uiConfig.funding?.targetChain ?? (isSolana ? DEST_CHAIN_SOL : DEST_CHAIN),
-    currency: uiConfig.funding?.targetCurrency ?? (isSolana ? DEST_USDC_SOL : DEST_USDC),
+    chain,
+    currency: uiConfig.funding?.targetCurrency ?? defaultCurrency,
   }
 }

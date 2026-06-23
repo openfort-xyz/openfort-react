@@ -21,6 +21,18 @@ const KNOWN_CHAINS: Record<number, Chain> = {
   [arbitrumSepolia.id]: arbitrumSepolia,
 }
 
+/** Testnets not in {@link KNOWN_CHAINS} but still worth recognizing (deprecated/uncommon). */
+const EXTRA_TESTNET_CHAIN_IDS = new Set<number>([5, 80001, 97, 4002])
+
+/**
+ * Whether an EVM chain id is a testnet. Reads viem's chain metadata (`testnet`)
+ * for the chains the SDK bundles, falling back to a small extra set. Use this to
+ * key behaviour off the wallet's active chain rather than the publishable key.
+ */
+export function isTestnetChainId(chainId: number): boolean {
+  return KNOWN_CHAINS[chainId]?.testnet === true || EXTRA_TESTNET_CHAIN_IDS.has(chainId)
+}
+
 /**
  * Default Solana RPC URLs by cluster.
  * Production apps should provide their own RPCs via walletConfig.solana.rpcUrls.

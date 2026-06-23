@@ -4,8 +4,8 @@ import { ButtonContainer } from '../../Common/Button/styles'
 export const Section = styled.div`
   display: flex;
   flex-direction: column;
-  margin-top: 20px;
-  gap: 12px;
+  margin-top: 16px;
+  gap: 10px;
 `
 
 export const SectionLabel = styled.span`
@@ -18,9 +18,9 @@ export const SectionLabel = styled.span`
 
 export const AmountCard = styled.div`
   display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 18px 20px;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
   border-radius: var(--ck-secondary-button-border-radius);
   border: 1px solid var(--ck-body-divider);
   background: var(--ck-secondary-button-background);
@@ -28,7 +28,7 @@ export const AmountCard = styled.div`
 `
 
 export const CurrencySymbol = styled.span`
-  font-size: 28px;
+  font-size: 18px;
   font-weight: 600;
   color: var(--ck-body-color-muted);
   line-height: 1;
@@ -39,7 +39,7 @@ export const AmountInput = styled.input`
   border: none;
   background: transparent;
   color: var(--ck-body-color);
-  font-size: 44px;
+  font-size: 24px;
   font-weight: 600;
   line-height: 1;
   padding: 0;
@@ -59,12 +59,12 @@ export const PresetList = styled.div`
 
 export const PresetButton = styled.button<{ $active?: boolean }>`
   flex: 1;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 999px;
   border: none;
   background: ${({ $active }) => ($active ? 'var(--ck-accent-color)' : 'var(--ck-secondary-button-background)')};
   color: ${({ $active }) => ($active ? 'var(--ck-accent-text-color)' : 'var(--ck-body-color)')};
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   cursor: pointer;
 
@@ -78,7 +78,7 @@ export const SelectorButton = styled.button`
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 14px 16px;
+  padding: 10px 14px;
   border-radius: var(--ck-secondary-button-border-radius);
   border: 1px solid var(--ck-body-divider);
   background: var(--ck-secondary-button-background);

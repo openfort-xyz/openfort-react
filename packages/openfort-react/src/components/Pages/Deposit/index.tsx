@@ -27,7 +27,6 @@ import {
   OptionSubtitle,
   OptionTitle,
 } from './styles'
-import { TestnetNotice } from './TestnetNotice'
 import { UnsupportedNetworkNotice } from './UnsupportedNetworkNotice'
 import { useFundingTarget } from './useFundingTarget'
 
@@ -141,7 +140,6 @@ const Deposit = () => {
   return (
     <PageContent onBack={routes.CONNECTED}>
       <ModalHeading>Add funds</ModalHeading>
-      <TestnetNotice />
       {targetUnsupported ? (
         <UnsupportedNetworkNotice targetChain={target.chain} railChains={railChains} />
       ) : (

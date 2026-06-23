@@ -8,7 +8,7 @@
  * SolanaSendConfirmation page.
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { formatUnits, parseUnits } from 'viem'
 import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
 import Button from '../../Common/Button'
@@ -18,8 +18,8 @@ import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes, type SendFormState } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { AmountCard, AmountInput } from '../Buy/styles'
 import {
-  AmountInputWrapper,
   ErrorText,
   Field,
   FieldLabel,
@@ -50,8 +50,13 @@ function solAsset(balance: bigint): Asset {
 }
 
 export const SolanaSend = () => {
-  const { sendForm, setSendForm, setRoute } = useOpenfort()
+  const { sendForm, setSendForm, setRoute, triggerResize } = useOpenfort()
   const { data: assets } = useSolanaWalletAssets()
+
+  // Size the modal to the form on mount so it's anchored and doesn't scroll.
+  useEffect(() => {
+    triggerResize()
+  }, [triggerResize])
 
   const asset = sendForm.asset
   const selected =
@@ -141,19 +146,18 @@ export const SolanaSend = () => {
 
         <Field>
           <FieldLabel>Amount</FieldLabel>
-          <AmountInputWrapper>
-            <Input
+          <AmountCard style={{ marginTop: 12 }}>
+            <AmountInput
               placeholder="0.00"
               value={sendForm.amount}
               onChange={handleAmountChange}
               inputMode="decimal"
               autoComplete="off"
-              style={{ paddingRight: '86px' }}
             />
             <MaxButton type="button" onClick={handleMax} disabled={balanceBase === undefined}>
               Max
             </MaxButton>
-          </AmountInputWrapper>
+          </AmountCard>
           <HelperText>
             Available: {availableLabel} {selected.symbol}
           </HelperText>
