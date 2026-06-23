@@ -113,9 +113,6 @@ const SignMessage = () => {
           </SuccessCircle>
           <SuccessTitle>Message signed</SuccessTitle>
           <SignaturePreview>{`${signature.slice(0, 14)}…${signature.slice(-12)}`}</SignaturePreview>
-          <CopyRow>
-            <CopyButton value={signature}>Copy signature</CopyButton>
-          </CopyRow>
           <Button variant="primary" onClick={close}>
             Done
           </Button>
