@@ -21,7 +21,7 @@ import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { isSolana } from '../Deposit/sources'
 import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
 import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
+import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 import { sanitizeAmountInput } from '../Send/utils'
 import { DepositWalletDesktop } from './DepositWalletDesktop'
@@ -161,7 +161,11 @@ const DepositWallet = () => {
         <UnsupportedNetworkNotice targetChain={route.target.chain} railChains={route.railChains} />
       )}
 
-      {!route.targetUnsupported && (
+      {!route.targetUnsupported && route.accountUnusableOnTarget && (
+        <AccountChainNotice targetChain={route.target.chain} />
+      )}
+
+      {!route.targetUnsupported && !route.accountUnusableOnTarget && (
         <Layout>
           <TopFixed>
             <RouteSelectors

@@ -18,10 +18,16 @@ import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@
 import {
   DEFAULT_EVM_FUNDING_TARGET,
   getFundingTargetForChain,
+  isTestKey,
   PLAYGROUND_EVM_CHAINS,
   SOLANA_FUNDING_TARGET,
+  TESTNET_FUNDING_TARGET,
 } from '@/lib/chains'
 import { useAppStore } from './lib/useAppStore'
+
+/** Test keys run on Relay's testnet rail (a few chains only); pin the funding
+ * target to a rail-supported testnet rather than following the active chain. */
+const IS_TEST_KEY = isTestKey(import.meta.env.VITE_OPENFORT_PUBLISHABLE_KEY)
 
 export type OpenfortPlaygroundMode = 'svm' | 'evm'
 
@@ -127,7 +133,11 @@ function FundingTargetSync() {
   const setProviderOptions = useAppStore((s) => s.setProviderOptions)
 
   useEffect(() => {
-    const target = getFundingTargetForChain(chainId) ?? DEFAULT_EVM_FUNDING_TARGET
+    // On testnet the rail only delivers to a couple of chains, so pin the target to
+    // Base Sepolia regardless of the active chain; on live keys follow the active chain.
+    const target = IS_TEST_KEY
+      ? TESTNET_FUNDING_TARGET
+      : (getFundingTargetForChain(chainId) ?? DEFAULT_EVM_FUNDING_TARGET)
     const funding = providerOptions.uiConfig?.funding
     if (funding?.targetChain === target.targetChain && funding?.targetCurrency === target.targetCurrency) {
       return

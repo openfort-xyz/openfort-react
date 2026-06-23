@@ -27,12 +27,6 @@ type PaymentOptionsContext = {
   /** When the funding backend is unavailable, crypto/CEX rows are disabled. */
   fundingAvailable: boolean
   /**
-   * Test-key (`pk_test_…`) project. The fiat (card/Apple Pay) and exchange rails
-   * settle real money on mainnet only — Stripe/Coinbase can't deliver to a testnet
-   * wallet — so they're disabled here. The crypto rails (Relay testnet) stay on.
-   */
-  testnet?: boolean
-  /**
    * Integrator-selected methods, in display order. When set, only these show
    * (still subject to device/availability gating). Omit to show all.
    */
@@ -102,11 +96,9 @@ export function getPaymentOptions(ctx: PaymentOptionsContext): ResolvedDepositOp
 
   return ordered.map((method) => {
     const kind = method.target.kind
-    // Fiat (card/Apple Pay) and exchange rails move real money and only settle on
-    // mainnet, so a test-key project can't use them — disable with a clear reason.
-    if (ctx.testnet && (kind === 'buy' || kind === 'cex')) {
-      return { ...method, disabled: true, disabledReason: 'Not available on testnet' }
-    }
+    // Fiat (card/Apple Pay) and exchange rails stay visible on testnet so the demo
+    // shows the full feature set; the final pay action is blocked downstream
+    // (BuyProcessing / DepositCex) with a testnet notice, since they settle on mainnet.
     const fundingRail = kind === 'crypto' || kind === 'wallet' || kind === 'cex'
     if (fundingRail && !ctx.fundingAvailable) {
       return { ...method, disabled: true, disabledReason: 'Coming soon' }

@@ -8,7 +8,6 @@ import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
 import useIsMobile from '../../../hooks/useIsMobile'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { getPublishableKeyEnvironment } from '../../../utils/validation'
 import { ModalHeading } from '../../Common/Modal/styles'
 import PoweredByFooter from '../../Common/PoweredByFooter'
 import { FundingMethod, routes } from '../../Openfort/types'
@@ -65,7 +64,7 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
  * Crypto/CEX route into the funding-session Pages; fiat rows reuse the Buy flow.
  */
 const Deposit = () => {
-  const { setRoute, setBuyForm, uiConfig, publishableKey, triggerResize } = useOpenfort()
+  const { setRoute, setBuyForm, uiConfig, triggerResize } = useOpenfort()
   const { chainType } = useOpenfortCore()
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
@@ -86,7 +85,6 @@ const Deposit = () => {
   const options = getPaymentOptions({
     isMobile,
     fundingAvailable: isAvailable,
-    testnet: getPublishableKeyEnvironment(publishableKey) === 'test',
     methods: uiConfig.funding?.methods,
   })
 

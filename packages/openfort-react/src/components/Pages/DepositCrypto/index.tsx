@@ -13,7 +13,7 @@ import { SameChainDepositStatus } from '../Deposit/SameChainDepositStatus'
 import { SameChainDepositSuccess } from '../Deposit/SameChainDepositSuccess'
 import { isSolana } from '../Deposit/sources'
 import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
+import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
 import { useDepositRoute } from '../Deposit/useDepositRoute'
 import { useSameChainArrival } from '../Deposit/useSameChainArrival'
 import { caipToChainId } from '../DepositWallet/walletDeeplinks'
@@ -55,6 +55,8 @@ const DepositCrypto = () => {
 
       {route.targetUnsupported ? (
         <UnsupportedNetworkNotice targetChain={route.target.chain} railChains={route.railChains} />
+      ) : route.accountUnusableOnTarget ? (
+        <AccountChainNotice targetChain={route.target.chain} />
       ) : (
         <>
           <RouteSelectors

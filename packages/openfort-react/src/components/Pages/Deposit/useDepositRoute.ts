@@ -1,7 +1,9 @@
 'use client'
 
+import { AccountTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
 import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
 import {
   type FundingChain,
@@ -23,6 +25,20 @@ function paymentMethodFor(chain: string, currency: FundingCurrency): PaymentMeth
   // A CEX withdrawal is just an on-chain send to the Relay deposit address — the
   // funding API has no separate 'cex' type, so every source resolves to evm/solana.
   return { type: isSolana(chain) ? 'solana' : 'evm', source }
+}
+
+/**
+ * Whether the embedded account can transact on `chainId`. EOAs share one address
+ * across EVM chains, so they're always usable; smart/delegated accounts are per-chain
+ * deployments, usable only on a chain they're deployed on. Returns true when the type
+ * or deployments are unknown — the deposit flow only blocks when it's certain.
+ */
+function accountUsableOnChain(wallet: ConnectedEmbeddedEthereumWallet | null, chainId: number): boolean {
+  if (!wallet || wallet.accountType == null) return true
+  if (wallet.accountType === AccountTypeEnum.EOA) return true
+  const chainScoped = wallet.accounts.filter((a) => a.chainId != null)
+  if (chainScoped.length === 0) return true
+  return chainScoped.some((a) => a.chainId === chainId)
 }
 
 /**
@@ -48,7 +64,10 @@ export function useDepositRoute(kind: DepositRouteKind) {
   // Coinbase Onramp, which only delivers to a fixed set of EVM chains.
   const chains: FundingChain[] = kind === 'cex' ? allChains.filter((c) => isCexDeliverable(c.id)) : allChains
   // Where funds land: the active embedded wallet (the Relay deposit recipient).
-  const address = wallet.status === 'connected' ? wallet.address : undefined
+  // Use the address as soon as the wallet exposes one — even mid-(re)connect or
+  // pending recovery — since receiving a deposit needs only the address, not a live
+  // signer. Gating on 'connected' left the page blank during those states.
+  const address = wallet.address ?? undefined
 
   const [chainId, setChainId] = useState('')
   const [currencySymbol, setCurrencySymbol] = useState('')
@@ -66,6 +85,11 @@ export function useDepositRoute(kind: DepositRouteKind) {
   // them, there's no route. Don't call Relay (it would 400 with a cryptic "invalid
   // currency"); the page prompts a switch to a supported chain instead.
   const targetUnsupported = !chainsLoading && railChains.length > 0 && !railChains.some((c) => c.id === target.chain)
+  // Funds settle on the TARGET chain. A smart/delegated account not deployed there
+  // can't use them, so block and guide the user to set up a usable account. EVM only —
+  // the recipient family already matches the target, and EOAs are always usable.
+  const targetChainId = isSolana(target.chain) ? null : Number(target.chain.split(':')[1])
+  const accountUnusableOnTarget = targetChainId != null && !accountUsableOnChain(ethWallet.activeWallet, targetChainId)
   const receiverAddress: string | null = sameChain
     ? (address ?? null)
     : (session?.paymentMethod?.receiverAddress ?? null)
@@ -73,7 +97,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
 
   useEffect(() => {
     if (!address || !isAvailable || !activeChain || !activeCurrency) return
-    if (targetUnsupported) {
+    if (targetUnsupported || accountUnusableOnTarget) {
       lastKey.current = ''
       reset()
       return
@@ -103,6 +127,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
     isAvailable,
     sameChain,
     targetUnsupported,
+    accountUnusableOnTarget,
     fund,
     reset,
     target.chain,
@@ -132,6 +157,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
     receiverAddress,
     sameChain,
     targetUnsupported,
+    accountUnusableOnTarget,
     railChains,
     status,
     loading,
