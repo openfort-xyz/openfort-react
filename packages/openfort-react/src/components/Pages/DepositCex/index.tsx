@@ -23,6 +23,7 @@ import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
 import { DEST_USDC, isSolana } from '../Deposit/sources'
 import { ButtonLogo, StepDivider } from '../Deposit/styles'
+import { TestnetNotice } from '../Deposit/TestnetNotice'
 import { useFundingTarget } from '../Deposit/useFundingTarget'
 import { sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
 
@@ -222,6 +223,8 @@ const DepositCex = () => {
   return (
     <PageContent onBack={routes.DEPOSIT}>
       <ModalHeading>Transfer from Exchange</ModalHeading>
+
+      <TestnetNotice />
 
       <Section>
         <SectionLabel>Amount</SectionLabel>

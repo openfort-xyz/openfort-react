@@ -16,6 +16,10 @@ export const DEST_USDC = '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'
 export const DEST_CHAIN_SOL = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'
 export const DEST_USDC_SOL = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
 
+/** EVM native-asset sentinel (zero address) — the default destination currency on
+ * chains where we don't ship a stablecoin address (e.g. testnets). */
+export const NATIVE_TOKEN_ADDRESS = '0x0000000000000000000000000000000000000000'
+
 /** True for a CAIP-2 Solana chain id. */
 export function isSolana(chain: string): boolean {
   return chain.startsWith('solana:')
