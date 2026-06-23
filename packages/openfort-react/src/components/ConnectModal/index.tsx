@@ -60,6 +60,7 @@ import Send from '../Pages/Send'
 import { SolanaSend } from '../Pages/Send/SolanaSend'
 import SendConfirmation from '../Pages/SendConfirmation'
 import { SolanaSendConfirmation } from '../Pages/SendConfirmation/SolanaSendConfirmation'
+import SignMessage from '../Pages/SignMessage'
 import SocialProviders from '../Pages/SocialProviders'
 import ConnectUsing from './ConnectUsing'
 import ConnectWithMobile from './ConnectWithMobile'
@@ -112,6 +113,7 @@ function buildSharedPages(): RoutePages {
     depositWallet: <DepositWallet />,
     depositCex: <DepositCex />,
     exportKey: <ExportKey />,
+    signMessage: <SignMessage />,
     walletOverview: <Connected />,
   }
 }

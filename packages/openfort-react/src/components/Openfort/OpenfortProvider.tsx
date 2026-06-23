@@ -34,6 +34,7 @@ import {
   routes,
   type SendFormState,
   type SetRouteOptions,
+  type SignRequest,
   UIAuthProvider,
 } from './types'
 
@@ -212,6 +213,7 @@ export const OpenfortProvider = ({
   const [emailInput, setEmailInput] = useState('')
   const [phoneInput, setPhoneInput] = useState('')
   const [sendForm, setSendForm] = useState<SendFormState>(defaultSendFormState)
+  const [signRequest, setSignRequest] = useState<SignRequest | null>(null)
   const [buyForm, setBuyForm] = useState<BuyFormState>(defaultBuyFormState)
   const [headerLeftSlot, setHeaderLeftSlot] = useState<React.ReactNode | null>(null)
   const [chainType, setChainType] = useState<ChainTypeEnum>(walletConfig?.chainType ?? ChainTypeEnum.EVM)
@@ -342,6 +344,8 @@ export const OpenfortProvider = ({
       setSendForm,
       buyForm,
       setBuyForm,
+      signRequest,
+      setSignRequest,
       onConnect,
       onDisconnect,
       chains,
@@ -371,6 +375,7 @@ export const OpenfortProvider = ({
       phoneInput,
       sendForm,
       buyForm,
+      signRequest,
       headerLeftSlot,
       onConnect,
       onDisconnect,

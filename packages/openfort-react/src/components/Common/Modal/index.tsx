@@ -320,6 +320,8 @@ const Modal: React.FC<ModalProps> = ({
       case routes.SWITCHNETWORKS:
       case routes.ETH_SWITCH_NETWORK:
         return locales.switchNetworkScreen_heading
+      case routes.SIGN_MESSAGE:
+        return 'Sign message'
       default:
         return ''
     }

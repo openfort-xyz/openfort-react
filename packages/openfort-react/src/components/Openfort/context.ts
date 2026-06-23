@@ -14,6 +14,7 @@ import type {
   RouteOptions,
   SendFormState,
   SetRouteOptions,
+  SignRequest,
 } from './types'
 
 type Connector =
@@ -69,6 +70,10 @@ export type ContextValue = {
   setSendForm: React.Dispatch<React.SetStateAction<SendFormState>>
   buyForm: BuyFormState
   setBuyForm: React.Dispatch<React.SetStateAction<BuyFormState>>
+
+  /** In-flight message/typed-data sign request driving the Sign message screen. */
+  signRequest: SignRequest | null
+  setSignRequest: React.Dispatch<React.SetStateAction<SignRequest | null>>
 
   /** Configured EVM chains (from wagmi bridge or walletConfig.ethereum). Empty when not EVM. */
   chains: Chain[]

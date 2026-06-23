@@ -98,9 +98,15 @@ const EthereumConnected: React.FC = () => {
     }, 0)
   }, [multiChainAssets])
 
+  // Re-measure on mount, after paint, and when the async assets resolve. Without
+  // the post-paint pass, returning to this screen (assets already cached) measures
+  // before layout settles and the modal keeps the shorter height, clipping the
+  // actions below the fold.
   useEffect(() => {
     context.triggerResize()
-  }, [context.triggerResize])
+    const id = requestAnimationFrame(() => context.triggerResize())
+    return () => cancelAnimationFrame(id)
+  }, [context.triggerResize, isLoading, totalBalanceUsd])
 
   useEffect(() => {
     if (!address) {
