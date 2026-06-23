@@ -13,7 +13,11 @@ import { routes } from '../../components/Openfort/types'
  * reset-on-open semantics so the wrong call order fails the test.
  */
 
-const state: { route: { route: string }; open: boolean } = { route: { route: routes.LOADING }, open: false }
+const state: { route: { route: string }; open: boolean; connected: boolean } = {
+  route: { route: routes.LOADING },
+  open: false,
+  connected: false,
+}
 
 const setRoute = vi.fn((r: string | { route: string }) => {
   state.route = typeof r === 'string' ? { route: r } : r
@@ -47,10 +51,10 @@ vi.mock('../../openfort/useOpenfort', () => ({
 vi.mock('../../core/ConnectionStrategyContext', () => ({ useConnectionStrategy: () => null }))
 vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({ useEthereumBridge: () => null }))
 vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
-  useEthereumEmbeddedWallet: () => ({ status: 'disconnected' }),
+  useEthereumEmbeddedWallet: () => ({ status: state.connected ? 'connected' : 'disconnected' }),
 }))
 vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
-  useSolanaEmbeddedWallet: () => ({ status: 'disconnected' }),
+  useSolanaEmbeddedWallet: () => ({ status: state.connected ? 'connected' : 'disconnected' }),
 }))
 
 const { useUI } = await import('../../hooks/openfort/useUI')
@@ -59,6 +63,7 @@ describe('useUI gotoAndOpen', () => {
   beforeEach(() => {
     state.route = { route: routes.LOADING }
     state.open = false
+    state.connected = false
     vi.clearAllMocks()
   })
 
@@ -79,5 +84,43 @@ describe('useUI gotoAndOpen', () => {
 
     expect(state.open).toBe(true)
     expect(state.route).toMatchObject({ route: routes.PROVIDERS })
+  })
+
+  it('deep-link helpers fall back to PROVIDERS while disconnected', () => {
+    const { result } = renderHook(() => useUI())
+
+    // Connected-only destinations route the user through login first.
+    for (const open of [
+      result.current.openSend,
+      result.current.openReceive,
+      result.current.openFunding,
+      result.current.openBuy,
+      result.current.openExportKey,
+      result.current.openSettings,
+    ]) {
+      act(() => open())
+      expect(state.open).toBe(true)
+      expect(state.route).toMatchObject({ route: routes.PROVIDERS })
+    }
+  })
+
+  it('deep-link helpers navigate to their target route while connected', () => {
+    state.connected = true
+    const { result } = renderHook(() => useUI())
+
+    const cases: [() => void, string][] = [
+      [result.current.openSend, routes.SEND],
+      [result.current.openReceive, routes.RECEIVE],
+      [result.current.openFunding, routes.DEPOSIT],
+      [result.current.openBuy, routes.BUY],
+      [result.current.openExportKey, routes.EXPORT_KEY],
+      [result.current.openSettings, routes.PROFILE],
+    ]
+
+    for (const [open, route] of cases) {
+      act(() => open())
+      expect(state.open).toBe(true)
+      expect(state.route).toMatchObject({ route })
+    }
   })
 })
