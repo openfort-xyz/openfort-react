@@ -98,9 +98,11 @@ const EthereumConnected: React.FC = () => {
     }, 0)
   }, [multiChainAssets])
 
+  // Re-measure on mount AND when the async assets resolve — otherwise the modal
+  // keeps the shorter loading-state height and clips the actions below the fold.
   useEffect(() => {
     context.triggerResize()
-  }, [context.triggerResize])
+  }, [context.triggerResize, isLoading, totalBalanceUsd])
 
   useEffect(() => {
     if (!address) {

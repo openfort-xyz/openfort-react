@@ -15,6 +15,7 @@ export const routes = {
   SOCIAL_PROVIDERS: 'socialProviders',
   PROFILE: 'profile',
   EXPORT_KEY: 'exportKey',
+  SIGN_MESSAGE: 'signMessage',
 
   LOADING: 'loading',
   LOAD_WALLETS: 'loadWallets',
@@ -552,6 +553,23 @@ export const defaultSendFormState: SendFormState = {
     type: 'native',
     balance: BigInt(0),
   },
+}
+
+/** EIP-712 typed-data payload accepted by `useSignMessage().signTypedData`. */
+export type SignTypedDataPayload = {
+  domain?: Record<string, unknown>
+  types: Record<string, { name: string; type: string }[]>
+  primaryType: string
+  message: Record<string, unknown>
+}
+
+/** An in-flight sign request that drives the Sign message modal screen. */
+export type SignRequest = (
+  | { kind: 'message'; message: string }
+  | { kind: 'typedData'; typedData: SignTypedDataPayload }
+) & {
+  resolve: (signature: `0x${string}`) => void
+  reject: (reason?: unknown) => void
 }
 
 export type BuyProviderId = 'moonpay' | 'coinbase' | 'stripe'
