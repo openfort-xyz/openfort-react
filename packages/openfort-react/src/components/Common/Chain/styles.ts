@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { css, keyframes } from 'styled-components'
+import defaultTheme from '../../../constants/defaultTheme'
 import styled from '../../../styles/styled'
 
 type ChainContainerProps = {
@@ -98,4 +99,107 @@ export const Unsupported = styled(motion.div)`
     top: -30%;
     right: -30%;
   }
+`
+
+/**
+ * Pill-shaped chain indicator/switch button shown in the connected header.
+ *
+ * Shared by the EVM `ChainSelect` (which adds a chevron + dropdown when more
+ * than one chain is available) and the read-only Solana indicator (which always
+ * renders in the `disabled` single-network state). The `disabled` branch
+ * collapses to an icon-only badge and shifts left to keep the icon aligned with
+ * the enabled pill.
+ */
+export const SwitchChainButton = styled(motion.button)`
+  --color: var(
+    --ck-dropdown-button-color,
+    var(--ck-button-primary-color, var(--ck-body-color))
+  );
+  --background: var(
+    --ck-dropdown-button-background,
+    var(--ck-secondary-button-background, var(--ck-body-background-secondary))
+  );
+  --box-shadow: var(
+    --ck-dropdown-button-box-shadow,
+    var(
+      --ck-secondary-button-box-shadow,
+      var(--ck-button-primary-box-shadow),
+      none
+    )
+  );
+
+  --hover-color: var(--ck-dropdown-button-hover-color, var(--color));
+  --hover-background: var(
+    --ck-dropdown-button-hover-background,
+    var(--background)
+  );
+  --hover-box-shadow: var(
+    --ck-dropdown-button-hover-box-shadow,
+    var(--box-shadow)
+  );
+
+  --active-color: var(--ck-dropdown-button-active-color, var(--hover-color));
+  --active-background: var(
+    --ck-dropdown-button-active-background,
+    var(--hover-background)
+  );
+  --active-box-shadow: var(
+    --ck-dropdown-button-active-box-shadow,
+    var(--hover-box-shadow)
+  );
+
+  appearance: none;
+  user-select: none;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 15px;
+  width: 52px;
+  height: 30px;
+  padding: 2px 6px 2px 3px;
+  font-size: 16px;
+  line-height: 19px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transform: translateZ(0px);
+
+  transition: 100ms ease;
+  transition-property: transform, background-color, box-shadow, color;
+
+  color: var(--color);
+  background: var(--background);
+  box-shadow: var(--box-shadow);
+
+  svg {
+    position: relative;
+    display: block;
+  }
+
+  ${(props) =>
+    props.disabled
+      ? css`
+          width: auto;
+          padding: 3px;
+          position: relative;
+          left: -22px;
+        `
+      : css`
+          cursor: pointer;
+
+          @media only screen and (min-width: ${defaultTheme.mobileWidth + 1}px) {
+            &:hover,
+            &:focus-visible {
+              color: var(--hover-color);
+              background: var(--hover-background);
+              box-shadow: var(--hover-box-shadow);
+            }
+            &:active {
+              color: var(--active-color);
+              background: var(--active-background);
+              box-shadow: var(--active-box-shadow);
+            }
+          }
+        `}
 `
