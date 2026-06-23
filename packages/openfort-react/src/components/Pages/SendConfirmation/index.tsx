@@ -23,28 +23,23 @@ import { parseTransactionError } from '../../../utils/errorHandling'
 import { logger } from '../../../utils/logger'
 import { getChainName, getDefaultEthereumRpcUrl } from '../../../utils/rpc'
 import Button from '../../Common/Button'
-import { CopyText } from '../../Common/CopyToClipboard/CopyText'
 import Loader from '../../Common/Loading'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { getAssetDecimals, getAssetSymbol, isSameToken, sanitizeForParsing } from '../Send/utils'
+import { ConfirmationSummary } from './ConfirmationSummary'
 import { EstimatedFees } from './EstimatedFees'
 import {
-  AddressValue,
-  AmountValue,
   ButtonRow,
-  CheckIconWrapper,
   ErrorAction,
   ErrorContainer,
   ErrorMessage,
   ErrorTitle,
   FeesValue,
+  SponsoredFee,
   StatusMessage,
-  SummaryItem,
-  SummaryLabel,
-  SummaryList,
 } from './styles'
 
 /** Check if chain is a testnet */
@@ -383,6 +378,13 @@ const SendConfirmation = () => {
     return feeSponsorship[chainId ?? 0] !== undefined
   }, [walletConfig?.ethereum?.ethereumFeeSponsorshipId, chainId])
 
+  const fiatTotal = useMemo(() => {
+    const perToken = token.metadata?.fiat?.value
+    const n = Number(normalisedAmount)
+    if (!perToken || !Number.isFinite(n) || n <= 0) return null
+    return `$${(n * perToken).toFixed(2)}`
+  }, [token.metadata?.fiat?.value, normalisedAmount])
+
   if (isSuccess) {
     const successAmount = normalisedAmount || '0'
     const successSymbol = getAssetSymbol(token)
@@ -406,46 +408,20 @@ const SendConfirmation = () => {
   return (
     <PageContent>
       <ModalHeading>Confirm transfer</ModalHeading>
-      <ModalBody>Review the transaction details before sending.</ModalBody>
+      <ModalBody>Review the transaction before sending.</ModalBody>
 
-      <SummaryList>
-        <SummaryItem>
-          <SummaryLabel>Sending</SummaryLabel>
-          <AmountValue>
-            {normalisedAmount || '0'} {getAssetSymbol(token)}
-          </AmountValue>
-        </SummaryItem>
-
-        <SummaryItem>
-          <SummaryLabel>From</SummaryLabel>
-          <AddressValue>
-            {address ? (
-              <CopyText size="1rem" value={address}>
-                {truncateEthAddress(address)}
-              </CopyText>
-            ) : (
-              '--'
-            )}
-          </AddressValue>
-        </SummaryItem>
-
-        <SummaryItem>
-          <SummaryLabel>To</SummaryLabel>
-          <AddressValue>
-            {recipientAddress ? (
-              <CopyText size="1rem" value={recipientAddress}>
-                {truncateEthAddress(recipientAddress)}
-              </CopyText>
-            ) : (
-              '--'
-            )}
-          </AddressValue>
-        </SummaryItem>
-
-        <div>
-          <SummaryItem>
-            <SummaryLabel>Estimated fees</SummaryLabel>
-            <FeesValue $completed={isSponsored}>
+      <ConfirmationSummary
+        amount={normalisedAmount || '0'}
+        symbol={getAssetSymbol(token)}
+        fiat={fiatTotal}
+        to={recipientAddress ? { display: truncateEthAddress(recipientAddress), value: recipientAddress } : undefined}
+        networkName={getChainName(chainId ?? 0)}
+        payWith={address ? { display: truncateEthAddress(address), value: address } : undefined}
+        fee={
+          isSponsored ? (
+            <SponsoredFee>Sponsored · gasless</SponsoredFee>
+          ) : (
+            <FeesValue>
               <EstimatedFees
                 account={address}
                 to={token.type === 'erc20' ? (token.address as `0x${string}`) : recipientAddress}
@@ -454,28 +430,12 @@ const SendConfirmation = () => {
                 chainId={chainId}
                 nativeSymbol={nativeSymbol}
                 enabled={Boolean(address && recipientAddress && parsedAmount && parsedAmount > BigInt(0))}
-                hideInfoIcon={isSponsored}
+                hideInfoIcon={false}
               />
-              <CheckIconWrapper>
-                <TickIcon />
-              </CheckIconWrapper>
             </FeesValue>
-          </SummaryItem>
-          {isSponsored && (
-            <div
-              style={{
-                textAlign: 'end',
-                marginTop: '4px',
-                width: '100%',
-                color: 'var(--ck-body-color-valid)',
-                fontSize: '12px',
-              }}
-            >
-              Sponsored transaction
-            </div>
-          )}
-        </div>
-      </SummaryList>
+          )
+        }
+      />
 
       {insufficientBalance && !isSuccess && (
         <StatusMessage $status="error">Insufficient balance for this transfer.</StatusMessage>

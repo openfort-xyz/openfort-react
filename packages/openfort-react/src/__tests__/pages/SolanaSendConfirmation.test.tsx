@@ -121,6 +121,6 @@ describe('SolanaSendConfirmation', () => {
   it('shows the Sponsored network-fee row only when sponsorFees is on', () => {
     h.sponsorFees = true
     render(<SolanaSendConfirmation />)
-    expect(screen.getByText('Sponsored')).toBeTruthy()
+    expect(screen.getByText(/Sponsored/)).toBeTruthy()
   })
 })

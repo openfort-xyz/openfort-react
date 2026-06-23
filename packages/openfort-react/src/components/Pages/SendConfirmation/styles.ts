@@ -52,28 +52,64 @@ export const FeesValue = styled(SummaryValue)<{ $completed?: boolean }>`
   opacity: ${(props) => (props.$completed ? 0.6 : 1)};
 `
 
-export const CheckIconWrapper = styled.span`
-  color: var(--ck-body-color);
-  line-height: 0;
+export const FiatValue = styled.span`
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--ck-body-color-muted);
+`
+
+export const NetworkValue = styled(SummaryValue)`
   display: inline-flex;
   align-items: center;
-  
-  svg {
-    width: 16px;
-    height: 16px;
+  justify-content: flex-end;
+  gap: 6px;
+
+  svg,
+  img {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
   }
 `
 
-// export const BalanceSpinnerWrapper = styled.span`
-//   display: inline-flex;
-//   align-items: center;
-//   margin-left: 8px;
+export const SponsoredFee = styled(SummaryValue)`
+  color: var(--ck-body-color-valid, #16a34a);
+`
 
-//   svg {
-//     width: 14px;
-//     height: 14px;
-//   }
-// `
+export const PayWithCard = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--ck-body-background-secondary, rgba(0, 0, 0, 0.04));
+`
+
+export const PayWithMeta = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+`
+
+export const PayWithAddress = styled.span`
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ck-body-color);
+`
+
+export const PayWithBadge = styled.span`
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ck-body-color-valid, #16a34a);
+  background: var(--ck-body-background, rgba(22, 163, 74, 0.12));
+`
 
 export const InfoIconWrapper = styled.span`
   color: var(--ck-body-color-muted);
