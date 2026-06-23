@@ -21,7 +21,7 @@ import { getExplorerUrl } from '../../../shared/utils/explorer'
 import { truncateEthAddress } from '../../../utils'
 import { parseTransactionError } from '../../../utils/errorHandling'
 import { logger } from '../../../utils/logger'
-import { getChainName, getDefaultEthereumRpcUrl, isTestnetChainId } from '../../../utils/rpc'
+import { getChainName, getDefaultEthereumRpcUrl } from '../../../utils/rpc'
 import Button from '../../Common/Button'
 import Loader from '../../Common/Loading'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
@@ -50,19 +50,7 @@ const SendConfirmation = () => {
   const address = wallet.status === 'connected' ? (wallet.address as `0x${string}`) : undefined
   const chainId = wallet.status === 'connected' ? wallet.chainId : undefined
 
-  // Build chain info for block explorer
-  const chain = chainId
-    ? {
-        id: chainId,
-        name: getChainName(chainId),
-        blockExplorers: {
-          default: {
-            url: getExplorerUrl(ChainTypeEnum.EVM, { chainId }),
-          },
-        },
-        testnet: isTestnetChainId(chainId),
-      }
-    : undefined
+  const blockExplorerUrl = chainId ? getExplorerUrl(ChainTypeEnum.EVM, { chainId }) : undefined
 
   const recipientAddress = isAddress(sendForm.recipient) ? (sendForm.recipient as Address) : undefined
   const normalisedAmount = sanitizeForParsing(sendForm.amount)
@@ -352,8 +340,6 @@ const SendConfirmation = () => {
 
   const status: 'idle' | 'success' | 'error' = isSuccess ? 'success' : firstError ? 'error' : 'idle'
   const errorDetails = status === 'error' ? parseTransactionError(firstError) : null
-
-  const blockExplorerUrl = chain?.blockExplorers?.default?.url
 
   const handleOpenBlockExplorer = () => {
     if (receipt?.transactionHash && blockExplorerUrl) {
