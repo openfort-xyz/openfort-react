@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.6.0
+
+### Minor Changes
+
+- [#298](https://github.com/openfort-xyz/openfort-react/pull/298) [`234cfc8`](https://github.com/openfort-xyz/openfort-react/commit/234cfc83b8580b7d1bee6c09d0c787d774275d6c) Thanks [@joalavedra](https://github.com/joalavedra)! - Standardize the send confirmation screen across EVM and Solana with a shared approval-style preview (Total / To / Network / Estimated fee + a "Pay with" card; sponsored sends show a gasless fee). `useUI().openSend(tx)` now accepts a prepared transaction (`{ to, amount, asset? }`) and jumps straight to that preview, skipping asset/amount/recipient entry; `openSend()` with no arguments still opens the full send flow.
+
+- [#294](https://github.com/openfort-xyz/openfort-react/pull/294) [`ca1e352`](https://github.com/openfort-xyz/openfort-react/commit/ca1e352f937c7b7949965ddda510d4c676cad090) Thanks [@joalavedra](https://github.com/joalavedra)! - Add `useSignMessage` and a Sign message modal screen (EVM). `signMessage` and `signTypedData` open a confirmation screen showing the message or EIP-712 typed data, then resolve with the signature once the user confirms (reject on dismiss). Also re-measure the connected screen when balances load so the modal opens at full height instead of briefly clipping the actions.
+
+### Patch Changes
+
+- [#291](https://github.com/openfort-xyz/openfort-react/pull/291) [`31ba77b`](https://github.com/openfort-xyz/openfort-react/commit/31ba77b236cc9ad702dbc699d139d41147b4065e) Thanks [@joalavedra](https://github.com/joalavedra)! - Solana connected header: render the network indicator with the same pill button and tooltip as the EVM chain selector (single-network state) instead of a bespoke badge, so EVM and Solana headers stay visually consistent. The EVM `SwitchChainButton` is now a shared component. The cluster remains fixed by `walletConfig.solana`, so the Solana indicator stays read-only (no chevron or dropdown).
+
 ## 1.5.1
 
 ### Patch Changes
