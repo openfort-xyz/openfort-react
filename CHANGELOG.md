@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.5.1
+
+### Patch Changes
+
+- [#295](https://github.com/openfort-xyz/openfort-react/pull/295) [`c062bdd`](https://github.com/openfort-xyz/openfort-react/commit/c062bddde1eac937201e1c65f995a795269ef1a8) Thanks [@isardmart](https://github.com/isardmart)! - Improve Funding UI
+
 ## 1.5.0
 
 ### Minor Changes
