@@ -6,7 +6,7 @@
  * EVM asset send form (ERC-20 and native ETH).
  */
 
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { formatUnits, isAddress, parseUnits } from 'viem'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import Button from '../../Common/Button'
@@ -16,8 +16,8 @@ import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes, type SendFormState } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { AmountCard, AmountInput } from '../Buy/styles'
 import {
-  AmountInputWrapper,
   ErrorText,
   Field,
   FieldLabel,
@@ -32,7 +32,13 @@ import {
 import { formatBalance, isSameToken, sanitizeAmountInput, sanitizeForParsing } from './utils'
 
 export const EthereumSend = () => {
-  const { sendForm, setSendForm, setRoute } = useOpenfort()
+  const { sendForm, setSendForm, setRoute, triggerResize } = useOpenfort()
+
+  // Size the modal to the form on mount. Without this the screen isn't anchored
+  // and scrolls within the modal — every other Page triggers a resize on mount.
+  useEffect(() => {
+    triggerResize()
+  }, [triggerResize])
 
   const { data: assets } = useEthereumWalletAssets()
 
@@ -139,19 +145,18 @@ export const EthereumSend = () => {
 
         <Field>
           <FieldLabel>Amount</FieldLabel>
-          <AmountInputWrapper>
-            <Input
+          <AmountCard style={{ marginTop: 12 }}>
+            <AmountInput
               placeholder="0.00"
               value={sendForm.amount}
               onChange={handleAmountChange}
               inputMode="decimal"
               autoComplete="off"
-              style={{ paddingRight: '86px' }}
             />
             <MaxButton type="button" onClick={handleMax} disabled={maxDisabled}>
               Max
             </MaxButton>
-          </AmountInputWrapper>
+          </AmountCard>
           <HelperText>
             Available: {availableLabel} {selectedSymbol}
           </HelperText>

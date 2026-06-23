@@ -21,7 +21,7 @@ import { getExplorerUrl } from '../../../shared/utils/explorer'
 import { truncateEthAddress } from '../../../utils'
 import { parseTransactionError } from '../../../utils/errorHandling'
 import { logger } from '../../../utils/logger'
-import { getChainName, getDefaultEthereumRpcUrl } from '../../../utils/rpc'
+import { getChainName, getDefaultEthereumRpcUrl, isTestnetChainId } from '../../../utils/rpc'
 import Button from '../../Common/Button'
 import Loader from '../../Common/Loading'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
@@ -42,12 +42,6 @@ import {
   StatusMessage,
 } from './styles'
 
-/** Check if chain is a testnet */
-function isTestnetChain(chainId: number): boolean {
-  const testnets = new Set([5, 11155111, 80001, 84532, 421614, 97, 4002])
-  return testnets.has(chainId)
-}
-
 const SendConfirmation = () => {
   const wallet = useEthereumEmbeddedWallet()
   const { chainType } = useOpenfortCore()
@@ -66,7 +60,7 @@ const SendConfirmation = () => {
             url: getExplorerUrl(ChainTypeEnum.EVM, { chainId }),
           },
         },
-        testnet: isTestnetChain(chainId),
+        testnet: isTestnetChainId(chainId),
       }
     : undefined
 
