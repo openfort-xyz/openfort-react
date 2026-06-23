@@ -6,7 +6,20 @@ import Button from '../../Common/Button'
 import { CopyButton } from '../../Common/CopyToClipboard/CopyButton'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { CopyRow, DataItem, DataKey, DataList, ErrorText, MessageBox, SignContent, Subtitle } from './styles'
+import {
+  CopyRow,
+  DataItem,
+  DataKey,
+  DataList,
+  ErrorText,
+  MessageBox,
+  SignaturePreview,
+  SignContent,
+  Subtitle,
+  SuccessCircle,
+  SuccessTitle,
+  SuccessWrap,
+} from './styles'
 
 /** Renders an EIP-712 value as a readable nested bullet list. */
 function DataNode({ value }: { value: unknown }) {
@@ -30,6 +43,7 @@ const SignMessage = () => {
   const wallet = useEthereumEmbeddedWallet()
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [signature, setSignature] = useState<`0x${string}` | null>(null)
   const settledRef = useRef(false)
 
   // Reject the pending request if the screen unmounts before signing (the user
@@ -40,7 +54,7 @@ const SignMessage = () => {
     }
   }, [signRequest])
 
-  // Content height changes between the message and typed-data views; re-measure.
+  // Content height changes between the views; re-measure.
   useEffect(() => {
     triggerResize()
   }, [triggerResize])
@@ -48,6 +62,11 @@ const SignMessage = () => {
   if (!signRequest) return null
 
   const appName = uiConfig.appName ?? 'This app'
+
+  const close = () => {
+    setSignRequest(null)
+    setOpen(false)
+  }
 
   const handleSign = async () => {
     setError(null)
@@ -57,7 +76,7 @@ const SignMessage = () => {
       const address = wallet.address
       if (!provider || !address) throw new Error('No connected wallet to sign with')
 
-      const signature = (
+      const signed = (
         signRequest.kind === 'message'
           ? await provider.request({ method: 'personal_sign', params: [signRequest.message, address] })
           : await provider.request({
@@ -67,13 +86,42 @@ const SignMessage = () => {
       ) as `0x${string}`
 
       settledRef.current = true
-      signRequest.resolve(signature)
-      setSignRequest(null)
-      setOpen(false)
+      signRequest.resolve(signed)
+      setSignature(signed)
+      setSigning(false)
+      triggerResize()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to sign the message')
       setSigning(false)
     }
+  }
+
+  if (signature) {
+    return (
+      <PageContent onBack={null}>
+        <SuccessWrap>
+          <SuccessCircle>
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M20 6 9 17l-5-5"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </SuccessCircle>
+          <SuccessTitle>Message signed</SuccessTitle>
+          <SignaturePreview>{`${signature.slice(0, 14)}…${signature.slice(-12)}`}</SignaturePreview>
+          <CopyRow>
+            <CopyButton value={signature}>Copy signature</CopyButton>
+          </CopyRow>
+          <Button variant="primary" onClick={close}>
+            Done
+          </Button>
+        </SuccessWrap>
+      </PageContent>
+    )
   }
 
   return (
