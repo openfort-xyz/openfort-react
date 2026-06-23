@@ -18,24 +18,13 @@ import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbedded
 import { sendSol, sendSolGasless, sendSplToken, sendSplTokenGasless } from '../../../solana/transfer'
 import { truncateSolanaAddress } from '../../../utils'
 import Button from '../../Common/Button'
-import { CopyText } from '../../Common/CopyToClipboard/CopyText'
 import Loader from '../../Common/Loading'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import {
-  AddressValue,
-  AmountValue,
-  ButtonRow,
-  ErrorContainer,
-  ErrorMessage,
-  ErrorTitle,
-  FeesValue,
-  SummaryItem,
-  SummaryLabel,
-  SummaryList,
-} from './styles'
+import { ConfirmationSummary } from './ConfirmationSummary'
+import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeesValue, SponsoredFee } from './styles'
 
 const SOL_DECIMALS = 9
 
@@ -154,46 +143,16 @@ export const SolanaSendConfirmation = () => {
   return (
     <PageContent onBack={routes.SOL_SEND}>
       <ModalHeading>Confirm transfer</ModalHeading>
-      <ModalBody>Review the transaction details before sending.</ModalBody>
+      <ModalBody>Review the transaction before sending.</ModalBody>
 
-      <SummaryList>
-        <SummaryItem>
-          <SummaryLabel>Sending</SummaryLabel>
-          <AmountValue>
-            {amount || '0'} {symbol}
-          </AmountValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>From</SummaryLabel>
-          <AddressValue>
-            {address ? (
-              <CopyText size="1rem" value={address}>
-                {truncateSolanaAddress(address)}
-              </CopyText>
-            ) : (
-              '--'
-            )}
-          </AddressValue>
-        </SummaryItem>
-        <SummaryItem>
-          <SummaryLabel>To</SummaryLabel>
-          <AddressValue>
-            {recipient ? (
-              <CopyText size="1rem" value={recipient}>
-                {truncateSolanaAddress(recipient)}
-              </CopyText>
-            ) : (
-              '--'
-            )}
-          </AddressValue>
-        </SummaryItem>
-        {isSponsored && (
-          <SummaryItem>
-            <SummaryLabel>Network fee</SummaryLabel>
-            <FeesValue $completed>Sponsored</FeesValue>
-          </SummaryItem>
-        )}
-      </SummaryList>
+      <ConfirmationSummary
+        amount={amount || '0'}
+        symbol={symbol}
+        to={recipient ? { display: truncateSolanaAddress(recipient), value: recipient } : undefined}
+        networkName={`Solana ${cluster.charAt(0).toUpperCase()}${cluster.slice(1)}`}
+        payWith={address ? { display: truncateSolanaAddress(address), value: address } : undefined}
+        fee={isSponsored ? <SponsoredFee>Sponsored · gasless</SponsoredFee> : <FeesValue>Network fee</FeesValue>}
+      />
 
       {error && (
         <ErrorContainer>

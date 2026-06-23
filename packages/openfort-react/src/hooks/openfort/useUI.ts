@@ -2,7 +2,7 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import React from 'react'
-import { type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types'
+import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
 import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
@@ -79,7 +79,7 @@ function isAccountId(id: string): boolean {
  * fire them directly and let the modal route the user through auth first.
  */
 export function useUI() {
-  const { open, setOpen, setRoute, setConnector, connector, chainType } = useOpenfort()
+  const { open, setOpen, setRoute, setConnector, setSendForm, connector, chainType } = useOpenfort()
   const { isLoading, user, needsRecovery, embeddedAccounts, activeEmbeddedAddress, embeddedState } = useOpenfortCore()
   const bridge = useEthereumBridge()
   const strategy = useConnectionStrategy()
@@ -114,6 +114,16 @@ export function useUI() {
     else setRoute(routes.CONNECTED)
   }
 
+  /**
+   * Prefill the send form and jump straight to the confirmation (preview) screen
+   * for the active chain, skipping asset/amount/recipient entry.
+   */
+  const openSendPreview = (tx: { to: string; amount: string; asset?: Asset }) => {
+    setSendForm({ recipient: tx.to, amount: tx.amount, asset: tx.asset ?? { type: 'native', balance: BigInt(0) } })
+    setOpen(true)
+    setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_SEND_CONFIRMATION : routes.SEND_CONFIRMATION)
+  }
+
   const gotoAndOpen = (route: ValidRoutes) => {
     const safeList = isConnected ? safeRoutes.connected : safeRoutes.disconnected
     const fallback = isConnected ? routes.CONNECTED : routes.PROVIDERS
@@ -145,7 +155,8 @@ export function useUI() {
     openProviders: () => gotoAndOpen(routes.PROVIDERS),
     openWallets: () => gotoAndOpen({ route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' }),
 
-    openSend: () => gotoAndOpen(routes.SEND),
+    openSend: (tx?: { to: string; amount: string; asset?: Asset }) =>
+      tx ? openSendPreview(tx) : gotoAndOpen(routes.SEND),
     openReceive: () => gotoAndOpen(routes.RECEIVE),
     openFunding: () => gotoAndOpen(routes.DEPOSIT),
     openBuy: () => gotoAndOpen(routes.BUY),
