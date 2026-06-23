@@ -6,6 +6,7 @@ import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEm
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
+import { getPublishableKeyEnvironment } from '../../../utils/validation'
 import Button from '../../Common/Button'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
@@ -36,6 +37,9 @@ import { getAssetSymbol, isSameToken } from '../Send/utils'
 const BuySelectProvider = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
   const { chainType } = useOpenfortCore()
+  // Card / Apple Pay settle on mainnet, so a test key can't deliver — block both
+  // providers (and Continue) with a clear reason while keeping the screen reachable.
+  const testnet = getPublishableKeyEnvironment(publishableKey) === 'test'
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()
@@ -280,6 +284,11 @@ const BuySelectProvider = () => {
             }
           }
 
+          if (testnet) {
+            isDisabled = true
+            disabledReason = 'Not on testnet'
+          }
+
           // Use real quote data if available, otherwise show loading or fallback
           const netDisplay = isDisabled
             ? disabledReason
@@ -333,7 +342,7 @@ const BuySelectProvider = () => {
         <Button variant="secondary" onClick={handleBack}>
           Back
         </Button>
-        <Button variant="primary" onClick={handleContinue} disabled={step2Disabled}>
+        <Button variant="primary" onClick={handleContinue} disabled={step2Disabled || testnet}>
           Continue
         </Button>
       </ContinueButtonWrapper>

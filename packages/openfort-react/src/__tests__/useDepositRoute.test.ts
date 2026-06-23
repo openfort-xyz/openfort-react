@@ -1,4 +1,4 @@
-import { ChainTypeEnum } from '@openfort/openfort-js'
+import { AccountTypeEnum, ChainTypeEnum } from '@openfort/openfort-js'
 import { renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -7,8 +7,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 // assert which embedded wallet supplies the destination address. The recipient is
 // resolved by the funding target's chain family (which tracks the active chain
 // type), so the target mock below mirrors useFundingTarget's chain-aware default.
+type MockActiveWallet = { accountType?: AccountTypeEnum; accounts: { id: string; chainId?: number }[] }
 let mockChainType: ChainTypeEnum = ChainTypeEnum.EVM
-const mockEthWallet: { status: string; address?: string } = { status: 'disconnected' }
+const mockEthWallet: { status: string; address?: string; activeWallet?: MockActiveWallet | null } = {
+  status: 'disconnected',
+}
 const mockSolWallet: { status: string; address?: string } = { status: 'disconnected' }
 
 vi.mock('../openfort/useOpenfort', () => ({
@@ -49,6 +52,7 @@ describe('useDepositRoute', () => {
     mockChainType = ChainTypeEnum.EVM
     mockEthWallet.status = 'disconnected'
     mockEthWallet.address = undefined
+    mockEthWallet.activeWallet = undefined
     mockSolWallet.status = 'disconnected'
     mockSolWallet.address = undefined
   })
@@ -80,5 +84,24 @@ describe('useDepositRoute', () => {
 
     const { result } = renderHook(() => useDepositRoute('crypto'))
     expect(result.current.address).toBeUndefined()
+  })
+
+  it('blocks funding when a chain-scoped account is not deployed on the EVM target chain', () => {
+    mockEthWallet.status = 'connected'
+    mockEthWallet.address = '0xEthAddr'
+    // Smart account deployed only on Polygon Amoy; the EVM funding target is Base (8453).
+    mockEthWallet.activeWallet = { accountType: AccountTypeEnum.SMART_ACCOUNT, accounts: [{ id: 'a', chainId: 80002 }] }
+    expect(renderHook(() => useDepositRoute('crypto')).result.current.accountUnusableOnTarget).toBe(true)
+
+    // Deployed on the target chain → usable.
+    mockEthWallet.activeWallet = { accountType: AccountTypeEnum.SMART_ACCOUNT, accounts: [{ id: 'a', chainId: 8453 }] }
+    expect(renderHook(() => useDepositRoute('crypto')).result.current.accountUnusableOnTarget).toBe(false)
+  })
+
+  it('never blocks an EOA — it shares one address across EVM chains', () => {
+    mockEthWallet.status = 'connected'
+    mockEthWallet.address = '0xEthAddr'
+    mockEthWallet.activeWallet = { accountType: AccountTypeEnum.EOA, accounts: [] }
+    expect(renderHook(() => useDepositRoute('crypto')).result.current.accountUnusableOnTarget).toBe(false)
   })
 })

@@ -135,6 +135,24 @@ export function getFundingTargetForChain(
  */
 export const DEFAULT_EVM_FUNDING_TARGET = getFundingTargetForChain(base.id)!
 
+/**
+ * Testnet Deposit-hub target: Base Sepolia native ETH — the one EVM testnet Relay's
+ * rail reliably delivers to. On a test key the target is pinned here regardless of
+ * the active chain, so the deposit address always resolves (following the active
+ * chain to e.g. Polygon Amoy leaves the deposit with no route — the "nothing inside"
+ * case). Funds land at the same embedded-wallet address, visible once switched to
+ * Base Sepolia.
+ */
+export const TESTNET_FUNDING_TARGET = {
+  targetChain: `eip155:${baseSepolia.id}`,
+  targetCurrency: NATIVE_CURRENCY,
+} as const
+
+/** True for a test publishable key (`pk_test_…`). */
+export function isTestKey(publishableKey?: string): boolean {
+  return publishableKey?.startsWith('pk_test_') ?? false
+}
+
 export function getPlaygroundRpcUrl(chainId?: number): string {
   if (chainId != null && RPC_URLS[chainId]) return RPC_URLS[chainId]
   return DEFAULT_EVM_CHAIN.rpcUrl

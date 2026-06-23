@@ -10,7 +10,9 @@ import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
 import { invalidateBalance } from '../../../hooks/useBalance'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { logger } from '../../../utils/logger'
+import { getPublishableKeyEnvironment } from '../../../utils/validation'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import Tooltip from '../../Common/Tooltip'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -62,7 +64,10 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
  * success / failed screen. No Relay routing; Binance is gated until its rail lands.
  */
 const DepositCex = () => {
-  const { triggerResize } = useOpenfort()
+  const { triggerResize, publishableKey } = useOpenfort()
+  // Coinbase onramp settles real funds on mainnet, so a test key can't deliver here.
+  // Keep the button live for the demo but block the hand-off with a testnet notice.
+  const testnet = getPublishableKeyEnvironment(publishableKey) === 'test'
   const target = useFundingTarget()
   // CEX (Coinbase pay-link + session) is served by the Openfort API, not the
   // standalone funding service — resolve this rail's base URL from the API backend.
@@ -110,7 +115,9 @@ const DepositCex = () => {
   const createSessionRef = useRef(createSession)
   createSessionRef.current = createSession
   useEffect(() => {
-    if (!isAvailable || !address || !chainSupported) return
+    // No session on testnet — Coinbase can't settle to a testnet wallet and the
+    // button below is blocked anyway; skip the mint so we don't fire a doomed call.
+    if (!isAvailable || !address || !chainSupported || testnet) return
     const key = `${target.chain}|${target.currency}|${address}`
     if (sessionKey.current === key) return
     sessionKey.current = key
@@ -131,7 +138,7 @@ const DepositCex = () => {
       // without this the guard above would block the retry after this cancel.
       sessionKey.current = ''
     }
-  }, [isAvailable, address, chainSupported, target.chain, target.currency])
+  }, [isAvailable, address, chainSupported, testnet, target.chain, target.currency])
 
   const fiatAmount = useMemo(() => {
     const normalized = sanitizeForParsing(sanitizeAmountInput(amount))
@@ -255,8 +262,10 @@ const DepositCex = () => {
       </Section>
 
       {!isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
-      {isAvailable && !chainSupported && <ModalBody>Coinbase can't deliver to {destChainName} yet.</ModalBody>}
-      {error && <ModalBody style={{ color: '#dc2626' }}>{error.message}</ModalBody>}
+      {!testnet && isAvailable && !chainSupported && (
+        <ModalBody>Coinbase can't deliver to {destChainName} yet.</ModalBody>
+      )}
+      {!testnet && error && <ModalBody style={{ color: '#dc2626' }}>{error.message}</ModalBody>}
 
       <StepDivider>Then open an exchange</StepDivider>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
@@ -279,6 +288,27 @@ const DepositCex = () => {
               <span>{titleCase(ex.id)}</span>
               <span style={{ marginLeft: 'auto', fontSize: 11, fontWeight: 600 }}>Coming soon</span>
             </button>
+          ) : testnet ? (
+            // Blocked on testnet (Coinbase settles on mainnet). Use aria-disabled, not
+            // `disabled`, so the hover still fires the tooltip that explains why.
+            <Tooltip key={ex.id} message="Coinbase settles on mainnet — not available on testnet.">
+              <button
+                type="button"
+                aria-disabled="true"
+                style={{
+                  ...walletListBtn,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 8,
+                  opacity: 0.55,
+                  cursor: 'not-allowed',
+                }}
+              >
+                <ButtonLogo>{EXCHANGE_LOGO[ex.id]}</ButtonLogo>
+                {`Open ${titleCase(ex.id)} ↗`}
+              </button>
+            </Tooltip>
           ) : (
             <button
               key={ex.id}

@@ -165,13 +165,11 @@ const ChainSelector: React.FC = () => {
               }
             }}
           >
-            {disabled ? (
-              <Tooltip message={locales.chainNetwork} xOffset={-6} delay={0.01}>
-                <Chain id={chain?.id} />
-              </Tooltip>
-            ) : (
+            {/* Show the chain name on hover whether or not a switch is available
+                (single configured chain, smart/delegated account, etc.). */}
+            <Tooltip message={locales.chainNetwork} xOffset={-6} delay={0.01}>
               <Chain id={chain?.id} />
-            )}
+            </Tooltip>
             {!disabled && <ChevronDown style={{ top: 1, left: -3 }} />}
           </SwitchChainButton>
         )}

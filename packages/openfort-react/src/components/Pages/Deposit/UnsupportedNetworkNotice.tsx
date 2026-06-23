@@ -115,6 +115,25 @@ export function UnsupportedNetworkNotice({
 }
 
 /**
+ * Shown in the deposit flow when funds would settle on the target chain but the active
+ * embedded account can't operate there — a smart or delegated account deployed only on
+ * other chains. EOAs share one address across EVM chains, so they never hit this.
+ * Guides the user to set up an account usable on the target chain.
+ */
+export function AccountChainNotice({ targetChain }: { targetChain: string }) {
+  const name = chainName(targetChain)
+  return (
+    <Card>
+      <Title>Your account isn't available on {name}</Title>
+      <Body>
+        Deposits settle on {name}, but your active account isn't set up there. Create an EOA, or a smart or delegated
+        account on {name}, then deposit again.
+      </Body>
+    </Card>
+  )
+}
+
+/**
  * EVM-only: the rail-supported chains the wallet can switch to. Rendered only when
  * an Ethereum bridge is present (wagmi), so the wagmi hook below never runs in a
  * Solana-only provider tree.
