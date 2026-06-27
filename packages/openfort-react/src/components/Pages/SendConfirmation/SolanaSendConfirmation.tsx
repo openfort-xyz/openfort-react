@@ -13,6 +13,7 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
+import { currencyLogoUrl } from '../../../constants/logos'
 import { getExplorerUrl } from '../../../shared/utils/explorer'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { sendSol, sendSolGasless, sendSplToken, sendSplTokenGasless } from '../../../solana/transfer'
@@ -23,8 +24,9 @@ import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { formatBalanceWithSymbol } from '../Send/utils'
 import { ConfirmationSummary } from './ConfirmationSummary'
-import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeesValue, SponsoredFee } from './styles'
+import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesValue, SponsoredText } from './styles'
 
 const SOL_DECIMALS = 9
 
@@ -150,8 +152,20 @@ export const SolanaSendConfirmation = () => {
         symbol={symbol}
         to={recipient ? { display: truncateSolanaAddress(recipient), value: recipient } : undefined}
         networkName={`Solana ${cluster.charAt(0).toUpperCase()}${cluster.slice(1)}`}
+        networkIcon={currencyLogoUrl('SOL') ? <img src={currencyLogoUrl('SOL') ?? ''} alt="" /> : undefined}
+        balance={formatBalanceWithSymbol(asset.balance, decimals, symbol)}
         payWith={address ? { display: truncateSolanaAddress(address), value: address } : undefined}
-        fee={isSponsored ? <SponsoredFee>Sponsored · gasless</SponsoredFee> : <FeesValue>Network fee</FeesValue>}
+        fee={
+          <FeesValue>
+            {isSponsored ? (
+              <>
+                <FeeStrike>≈ 0.000005 SOL</FeeStrike> <SponsoredText>Sponsored</SponsoredText>
+              </>
+            ) : (
+              '≈ 0.000005 SOL'
+            )}
+          </FeesValue>
+        }
       />
 
       {error && (

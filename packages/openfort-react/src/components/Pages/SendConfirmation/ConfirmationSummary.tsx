@@ -32,6 +32,8 @@ interface ConfirmationSummaryProps {
   fee: ReactNode
   /** The wallet the funds are paid from. */
   payWith?: ConfirmationAddress
+  /** Current balance of the pay-with wallet, e.g. "134.32 USDC". */
+  balance?: string
 }
 
 /**
@@ -48,6 +50,7 @@ export function ConfirmationSummary({
   networkIcon,
   fee,
   payWith,
+  balance,
 }: ConfirmationSummaryProps) {
   return (
     <>
@@ -100,9 +103,7 @@ export function ConfirmationSummary({
             )}
           </PayWithAddress>
         </PayWithMeta>
-        <PayWithBadge>
-          {amount || '0'} {symbol}
-        </PayWithBadge>
+        {balance ? <PayWithBadge>{balance}</PayWithBadge> : null}
       </PayWithCard>
     </>
   )
