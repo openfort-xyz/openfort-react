@@ -150,3 +150,4 @@ export {
 export { formatAddress } from './utils/format'
 export { getDefaultSolanaRpcUrl } from './utils/rpc'
 export { OPENFORT_VERSION } from './version'
+export type { OpenfortWagmiOptions } from './wagmi/options'

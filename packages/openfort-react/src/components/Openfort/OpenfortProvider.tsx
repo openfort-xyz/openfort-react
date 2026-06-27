@@ -19,6 +19,7 @@ import type { CustomTheme, Languages, Mode, Theme } from '../../types'
 import { logger } from '../../utils/logger'
 import { buildChainFromConfig } from '../../utils/rpc'
 import { isFamily } from '../../utils/wallets'
+import type { OpenfortWagmiOptions } from '../../wagmi/options'
 
 import { type ContextValue, OpenfortContext, UIContext, type UIContextValue } from './context'
 import {
@@ -54,6 +55,10 @@ const LazyEmbeddedWalletWagmiSync = lazy(() =>
 
 const LazyConnectKitModal = lazy(() => import('../ConnectModal'))
 
+const LazyManagedEvmProvider = lazy(() =>
+  import('../../wagmi/ManagedEvmProvider').then((m) => ({ default: m.ManagedEvmProvider }))
+)
+
 /** {@link OpenfortProvider} props. */
 type OpenfortProviderProps = {
   children?: React.ReactNode
@@ -63,24 +68,19 @@ type OpenfortProviderProps = {
   walletConfig?: OpenfortWalletConfig
   overrides?: SDKOverrides
   thirdPartyAuth?: ThirdPartyAuthConfiguration
+  /**
+   * Managed wagmi setup (EVM). Provide chains/transports and Openfort builds the wagmi config
+   * internally — including WalletConnect from your Openfort dashboard — so you don't need a
+   * `WagmiProvider`/`OpenfortWagmiBridge`. Ignored if you wrap this provider in your own
+   * `WagmiProvider` (manual mode). Requires a `QueryClientProvider` ancestor.
+   */
+  wagmi?: OpenfortWagmiOptions
 } & useConnectCallbackProps
 
 let openfortProviderWarnedNoWagmi = false
+let openfortProviderWarnedWagmiIgnored = false
 
-/**
- * Root provider for Openfort. Wrap your app with this to enable connect modal, auth, and wallet features.
- * Requires publishableKey. Use with wagmi's OpenfortProvider for EVM + wagmi.
- *
- * @remarks Client-only. Use in a Client Component (e.g. add `"use client"` in Next.js App Router).
- *
- * @example
- * ```tsx
- * <OpenfortProvider publishableKey="pk_test_...">
- *   <App />
- * </OpenfortProvider>
- * ```
- */
-export const OpenfortProvider = ({
+const OpenfortProviderInner = ({
   children,
   uiConfig,
   onConnect,
@@ -175,7 +175,7 @@ export const OpenfortProvider = ({
       if (process.env.NODE_ENV === 'development' && !openfortProviderWarnedNoWagmi) {
         openfortProviderWarnedNoWagmi = true
         logger.warn(
-          '[@openfort/react] UIAuthProvider.WALLET was removed from authProviders because no WalletConnect connector is present. Pass walletConnectProjectId to getDefaultConfig/getDefaultConnectors to enable external wallet sign-in.'
+          '[@openfort/react] UIAuthProvider.WALLET was removed from authProviders because no external wallet connector is present. Enable it by configuring WalletConnect in the Openfort dashboard (External wallet provider), passing the `wagmi` prop to OpenfortProvider, or passing walletConnectProjectId to getDefaultConfig/getDefaultConnectors.'
         )
       }
     }
@@ -494,4 +494,49 @@ export const OpenfortProvider = ({
       </OpenfortContext.Provider>
     </UIContext.Provider>
   )
+}
+
+/**
+ * Root provider for Openfort. Wrap your app with this to enable connect modal, auth, and wallet features.
+ * Requires `publishableKey`.
+ *
+ * For EVM + wagmi you can either:
+ * - **Managed:** pass the `wagmi` prop (chains/transports) and Openfort builds the wagmi config for
+ *   you — including WalletConnect configured in your Openfort dashboard. No `WagmiProvider` boilerplate.
+ * - **Manual:** wrap this provider in your own `WagmiProvider` + `OpenfortWagmiBridge`.
+ *
+ * @remarks Client-only. Use in a Client Component (e.g. add `"use client"` in Next.js App Router).
+ *
+ * @example
+ * ```tsx
+ * <OpenfortProvider publishableKey="pk_test_..." wagmi={{ chains: [base] }}>
+ *   <App />
+ * </OpenfortProvider>
+ * ```
+ */
+export const OpenfortProvider = ({ wagmi, ...props }: OpenfortProviderProps) => {
+  const existingBridge = useContext(OpenfortEthereumBridgeContext)
+
+  if (wagmi && existingBridge && process.env.NODE_ENV === 'development' && !openfortProviderWarnedWagmiIgnored) {
+    openfortProviderWarnedWagmiIgnored = true
+    logger.warn(
+      '[@openfort/react] The `wagmi` prop was ignored because a WagmiProvider/OpenfortWagmiBridge is already present. Use the `wagmi` prop for managed setup, or your own WagmiProvider for manual setup — not both.'
+    )
+  }
+
+  if (wagmi && !existingBridge) {
+    return (
+      <Suspense fallback={null}>
+        <LazyManagedEvmProvider
+          publishableKey={props.publishableKey}
+          backendUrl={props.overrides?.backendUrl}
+          wagmi={wagmi}
+        >
+          <OpenfortProviderInner {...props} />
+        </LazyManagedEvmProvider>
+      </Suspense>
+    )
+  }
+
+  return <OpenfortProviderInner {...props} />
 }

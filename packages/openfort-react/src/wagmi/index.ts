@@ -5,6 +5,7 @@ export {
 } from './defaultConnectors'
 export { embeddedWalletConnector, setEmbeddedWalletProvider } from './embeddedConnector'
 export { OpenfortWagmiBridge } from './OpenfortWagmiBridge'
+export type { OpenfortWagmiOptions } from './options'
 export { useChainIsSupported } from './useChainIsSupported'
 export { useChains } from './useChains'
 export { useConnectWithSiwe } from './useConnectWithSiwe'
