@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
-import { formatUnits, type Hex } from 'viem'
+import { formatUnits } from 'viem'
+import { DEFAULT_ASSETS, isStableSymbol } from '../../../constants/defaultAssets'
 import { symbolToColor, TOKEN_LOGO } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
@@ -9,7 +10,6 @@ import Chain from '../../Common/Chain'
 import { ModalHeading } from '../../Common/Modal/styles'
 import type { MultiChainAsset } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
-import { DEST_USDC } from '../Deposit/sources'
 import {
   ChainBadge,
   ChainGroup,
@@ -48,12 +48,10 @@ const priceFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 4,
 })
 
-const BASE_CHAIN_ID = 8453
-
 /**
  * Default tokens to surface at zero balance so the inventory is never empty: the
- * chain's native token plus the stablecoins we ship a verified address for (Base
- * USDC). Skips any already held. Other chains get native only.
+ * active chain's native token plus the documented default ERC-20s for that chain
+ * (USDC / USDT / DAI / wrapped native). Skips any already held.
  */
 function buildDefaultTokens(chainId: number | undefined, held: MultiChainAsset[]): MultiChainAsset[] {
   if (chainId === undefined) return []
@@ -72,13 +70,19 @@ function buildDefaultTokens(chainId: number | undefined, held: MultiChainAsset[]
     } as MultiChainAsset)
   }
 
-  if (chainId === BASE_CHAIN_ID && !heldKeys.has(`${BASE_CHAIN_ID}-${DEST_USDC.toLowerCase()}`)) {
+  for (const token of DEFAULT_ASSETS[chainId] ?? []) {
+    if (heldKeys.has(`${chainId}-${token.address.toLowerCase()}`)) continue
     defaults.push({
       type: 'erc20',
-      chainId: BASE_CHAIN_ID,
-      address: DEST_USDC as Hex,
+      chainId,
+      address: token.address,
       balance: ZERO,
-      metadata: { symbol: 'USDC', name: 'USD Coin', decimals: 6, fiat: { value: 1, currency: 'USD' } },
+      metadata: {
+        symbol: token.symbol,
+        name: token.name,
+        decimals: token.decimals,
+        fiat: isStableSymbol(token.symbol) ? { value: 1, currency: 'USD' } : undefined,
+      },
     } as MultiChainAsset)
   }
 
