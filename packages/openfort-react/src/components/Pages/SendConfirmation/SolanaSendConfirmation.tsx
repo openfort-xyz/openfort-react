@@ -14,9 +14,16 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
 import { currencyLogoUrl } from '../../../constants/logos'
+import { useAsyncData } from '../../../shared/hooks/useAsyncData'
 import { getExplorerUrl } from '../../../shared/utils/explorer'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { sendSol, sendSolGasless, sendSplToken, sendSplTokenGasless } from '../../../solana/transfer'
+import {
+  estimateSolanaTransferFeeLamports,
+  sendSol,
+  sendSolGasless,
+  sendSplToken,
+  sendSplTokenGasless,
+} from '../../../solana/transfer'
 import { truncateSolanaAddress } from '../../../utils'
 import Button from '../../Common/Button'
 import Loader from '../../Common/Loading'
@@ -24,9 +31,9 @@ import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { formatBalanceWithSymbol } from '../Send/utils'
+import { formatBalance, formatBalanceWithSymbol } from '../Send/utils'
 import { ConfirmationSummary } from './ConfirmationSummary'
-import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeesValue, SponsoredText } from './styles'
+import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesValue, SponsoredText } from './styles'
 
 const SOL_DECIMALS = 9
 
@@ -47,6 +54,17 @@ export const SolanaSendConfirmation = () => {
 
   // Fees are sponsored from config (the SVM counterpart of ethereumFeeSponsorshipId).
   const isSponsored = Boolean(walletConfig?.solana?.sponsorFees)
+
+  // Real network fee from the RPC (getFeeForMessage). Null while loading or on failure.
+  const feeQuery = useAsyncData({
+    queryKey: ['sol-fee', address, recipient, rpcUrl],
+    queryFn: () =>
+      address && recipient && rpcUrl
+        ? estimateSolanaTransferFeeLamports({ from: address, to: recipient, rpcUrl })
+        : Promise.resolve(null),
+    enabled: Boolean(address && recipient && rpcUrl),
+  })
+  const feeText = feeQuery.data != null ? `≈ ${formatBalance(feeQuery.data, SOL_DECIMALS)} SOL` : null
 
   const [isLoading, setIsLoading] = useState(false)
   const [signature, setSignature] = useState<string | null>(null)
@@ -155,7 +173,17 @@ export const SolanaSendConfirmation = () => {
         networkIcon={currencyLogoUrl('SOL') ? <img src={currencyLogoUrl('SOL') ?? ''} alt="" /> : undefined}
         balance={formatBalanceWithSymbol(asset.balance, decimals, symbol)}
         payWith={address ? { display: truncateSolanaAddress(address), value: address } : undefined}
-        fee={<FeesValue>{isSponsored ? <SponsoredText>Sponsored</SponsoredText> : '--'}</FeesValue>}
+        fee={
+          <FeesValue>
+            {isSponsored ? (
+              <>
+                {feeText && <FeeStrike>{feeText}</FeeStrike>} <SponsoredText>Sponsored</SponsoredText>
+              </>
+            ) : (
+              (feeText ?? '--')
+            )}
+          </FeesValue>
+        }
       />
 
       {error && (
