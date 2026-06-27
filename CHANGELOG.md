@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.2
+
+### Patch Changes
+
+- [#304](https://github.com/openfort-xyz/openfort-react/pull/304) [`6bc6394`](https://github.com/openfort-xyz/openfort-react/commit/6bc63948fa7664993c2403b00d58077db7394d0a) Thanks [@joalavedra](https://github.com/joalavedra)! - The asset inventory now shows default tokens at zero balance so it's never empty: the active chain's native token (ETH / POL / SOL / …) plus the documented default ERC-20s for that chain (USDC / USDT / DAI / wrapped native — see the [default assets](https://www.openfort.io/docs/configuration/default-assets) reference), and Solana USDC + USDT (cluster-aware). Held tokens are listed first. Tapping the connected balance opens the inventory directly instead of routing through the intermediate "No assets available" screen.
+
 ## 1.6.1
 
 ### Patch Changes
