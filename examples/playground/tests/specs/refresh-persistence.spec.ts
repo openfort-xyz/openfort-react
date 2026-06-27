@@ -33,8 +33,8 @@ test.describe('Dashboard regression - refresh persistence', () => {
     await dashboardPage.expectLoaded(m)
     await expect(currentChain).toContainText(/polygon amoy/i, { timeout: 90_000 })
 
-    // Sanity: signatures input still exists (dashboard not broken)
-    await expect(page.getByPlaceholder(/enter a message to sign/i)).toBeVisible({ timeout: 60_000 })
+    // Sanity: the Openfort UI card still renders (dashboard not broken)
+    await expect(page.getByRole('button', { name: /^sign message$/i }).first()).toBeVisible({ timeout: 60_000 })
   })
 })
 
