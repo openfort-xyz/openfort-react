@@ -1,5 +1,5 @@
 ---
-"@openfort/react": minor
+"@openfort/react": patch
 ---
 
 Wallet UI improvements:
