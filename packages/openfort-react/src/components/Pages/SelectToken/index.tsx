@@ -3,6 +3,8 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
@@ -11,6 +13,7 @@ import { type Asset, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { formatBalanceWithSymbol, getAssetDecimals, getAssetSymbol } from '../Send/utils'
 import {
   EmptyState,
@@ -18,7 +21,9 @@ import {
   TokenBalance,
   TokenButton,
   TokenInfo,
+  TokenLeftGroup,
   TokenList,
+  TokenLogoArea,
   TokenName,
   TokenSymbol,
 } from './styles'
@@ -41,6 +46,7 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
   }, [viewAllAssets])
 
   const { chainType } = useOpenfortCore()
+  const { chainId } = useEthereumEmbeddedWallet()
   const { data: walletAssets, isLoading: isBalancesLoading } = useEthereumWalletAssets()
 
   // Buys pick from a fixed buyable-currency list (USDC first, then native) per
@@ -133,10 +139,19 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
               onClick={() => handleSelect(token)}
               style={{ opacity: isDisabled ? 0.4 : 1, cursor: isDisabled ? 'not-allowed' : 'pointer' }}
             >
-              <TokenInfo>
-                <TokenSymbol>{displayName}</TokenSymbol>
-                {isBuyFlow && <TokenName>{displaySymbol}</TokenName>}
-              </TokenInfo>
+              <TokenLeftGroup>
+                <TokenLogoArea>
+                  <AssetChainLogo
+                    assetLogo={currencyLogoUrl(displaySymbol) ?? ''}
+                    chainLogo={chainLogoUrl(chainId) ?? ''}
+                    symbol={displaySymbol}
+                  />
+                </TokenLogoArea>
+                <TokenInfo>
+                  <TokenSymbol>{displayName}</TokenSymbol>
+                  {isBuyFlow && <TokenName>{displaySymbol}</TokenName>}
+                </TokenInfo>
+              </TokenLeftGroup>
               {isBuyFlow ? (
                 <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <ArrowChevron stroke="currentColor" d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314" />

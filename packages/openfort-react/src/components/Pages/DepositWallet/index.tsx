@@ -8,6 +8,7 @@ import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeConte
 import useIsMobile from '../../../hooks/useIsMobile'
 import styled from '../../../styles/styled'
 import { isIOS } from '../../../utils'
+import { TextLinkButton } from '../../Common/Button/styles'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { ScrollArea } from '../../Common/ScrollArea'
 import { routes } from '../../Openfort/types'
@@ -96,6 +97,8 @@ const DepositWallet = () => {
   // (the funding deposit-address mint uses a fixed nominal amount regardless).
   const [amount, setAmount] = useState('1')
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
+  // Collapse the wallet list to keep the picker short on mobile; "Show more" reveals the rest.
+  const [showAllWallets, setShowAllWallets] = useState(false)
 
   const depositPageUrl = uiConfig.funding?.depositPageUrl ?? OPENFORT_DEPOSIT_PAGE_URL
   // Solana sources have no numeric chain id and no desktop EVM-extension send, so
@@ -145,9 +148,12 @@ const DepositWallet = () => {
   // dead-ends there, so hide it on iOS while keeping it on Android.
   const deeplinks = isIOS() ? allDeeplinks.filter((d) => d.app !== 'trust') : allDeeplinks
 
+  const WALLET_LIMIT = 3
+  const visibleDeeplinks = showAllWallets ? deeplinks : deeplinks.slice(0, WALLET_LIMIT)
+
   useEffect(() => {
     triggerResize()
-  }, [route.receiverAddress, route.loading, route.status, deeplinks.length, triggerResize])
+  }, [route.receiverAddress, route.loading, route.status, deeplinks.length, showAllWallets, triggerResize])
 
   if (isDepositFlowActive(route.status)) return <DepositProgress status={route.status} />
 
@@ -226,7 +232,7 @@ const DepositWallet = () => {
                 {deeplinks.length > 0 && (
                   <ScrollArea fill>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {deeplinks.map((d) => (
+                      {visibleDeeplinks.map((d) => (
                         <a
                           key={d.app}
                           href={amountValid ? d.url : undefined}
@@ -247,6 +253,15 @@ const DepositWallet = () => {
                           {d.label} ↗
                         </a>
                       ))}
+                      {deeplinks.length > WALLET_LIMIT && (
+                        <TextLinkButton
+                          type="button"
+                          onClick={() => setShowAllWallets((v) => !v)}
+                          style={{ alignSelf: 'center', marginTop: 2 }}
+                        >
+                          {showAllWallets ? 'Show less' : `Show ${deeplinks.length - WALLET_LIMIT} more`}
+                        </TextLinkButton>
+                      )}
                     </div>
                   </ScrollArea>
                 )}

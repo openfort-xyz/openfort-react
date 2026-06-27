@@ -8,26 +8,32 @@
 
 import { useEffect, useMemo } from 'react'
 import { formatUnits, isAddress, parseUnits } from 'viem'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import Input from '../../Common/Input'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes, type SendFormState } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput } from '../Buy/styles'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import {
+  AmountField,
+  AmountMeta,
+  AmountRow,
+  BalanceMeta,
+  CardLabel,
   ErrorText,
-  Field,
-  FieldLabel,
   Form,
-  HelperText,
-  MaxButton,
-  TokenSelectorButton,
-  TokenSelectorContent,
-  TokenSelectorRight,
-  TokenSelectorValue,
+  MetaText,
+  PasteButton,
+  PillLogo,
+  RecipientInput,
+  SendCard,
+  TokenPill,
+  ToRow,
+  UseMaxButton,
 } from './styles'
 import { formatBalance, isSameToken, sanitizeAmountInput, sanitizeForParsing } from './utils'
 
@@ -41,6 +47,7 @@ export const EthereumSend = () => {
   }, [triggerResize])
 
   const { data: assets } = useEthereumWalletAssets()
+  const { chainId } = useEthereumEmbeddedWallet()
 
   const matchedToken = useMemo(
     () => assets?.find((asset) => isSameToken(asset, sendForm.asset)),
@@ -91,6 +98,15 @@ export const EthereumSend = () => {
     }))
   }
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) setSendForm((prev) => ({ ...prev, recipient: text.trim() }))
+    } catch {
+      // Clipboard unavailable or permission denied — leave the field as-is.
+    }
+  }
+
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
     if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
@@ -117,20 +133,55 @@ export const EthereumSend = () => {
   const availableLabel = formatBalance(selectedBalanceValue, selectedDecimalsValue)
   const maxDisabled = !selectedBalanceValue
 
+  const fiatValue = useMemo(() => {
+    const perToken = selectedToken.metadata?.fiat?.value
+    const n = Number(sanitizeForParsing(sendForm.amount))
+    if (!perToken || !Number.isFinite(n) || n <= 0) return null
+    return `$${(n * perToken).toFixed(2)}`
+  }, [selectedToken.metadata, sendForm.amount])
+
   return (
     <PageContent onBack={routes.CONNECTED}>
-      <ModalHeading>Send assets</ModalHeading>
+      <ModalHeading>Send money</ModalHeading>
       <Form onSubmit={handleSubmit}>
-        <Field>
-          <FieldLabel>Asset</FieldLabel>
-          <TokenSelectorButton type="button" onClick={handleOpenTokenSelector}>
-            <TokenSelectorContent>
-              <TokenSelectorValue $primary>{selectedSymbol || 'Select token'}</TokenSelectorValue>
-            </TokenSelectorContent>
-            <TokenSelectorRight>
-              <TokenSelectorValue>
-                {availableLabel === '--' ? '--' : `${availableLabel} ${selectedSymbol ?? ''}`}
-              </TokenSelectorValue>
+        <SendCard>
+          <ToRow>
+            <CardLabel>To</CardLabel>
+            <RecipientInput
+              placeholder="0x… or address"
+              value={sendForm.recipient}
+              onChange={handleRecipientChange}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <PasteButton type="button" onClick={handlePaste}>
+              Paste
+            </PasteButton>
+          </ToRow>
+          {sendForm.recipient && !recipientValid && <ErrorText>Enter a valid wallet address.</ErrorText>}
+        </SendCard>
+
+        <SendCard>
+          <CardLabel>Amount</CardLabel>
+          <AmountRow>
+            <AmountField
+              placeholder="0"
+              value={sendForm.amount}
+              onChange={handleAmountChange}
+              inputMode="decimal"
+              autoComplete="off"
+            />
+            <TokenPill type="button" onClick={handleOpenTokenSelector}>
+              {selectedSymbol && (
+                <PillLogo>
+                  <AssetChainLogo
+                    assetLogo={currencyLogoUrl(selectedSymbol) ?? ''}
+                    chainLogo={chainLogoUrl(chainId) ?? ''}
+                    symbol={selectedSymbol}
+                  />
+                </PillLogo>
+              )}
+              {selectedSymbol || 'Select'}
               <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <ArrowChevron
                   stroke="currentColor"
@@ -139,36 +190,20 @@ export const EthereumSend = () => {
                   strokeLinecap="round"
                 />
               </Arrow>
-            </TokenSelectorRight>
-          </TokenSelectorButton>
-        </Field>
-
-        <Field>
-          <FieldLabel>Amount</FieldLabel>
-          <AmountCard style={{ marginTop: 12 }}>
-            <AmountInput
-              placeholder="0.00"
-              value={sendForm.amount}
-              onChange={handleAmountChange}
-              inputMode="decimal"
-              autoComplete="off"
-            />
-            <MaxButton type="button" onClick={handleMax} disabled={maxDisabled}>
-              Max
-            </MaxButton>
-          </AmountCard>
-          <HelperText>
-            Available: {availableLabel} {selectedSymbol}
-          </HelperText>
+            </TokenPill>
+          </AmountRow>
+          <AmountMeta>
+            <MetaText style={{ flex: 1, minWidth: 0 }}>{fiatValue ?? ''}</MetaText>
+            <BalanceMeta>
+              <MetaText>{availableLabel === '--' ? '--' : `${availableLabel} ${selectedSymbol}`}</MetaText>
+              <UseMaxButton type="button" onClick={handleMax} disabled={maxDisabled}>
+                Use max
+              </UseMaxButton>
+            </BalanceMeta>
+          </AmountMeta>
           {sendForm.amount && parsedAmount === null && <ErrorText>Enter a valid amount.</ErrorText>}
           {insufficientBalance && <ErrorText>Insufficient balance for this transfer.</ErrorText>}
-        </Field>
-
-        <Field>
-          <FieldLabel>Recipient address</FieldLabel>
-          <Input placeholder="0x..." value={sendForm.recipient} onChange={handleRecipientChange} autoComplete="off" />
-          {sendForm.recipient && !recipientValid && <ErrorText>Enter a valid wallet address.</ErrorText>}
-        </Field>
+        </SendCard>
 
         <Button variant="primary" disabled={!canProceed}>
           Review transfer

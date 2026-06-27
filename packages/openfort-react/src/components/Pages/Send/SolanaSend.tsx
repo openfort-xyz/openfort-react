@@ -10,26 +10,31 @@
 
 import { useEffect, useMemo } from 'react'
 import { formatUnits, parseUnits } from 'viem'
+import { currencyLogoUrl } from '../../../constants/logos'
 import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import Input from '../../Common/Input'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes, type SendFormState } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput } from '../Buy/styles'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import {
+  AmountField,
+  AmountMeta,
+  AmountRow,
+  BalanceMeta,
+  CardLabel,
   ErrorText,
-  Field,
-  FieldLabel,
   Form,
-  HelperText,
-  MaxButton,
-  TokenSelectorButton,
-  TokenSelectorContent,
-  TokenSelectorRight,
-  TokenSelectorValue,
+  MetaText,
+  PasteButton,
+  PillLogo,
+  RecipientInput,
+  SendCard,
+  TokenPill,
+  ToRow,
+  UseMaxButton,
 } from './styles'
 import { formatBalance, sanitizeAmountInput, sanitizeForParsing } from './utils'
 
@@ -118,20 +123,64 @@ export const SolanaSend = () => {
 
   const handleOpenTokenSelector = () => setRoute(routes.SOL_SEND_TOKEN_SELECT)
 
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText()
+      if (text) setSendForm((prev) => ({ ...prev, recipient: text.trim() }))
+    } catch {
+      // Clipboard unavailable or permission denied — leave the field as-is.
+    }
+  }
+
+  const fiatValue = useMemo(() => {
+    const perToken = asset.metadata?.fiat?.value
+    const n = Number(sanitizeForParsing(sendForm.amount))
+    if (!perToken || !Number.isFinite(n) || n <= 0) return null
+    return `$${(n * perToken).toFixed(2)}`
+  }, [asset.metadata, sendForm.amount])
+
   return (
     <PageContent onBack={routes.SOL_CONNECTED}>
-      <ModalHeading>Send assets</ModalHeading>
+      <ModalHeading>Send money</ModalHeading>
       <Form onSubmit={handleSubmit}>
-        <Field>
-          <FieldLabel>Asset</FieldLabel>
-          <TokenSelectorButton type="button" onClick={handleOpenTokenSelector}>
-            <TokenSelectorContent>
-              <TokenSelectorValue $primary>{selected.symbol}</TokenSelectorValue>
-            </TokenSelectorContent>
-            <TokenSelectorRight>
-              <TokenSelectorValue>
-                {availableLabel === '--' ? '--' : `${availableLabel} ${selected.symbol}`}
-              </TokenSelectorValue>
+        <SendCard>
+          <ToRow>
+            <CardLabel>To</CardLabel>
+            <RecipientInput
+              placeholder="Solana address"
+              value={sendForm.recipient}
+              onChange={(e) => setSendForm((prev) => ({ ...prev, recipient: e.target.value }))}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <PasteButton type="button" onClick={handlePaste}>
+              Paste
+            </PasteButton>
+          </ToRow>
+          {sendForm.recipient && !recipientValid && <ErrorText>Enter a valid Solana address.</ErrorText>}
+        </SendCard>
+
+        <SendCard>
+          <CardLabel>Amount</CardLabel>
+          <AmountRow>
+            <AmountField
+              placeholder="0"
+              value={sendForm.amount}
+              onChange={handleAmountChange}
+              inputMode="decimal"
+              autoComplete="off"
+            />
+            <TokenPill type="button" onClick={handleOpenTokenSelector}>
+              {selected.symbol && (
+                <PillLogo>
+                  <AssetChainLogo
+                    assetLogo={currencyLogoUrl(selected.symbol) ?? ''}
+                    chainLogo={currencyLogoUrl('SOL') ?? ''}
+                    symbol={selected.symbol}
+                  />
+                </PillLogo>
+              )}
+              {selected.symbol}
               <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <ArrowChevron
                   stroke="currentColor"
@@ -140,41 +189,20 @@ export const SolanaSend = () => {
                   strokeLinecap="round"
                 />
               </Arrow>
-            </TokenSelectorRight>
-          </TokenSelectorButton>
-        </Field>
-
-        <Field>
-          <FieldLabel>Amount</FieldLabel>
-          <AmountCard style={{ marginTop: 12 }}>
-            <AmountInput
-              placeholder="0.00"
-              value={sendForm.amount}
-              onChange={handleAmountChange}
-              inputMode="decimal"
-              autoComplete="off"
-            />
-            <MaxButton type="button" onClick={handleMax} disabled={balanceBase === undefined}>
-              Max
-            </MaxButton>
-          </AmountCard>
-          <HelperText>
-            Available: {availableLabel} {selected.symbol}
-          </HelperText>
+            </TokenPill>
+          </AmountRow>
+          <AmountMeta>
+            <MetaText style={{ flex: 1, minWidth: 0 }}>{fiatValue ?? ''}</MetaText>
+            <BalanceMeta>
+              <MetaText>{availableLabel === '--' ? '--' : `${availableLabel} ${selected.symbol}`}</MetaText>
+              <UseMaxButton type="button" onClick={handleMax} disabled={balanceBase === undefined}>
+                Use max
+              </UseMaxButton>
+            </BalanceMeta>
+          </AmountMeta>
           {sendForm.amount && parsedAmount === null && <ErrorText>Enter a valid amount.</ErrorText>}
           {insufficientBalance && <ErrorText>Insufficient {selected.symbol} balance for this transfer.</ErrorText>}
-        </Field>
-
-        <Field>
-          <FieldLabel>Recipient address</FieldLabel>
-          <Input
-            placeholder="Solana address"
-            value={sendForm.recipient}
-            onChange={(e) => setSendForm((prev) => ({ ...prev, recipient: e.target.value }))}
-            autoComplete="off"
-          />
-          {sendForm.recipient && !recipientValid && <ErrorText>Enter a valid Solana address.</ErrorText>}
-        </Field>
+        </SendCard>
 
         <Button variant="primary" disabled={!canProceed}>
           Review transfer

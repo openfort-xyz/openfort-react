@@ -33,7 +33,7 @@ export function useSignMessage() {
 
   const request = useCallback(
     (args: SignArgs) =>
-      new Promise<`0x${string}`>((resolve, reject) => {
+      new Promise<string>((resolve, reject) => {
         setIsPending(true)
         // setOpen(true) resets route/history, so it MUST run before setRoute.
         setOpen(true)

@@ -1,7 +1,10 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { CopyButton } from '../../Common/CopyToClipboard/CopyButton'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -12,6 +15,7 @@ import {
   DataKey,
   DataList,
   ErrorText,
+  Footer,
   MessageBox,
   SignaturePreview,
   SignContent,
@@ -40,17 +44,30 @@ function DataNode({ value }: { value: unknown }) {
 
 const SignMessage = () => {
   const { signRequest, setSignRequest, setOpen, uiConfig, triggerResize } = useOpenfort()
+  const { chainType } = useOpenfortCore()
   const wallet = useEthereumEmbeddedWallet()
+  const solana = useSolanaEmbeddedWallet()
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [signature, setSignature] = useState<`0x${string}` | null>(null)
+  const [signature, setSignature] = useState<string | null>(null)
   const settledRef = useRef(false)
+  const mountedRef = useRef(false)
 
   // Reject the pending request if the screen unmounts before signing (the user
-  // closed the modal or navigated away).
+  // closed the modal or navigated away). React StrictMode invokes effect cleanup
+  // on a dev-only synchronous remount, so defer the reject to a microtask: the
+  // immediate remount flips mountedRef back to true and cancels the spurious
+  // "User rejected" that would otherwise fire while the wallet UI is still open.
   useEffect(() => {
+    mountedRef.current = true
+    const request = signRequest
     return () => {
-      if (!settledRef.current) signRequest?.reject(new Error('User rejected the signature request'))
+      mountedRef.current = false
+      queueMicrotask(() => {
+        if (!mountedRef.current && !settledRef.current) {
+          request?.reject(new Error('User rejected the signature request'))
+        }
+      })
     }
   }, [signRequest])
 
@@ -72,18 +89,25 @@ const SignMessage = () => {
     setError(null)
     setSigning(true)
     try {
-      const provider = await wallet.activeWallet?.getProvider()
-      const address = wallet.address
-      if (!provider || !address) throw new Error('No connected wallet to sign with')
+      let signed: string
+      if (chainType === ChainTypeEnum.SVM) {
+        if (signRequest.kind !== 'message') throw new Error('Typed data signing is not supported on Solana.')
+        if (solana.status !== 'connected') throw new Error('No connected wallet to sign with')
+        signed = await solana.provider.signMessage(signRequest.message)
+      } else {
+        const provider = await wallet.activeWallet?.getProvider()
+        const address = wallet.address
+        if (!provider || !address) throw new Error('No connected wallet to sign with')
 
-      const signed = (
-        signRequest.kind === 'message'
-          ? await provider.request({ method: 'personal_sign', params: [signRequest.message, address] })
-          : await provider.request({
-              method: 'eth_signTypedData_v4',
-              params: [address, JSON.stringify(signRequest.typedData)],
-            })
-      ) as `0x${string}`
+        signed = (
+          signRequest.kind === 'message'
+            ? await provider.request({ method: 'personal_sign', params: [signRequest.message, address] })
+            : await provider.request({
+                method: 'eth_signTypedData_v4',
+                params: [address, JSON.stringify(signRequest.typedData)],
+              })
+        ) as string
+      }
 
       settledRef.current = true
       signRequest.resolve(signed)
@@ -129,27 +153,28 @@ const SignMessage = () => {
         {signRequest.kind === 'message' ? (
           <MessageBox>{signRequest.message}</MessageBox>
         ) : (
-          <>
-            <MessageBox $scroll>
-              <DataNode
-                value={{
-                  domain: signRequest.typedData.domain,
-                  primaryType: signRequest.typedData.primaryType,
-                  message: signRequest.typedData.message,
-                }}
-              />
-            </MessageBox>
+          <MessageBox>
+            <DataNode
+              value={{
+                domain: signRequest.typedData.domain,
+                primaryType: signRequest.typedData.primaryType,
+                message: signRequest.typedData.message,
+              }}
+            />
+          </MessageBox>
+        )}
+
+        <Footer>
+          {signRequest.kind === 'typedData' && (
             <CopyRow>
               <CopyButton value={JSON.stringify(signRequest.typedData, null, 2)}>Copy to clipboard</CopyButton>
             </CopyRow>
-          </>
-        )}
-
-        {error && <ErrorText>{error}</ErrorText>}
-
-        <Button variant="primary" onClick={handleSign} waiting={signing} disabled={signing} arrow>
-          Sign and continue
-        </Button>
+          )}
+          {error && <ErrorText>{error}</ErrorText>}
+          <Button variant="primary" onClick={handleSign} waiting={signing} disabled={signing} arrow>
+            Sign and continue
+          </Button>
+        </Footer>
       </SignContent>
     </PageContent>
   )
