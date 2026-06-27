@@ -26,7 +26,7 @@ import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { formatBalanceWithSymbol } from '../Send/utils'
 import { ConfirmationSummary } from './ConfirmationSummary'
-import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesValue, SponsoredText } from './styles'
+import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeesValue, SponsoredText } from './styles'
 
 const SOL_DECIMALS = 9
 
@@ -155,17 +155,7 @@ export const SolanaSendConfirmation = () => {
         networkIcon={currencyLogoUrl('SOL') ? <img src={currencyLogoUrl('SOL') ?? ''} alt="" /> : undefined}
         balance={formatBalanceWithSymbol(asset.balance, decimals, symbol)}
         payWith={address ? { display: truncateSolanaAddress(address), value: address } : undefined}
-        fee={
-          <FeesValue>
-            {isSponsored ? (
-              <>
-                <FeeStrike>≈ 0.000005 SOL</FeeStrike> <SponsoredText>Sponsored</SponsoredText>
-              </>
-            ) : (
-              '≈ 0.000005 SOL'
-            )}
-          </FeesValue>
-        }
+        fee={<FeesValue>{isSponsored ? <SponsoredText>Sponsored</SponsoredText> : '--'}</FeesValue>}
       />
 
       {error && (
