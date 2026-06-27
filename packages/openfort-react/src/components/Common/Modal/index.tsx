@@ -4,6 +4,7 @@ import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTransition } from 'react-transition-state'
+import ResizeObserver from 'resize-observer-polyfill'
 import { AuthIcon } from '../../../assets/icons'
 import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
@@ -245,6 +246,16 @@ const Modal: React.FC<ModalProps> = ({
 
       // Calculate new content bounds
       updateBounds(node)
+
+      // Auto-fit: re-measure whenever the active page's content size changes, so
+      // every page — and any new one — sizes the modal correctly without having
+      // to call triggerResize() itself.
+      resizeObserverRef.current?.disconnect()
+      const observer = new ResizeObserver(() => {
+        if (ref.current === node) updateBounds(node)
+      })
+      observer.observe(node)
+      resizeObserverRef.current = observer
     },
     [open, inTransition]
   )
@@ -256,9 +267,12 @@ const Modal: React.FC<ModalProps> = ({
   const switchChain = bridge?.switchChain?.switchChain
 
   const ref = useRef<any>(null)
+  const resizeObserverRef = useRef<ResizeObserver | null>(null)
   useEffect(() => {
     if (ref.current) updateBounds(ref.current)
   }, [chainId, switchChain, mobile, context.uiConfig, context.resize])
+
+  useEffect(() => () => resizeObserverRef.current?.disconnect(), [])
 
   useEffect(() => {
     if (!mounted) {

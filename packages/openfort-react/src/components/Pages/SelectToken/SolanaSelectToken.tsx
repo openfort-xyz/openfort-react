@@ -8,13 +8,14 @@
  * Send screen. The SVM counterpart of {@link SelectToken}.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { formatUnits } from 'viem'
-import { symbolToColor, TOKEN_LOGO } from '../../../constants/logos'
+import { currencyLogoUrl } from '../../../constants/logos'
 import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import {
   EmptyState,
   SelectTokenContent,
@@ -24,25 +25,21 @@ import {
   TokenLeftGroup,
   TokenList,
   TokenLogoArea,
-  TokenLogoFallback,
-  TokenLogoImg,
   TokenName,
   TokenSymbol,
 } from './styles'
 
 const ZERO = BigInt(0)
 
+/** Token logo with the Solana chain badge, matching the EVM picker. */
 function SolanaTokenLogo({ symbol }: { symbol: string }) {
-  const [imgError, setImgError] = useState(false)
-  const url = TOKEN_LOGO[symbol.toUpperCase()] ?? null
-
   return (
     <TokenLogoArea>
-      {url && !imgError ? (
-        <TokenLogoImg src={url} alt={symbol} onError={() => setImgError(true)} />
-      ) : (
-        <TokenLogoFallback $bg={symbolToColor(symbol)}>{symbol.charAt(0).toUpperCase()}</TokenLogoFallback>
-      )}
+      <AssetChainLogo
+        assetLogo={currencyLogoUrl(symbol) ?? ''}
+        chainLogo={currencyLogoUrl('SOL') ?? ''}
+        symbol={symbol}
+      />
     </TokenLogoArea>
   )
 }

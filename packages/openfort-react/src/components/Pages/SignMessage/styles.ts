@@ -4,9 +4,16 @@ export const SignContent = styled.div`
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-height: 0;
+  /* Cap to the modal viewport (InnerContainer caps at 88vh) so the message body
+     is the only part that scrolls and the Sign button stays pinned and reachable
+     on small screens. 112px ≈ PageContent top padding + PageContents padding,
+     mirroring DepositWallet's Layout. */
+  max-height: calc(88vh - 112px);
 `
 
 export const Subtitle = styled.p`
+  flex-shrink: 0;
   margin: 0;
   text-align: center;
   font-size: 15px;
@@ -14,7 +21,12 @@ export const Subtitle = styled.p`
   color: var(--ck-body-color-muted, #999);
 `
 
-export const MessageBox = styled.div<{ $scroll?: boolean }>`
+export const MessageBox = styled.div`
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   padding: 16px;
   border-radius: 12px;
   background: var(--ck-body-background-secondary, rgba(0, 0, 0, 0.04));
@@ -24,7 +36,13 @@ export const MessageBox = styled.div<{ $scroll?: boolean }>`
   text-align: left;
   word-break: break-word;
   white-space: pre-wrap;
-  ${({ $scroll }) => $scroll && 'max-height: 320px; overflow-y: auto;'}
+`
+
+export const Footer = styled.div`
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 `
 
 export const DataList = styled.ul`

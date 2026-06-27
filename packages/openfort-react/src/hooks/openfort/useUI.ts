@@ -29,7 +29,9 @@ const safeRoutes: {
     routes.PROVIDERS,
     routes.PROFILE,
     routes.SEND,
+    routes.SOL_SEND,
     routes.RECEIVE,
+    routes.SOL_RECEIVE,
     routes.DEPOSIT,
     routes.BUY,
     routes.EXPORT_KEY,
@@ -156,8 +158,8 @@ export function useUI() {
     openWallets: () => gotoAndOpen({ route: routes.CONNECTORS, connectType: 'linkIfUserConnectIfNoUser' }),
 
     openSend: (tx?: { to: string; amount: string; asset?: Asset }) =>
-      tx ? openSendPreview(tx) : gotoAndOpen(routes.SEND),
-    openReceive: () => gotoAndOpen(routes.RECEIVE),
+      tx ? openSendPreview(tx) : gotoAndOpen(chainType === ChainTypeEnum.SVM ? routes.SOL_SEND : routes.SEND),
+    openReceive: () => gotoAndOpen(chainType === ChainTypeEnum.SVM ? routes.SOL_RECEIVE : routes.RECEIVE),
     openFunding: () => gotoAndOpen(routes.DEPOSIT),
     openBuy: () => gotoAndOpen(routes.BUY),
     openExportKey: () => gotoAndOpen(routes.EXPORT_KEY),

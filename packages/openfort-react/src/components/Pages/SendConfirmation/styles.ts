@@ -1,4 +1,5 @@
 import styled from '../../../styles/styled'
+import { ButtonContainer } from '../../Common/Button/styles'
 
 export const SummaryList = styled.div`
   display: flex;
@@ -73,8 +74,15 @@ export const NetworkValue = styled(SummaryValue)`
   }
 `
 
-export const SponsoredFee = styled(SummaryValue)`
+/** The would-be fee, struck through, shown next to "Sponsored". */
+export const FeeStrike = styled.span`
+  text-decoration: line-through;
+  opacity: 0.55;
+`
+
+export const SponsoredText = styled.span`
   color: var(--ck-body-color-valid, #16a34a);
+  font-weight: 600;
 `
 
 export const PayWithCard = styled.div`
@@ -107,8 +115,8 @@ export const PayWithBadge = styled.span`
   border-radius: 999px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--ck-body-color-valid, #16a34a);
-  background: var(--ck-body-background, rgba(22, 163, 74, 0.12));
+  color: var(--ck-body-color);
+  background: var(--ck-body-background);
 `
 
 export const InfoIconWrapper = styled.span`
@@ -130,9 +138,16 @@ export const InfoIconWrapper = styled.span`
 
 export const ButtonRow = styled.div`
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  gap: 12px;
   margin-top: 24px;
+
+  > button {
+    flex: 1;
+  }
+
+  ${ButtonContainer} {
+    margin: 0;
+  }
 `
 
 export const StatusMessage = styled.div<{

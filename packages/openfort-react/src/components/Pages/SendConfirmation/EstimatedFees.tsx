@@ -7,7 +7,7 @@ import { getDefaultEthereumRpcUrl } from '../../../utils/rpc'
 import Tooltip from '../../Common/Tooltip'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { formatBalance } from '../Send/utils'
-import { InfoIconWrapper } from './styles'
+import { FeeStrike, InfoIconWrapper, SponsoredText } from './styles'
 
 const InfoIcon = () => (
   <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -32,6 +32,8 @@ type EstimatedFeesProps = {
   nativeSymbol: string
   enabled?: boolean
   hideInfoIcon?: boolean
+  /** When fees are sponsored, show the estimate struck through next to "Sponsored". */
+  sponsored?: boolean
 }
 
 export const EstimatedFees = ({
@@ -43,6 +45,7 @@ export const EstimatedFees = ({
   nativeSymbol,
   enabled = true,
   hideInfoIcon = false,
+  sponsored = false,
 }: EstimatedFeesProps) => {
   const { walletConfig } = useOpenfort()
   const { data: assets } = useEthereumWalletAssets()
@@ -74,43 +77,43 @@ export const EstimatedFees = ({
     enabled: enabled && !!account && !!to && !!chainId,
   })
 
-  // Handle query states
-  if (!gas.data || gas.error) {
-    return <>--</>
+  // Format the estimate (USD when a native price is known, otherwise native units).
+  const gasUnits = gas.data?.gasLimit
+  let feeText: string | null = null
+  if (gas.data && !gas.error) {
+    const gasCost = gas.data.estimatedCost
+    if (pricePerToken !== undefined) {
+      feeText = `≈ ${usdFormatter.format(Number.parseFloat(formatUnits(gasCost, 18)) * pricePerToken)}`
+    } else {
+      feeText = `≈ ${formatBalance(gasCost, 18)} ${nativeSymbol}`
+    }
   }
 
-  const gasCost = gas.data.estimatedCost
-  const gasUnits = gas.data.gasLimit
+  const info =
+    !hideInfoIcon && gasUnits ? (
+      <Tooltip message={`${gasUnits.toString()} gas units (paid in ${nativeSymbol})`} delay={0.2}>
+        <InfoIconWrapper>
+          <InfoIcon />
+        </InfoIconWrapper>
+      </Tooltip>
+    ) : null
 
-  if (pricePerToken !== undefined) {
-    const gasCostInEth = Number.parseFloat(formatUnits(gasCost, 18))
-    const gasCostInUsd = gasCostInEth * pricePerToken
-
+  // Sponsored: show what it would have cost, struck through, next to "Sponsored".
+  if (sponsored) {
     return (
       <>
-        ≈ {usdFormatter.format(gasCostInUsd)}
-        {!hideInfoIcon && (
-          <Tooltip message={`${gasUnits.toString()} gas units (paid in ${nativeSymbol})`} delay={0.2}>
-            <InfoIconWrapper>
-              <InfoIcon />
-            </InfoIconWrapper>
-          </Tooltip>
-        )}
+        {feeText && <FeeStrike>{feeText}</FeeStrike>}
+        <SponsoredText>Sponsored</SponsoredText>
       </>
     )
   }
 
-  // Fallback to native token if price not available
+  if (!feeText) return <>--</>
+
   return (
     <>
-      ≈ {formatBalance(gasCost, 18)} {nativeSymbol}
-      {!hideInfoIcon && (
-        <Tooltip message={`${gasUnits.toString()} gas units`} delay={0.2}>
-          <InfoIconWrapper>
-            <InfoIcon />
-          </InfoIconWrapper>
-        </Tooltip>
-      )}
+      {feeText}
+      {info}
     </>
   )
 }

@@ -391,3 +391,52 @@ export async function sendSplTokenGasless({
     publishableKey,
   })
 }
+
+/**
+ * Read the network fee (in lamports) for a single-signer transfer from the RPC
+ * via `getFeeForMessage`. Returns null on any failure so callers can fall back to
+ * a neutral "--" rather than a fabricated number. The base fee is per-signature
+ * and identical for native and SPL transfers (a single fee-payer signature), so a
+ * representative SOL transfer message is enough to price it.
+ */
+export async function estimateSolanaTransferFeeLamports({
+  from,
+  to,
+  rpcUrl,
+}: {
+  from: string
+  to: string
+  rpcUrl: string
+}): Promise<bigint | null> {
+  try {
+    const kit = await import('@solana/kit')
+    const { getTransferSolInstruction } = await import('@solana-program/system')
+
+    const fromAddress = kit.address(from)
+    const rpc = kit.createSolanaRpc(rpcUrl)
+    const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+
+    const message = kit.pipe(
+      kit.createTransactionMessage({ version: 0 }),
+      (tx) => kit.setTransactionMessageFeePayer(fromAddress, tx),
+      (tx) => kit.setTransactionMessageLifetimeUsingBlockhash(latestBlockhash, tx),
+      (tx) =>
+        kit.appendTransactionMessageInstruction(
+          getTransferSolInstruction({
+            source: kit.createNoopSigner(fromAddress),
+            destination: kit.address(to),
+            amount: kit.lamports(BigInt(1)),
+          }),
+          tx
+        )
+    )
+
+    const compiled = kit.compileTransactionMessage(message)
+    const base64Message = kit.getBase64Decoder().decode(kit.getCompiledTransactionMessageEncoder().encode(compiled))
+
+    const { value } = await rpc.getFeeForMessage(base64Message as Parameters<typeof rpc.getFeeForMessage>[0]).send()
+    return value == null ? null : BigInt(value)
+  } catch {
+    return null
+  }
+}

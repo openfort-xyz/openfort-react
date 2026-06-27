@@ -12,6 +12,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Abi, Address } from 'viem'
 import { createPublicClient, encodeFunctionData, erc20Abi, http, isAddress, parseUnits } from 'viem'
 import { TickIcon } from '../../../assets/icons'
+import { chainLogoUrl } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import { useBalance } from '../../../hooks/useBalance'
@@ -28,24 +29,21 @@ import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { getAssetDecimals, getAssetSymbol, isSameToken, sanitizeForParsing } from '../Send/utils'
+import {
+  formatBalanceWithSymbol,
+  getAssetDecimals,
+  getAssetSymbol,
+  isSameToken,
+  sanitizeForParsing,
+} from '../Send/utils'
 import { ConfirmationSummary } from './ConfirmationSummary'
 import { EstimatedFees } from './EstimatedFees'
-import {
-  ButtonRow,
-  ErrorAction,
-  ErrorContainer,
-  ErrorMessage,
-  ErrorTitle,
-  FeesValue,
-  SponsoredFee,
-  StatusMessage,
-} from './styles'
+import { ButtonRow, ErrorAction, ErrorContainer, ErrorMessage, ErrorTitle, FeesValue, StatusMessage } from './styles'
 
 const SendConfirmation = () => {
   const wallet = useEthereumEmbeddedWallet()
   const { chainType } = useOpenfortCore()
-  const { sendForm, setRoute, triggerResize, walletConfig } = useOpenfort()
+  const { sendForm, setRoute, triggerResize, walletConfig, chains } = useOpenfort()
 
   const address = wallet.status === 'connected' ? (wallet.address as `0x${string}`) : undefined
   const chainId = wallet.status === 'connected' ? wallet.chainId : undefined
@@ -365,6 +363,13 @@ const SendConfirmation = () => {
     return `$${(n * perToken).toFixed(2)}`
   }, [token.metadata?.fiat?.value, normalisedAmount])
 
+  // Prefer the configured chain's display name over the numeric id fallback.
+  const networkName = chains?.find((c) => c.id === chainId)?.name ?? getChainName(chainId ?? 0)
+  const balanceLabel =
+    currentBalance !== undefined
+      ? formatBalanceWithSymbol(currentBalance, getAssetDecimals(token) ?? 18, getAssetSymbol(token))
+      : undefined
+
   if (isSuccess) {
     const successAmount = normalisedAmount || '0'
     const successSymbol = getAssetSymbol(token)
@@ -395,25 +400,24 @@ const SendConfirmation = () => {
         symbol={getAssetSymbol(token)}
         fiat={fiatTotal}
         to={recipientAddress ? { display: truncateEthAddress(recipientAddress), value: recipientAddress } : undefined}
-        networkName={getChainName(chainId ?? 0)}
+        networkName={networkName}
+        networkIcon={chainLogoUrl(chainId) ? <img src={chainLogoUrl(chainId) ?? ''} alt="" /> : undefined}
+        balance={balanceLabel}
         payWith={address ? { display: truncateEthAddress(address), value: address } : undefined}
         fee={
-          isSponsored ? (
-            <SponsoredFee>Sponsored · gasless</SponsoredFee>
-          ) : (
-            <FeesValue>
-              <EstimatedFees
-                account={address}
-                to={token.type === 'erc20' ? (token.address as `0x${string}`) : recipientAddress}
-                value={token.type === 'native' && parsedAmount ? parsedAmount : undefined}
-                data={transferData}
-                chainId={chainId}
-                nativeSymbol={nativeSymbol}
-                enabled={Boolean(address && recipientAddress && parsedAmount && parsedAmount > BigInt(0))}
-                hideInfoIcon={false}
-              />
-            </FeesValue>
-          )
+          <FeesValue>
+            <EstimatedFees
+              account={address}
+              to={token.type === 'erc20' ? (token.address as `0x${string}`) : recipientAddress}
+              value={token.type === 'native' && parsedAmount ? parsedAmount : undefined}
+              data={transferData}
+              chainId={chainId}
+              nativeSymbol={nativeSymbol}
+              enabled={Boolean(address && recipientAddress && parsedAmount && parsedAmount > BigInt(0))}
+              sponsored={isSponsored}
+              hideInfoIcon={false}
+            />
+          </FeesValue>
         }
       />
 

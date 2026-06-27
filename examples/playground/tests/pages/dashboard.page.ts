@@ -1,6 +1,5 @@
 import { expect, type Page } from '@playwright/test'
 import type { PlaygroundMode } from '../utils/mode'
-import { EVM_SIGNED_REGEX, SOLANA_SIGNED_REGEX } from '../utils/mode'
 
 export class DashboardPage {
   constructor(private readonly page: Page) {}
@@ -53,27 +52,29 @@ export class DashboardPage {
   }
 
   /**
-   * Sign a message and validate the result.
-   * @param message - Message to sign
-   * @param mode - EVM uses 0x signed hash; Solana uses base58.
+   * Sign a message through the Openfort UI widget: open the modal from the
+   * "Openfort UI" card, confirm, wait for the success screen, then close it.
+   * (The message content is fixed by the widget demo, so the argument is unused.)
    */
-  async signMessage(message: string, mode: PlaygroundMode) {
-    const messageInput = this.page.getByPlaceholder(/enter a message to sign/i)
-    await expect(messageInput).toBeVisible({ timeout: 60_000 })
-    await messageInput.fill(message)
-
-    const signBtn = this.page.getByRole('button', { name: /sign a message/i })
+  async signMessage(_message: string, _mode: PlaygroundMode) {
+    const card = await this.getCardByTitle(/openfort ui/i)
+    const signBtn = card.getByRole('button', { name: /^sign message$/i })
     await expect(signBtn).toBeEnabled({ timeout: 90_000 })
     await signBtn.click()
 
-    const signedRegex = mode === 'svm' ? SOLANA_SIGNED_REGEX : EVM_SIGNED_REGEX
+    const confirmBtn = this.page.getByRole('button', { name: /sign and continue/i })
+    await expect(confirmBtn).toBeVisible({ timeout: 30_000 })
+    await confirmBtn.click()
 
     try {
-      await expect(this.page.getByText(signedRegex)).toBeVisible({ timeout: 120_000 })
+      await expect(this.page.getByText(/message signed/i)).toBeVisible({ timeout: 120_000 })
     } catch (e) {
       await this.page.screenshot({ path: 'test-results/sign-message-failed.png', fullPage: true }).catch(() => {})
       throw e
     }
+
+    // Close the success screen so the dashboard is interactive again.
+    await this.page.getByRole('button', { name: /^done$/i }).click()
   }
 
   async getCardByTitle(title: string | RegExp) {

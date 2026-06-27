@@ -568,7 +568,8 @@ export type SignRequest = (
   | { kind: 'message'; message: string }
   | { kind: 'typedData'; typedData: SignTypedDataPayload }
 ) & {
-  resolve: (signature: `0x${string}`) => void
+  // EVM returns a 0x-hex signature; Solana returns a base58 string — hence `string`.
+  resolve: (signature: string) => void
   reject: (reason?: unknown) => void
 }
 

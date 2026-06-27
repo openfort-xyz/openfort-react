@@ -9,7 +9,7 @@ import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton'
 import CustomQRCode from '../../Common/CustomQRCode'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import { ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -74,8 +74,7 @@ const Receive = () => {
   return (
     <PageContent onBack={isSolanaRoute ? routes.SOL_CONNECTED : routes.CONNECTED}>
       <ReceiveContent>
-        <ModalHeading>Receive funds</ModalHeading>
-        <ModalBody>Scan the QR code or copy your wallet details.</ModalBody>
+        <ModalHeading>Receive money</ModalHeading>
 
         {address && (
           <QRWrapper>

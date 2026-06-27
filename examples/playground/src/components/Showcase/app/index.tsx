@@ -2,14 +2,16 @@ import { ChainTypeEnum, useOpenfort, useSignOut, useUser } from '@openfort/react
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { ConnectExternalWalletCard } from '@/components/Showcase/app/ConnectExternalWalletCard'
+import { OpenfortUICard } from '@/components/Showcase/app/OpenfortUICard'
 import { SendTransactionCardSolana } from '@/components/Showcase/app/SendTransactionCardSolana'
 import { SessionKeysCard } from '@/components/Showcase/app/SessionKeys'
 import { SessionKeysCardEVM } from '@/components/Showcase/app/SessionKeysCardEVM'
 import { SetActiveWalletsCardEthereum } from '@/components/Showcase/app/SetActiveWallets'
 import { SetActiveWalletsCardSolana } from '@/components/Showcase/app/SetActiveWalletsCardSolana'
-import { SignaturesCard } from '@/components/Showcase/app/Signatures'
 import { SignaturesCardEVM } from '@/components/Showcase/app/SignaturesCardEVM'
 import { SignaturesCardSolana } from '@/components/Showcase/app/SignaturesCardSolana'
+import { SiweCard } from '@/components/Showcase/app/SiweCard'
+import { SolanaOpenfortUICard } from '@/components/Showcase/app/SolanaOpenfortUICard'
 import { SwitchChainCardEVM } from '@/components/Showcase/app/SwitchChainCardEVM'
 import { TransactionHistoryCardSolana } from '@/components/Showcase/app/TransactionHistoryCardSolana'
 import { WriteContractCard } from '@/components/Showcase/app/WriteContract'
@@ -54,6 +56,7 @@ export const App = () => {
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
         {isSVM ? (
           <>
+            <SolanaOpenfortUICard hook="useUI (Openfort UI)" />
             <SignaturesCardSolana hook="useSolanaMessageSigner" />
             <SendTransactionCardSolana hook="sendSolTransaction" />
             <TransactionHistoryCardSolana hook="getTransactionHistory" />
@@ -61,18 +64,16 @@ export const App = () => {
           </>
         ) : hasWagmi ? (
           <>
-            <SignaturesCard hook="useSignMessage" />
+            <OpenfortUICard hook="useUI (Openfort UI)" />
+            <SiweCard hook="createSIWEMessage · useSignMessage" />
             <WriteContractCard hook="useWriteContract" />
             <SwitchChainCardEVM hook="useSwitchChain" />
-            <div className="lg:col-span-2 xl:col-span-3 flex flex-col lg:flex-row gap-4">
-              <SessionKeysCard hook="useGrantPermissions" />
-              <div className="min-w-[40%]">
-                <ConnectExternalWalletCard />
-              </div>
-            </div>
+            <SessionKeysCard hook="useGrantPermissions" />
+            <ConnectExternalWalletCard />
           </>
         ) : (
           <>
+            <OpenfortUICard hook="useUI (Openfort UI)" />
             <SignaturesCardEVM hook="viem signMessage" />
             <WriteContractCardEVM hook="viem readContract / writeContract" />
             <SwitchChainCardEVM hook="wallet_switchEthereumChain" />
