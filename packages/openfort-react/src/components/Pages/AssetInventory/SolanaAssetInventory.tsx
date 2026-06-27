@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { formatUnits } from 'viem'
 import { currencyLogoUrl } from '../../../constants/logos'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
@@ -22,6 +23,42 @@ import {
 } from '../SelectToken/styles'
 
 const ZERO = BigInt(0)
+
+const USDC_MINT_MAINNET = 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v'
+const USDC_MINT_DEVNET = '4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'
+const USDT_MINT_MAINNET = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'
+
+type SolanaToken = { mint: string; symbol: string; name: string; amount: bigint; decimals: number; isNative: boolean }
+
+/**
+ * Default tokens to surface at zero balance: native SOL plus the stablecoins we
+ * ship verified mints for (USDC on the active cluster, USDT on mainnet). Skips any
+ * already held.
+ */
+function buildSolanaDefaults(cluster: string | undefined, held: SolanaToken[]): SolanaToken[] {
+  const isMainnet = cluster === 'mainnet-beta' || cluster === 'mainnet'
+  const heldMints = new Set(held.map((t) => t.mint))
+  const defaults: SolanaToken[] = []
+
+  if (!heldMints.has('native')) {
+    defaults.push({ mint: 'native', symbol: 'SOL', name: 'Solana', amount: ZERO, decimals: 9, isNative: true })
+  }
+  const usdcMint = isMainnet ? USDC_MINT_MAINNET : USDC_MINT_DEVNET
+  if (!heldMints.has(usdcMint)) {
+    defaults.push({ mint: usdcMint, symbol: 'USDC', name: 'USD Coin', amount: ZERO, decimals: 6, isNative: false })
+  }
+  if (isMainnet && !heldMints.has(USDT_MINT_MAINNET)) {
+    defaults.push({
+      mint: USDT_MINT_MAINNET,
+      symbol: 'USDT',
+      name: 'Tether USD',
+      amount: ZERO,
+      decimals: 6,
+      isNative: false,
+    })
+  }
+  return defaults
+}
 
 /** Token logo with the Solana chain badge, matching the EVM inventory. */
 function SolanaTokenLogo({ symbol }: { symbol: string }) {
@@ -44,12 +81,19 @@ function SolanaTokenLogo({ symbol }: { symbol: string }) {
 export const SolanaAssetInventory = () => {
   const { data, isLoading } = useSolanaWalletAssets()
   const { triggerResize } = useOpenfort()
+  const wallet = useSolanaEmbeddedWallet()
+  const cluster = wallet.cluster
 
   useEffect(() => {
     if (!isLoading) triggerResize()
   }, [isLoading, triggerResize])
 
-  const tokens = (data ?? []).filter((t) => t.amount > ZERO)
+  // Held tokens first, then default zero-balance tokens (SOL + stablecoins) so the
+  // list is never empty.
+  const tokens = useMemo(() => {
+    const held = (data ?? []).filter((t) => t.amount > ZERO)
+    return [...held, ...buildSolanaDefaults(cluster, held)]
+  }, [data, cluster])
 
   if (isLoading) {
     return (

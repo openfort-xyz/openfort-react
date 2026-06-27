@@ -142,11 +142,8 @@ const EthereumConnected: React.FC = () => {
       <TextLinkButton
         type="button"
         onClick={() => {
-          const firstBalanceAsset = getFirstBalanceAsset(assets)
-          if (!firstBalanceAsset) {
-            setRoute(routes.NO_ASSETS_AVAILABLE)
-            return
-          }
+          // The inventory always shows the chain's native token + stablecoin
+          // defaults, so there's no empty state to gate on.
           setRoute(routes.ASSET_INVENTORY)
         }}
       >

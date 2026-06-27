@@ -1,8 +1,11 @@
 import { motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
+import { DEFAULT_ASSETS, isStableSymbol } from '../../../constants/defaultAssets'
 import { symbolToColor, TOKEN_LOGO } from '../../../constants/logos'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { getNativeCurrency } from '../../../utils/rpc'
 import Chain from '../../Common/Chain'
 import { ModalHeading } from '../../Common/Modal/styles'
 import type { MultiChainAsset } from '../../Openfort/types'
@@ -45,6 +48,47 @@ const priceFormatter = new Intl.NumberFormat('en-US', {
   maximumFractionDigits: 4,
 })
 
+/**
+ * Default tokens to surface at zero balance so the inventory is never empty: the
+ * active chain's native token plus the documented default ERC-20s for that chain
+ * (USDC / USDT / DAI / wrapped native). Skips any already held.
+ */
+function buildDefaultTokens(chainId: number | undefined, held: MultiChainAsset[]): MultiChainAsset[] {
+  if (chainId === undefined) return []
+  const heldKeys = new Set(
+    held.map((t) => (t.type === 'erc20' ? `${t.chainId}-${t.address.toLowerCase()}` : `${t.chainId}-native`))
+  )
+  const defaults: MultiChainAsset[] = []
+
+  if (!heldKeys.has(`${chainId}-native`)) {
+    const native = getNativeCurrency(chainId)
+    defaults.push({
+      type: 'native',
+      chainId,
+      balance: ZERO,
+      metadata: { symbol: native.symbol, decimals: native.decimals, fiat: { value: 0, currency: 'USD' } },
+    } as MultiChainAsset)
+  }
+
+  for (const token of DEFAULT_ASSETS[chainId] ?? []) {
+    if (heldKeys.has(`${chainId}-${token.address.toLowerCase()}`)) continue
+    defaults.push({
+      type: 'erc20',
+      chainId,
+      address: token.address,
+      balance: ZERO,
+      metadata: {
+        symbol: token.symbol,
+        name: token.name,
+        decimals: token.decimals,
+        fiat: isStableSymbol(token.symbol) ? { value: 1, currency: 'USD' } : undefined,
+      },
+    } as MultiChainAsset)
+  }
+
+  return defaults
+}
+
 function getTokenLogoUrl(token: MultiChainAsset): string | null {
   const symbol = getAssetSymbol(token).toUpperCase()
   return TOKEN_LOGO[symbol] ?? null
@@ -81,8 +125,6 @@ function renderTokenRow(token: MultiChainAsset) {
   let priceDisplay: string | null = null
 
   const isBalanceLoaded = token.balance !== undefined
-  const hasZeroBalance = isBalanceLoaded && (token.balance ?? ZERO) <= ZERO
-  if (hasZeroBalance) return null
 
   if (isBalanceLoaded && token.balance !== undefined) {
     const amount = parseFloat(formatUnits(token.balance, decimals))
@@ -167,6 +209,7 @@ function PillLogo({ symbol }: { symbol: string }) {
 export const AssetInventory = () => {
   const { data, multiChain, isLoading: isBalancesLoading } = useEthereumWalletAssets({ multiChain: true })
   const { triggerResize, chains } = useOpenfort()
+  const { chainId } = useEthereumEmbeddedWallet()
   const [showDetails, setShowDetails] = useState(false)
 
   useEffect(() => {
@@ -178,7 +221,13 @@ export const AssetInventory = () => {
   }, [showDetails])
 
   const tokens = (multiChain ? data : null) ?? []
-  const hasBalance = tokens.some((t) => t.balance > ZERO)
+
+  // Held tokens (any chain) first, then default zero-balance tokens for the active
+  // chain so the list is never empty and always shows the chain's essentials.
+  const displayTokens = useMemo(() => {
+    const held = tokens.filter((t) => t.balance > ZERO)
+    return [...held, ...buildDefaultTokens(chainId, held)]
+  }, [tokens, chainId])
 
   const chainNameMap = useMemo(() => {
     const map = new Map<number, string>()
@@ -264,7 +313,9 @@ export const AssetInventory = () => {
           </svg>
           Only configured chains and tokens are shown
         </InfoLink>
-        <TokenList>{hasBalance ? tokens.map(renderTokenRow) : <EmptyState>No assets found</EmptyState>}</TokenList>
+        <TokenList>
+          {displayTokens.length > 0 ? displayTokens.map(renderTokenRow) : <EmptyState>No assets found</EmptyState>}
+        </TokenList>
       </ContentWrapper>
     </SelectTokenContent>
   )
