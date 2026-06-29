@@ -1,0 +1,40 @@
+{
+  "pkg": "@openfort/react",
+  "globalName": "OpenfortReact",
+  "projectId": "e7f20843-3a6a-4892-b91b-802d05504e5e",
+  "shape": "package",
+  "buildCmd": "pnpm --filter @openfort/react build",
+  "readmeHeader": ".design-sync/conventions.md",
+  "entry": "./packages/openfort-react/build/index.js",
+  "tsconfig": "../../.design-sync/preview-tsconfig.json",
+  "extraEntries": [
+    "../../.design-sync/pages-entry.mjs"
+  ],
+  "componentSrcMap": {
+    "OpenfortError": null,
+    "ProvidersScreen": "src/components/Pages/Providers/index.tsx",
+    "EmailLoginScreen": "src/components/Pages/EmailLogin/index.tsx",
+    "EmailOtpScreen": "src/components/Pages/EmailOTP/index.tsx",
+    "PhoneOtpScreen": "src/components/Pages/PhoneOTP/index.tsx",
+    "ForgotPasswordScreen": "src/components/Pages/ForgotPassword/index.tsx",
+    "OnboardingScreen": "src/components/Pages/Onboarding/index.tsx",
+    "SendScreen": "src/components/Pages/Send/index.tsx",
+    "ReceiveScreen": "src/components/Pages/Receive/index.tsx",
+    "SelectTokenScreen": "src/components/Pages/SelectToken/index.tsx",
+    "DepositScreen": "src/components/Pages/Deposit/index.tsx",
+    "BuyScreen": "src/components/Pages/Buy/index.tsx",
+    "BuySelectProviderScreen": "src/components/Pages/BuySelectProvider/index.tsx",
+    "DepositCexScreen": "src/components/Pages/DepositCex/index.tsx",
+    "DepositCryptoScreen": "src/components/Pages/DepositCrypto/index.tsx",
+    "DepositWalletScreen": "src/components/Pages/DepositWallet/index.tsx",
+    "ProfileScreen": "src/components/Pages/Profile/index.tsx",
+    "AboutScreen": "src/components/Pages/About/index.tsx",
+    "ExportKeyScreen": "src/components/Pages/ExportKey/index.tsx"
+  },
+  "provider": {
+    "component": "OpenfortProvider",
+    "props": {
+      "publishableKey": "pk_test_preview"
+    }
+  }
+}

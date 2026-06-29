@@ -1,0 +1,8 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@sentry/browser": ["./stubs/sentry-browser.js"]
+    }
+  }
+}

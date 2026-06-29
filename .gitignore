@@ -42,3 +42,11 @@ examples/playground/tests/.auth/
 docs/
 semgrep-results-001/
 .gstack/
+
+# design-sync (claude.ai/design) — staged scripts, build output, machine state
+.ds-sync/
+ds-bundle/
+ds-bundle-test/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules
