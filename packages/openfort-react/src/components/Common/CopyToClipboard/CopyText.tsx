@@ -10,7 +10,7 @@ const Container = styled.div<{ $disabled?: boolean }>`
   gap: 4px;
   cursor: ${(props) => (props.$disabled ? 'not-allowed' : 'pointer')};
   opacity: ${(props) => (props.$disabled ? 0.4 : 1)};
-  transition: all 220ms ease;
+  transition: color 220ms ease, opacity 220ms ease;
 
   --color: var(--ck-copytoclipboard-stroke);
 

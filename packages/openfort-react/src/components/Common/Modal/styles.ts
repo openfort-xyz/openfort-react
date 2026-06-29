@@ -216,7 +216,8 @@ export const BackgroundOverlay = styled(motion.div)<{
   right: 0;
   bottom: 0;
   background: var(--ck-overlay-background, rgba(71, 88, 107, 0.24));
-  backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, none)')};
+  backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, blur(2px))')};
+  -webkit-backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, blur(2px))')};
   opacity: 0;
   animation: ${(props) => (props.$active ? FadeIn : FadeOut)} 150ms ease-out
     both;
@@ -246,10 +247,13 @@ export const BoxContainer = styled(motion.div)`
   position: relative;
   color: var(--ck-body-color);
 
-  animation: 150ms ease both;
+  /* Exit is snappier than enter — slow where the user decides (open),
+     fast where the system responds (dismiss). */
+  animation: 130ms var(--ck-ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both;
   animation-name: ${BoxOut};
   &.active {
     animation-name: ${BoxIn};
+    animation-duration: 200ms;
   }
 
   &:before {
@@ -265,7 +269,8 @@ export const BoxContainer = styled(motion.div)`
     max-height: 88vh;
     transform: translateX(-50%);
     backface-visibility: hidden;
-    transition: all 200ms ease;
+    transition: width 200ms ease, height 200ms ease, box-shadow 200ms ease,
+      border-radius 200ms ease;
     border-radius: var(--ck-border-radius, 20px);
     background: var(--ck-body-background);
     box-shadow: var(--ck-modal-box-shadow);
@@ -287,6 +292,14 @@ export const BoxContainer = styled(motion.div)`
       width: 100%;
       transition: 0ms height cubic-bezier(0.15, 1.15, 0.6, 1);
       will-change: height;
+    }
+  }
+
+  /* Reduced motion: keep the fade, drop the scale/slide. */
+  @media (prefers-reduced-motion: reduce) {
+    animation-name: ${FadeOut};
+    &.active {
+      animation-name: ${FadeIn};
     }
   }
 `
@@ -331,7 +344,7 @@ export const PageContainer = styled(motion.div)`
   justify-content: center;
   align-items: center;
   transform-origin: center center;
-  animation: 200ms ease both;
+  animation: 200ms var(--ck-ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both;
 
   &.active {
     animation-name: ${FadeInScaleDown};
@@ -379,6 +392,18 @@ export const PageContainer = styled(motion.div)`
       animation-delay: 0ms;
     }
   }
+
+  /* Reduced motion: cross-fade pages instead of scaling them. */
+  @media (prefers-reduced-motion: reduce) {
+    &.active,
+    &.active-scale-up {
+      animation-name: ${FadeIn};
+    }
+    &.exit,
+    &.exit-scale-down {
+      animation-name: ${FadeOut};
+    }
+  }
 `
 export const PageContents = styled(motion.div)`
   margin: 0 auto;
@@ -409,7 +434,7 @@ export const CloseButton = styled(motion.button)`
   margin: 0;
   color: var(--ck-body-action-color);
   background: var(--ck-body-background);
-  transition: background-color 200ms ease, transform 100ms ease;
+  transition: background-color 200ms ease, transform 100ms ease-out;
   /* will-change: transform; */
   svg {
     display: block;
@@ -419,7 +444,7 @@ export const CloseButton = styled(motion.button)`
     background: var(--ck-body-background-secondary);
   }
   &:active {
-    transform: scale(0.9);
+    transform: scale(var(--ck-press-scale, 0.97));
   }
 `
 
@@ -436,7 +461,7 @@ const _SiweButton = styled(motion.button)`
   margin: 0;
   color: var(--ck-body-action-color);
   background: var(--ck-body-background);
-  transition: background-color 200ms ease, transform 100ms ease;
+  transition: background-color 200ms ease, transform 100ms ease-out;
   /* will-change: transform; */
   svg {
     display: block;
@@ -449,7 +474,7 @@ const _SiweButton = styled(motion.button)`
       background: var(--ck-body-background-secondary);
     }
     &:active {
-      transform: scale(0.9);
+      transform: scale(var(--ck-press-scale, 0.97));
     }
   }
 `
@@ -467,7 +492,7 @@ export const BackButton = styled(motion.button)`
   margin: 0;
   color: var(--ck-body-action-color);
   background: var(--ck-body-background);
-  transition: background-color 200ms ease, transform 100ms ease;
+  transition: background-color 200ms ease, transform 100ms ease-out;
   /* will-change: transform; */
   svg {
     display: block;
@@ -481,7 +506,7 @@ export const BackButton = styled(motion.button)`
       background: var(--ck-body-background-secondary);
     }
     &:active {
-      transform: scale(0.9);
+      transform: scale(var(--ck-press-scale, 0.97));
     }
   }
 `
@@ -500,7 +525,7 @@ export const InfoButton = styled(motion.button)`
   margin: 0;
   color: var(--ck-body-action-color);
   background: var(--ck-body-background);
-  transition: background-color 200ms ease, transform 100ms ease;
+  transition: background-color 200ms ease, transform 100ms ease-out;
   /* will-change: transform; */
   svg {
     display: block;
@@ -512,13 +537,13 @@ export const InfoButton = styled(motion.button)`
       background: var(--ck-body-background-secondary);
     }
     &:active {
-      transform: scale(0.9);
+      transform: scale(var(--ck-press-scale, 0.97));
     }
   }
 `
 
 export const Container = styled(motion.div)`
-  --ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+  --ease: var(--ck-ease-out, cubic-bezier(0.23, 1, 0.32, 1));
   --duration: 200ms;
   --transition: height var(--duration) var(--ease),
     width var(--duration) var(--ease);

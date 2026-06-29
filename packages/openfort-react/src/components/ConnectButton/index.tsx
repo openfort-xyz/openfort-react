@@ -28,7 +28,7 @@ const contentVariants: Variants = {
     opacity: 1,
     x: 0.1,
     transition: {
-      duration: 0.4,
+      duration: 0.22,
       ease: [0.25, 1, 0.5, 1],
     },
   },
@@ -39,7 +39,7 @@ const contentVariants: Variants = {
     pointerEvents: 'none',
     position: 'absolute',
     transition: {
-      duration: 0.4,
+      duration: 0.22,
       ease: [0.25, 1, 0.5, 1],
     },
   },
@@ -55,7 +55,7 @@ const addressVariants: Variants = {
     x: 0.2,
     opacity: 1,
     transition: {
-      duration: 0.4,
+      duration: 0.22,
       ease: [0.25, 1, 0.5, 1],
     },
   },
@@ -66,7 +66,7 @@ const addressVariants: Variants = {
     pointerEvents: 'none',
     position: 'absolute',
     transition: {
-      duration: 0.4,
+      duration: 0.22,
       ease: [0.25, 1, 0.5, 1],
     },
   },
@@ -79,7 +79,7 @@ const textVariants: Variants = {
   animate: {
     opacity: 1,
     transition: {
-      duration: 0.3,
+      duration: 0.2,
       ease: [0.25, 1, 0.5, 1],
     },
   },
@@ -87,7 +87,7 @@ const textVariants: Variants = {
     position: 'absolute',
     opacity: 0,
     transition: {
-      duration: 0.3,
+      duration: 0.2,
       ease: [0.25, 1, 0.5, 1],
     },
   },
@@ -382,7 +382,7 @@ export function OpenfortButton({
                   width: 'auto',
                   marginRight: -24,
                   transition: {
-                    duration: 0.4,
+                    duration: 0.22,
                     ease: [0.25, 1, 0.5, 1],
                   },
                 }}
@@ -392,7 +392,7 @@ export function OpenfortButton({
                   width: 0,
                   marginRight: 0,
                   transition: {
-                    duration: 0.4,
+                    duration: 0.22,
                     ease: [0.25, 1, 0.5, 1],
                   },
                 }}
