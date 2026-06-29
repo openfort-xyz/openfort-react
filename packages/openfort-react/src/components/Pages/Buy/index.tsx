@@ -7,25 +7,22 @@ import useLocales from '../../../hooks/useLocales'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import { ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
+import { getProviders } from './providers'
 import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
 import {
   AmountCard,
   AmountInput,
   ContinueButtonWrapper,
-  CurrencySymbol,
   PresetButton,
   PresetList,
-  Section,
-  SectionLabel,
   SelectorButton,
   SelectorContent,
   SelectorRight,
-  SelectorSubtitle,
   SelectorTitle,
 } from './styles'
 import { createCurrencyFormatter, getCurrencySymbol } from './utils'
@@ -108,8 +105,13 @@ const Buy = () => {
 
   const handleContinue = () => {
     if (fiatAmount === null || fiatAmount <= 0) return
-    setRoute(routes.BUY_SELECT_PROVIDER)
+    // Provider is resolved by Openfort (set on the deposit hub); skip the picker.
+    setRoute(routes.BUY_PROCESSING)
   }
+
+  const providerName =
+    getProviders().find((p) => p.id === buyForm.providerId)?.name ??
+    (buyForm.providerId ? buyForm.providerId.charAt(0).toUpperCase() + buyForm.providerId.slice(1) : 'provider')
 
   const handleBack = () => {
     // Card/Apple Pay is reached via the Add funds hub — back returns there.
@@ -122,58 +124,60 @@ const Buy = () => {
   return (
     <PageContent onBack={handleBack}>
       <ModalHeading>{locales.buyScreen_heading}</ModalHeading>
-      <ModalBody>{locales.buyScreen_subheading}</ModalBody>
 
-      <Section>
-        <SectionLabel>Amount</SectionLabel>
-        <AmountCard>
-          <CurrencySymbol>{currencySymbol}</CurrencySymbol>
+      <AmountCard style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <AmountInput
+            style={{ flex: 1, minWidth: 0, textAlign: 'left' }}
             value={buyForm.amount}
             onChange={handleAmountChange}
             onBlur={handleAmountBlur}
-            placeholder="0.00"
+            placeholder="0"
             inputMode="decimal"
             autoComplete="off"
           />
-        </AmountCard>
-        <PresetList>
-          {amountPresets.map((preset) => (
-            <PresetButton
-              key={preset}
-              type="button"
-              onClick={() => handlePresetClick(preset)}
-              $active={isPresetSelected(preset)}
-            >
-              {currencyFormatter.format(preset)}
-            </PresetButton>
-          ))}
-        </PresetList>
-      </Section>
+          <SelectorButton
+            type="button"
+            onClick={handleOpenTokenSelector}
+            style={{ width: 'auto', flex: '0 0 auto', padding: '8px 14px', borderRadius: 999 }}
+            title={tokenName}
+          >
+            <SelectorContent>
+              <SelectorTitle>{tokenSymbol || 'Select'}</SelectorTitle>
+            </SelectorContent>
+            <SelectorRight>
+              <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ArrowChevron
+                  stroke="currentColor"
+                  d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                />
+              </Arrow>
+            </SelectorRight>
+          </SelectorButton>
+        </div>
+        <div style={{ marginTop: 8, fontSize: 15, fontWeight: 500, color: 'var(--ck-body-color-muted)' }}>
+          {fiatAmount !== null ? currencyFormatter.format(fiatAmount) : `${currencySymbol}0.00`}
+        </div>
+      </AmountCard>
 
-      <Section>
-        <SectionLabel>Currency</SectionLabel>
-        <SelectorButton type="button" onClick={handleOpenTokenSelector}>
-          <SelectorContent>
-            <SelectorTitle>{tokenSymbol || 'Select currency'}</SelectorTitle>
-            <SelectorSubtitle>{tokenName}</SelectorSubtitle>
-          </SelectorContent>
-          <SelectorRight>
-            <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <ArrowChevron
-                stroke="currentColor"
-                d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </Arrow>
-          </SelectorRight>
-        </SelectorButton>
-      </Section>
+      <PresetList>
+        {amountPresets.map((preset) => (
+          <PresetButton
+            key={preset}
+            type="button"
+            onClick={() => handlePresetClick(preset)}
+            $active={isPresetSelected(preset)}
+          >
+            {currencyFormatter.format(preset)}
+          </PresetButton>
+        ))}
+      </PresetList>
 
       <ContinueButtonWrapper>
         <Button variant="primary" onClick={handleContinue} disabled={step1Disabled}>
-          Continue
+          Buy on {providerName}
         </Button>
       </ContinueButtonWrapper>
     </PageContent>

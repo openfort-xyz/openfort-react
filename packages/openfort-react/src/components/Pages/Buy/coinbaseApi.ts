@@ -63,12 +63,6 @@ const COINBASE_SUPPORTED_CURRENCIES = [
   'xlm',
 ] as const
 
-// Check if a token is supported by Coinbase
-export const isCoinbaseSupported = (token: Asset): boolean => {
-  const symbol = getAssetSymbol(token)
-  return COINBASE_SUPPORTED_CURRENCIES.includes(symbol.toLowerCase() as any)
-}
-
 // Map token symbol to Coinbase currency code
 const getCurrencyCode = (token: Asset): string => {
   const symbol = getAssetSymbol(token)

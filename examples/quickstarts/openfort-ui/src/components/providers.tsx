@@ -30,6 +30,11 @@ const uiConfig = {
   theme: import.meta.env.VITE_OPENFORT_THEME as Theme,
   // Point the Deposit hub's crypto/CEX rails at the local funding backend.
   fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL ?? 'https://api.openfort.io',
+  funding: {
+    // Destination where deposited funds land: Base mainnet USDC.
+    targetChain: 'eip155:8453',
+    targetCurrency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  },
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

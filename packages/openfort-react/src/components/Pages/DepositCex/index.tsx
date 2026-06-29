@@ -16,7 +16,7 @@ import Tooltip from '../../Common/Tooltip'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
+import { AmountCard, AmountInput, PresetButton, PresetList, Section } from '../Buy/styles'
 import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { DepositStatus } from '../Deposit/DepositStatus'
@@ -227,17 +227,45 @@ const DepositCex = () => {
       <TestnetNotice />
 
       <Section>
-        <SectionLabel>Amount</SectionLabel>
-        <AmountCard>
-          <CurrencySymbol>$</CurrencySymbol>
-          <AmountInput
-            value={amount}
-            onChange={handleAmountChange}
-            onBlur={handleAmountBlur}
-            placeholder="0.00"
-            inputMode="decimal"
-            autoComplete="off"
-          />
+        <AmountCard style={{ flexDirection: 'column', alignItems: 'stretch' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+            <AmountInput
+              style={{ flex: 1, minWidth: 0, textAlign: 'left' }}
+              value={amount}
+              onChange={handleAmountChange}
+              onBlur={handleAmountBlur}
+              placeholder="0"
+              inputMode="decimal"
+              autoComplete="off"
+            />
+            {destAssetLabel && (
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  flex: '0 0 auto',
+                  padding: '8px 14px',
+                  borderRadius: 999,
+                  background: 'var(--ck-body-background-secondary)',
+                  fontWeight: 600,
+                }}
+              >
+                {destAssetLogo && (
+                  <img
+                    src={destAssetLogo}
+                    alt=""
+                    style={{ width: 18, height: 18, borderRadius: 999 }}
+                    onError={hideBrokenLogo}
+                  />
+                )}
+                {destAssetLabel}
+              </span>
+            )}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 15, fontWeight: 500, color: 'var(--ck-body-color-muted)' }}>
+            {fiatAmount !== null ? `$${fiatAmount.toFixed(2)}` : '$0.00'}
+          </div>
         </AmountCard>
         <PresetList>
           {PRESETS.map((preset) => (

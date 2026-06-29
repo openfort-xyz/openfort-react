@@ -111,6 +111,33 @@ export const BuyIcon = ({ ...props }) => (
   </svg>
 );
 
+export const BankIcon = ({ ...props }) => (
+  <svg
+    aria-hidden="true"
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    {...props}
+  >
+    <path
+      d="M3 9.5L12 4L21 9.5"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M5 10.5V17M9.5 10.5V17M14.5 10.5V17M19 10.5V17"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+    />
+    <path d="M3.5 20.5H20.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+  </svg>
+);
+
 export const DollarIcon = (props) => (
   <svg
     width="800px"

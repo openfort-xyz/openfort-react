@@ -1,27 +1,4 @@
-import { ChainTypeEnum, SDKConfiguration } from '@openfort/openfort-js'
-import type { Asset } from '../../Openfort/types'
-import { getAssetSymbol } from '../Send/utils'
-
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
-
-// Generic quote response type (matches backend OnrampQuoteResponse)
-export type OnrampQuote = {
-  provider: string
-  sourceAmount: string
-  sourceCurrency: string
-  destinationAmount: string
-  destinationCurrency: string
-  destinationNetwork: string
-  fees: Array<{
-    amount: string
-    currency: string
-    type: string
-  }>
-  exchangeRate: string
-}
+import { ChainTypeEnum } from '@openfort/openfort-js'
 
 /** EVM chain id → onramp network name. */
 const EVM_NETWORK_MAP: Record<number, string> = {
@@ -41,56 +18,4 @@ export function resolveOnrampNetwork(chainType: ChainTypeEnum, chainId?: number)
   if (chainType === ChainTypeEnum.SVM) return 'solana'
   if (chainId == null) return undefined
   return EVM_NETWORK_MAP[chainId] ?? 'base'
-}
-
-// Map token symbol to currency code
-const getCurrencyCode = (token: Asset): string => {
-  return getAssetSymbol(token).toLowerCase()
-}
-
-type GetAllQuotesParams = {
-  token: Asset
-  network: string
-  publishableKey: string
-  sourceCurrency: string
-  sourceAmount: string
-}
-
-/**
- * Get quotes from all available providers
- * Calls the backend without specifying a provider to get quotes from all providers
- */
-export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQuote[]> => {
-  const { token, network, publishableKey, sourceCurrency, sourceAmount } = params
-
-  if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
-  }
-
-  // Build request body WITHOUT provider to get all quotes
-  const requestBody = {
-    destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: network,
-    sourceCurrency: sourceCurrency.toLowerCase(),
-    sourceAmount,
-  }
-
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to fetch quotes')
-  }
-
-  const data = await response.json()
-
-  // Backend returns array when provider is not specified
-  return Array.isArray(data) ? data : [data]
 }

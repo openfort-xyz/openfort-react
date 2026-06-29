@@ -60,10 +60,8 @@ export const routes = {
   DEPOSIT_CEX: 'depositCex',
   BUY: 'buy',
   BUY_TOKEN_SELECT: 'buyTokenSelect',
-  BUY_SELECT_PROVIDER: 'buySelectProvider',
   BUY_PROCESSING: 'buyProcessing',
   BUY_COMPLETE: 'buyComplete',
-  BUY_PROVIDER_SELECT: 'buyProviderSelect',
 
   ETH_CONNECTED: 'eth:connected',
   ETH_CREATE_WALLET: 'eth:createWallet',
@@ -383,10 +381,14 @@ type WalletRecoveryOptionsExtended = {
  * which appear and in what order — like `authProviders` for the auth modal.
  */
 export enum FundingMethod {
-  /** Apple Pay (fiat onramp; mobile only). */
+  /** Apple Pay (fiat onramp; native wallet sheet via Coinbase, else Swapped). */
   APPLE_PAY = 'applePay',
+  /** Google Pay (fiat onramp; native wallet sheet via Coinbase, else Swapped). */
+  GOOGLE_PAY = 'googlePay',
   /** Card (fiat onramp). */
   CARD = 'card',
+  /** Bank transfer (fiat onramp; shows the regional rail — ACH/SEPA/Interac). */
+  BANK_TRANSFER = 'bankTransfer',
   /** Transfer from wallet — prefilled wallet deeplinks. */
   WALLET = 'wallet',
   /** Transfer from address — cross-chain deposit address + QR. */

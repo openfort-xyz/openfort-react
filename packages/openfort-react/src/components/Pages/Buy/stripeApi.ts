@@ -42,12 +42,6 @@ type CreateStripeSessionParams = {
 // Stripe supported currencies
 const STRIPE_SUPPORTED_CURRENCIES = ['btc', 'eth', 'xlm', 'matic', 'pol', 'sol', 'usdc', 'avax', 'wld'] as const
 
-// Check if a token is supported by Stripe
-export const isStripeSupported = (token: Asset): boolean => {
-  const symbol = getAssetSymbol(token)
-  return STRIPE_SUPPORTED_CURRENCIES.includes(symbol.toLowerCase() as any)
-}
-
 // Map token symbol to Stripe currency code
 const getCurrencyCode = (token: Asset): string => {
   const symbol = getAssetSymbol(token)

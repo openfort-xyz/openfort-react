@@ -68,7 +68,7 @@ const BuyProcessing = () => {
 
     const createSessionAndOpenPopup = async () => {
       if (!fiatAmount || fiatAmount <= 0) {
-        setRoute(routes.BUY_SELECT_PROVIDER)
+        setRoute(routes.BUY)
         return
       }
 
@@ -232,7 +232,7 @@ const BuyProcessing = () => {
       popupWindow.close()
     }
     setPopupWindow(null)
-    setRoute(routes.BUY_SELECT_PROVIDER)
+    setRoute(routes.BUY)
   }
 
   if (sessionError) {

@@ -22,8 +22,6 @@ import { SolanaAssetInventory } from '../Pages/AssetInventory/SolanaAssetInvento
 import Buy from '../Pages/Buy'
 import BuyComplete from '../Pages/BuyComplete'
 import BuyProcessing from '../Pages/BuyProcessing'
-import BuyProviderSelect from '../Pages/BuyProviderSelect'
-import BuySelectProvider from '../Pages/BuySelectProvider'
 import { Connected } from '../Pages/Connected'
 import ConnectedSuccess from '../Pages/ConnectedSuccess'
 import Connectors from '../Pages/Connectors'
@@ -102,10 +100,8 @@ function buildSharedPages(): RoutePages {
     sendConfirmation: <SendConfirmation />,
     sendTokenSelect: <SelectToken isBuyFlow={false} />,
     buyTokenSelect: <SelectToken isBuyFlow={true} />,
-    buySelectProvider: <BuySelectProvider />,
     buyProcessing: <BuyProcessing />,
     buyComplete: <BuyComplete />,
-    buyProviderSelect: <BuyProviderSelect />,
     receive: <Receive />,
     buy: <Buy />,
     deposit: <Deposit />,

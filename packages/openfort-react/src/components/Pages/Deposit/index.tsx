@@ -2,10 +2,11 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { type ReactNode, type SyntheticEvent, useEffect } from 'react'
-import { BuyIcon, DollarIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
+import { BankIcon, BuyIcon, DollarIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
 import logos from '../../../assets/logos'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
+import { useResolvedFundingMethods } from '../../../hooks/openfort/useResolvedFundingMethods'
 import useIsMobile from '../../../hooks/useIsMobile'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { ModalHeading } from '../../Common/Modal/styles'
@@ -14,6 +15,7 @@ import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
+import { backendMethodId } from '../Buy/onrampMethodsApi'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
 import {
@@ -33,7 +35,9 @@ import { useFundingTarget } from './useFundingTarget'
 /** The action icon shown in each row's left badge (icons default to 20×20). */
 const METHOD_ICON: Record<FundingMethod, ReactNode> = {
   [FundingMethod.APPLE_PAY]: <DollarIcon />,
+  [FundingMethod.GOOGLE_PAY]: <DollarIcon />,
   [FundingMethod.CARD]: <BuyIcon />,
+  [FundingMethod.BANK_TRANSFER]: <BankIcon />,
   [FundingMethod.WALLET]: <WalletIcon />,
   [FundingMethod.ADDRESS]: <ReceiveIcon />,
   [FundingMethod.EXCHANGE]: <ExternalLinkIcon />,
@@ -51,6 +55,7 @@ const BRAND_LOGOS: Partial<Record<FundingMethod, ReactNode[]>> = {
   [FundingMethod.EXCHANGE]: [<logos.Coinbase key="cb" background />, <logos.Binance key="bn" />],
   [FundingMethod.CARD]: [<logos.Visa key="visa" />, <logos.Mastercard key="mc" />],
   [FundingMethod.APPLE_PAY]: [<logos.Apple key="apple" />],
+  [FundingMethod.GOOGLE_PAY]: [<logos.Google key="google" />],
 }
 
 const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
@@ -69,6 +74,7 @@ const Deposit = () => {
   const { isAvailable } = useFunding()
   const { chains, railChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
+  const { loaded, availableMethodIds, providerFor } = useResolvedFundingMethods()
 
   // The rail can only deliver to chains it lists. If the embedded wallet's target
   // chain (e.g. Polygon Amoy or a Solana testnet) isn't one of them, there's no
@@ -81,11 +87,26 @@ const Deposit = () => {
     triggerResize()
   }, [targetUnsupported, triggerResize])
 
+  // Wallet pay is browser/device gated: Apple Pay on Apple/Safari, Google Pay on
+  // Android/Chrome. UA heuristic for now — TODO: refine with ApplePaySession /
+  // Google Pay isReadyToPay capability checks.
+  const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent
+  const isApple = /Mac|iPhone|iPad|iPod/.test(ua)
   const options = getPaymentOptions({
     isMobile,
     fundingAvailable: isAvailable,
+    canApplePay: isApple,
+    canGooglePay: !isApple,
     methods: uiConfig.funding?.methods,
   })
+
+  // Once Openfort has resolved the region's fiat methods, show only those fiat
+  // rows (crypto rails are always available). Falls back to the static rows when
+  // the resolve request hasn't completed or returned nothing.
+  const visibleOptions =
+    loaded && availableMethodIds.size > 0
+      ? options.filter((o) => o.target.kind !== 'buy' || availableMethodIds.has(backendMethodId(o.id) ?? ''))
+      : options
 
   // Distinct source-currency logos (USDC, USDT, ETH, …) for the "from address" row.
   const currencyLogos: string[] = []
@@ -123,11 +144,12 @@ const Deposit = () => {
       setRoute(routes.DEPOSIT_CEX)
       return
     }
-    // Fiat rails reuse the existing Buy flow; preselect the chosen provider so
-    // Apple Pay / Card land on the right rail.
+    // Fiat rails reuse the Buy flow. The provider is resolved by Openfort
+    // (region + destination asset) and never shown to the user; default to Stripe
+    // when the resolved provider isn't one the Buy flow executes yet (e.g. MoonPay redirect).
     setBuyForm((prev) => ({
       ...prev,
-      providerId: target.providerId,
+      providerId: providerFor(target.method) ?? 'stripe',
       // Default the card-buy to USDC per chain family. Without this the EVM default
       // resolves to the wallet's (often empty) asset list — "no supported tokens" —
       // and the Solana native default would resolve to SOL (isSameToken treats any
@@ -145,7 +167,7 @@ const Deposit = () => {
       ) : (
         <DepositContent>
           <OptionList>
-            {options.map((option) => (
+            {visibleOptions.map((option) => (
               <OptionButton key={option.id} type="button" disabled={option.disabled} onClick={() => go(option.target)}>
                 <OptionLeft>
                   <OptionIconBadge>{METHOD_ICON[option.id]}</OptionIconBadge>
