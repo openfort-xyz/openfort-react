@@ -521,16 +521,35 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
       syncInProgressRef.current = accountByAddress.address.toLowerCase()
       let cancelled = false
       getEmbeddedEthereumProvider()
-        .then((provider) => {
+        .then(async (provider) => {
+          if (cancelled) return
+
+          // The provider signs with the account in the core SDK's storage, which
+          // can differ from `activeEmbeddedAddress` when the latter was seeded from
+          // the accounts list (e.g. the first-account fallback in useActiveAddressSync
+          // when the user has multiple smart accounts) rather than the SDK's active
+          // wallet. Reconcile to the provider's real account so the displayed wallet
+          // and the actual signer always agree — otherwise personal_sign rejects with
+          // "personal_sign requires the signer to be the from address".
+          const providerAccounts = (await provider.request({ method: 'eth_accounts' }).catch(() => [])) as string[]
+          const realAddr = providerAccounts?.[0]?.toLowerCase()
+          const resolved =
+            (realAddr && ethereumAccounts.find((acc) => acc.address.toLowerCase() === realAddr)) || accountByAddress
           if (cancelled) return
 
           const connectedWallet = buildConnectedWallet(
-            accountByAddress,
-            ethereumAccounts.indexOf(accountByAddress),
+            resolved,
+            ethereumAccounts.indexOf(resolved),
             async () => provider,
             { isActive: true, isConnecting: false }
           )
           setState({ status: 'connected', activeWallet: connectedWallet, provider, error: null })
+
+          // Keep the single source of truth in step. The deps-driven re-run then hits
+          // the "already synced" guard above and stops — no render loop.
+          if (resolved.address.toLowerCase() !== activeEmbeddedAddress?.toLowerCase()) {
+            setActiveEmbeddedAddress(resolved.address)
+          }
         })
         .catch(() => {})
         .finally(() => {
