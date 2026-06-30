@@ -1,5 +1,6 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
 import { FundingMethod } from '../../Openfort/types'
+import { ONRAMP_API_BASE } from './onrampEndpoints'
 
 const getBackendUrl = (): string => {
   const sdkConfig = SDKConfiguration.getInstance()
@@ -47,7 +48,7 @@ export async function fetchOnrampMethods(params: FetchOnrampMethodsParams): Prom
   const query = new URLSearchParams({ targetChain, targetCurrency })
   if (country) query.set('country', country)
   try {
-    const response = await fetch(`${getBackendUrl()}/v1/onramp/methods?${query.toString()}`, {
+    const response = await fetch(`${getBackendUrl()}${ONRAMP_API_BASE}/methods?${query.toString()}`, {
       headers: { Authorization: `Bearer ${publishableKey}` },
     })
     if (!response.ok) return []

@@ -2,9 +2,12 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
 import useLocales from '../../../hooks/useLocales'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
 import { ModalHeading } from '../../Common/Modal/styles'
@@ -12,6 +15,8 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
+import { resolveOnrampNetwork } from './onrampApi'
+import { totalFee } from './onrampQuoteApi'
 import { getProviders } from './providers'
 import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
 import {
@@ -29,6 +34,26 @@ import { createCurrencyFormatter, getCurrencySymbol } from './utils'
 
 const amountPresets = [10, 20, 50]
 
+// Fiat source currencies the onramp accepts. Kept small; USD is the safe default
+// (some providers reject non-USD and fall back to the buyer's local currency).
+const SOURCE_CURRENCIES = ['USD', 'EUR', 'GBP']
+
+// Friendly labels for the onramp destination networks resolveOnrampNetwork returns.
+const CHAIN_LABEL: Record<string, string> = {
+  base: 'Base',
+  ethereum: 'Ethereum',
+  polygon: 'Polygon',
+  arbitrum: 'Arbitrum',
+  optimism: 'Optimism',
+  solana: 'Solana',
+}
+
+const formatTokenAmount = (raw: string): string => {
+  const numeric = Number(raw)
+  if (!Number.isFinite(numeric)) return raw
+  return numeric.toLocaleString('en-US', { maximumFractionDigits: 6 })
+}
+
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
   const locales = useLocales()
@@ -37,6 +62,18 @@ const Buy = () => {
   // Solana wallets buy Solana currencies (USDC default, then SOL); EVM reads its
   // own assets. Both hooks run unconditionally; the active chain picks the list.
   const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
+
+  // Resolve the onramp destination network (where the bought token lands). The
+  // chain is fixed by the wallet's active network — shown read-only on the preview.
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+  const chainId =
+    wallet.status === 'connected' && chainType === ChainTypeEnum.EVM
+      ? (wallet as typeof ethereumWallet).chainId
+      : undefined
+  const network = resolveOnrampNetwork(chainType, chainId)
+  const chainLabel = network ? (CHAIN_LABEL[network] ?? network.charAt(0).toUpperCase() + network.slice(1)) : ''
 
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
@@ -66,6 +103,19 @@ const Buy = () => {
 
   const currencyFormatter = useMemo(() => createCurrencyFormatter(buyForm.currency), [buyForm.currency])
   const currencySymbol = useMemo(() => getCurrencySymbol(buyForm.currency), [buyForm.currency])
+
+  // A real quote from the resolved provider — refreshes as the amount/token/currency
+  // settle. Re-measure the modal when the estimate appears/disappears.
+  const { quote, loading: quoteLoading } = useOnrampQuote({
+    provider: buyForm.providerId,
+    token: selectedToken,
+    network,
+    sourceCurrency: buyForm.currency,
+    amount: fiatAmount,
+  })
+  useEffect(() => {
+    triggerResize()
+  }, [quote, quoteLoading, triggerResize])
 
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
@@ -99,13 +149,19 @@ const Buy = () => {
     }))
   }
 
+  const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    const currency = event.target.value
+    setBuyForm((prev) => ({ ...prev, currency }))
+  }
+
   const handleOpenTokenSelector = () => {
     setRoute(routes.BUY_TOKEN_SELECT)
   }
 
   const handleContinue = () => {
     if (fiatAmount === null || fiatAmount <= 0) return
-    // Provider is resolved by Openfort (set on the deposit hub); skip the picker.
+    // Provider is resolved by Openfort (set on the deposit hub); skip the picker
+    // and go straight to the provider redirect.
     setRoute(routes.BUY_PROCESSING)
   }
 
@@ -120,6 +176,9 @@ const Buy = () => {
 
   const isPresetSelected = (value: number) => pressedPreset === value
   const step1Disabled = fiatAmount === null || fiatAmount <= 0
+
+  const receiveText = quote ? `≈ ${formatTokenAmount(quote.destinationAmount)} ${tokenSymbol}` : null
+  const feeText = quote ? currencyFormatter.format(totalFee(quote)) : null
 
   return (
     <PageContent onBack={handleBack}>
@@ -174,6 +233,62 @@ const Buy = () => {
           </PresetButton>
         ))}
       </PresetList>
+
+      <div
+        style={{
+          marginTop: 16,
+          paddingTop: 14,
+          borderTop: '1px solid var(--ck-body-divider, rgba(0,0,0,0.08))',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          fontSize: 13,
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: 'var(--ck-body-color-muted)' }}>Pay in</span>
+          <select
+            value={buyForm.currency}
+            onChange={handleCurrencyChange}
+            style={{
+              appearance: 'none',
+              background: 'transparent',
+              border: 'none',
+              color: 'var(--ck-body-color)',
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: 'pointer',
+              textAlign: 'right',
+              fontFamily: 'inherit',
+            }}
+          >
+            {SOURCE_CURRENCIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: 'var(--ck-body-color-muted)' }}>Destination</span>
+          <span style={{ fontWeight: 600, color: 'var(--ck-body-color)' }}>
+            {tokenSymbol}
+            {chainLabel ? ` on ${chainLabel}` : ''}
+          </span>
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <span style={{ color: 'var(--ck-body-color-muted)' }}>You receive</span>
+          <span style={{ fontWeight: 600, color: 'var(--ck-body-color)' }}>
+            {quoteLoading ? 'Fetching best price…' : (receiveText ?? '—')}
+          </span>
+        </div>
+        {feeText && (
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ color: 'var(--ck-body-color-muted)' }}>Fee</span>
+            <span style={{ color: 'var(--ck-body-color-muted)' }}>{feeText}</span>
+          </div>
+        )}
+      </div>
 
       <ContinueButtonWrapper>
         <Button variant="primary" onClick={handleContinue} disabled={step1Disabled}>

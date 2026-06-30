@@ -1,25 +1,11 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
 import type { Asset } from '../../Openfort/types'
 import { getAssetSymbol } from '../Send/utils'
+import { ONRAMP_API_BASE } from './onrampEndpoints'
 
 const getBackendUrl = (): string => {
   const sdkConfig = SDKConfiguration.getInstance()
   return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
-
-type CoinbaseQuoteResponse = {
-  provider: string
-  sourceAmount: string
-  sourceCurrency: string
-  destinationAmount: string
-  destinationCurrency: string
-  destinationNetwork: string
-  fees: Array<{
-    amount: string
-    currency: string
-    type: string
-  }>
-  exchangeRate: string
 }
 
 type CoinbaseOnrampResponse = {
@@ -115,7 +101,7 @@ export const createCoinbaseSession = async (
   if (rest.redirectUrl) requestBody.redirectUrl = rest.redirectUrl
   if (rest.clientIp) requestBody.clientIp = rest.clientIp
 
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/sessions`, {
+  const response = await fetch(`${getBackendUrl()}${ONRAMP_API_BASE}/sessions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -127,64 +113,6 @@ export const createCoinbaseSession = async (
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
     throw new Error(errorData.error || errorData.errorMessage || 'Failed to create Coinbase session')
-  }
-
-  return response.json()
-}
-
-type GetCoinbaseQuoteParams = {
-  sourceCurrency: string
-  destinationCurrency: string
-  destinationNetwork: string
-  sourceAmount: string
-  paymentMethod: string
-  country?: string
-  subdivision?: string
-}
-
-/**
- * Get a quote from Coinbase
- * This provides fee estimates and exchange rates
- */
-const _getCoinbaseQuote = async (
-  params: Omit<GetCoinbaseQuoteParams, 'destinationCurrency' | 'destinationNetwork'> & {
-    token: Asset
-    network: string
-    publishableKey: string
-  }
-): Promise<CoinbaseQuoteResponse> => {
-  const { token, network, publishableKey, ...rest } = params
-
-  if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
-  }
-
-  // Build request body
-  const requestBody: GetCoinbaseQuoteParams & { provider: string } = {
-    provider: 'coinbase',
-    destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: network,
-    sourceCurrency: rest.sourceCurrency,
-    sourceAmount: rest.sourceAmount,
-    paymentMethod: rest.paymentMethod,
-  }
-
-  // Add optional parameters only if provided
-  if (rest.country) requestBody.country = rest.country
-  if (rest.subdivision) requestBody.subdivision = rest.subdivision
-
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to fetch Coinbase quote')
   }
 
   return response.json()
