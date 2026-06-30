@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.3
+
+### Patch Changes
+
+- [#308](https://github.com/openfort-xyz/openfort-react/pull/308) [`df7f782`](https://github.com/openfort-xyz/openfort-react/commit/df7f782047b3023a1459770bc95c47efc1635128) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Fix `personal_sign` failing with "personal_sign requires the signer to be the from address" when a user has multiple embedded smart accounts. The Sign Message modal now derives the `from` address from the provider's active account (via `eth_accounts`) instead of the hook's cached address, and `useEthereumEmbeddedWallet` reconciles its active wallet to the provider's real signing account so the displayed wallet and the actual signer always agree.
+
+- [#307](https://github.com/openfort-xyz/openfort-react/pull/307) [`31ac00f`](https://github.com/openfort-xyz/openfort-react/commit/31ac00f8a21fecc05aeeed342893c7adf67483ec) Thanks [@joalavedra](https://github.com/joalavedra)! - Polish modal and button motion. The connect button and the in-modal primary buttons now scale on press; press feedback is unified behind a `--ck-press-scale` token (was an inconsistent mix of `scale(0.9)`/`0.95`/`0.98`, with the main CTA giving none). Easing is stronger (`--ck-ease-out` replaces the default-strength `ease` on the modal resize and page transitions), `transition: all` is replaced with explicit properties across inputs/buttons/copy controls, the connect-button text swap is faster (400ms → 220ms), the modal exit is snappier than its enter, the backdrop gets a subtle blur, and `prefers-reduced-motion` now swaps the modal's scale/slide for opacity-only fades.
+
 ## 1.6.2
 
 ### Patch Changes
