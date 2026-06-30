@@ -53,8 +53,8 @@ export const createBackend = async ({
           `SHIELD_PUBLISHABLE_KEY=${shieldPublishableKey}`,
         )
         .replace(
-          /SHIELD_ENCRYPTION_SHARE=.*/g,
-          `SHIELD_ENCRYPTION_SHARE=${shieldEncryptionShare}`,
+          /SHIELD_ENCRYPTION_KEY=.*/g,
+          `SHIELD_ENCRYPTION_KEY=${shieldEncryptionShare}`,
         )
         .replace(/PORT=.*/g, `PORT=${port}`);
 
