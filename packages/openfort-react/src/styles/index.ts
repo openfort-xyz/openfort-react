@@ -15,6 +15,11 @@ const themeGlobals = {
     'Segoe UI Symbol'`,
     '--ck-border-radius': '20px',
     '--ck-secondary-button-border-radius': '16px',
+    // Motion tokens — one source for easing/press feedback so the whole modal
+    // shares a vocabulary. Strong ease-out (the built-in CSS `ease` is too weak).
+    '--ck-ease-out': 'cubic-bezier(0.23, 1, 0.32, 1)',
+    '--ck-ease-in-out': 'cubic-bezier(0.77, 0, 0.175, 1)',
+    '--ck-press-scale': '0.97',
   },
   graphics: {
     light: {
@@ -323,14 +328,11 @@ export const ResetContainer = styled(motion.div)<{
     outline: none;
     border: none;
   }
-  /*
-  @media (prefers-reduced-motion) {
-    * {
-      animation-duration: 60ms !important;
-      transition-duration: 60ms !important;
-    }
-  }
-  */
+  /* Reduced motion is handled where movement actually happens — the modal
+     surfaces (Common/Modal/styles.ts) swap scale/slide for opacity-only fades,
+     and the connect button (ConnectButton) drops its horizontal slide — so
+     comprehension-aiding fades survive while vestibular-triggering motion is
+     removed (rather than a blanket duration:0 that kills the fades too). */
   img,
   svg {
     max-width: 100%;

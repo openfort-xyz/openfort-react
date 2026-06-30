@@ -10,7 +10,7 @@ const StyledButton = styled.button<{ $size: number }>`
   border-radius: var(--ck-secondary-button-border-radius);
   background: var(--ck-accent-color, rgba(26, 136, 248, 0.1));
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 200ms ease;
   display: flex;
   align-items: center;
   justify-content: center;

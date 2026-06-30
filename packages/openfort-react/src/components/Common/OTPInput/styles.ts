@@ -96,7 +96,7 @@ export const OTPSlotWrapper = styled.div<{ isActive: boolean }>`
   align-items: center;
   justify-content: center;
 
-  transition: all 0.3s;
+  transition: border-color 200ms ease, background 200ms ease, outline-color 200ms ease;
 
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
