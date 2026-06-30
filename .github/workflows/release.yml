@@ -3,6 +3,7 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,6 +23,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        with:
+          # Fetch full git history so Changesets can resolve the commits behind
+          # each changeset and generate changelog entries correctly.
+          fetch-depth: 0
 
       - name: Install pnpm
         uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
@@ -29,7 +34,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
         with:
-          node-version: 24
+          # Pin the minor so the runner image can't drift onto a Node build that
+          # breaks node-fetch's gzip handling in the changelog generator.
+          node-version: 24.5
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
