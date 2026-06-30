@@ -93,13 +93,6 @@ export const SelectorButton = styled.button`
   }
 `
 
-export const SelectorContent = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  overflow: hidden;
-`
-
 export const SelectorTitle = styled.span`
   font-size: 15px;
   font-weight: 600;

@@ -1,7 +1,8 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useMemo, useState } from 'react'
+import { type SyntheticEvent, useEffect, useMemo, useState } from 'react'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import { useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
@@ -14,6 +15,7 @@ import { ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
 import { resolveOnrampNetwork } from './onrampApi'
 import { totalFee } from './onrampQuoteApi'
@@ -26,7 +28,6 @@ import {
   PresetButton,
   PresetList,
   SelectorButton,
-  SelectorContent,
   SelectorRight,
   SelectorTitle,
 } from './styles'
@@ -54,6 +55,10 @@ const formatTokenAmount = (raw: string): string => {
   return numeric.toLocaleString('en-US', { maximumFractionDigits: 6 })
 }
 
+const hideBrokenImg = (e: SyntheticEvent<HTMLImageElement>) => {
+  e.currentTarget.style.display = 'none'
+}
+
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
   const locales = useLocales()
@@ -74,6 +79,7 @@ const Buy = () => {
       : undefined
   const network = resolveOnrampNetwork(chainType, chainId)
   const chainLabel = network ? (CHAIN_LABEL[network] ?? network.charAt(0).toUpperCase() + network.slice(1)) : ''
+  const chainLogo = chainLogoUrl(chainId)
 
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
@@ -100,6 +106,7 @@ const Buy = () => {
 
   const tokenSymbol = getAssetSymbol(selectedToken)
   const tokenName = (selectedToken.metadata?.name as string) || tokenSymbol
+  const tokenLogo = currencyLogoUrl(tokenSymbol)
 
   const currencyFormatter = useMemo(() => createCurrencyFormatter(buyForm.currency), [buyForm.currency])
   const currencySymbol = useMemo(() => getCurrencySymbol(buyForm.currency), [buyForm.currency])
@@ -177,7 +184,15 @@ const Buy = () => {
   const isPresetSelected = (value: number) => pressedPreset === value
   const step1Disabled = fiatAmount === null || fiatAmount <= 0
 
-  const receiveText = quote ? `≈ ${formatTokenAmount(quote.destinationAmount)} ${tokenSymbol}` : null
+  // The secondary line is the real conversion: how much of the token the entered
+  // fiat buys, from the live quote. Falls back to the fiat value when no quote.
+  const conversionText = quote
+    ? `≈ ${formatTokenAmount(quote.destinationAmount)} ${tokenSymbol}`
+    : quoteLoading && fiatAmount !== null
+      ? `≈ … ${tokenSymbol}`
+      : fiatAmount !== null
+        ? currencyFormatter.format(fiatAmount)
+        : `${currencySymbol}0.00`
   const feeText = quote ? currencyFormatter.format(totalFee(quote)) : null
 
   return (
@@ -198,12 +213,15 @@ const Buy = () => {
           <SelectorButton
             type="button"
             onClick={handleOpenTokenSelector}
-            style={{ width: 'auto', flex: '0 0 auto', padding: '8px 14px', borderRadius: 999 }}
+            style={{ width: 'auto', flex: '0 0 auto', padding: '6px 12px', borderRadius: 999 }}
             title={tokenName}
           >
-            <SelectorContent>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
+              <div style={{ width: 22, flex: '0 0 auto' }}>
+                <AssetChainLogo assetLogo={tokenLogo ?? ''} chainLogo={chainLogo ?? ''} symbol={tokenSymbol} />
+              </div>
               <SelectorTitle>{tokenSymbol || 'Select'}</SelectorTitle>
-            </SelectorContent>
+            </div>
             <SelectorRight>
               <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <ArrowChevron
@@ -217,11 +235,11 @@ const Buy = () => {
           </SelectorButton>
         </div>
         <div style={{ marginTop: 8, fontSize: 15, fontWeight: 500, color: 'var(--ck-body-color-muted)' }}>
-          {fiatAmount !== null ? currencyFormatter.format(fiatAmount) : `${currencySymbol}0.00`}
+          {conversionText}
         </div>
       </AmountCard>
 
-      <PresetList>
+      <PresetList style={{ marginTop: 14 }}>
         {amountPresets.map((preset) => (
           <PresetButton
             key={preset}
@@ -271,15 +289,20 @@ const Buy = () => {
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: 'var(--ck-body-color-muted)' }}>Destination</span>
-          <span style={{ fontWeight: 600, color: 'var(--ck-body-color)' }}>
-            {tokenSymbol}
-            {chainLabel ? ` on ${chainLabel}` : ''}
-          </span>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: 'var(--ck-body-color-muted)' }}>You receive</span>
-          <span style={{ fontWeight: 600, color: 'var(--ck-body-color)' }}>
-            {quoteLoading ? 'Fetching best price…' : (receiveText ?? '—')}
+          <span
+            style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--ck-body-color)' }}
+          >
+            {chainLogo && (
+              <img
+                src={chainLogo}
+                alt=""
+                width={16}
+                height={16}
+                style={{ borderRadius: '50%' }}
+                onError={hideBrokenImg}
+              />
+            )}
+            {chainLabel || '—'}
           </span>
         </div>
         {feeText && (

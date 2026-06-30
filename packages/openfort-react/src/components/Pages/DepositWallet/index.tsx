@@ -15,6 +15,7 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
+import { createCurrencyFormatter } from '../Buy/utils'
 import { AddressPageLink } from '../Deposit/AddressPageLink'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { walletListBtn } from '../Deposit/formStyles'
@@ -75,8 +76,13 @@ const WALLET_LOGO: Record<string, ReactNode> = {
   rabby: <logos.Rabby />,
 }
 
-/** Preset deposit amounts, in the selected source token's units. */
-const PRESETS = [10, 25, 50]
+// Dollar-denominated preset amounts (matching the onramp/buy flow). For $1
+// stablecoins (the usual funding tokens) the dollar value equals the token
+// amount 1:1; there's no price feed here for volatile tokens, so those fall
+// back to plain token-unit presets.
+const PRESETS = [10, 20, 50]
+const STABLE_USD = new Set(['USDC', 'USDT', 'DAI', 'USDB', 'USDS', 'PYUSD', 'EURC'])
+const usdFormatter = createCurrencyFormatter('USD')
 
 /**
  * Transfer from wallet. Pick a source chain/token and an amount, then choose the
@@ -107,6 +113,11 @@ const DepositWallet = () => {
   const isSolanaSrc = isSolana(route.activeChain?.id ?? '')
   const srcChainId = caipToChainId(route.activeChain?.id)
   const amountValid = Number.parseFloat(amount) > 0
+  // The amount is token-denominated. For $1 stablecoins the dollar value equals
+  // the token amount, so presets/labels show $; volatile tokens have no price
+  // feed here and keep plain token-unit presets.
+  const isStable = STABLE_USD.has((route.activeCurrency?.symbol ?? '').toUpperCase())
+  const usdValue = isStable ? Number.parseFloat(amount) : Number.NaN
 
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
@@ -197,7 +208,12 @@ const DepositWallet = () => {
                   autoComplete="off"
                 />
               </AmountCard>
-              <PresetList>
+              {isStable && (
+                <div style={{ marginTop: 6, fontSize: 13, fontWeight: 500, color: 'var(--ck-body-color-muted)' }}>
+                  {Number.isFinite(usdValue) ? usdFormatter.format(usdValue) : '$0.00'}
+                </div>
+              )}
+              <PresetList style={{ marginTop: 12 }}>
                 {PRESETS.map((preset) => (
                   <PresetButton
                     key={preset}
@@ -205,7 +221,7 @@ const DepositWallet = () => {
                     $active={pressedPreset === preset}
                     onClick={() => handlePreset(preset)}
                   >
-                    {preset}
+                    {isStable ? usdFormatter.format(preset) : preset}
                   </PresetButton>
                 ))}
               </PresetList>
