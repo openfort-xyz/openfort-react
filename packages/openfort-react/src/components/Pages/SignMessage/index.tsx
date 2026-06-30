@@ -96,8 +96,16 @@ const SignMessage = () => {
         signed = await solana.provider.signMessage(signRequest.message)
       } else {
         const provider = await wallet.activeWallet?.getProvider()
-        const address = wallet.address
-        if (!provider || !address) throw new Error('No connected wallet to sign with')
+        if (!provider) throw new Error('No connected wallet to sign with')
+
+        // Use the address the provider will actually sign with as `from`. The core
+        // SDK resolves the signing account from storage, which can diverge from the
+        // hook's activeWallet.address when the user has multiple smart accounts.
+        // A stale `from` makes personal_sign reject with
+        // "personal_sign requires the signer to be the from address".
+        const accounts = (await provider.request({ method: 'eth_accounts' })) as string[]
+        const address = accounts?.[0] ?? wallet.address
+        if (!address) throw new Error('No connected wallet to sign with')
 
         signed = (
           signRequest.kind === 'message'

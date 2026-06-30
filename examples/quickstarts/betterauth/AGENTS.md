@@ -126,7 +126,7 @@ GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 OPENFORT_SECRET_KEY=sk_test_...
 SHIELD_PUBLISHABLE_KEY=your-shield-publishable-key
-SHIELD_ENCRYPTION_SHARE=your-shield-encryption-share
+SHIELD_ENCRYPTION_KEY=your-shield-encryption-share
 SHIELD_SECRET_KEY=your-shield-secret-key
 FRONTEND_URL=http://localhost:5173
 ```

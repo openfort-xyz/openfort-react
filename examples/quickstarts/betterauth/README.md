@@ -100,7 +100,7 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 # Openfort
 OPENFORT_SECRET_KEY=sk_test_...
 SHIELD_PUBLISHABLE_KEY=your-shield-publishable-key
-SHIELD_ENCRYPTION_SHARE=your-shield-encryption-share
+SHIELD_ENCRYPTION_KEY=your-shield-encryption-share
 SHIELD_SECRET_KEY=your-shield-secret-key
 
 # Frontend URL (for CORS)
@@ -201,7 +201,7 @@ pnpm --filter @openfort-betterauth/web dev
 | `FRONTEND_URL`            | Frontend URL for CORS                | Yes      |
 | `OPENFORT_SECRET_KEY`     | Openfort secret key                  | Yes      |
 | `SHIELD_PUBLISHABLE_KEY`  | Shield publishable key               | Yes      |
-| `SHIELD_ENCRYPTION_SHARE` | Shield encryption share              | Yes      |
+| `SHIELD_ENCRYPTION_KEY` | Shield encryption share              | Yes      |
 | `SHIELD_SECRET_KEY`       | Shield secret key                    | Yes      |
 
 ### Frontend Variables (`apps/web/.env.local`)
