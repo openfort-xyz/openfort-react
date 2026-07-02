@@ -4,8 +4,10 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import { type ReactNode, type SyntheticEvent, useEffect } from 'react'
 import { BankIcon, BuyIcon, DollarIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
 import logos from '../../../assets/logos'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { useResolvedFundingMethods } from '../../../hooks/openfort/useResolvedFundingMethods'
 import useIsMobile from '../../../hooks/useIsMobile'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
@@ -15,9 +17,8 @@ import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
-import { backendMethodId } from '../Buy/onrampMethodsApi'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
-import { type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
+import { canPresentApplePay, type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
 import {
   DepositContent,
   LogoCluster,
@@ -30,7 +31,6 @@ import {
   OptionTitle,
 } from './styles'
 import { UnsupportedNetworkNotice } from './UnsupportedNetworkNotice'
-import { useFundingTarget } from './useFundingTarget'
 
 /** The action icon shown in each row's left badge (icons default to 20×20). */
 const METHOD_ICON: Record<FundingMethod, ReactNode> = {
@@ -74,7 +74,7 @@ const Deposit = () => {
   const { isAvailable } = useFunding()
   const { chains, railChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
-  const { loaded, availableMethodIds, providerFor } = useResolvedFundingMethods()
+  const { loaded, availableMethodIds } = useResolvedFundingMethods()
 
   // The rail can only deliver to chains it lists. If the embedded wallet's target
   // chain (e.g. Polygon Amoy or a Solana testnet) isn't one of them, there's no
@@ -87,16 +87,15 @@ const Deposit = () => {
     triggerResize()
   }, [targetUnsupported, triggerResize])
 
-  // Wallet pay is browser/device gated: Apple Pay on Apple/Safari, Google Pay on
-  // Android/Chrome. UA heuristic for now — TODO: refine with ApplePaySession /
-  // Google Pay isReadyToPay capability checks.
-  const ua = typeof navigator === 'undefined' ? '' : navigator.userAgent
-  const isApple = /Mac|iPhone|iPad|iPod/.test(ua)
+  // Wallet pay is device/browser gated, independent of region. Apple Pay has a
+  // real capability API (ApplePaySession — Safari on macOS/iOS, so desktop Safari
+  // shows the row too). Google Pay's isReadyToPay needs Google's script; until
+  // that's wired, Android is the honest approximation.
   const options = getPaymentOptions({
     isMobile,
     fundingAvailable: isAvailable,
-    canApplePay: isApple,
-    canGooglePay: !isApple,
+    canApplePay: canPresentApplePay(),
+    canGooglePay: typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent),
     methods: uiConfig.funding?.methods,
   })
 
@@ -145,17 +144,13 @@ const Deposit = () => {
       setRoute(routes.DEPOSIT_CEX)
       return
     }
-    // Fiat rails reuse the Buy flow. The provider is resolved by Openfort
-    // (region + destination asset) and never shown to the user. A row without a
-    // resolved provider can't render (visibleOptions gates on the resolve), so
-    // this only guards a race between resolve state and a just-tapped row.
-    const providerId = providerFor(target.method)
-    if (!providerId) {
-      return
-    }
+    // Fiat rails go through the Buy flow, which mints a funding session and
+    // commits `{ type: 'onramp', method }` — the provider is resolved
+    // server-side and never shown to the user.
     setBuyForm((prev) => ({
       ...prev,
-      providerId,
+      method: target.method,
+      session: null,
       // Default the card-buy to USDC per chain family. Without this the EVM default
       // resolves to the wallet's (often empty) asset list — "no supported tokens" —
       // and the Solana native default would resolve to SOL (isSameToken treats any

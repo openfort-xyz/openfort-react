@@ -4,6 +4,7 @@ import { AccountTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
+import { isSolana } from '../../../hooks/openfort/fundingSources'
 import { cryptoPaymentMethod, type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
 import {
   type FundingChain,
@@ -11,11 +12,10 @@ import {
   nominalUnits,
   useFundingChains,
 } from '../../../hooks/openfort/useFundingChains'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { logger } from '../../../utils/logger'
 import { isCexDeliverable } from './cexChains'
-import { isSolana } from './sources'
-import { useFundingTarget } from './useFundingTarget'
 
 /** Which rail the route feeds: self-custody wallet send vs exchange withdrawal. */
 type DepositRouteKind = 'crypto' | 'cex'

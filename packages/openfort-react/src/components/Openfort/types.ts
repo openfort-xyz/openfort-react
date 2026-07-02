@@ -583,13 +583,17 @@ export type SignRequest = (
   reject: (reason?: unknown) => void
 }
 
-export type BuyProviderId = 'moonpay' | 'coinbase' | 'stripe'
-
 export type BuyFormState = {
   amount: string
   currency: string
   asset: Asset
-  providerId: BuyProviderId
+  /** The fiat method being bought with. The provider is resolved server-side. */
+  method: FundingMethod
+  /**
+   * The funding session the buy commits into, minted when the amount screen
+   * mounts. Consumed by the commit — every attempt gets a fresh session.
+   */
+  session: { id: string; clientSecret: string } | null
 }
 
 export const defaultBuyFormState: BuyFormState = {
@@ -599,5 +603,6 @@ export const defaultBuyFormState: BuyFormState = {
     type: 'native',
     balance: BigInt(0),
   },
-  providerId: 'coinbase',
+  method: FundingMethod.CARD,
+  session: null,
 }

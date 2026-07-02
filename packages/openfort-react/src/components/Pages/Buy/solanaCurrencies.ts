@@ -1,6 +1,6 @@
 import type { Hex } from 'viem'
+import { DEST_USDC_SOL } from '../../../hooks/openfort/fundingSources'
 import type { Asset } from '../../Openfort/types'
-import { DEST_USDC_SOL } from '../Deposit/sources'
 
 /**
  * Buyable Solana destination currencies for the fiat onramp. USDC is first so it

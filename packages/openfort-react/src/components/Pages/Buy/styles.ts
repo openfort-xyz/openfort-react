@@ -139,3 +139,95 @@ export const PendingContainer = styled.div`
   margin: 20px auto 32px;
   height: 120px;
 `
+
+export const AmountColumnCard = styled(AmountCard)`
+  flex-direction: column;
+  align-items: stretch;
+`
+
+export const AmountRow = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+`
+
+export const AmountRowInput = styled(AmountInput)`
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+`
+
+export const TokenPillButton = styled(SelectorButton)`
+  width: auto;
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  border-radius: 999px;
+`
+
+export const TokenPillContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+`
+
+export const TokenPillLogo = styled.div`
+  width: 22px;
+  flex: 0 0 auto;
+`
+
+export const ConversionLine = styled.div`
+  margin-top: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ck-body-color-muted);
+`
+
+export const SummarySection = styled.div`
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--ck-body-divider, rgba(0, 0, 0, 0.08));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+`
+
+export const SummaryRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+`
+
+export const SummaryLabel = styled.span`
+  color: var(--ck-body-color-muted);
+`
+
+export const SummaryValue = styled.span`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--ck-body-color);
+`
+
+export const SummaryMuted = styled.span`
+  color: var(--ck-body-color-muted);
+`
+
+export const CurrencySelect = styled.select`
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: var(--ck-body-color);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: right;
+  font-family: inherit;
+`
+
+export const ChainLogoImg = styled.img`
+  border-radius: 50%;
+`

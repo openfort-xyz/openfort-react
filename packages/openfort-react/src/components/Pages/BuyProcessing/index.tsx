@@ -1,253 +1,93 @@
 'use client'
 
-import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Logos from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
+import { useOnramp } from '../../../hooks/openfort/useOnramp'
 import Button from '../../Common/Button'
 import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
 import SquircleSpinner from '../../Common/SquircleSpinner'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { createCoinbaseSession } from '../Buy/coinbaseApi'
-import { resolveOnrampNetwork } from '../Buy/onrampApi'
-import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
-import { createStripeSession } from '../Buy/stripeApi'
 import { ContinueButtonWrapper, PendingContainer, StackedButtonWrapper } from '../Buy/styles'
-import { isSameToken } from '../Send/utils'
 
+/**
+ * Commit-and-track screen for a fiat buy. The amount screen minted the funding
+ * session; this one sets the onramp payment method (the server resolves the
+ * provider), opens the hosted checkout, and follows the SESSION status — the
+ * popup is never the source of truth, settlement webhooks are.
+ */
 const BuyProcessing = () => {
-  const { buyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const { buyForm, setRoute, triggerResize } = useOpenfort()
 
-  // Use chain-specific hooks
-  const ethereumWallet = useEthereumEmbeddedWallet()
-  const solanaWallet = useSolanaEmbeddedWallet()
-  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
-
-  const isConnected = wallet.status === 'connected'
-  const address = isConnected ? wallet.address : undefined
-  const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
-  const network = resolveOnrampNetwork(chainType, chainId)
-
-  const [popupWindow, setPopupWindow] = useState<Window | null>(null)
+  const onramp = useOnramp(buyForm.session, backendMethodId(buyForm.method), { useBackendUrl: true })
+  const openRef = useRef(onramp.open)
+  openRef.current = onramp.open
+  const [failed, setFailed] = useState<string | null>(null)
   const [showContinueButton, setShowContinueButton] = useState(false)
-  const [isCreatingSession, setIsCreatingSession] = useState(true)
-  const [sessionError, setSessionError] = useState(false)
 
-  const { data: ethAssets } = useEthereumWalletAssets()
-  const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
-
-  const matchedToken = useMemo(
-    () => assets?.find((asset) => isSameToken(asset, buyForm.asset)),
-    [assets, buyForm.asset]
-  )
-
-  const selectedTokenOption = matchedToken ?? assets?.[0]
-  const selectedToken = selectedTokenOption ?? buyForm.asset
-
-  const fiatAmount = useMemo(() => {
-    const normalized = buyForm.amount
-    if (!normalized) return null
-    const numeric = Number(normalized)
-    if (!Number.isFinite(numeric)) return null
-    return numeric
-  }, [buyForm.amount])
-
-  // Create session and open popup once wallet is ready
-  const sessionStartedRef = useRef(false)
+  // Commit once per mount. A session takes a single payment method, so a retry
+  // goes back to the amount screen, which mints a fresh session.
+  const startedRef = useRef(false)
   useEffect(() => {
-    if (!address || !network) return
-    if (sessionStartedRef.current) return
-    sessionStartedRef.current = true
-
-    const createSessionAndOpenPopup = async () => {
-      if (!fiatAmount || fiatAmount <= 0) {
-        setRoute(routes.BUY)
-        return
-      }
-
-      setIsCreatingSession(true)
-      setSessionError(false)
-
-      try {
-        let onrampUrl: string | null = null
-
-        // Create session based on selected provider
-        if (buyForm.providerId === 'coinbase') {
-          const session = await createCoinbaseSession({
-            token: selectedToken,
-            network,
-            publishableKey,
-            destinationAddress: address,
-            sourceAmount: fiatAmount.toFixed(2),
-            sourceCurrency: buyForm.currency,
-            redirectUrl: `${window.location.origin}?coinbase_onramp=success`,
-          })
-          onrampUrl = session.onrampUrl
-        } else if (buyForm.providerId === 'stripe') {
-          const session = await createStripeSession({
-            token: selectedToken,
-            network,
-            publishableKey,
-            destinationAddress: address,
-            sourceAmount: fiatAmount.toFixed(2),
-            sourceCurrency: buyForm.currency,
-            redirectUrl: `${window.location.origin}?stripe_onramp=success`,
-          })
-          onrampUrl = session.onrampUrl
-        }
-
-        if (!onrampUrl) {
-          setSessionError(true)
-          return
-        }
-
-        // Coinbase onramp rejects requests when fiatCurrency is set to a non-USD currency (e.g. EUR).
-        // Strip the param so it uses the user's default currency instead.
-        const url = new URL(onrampUrl)
-        url.searchParams.delete('fiatCurrency')
-        const sanitizedProviderUrl = url.toString()
-
-        if (typeof window !== 'undefined') {
-          const popupWidth = 500
-          const popupHeight = 700
-          const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX
-          const dualScreenTop = window.screenTop !== undefined ? window.screenTop : window.screenY
-          const width = window.innerWidth
-            ? window.innerWidth
-            : document.documentElement.clientWidth
-              ? document.documentElement.clientWidth
-              : screen.width
-          const height = window.innerHeight
-            ? window.innerHeight
-            : document.documentElement.clientHeight
-              ? document.documentElement.clientHeight
-              : screen.height
-          const left = width / 2 - popupWidth / 2 + dualScreenLeft
-          const top = height / 2 - popupHeight / 2 + dualScreenTop
-
-          const popup = window.open(
-            sanitizedProviderUrl,
-            'BuyPopup',
-            `scrollbars=yes,width=${popupWidth},height=${popupHeight},top=${top},left=${left}`
-          )
-
-          if (popup) {
-            setPopupWindow(popup)
-          } else {
-            setSessionError(true)
-          }
-        }
-      } catch (_error) {
-        setSessionError(true)
-      } finally {
-        setIsCreatingSession(false)
-      }
+    if (startedRef.current) return
+    if (!buyForm.session) {
+      setRoute(routes.BUY)
+      return
     }
+    startedRef.current = true
+    const fiatAmount = Number(buyForm.amount)
+    openRef
+      .current({
+        sourceAmount: Number.isFinite(fiatAmount) && fiatAmount > 0 ? fiatAmount.toFixed(2) : undefined,
+        sourceCurrency: buyForm.currency,
+        redirectUrl: typeof window === 'undefined' ? undefined : `${window.location.origin}?onramp=success`,
+      })
+      .then((session) => {
+        if (session.status === 'succeeded') {
+          setRoute(routes.BUY_COMPLETE)
+        } else {
+          setFailed(
+            session.status === 'bounced'
+              ? 'The purchase was reversed and refunded by the provider.'
+              : 'The purchase was not completed in time.'
+          )
+        }
+      })
+      .catch((e) => {
+        setFailed(e instanceof Error ? e.message : 'Failed to start the purchase.')
+      })
+  }, [buyForm.session, buyForm.amount, buyForm.currency, setRoute])
 
-    createSessionAndOpenPopup()
-  }, [address, network]) // Run when wallet becomes ready
-
-  // Trigger resize on mount and when state changes
+  // Re-measure the modal as the state machine advances.
   useEffect(() => {
     triggerResize()
-  }, [triggerResize, isCreatingSession, showContinueButton, sessionError])
+  }, [triggerResize, onramp.status, failed, showContinueButton])
 
-  // Show continue button after 2 seconds
+  // Offer a manual advance after a while — settlement webhooks can lag the
+  // provider's own success screen.
   useEffect(() => {
-    if (isCreatingSession) return
-
-    setShowContinueButton(false)
-    const timer = setTimeout(() => {
-      setShowContinueButton(true)
-    }, 2000)
+    if (onramp.status !== 'waiting_payment' && onramp.status !== 'processing') return
+    const timer = setTimeout(() => setShowContinueButton(true), 5_000)
     return () => clearTimeout(timer)
-  }, [isCreatingSession])
-
-  // Monitor popup window for redirect or close
-  useEffect(() => {
-    if (!popupWindow || isCreatingSession) return
-
-    const checkPopup = setInterval(() => {
-      try {
-        // Check if popup is closed
-        if (popupWindow.closed) {
-          clearInterval(checkPopup)
-          setPopupWindow(null)
-          // Only auto-advance for Coinbase
-          if (buyForm.providerId === 'coinbase') {
-            setRoute(routes.BUY_COMPLETE)
-          }
-          return
-        }
-
-        // Try to check if popup has redirected to our success URL
-        try {
-          const popupUrl = popupWindow.location.href
-          if (popupUrl.includes('coinbase_onramp=success') || popupUrl.includes('stripe_onramp=success')) {
-            popupWindow.close()
-            setPopupWindow(null)
-            setRoute(routes.BUY_COMPLETE)
-            clearInterval(checkPopup)
-          }
-        } catch (_e) {
-          // Cross-origin error is expected while on provider domain
-          // We can't read the URL until it redirects back to our domain
-        }
-      } catch (_error) {
-        // Handle any other errors
-        clearInterval(checkPopup)
-      }
-    }, 500)
-
-    return () => {
-      clearInterval(checkPopup)
-    }
-  }, [popupWindow, buyForm.providerId, setRoute, isCreatingSession])
-
-  const handleCancel = () => {
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close()
-    }
-    setPopupWindow(null)
-    setRoute(routes.BUY)
-  }
-
-  const handleContinue = () => {
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close()
-    }
-    setPopupWindow(null)
-    setRoute(routes.BUY_COMPLETE)
-  }
+  }, [onramp.status])
 
   const handleBack = () => {
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close()
-    }
-    setPopupWindow(null)
+    onramp.reset()
     setRoute(routes.BUY)
   }
 
-  if (sessionError) {
+  if (failed) {
     return (
       <PageContent onBack={handleBack}>
         <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
-          <ModalHeading>Error</ModalHeading>
-          <ModalBody>
-            Failed to create payment session.
-            <br />
-            Please try again.
-          </ModalBody>
+          <ModalHeading>Purchase not completed</ModalHeading>
+          <ModalBody>{failed}</ModalBody>
           <ContinueButtonWrapper style={{ marginTop: 24 }}>
             <Button variant="primary" onClick={handleBack}>
-              Go Back
+              Try again
             </Button>
           </ContinueButtonWrapper>
         </ModalContent>
@@ -255,49 +95,19 @@ const BuyProcessing = () => {
     )
   }
 
-  const isStripe = buyForm.providerId === 'stripe'
-  const isCoinbase = buyForm.providerId === 'coinbase'
-  const isProvider = isStripe || isCoinbase
-
-  if (isCreatingSession) {
-    return (
-      <PageContent onBack={handleBack}>
-        <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
-          <ModalHeading>Creating Session</ModalHeading>
-          <ModalBody>Please wait...</ModalBody>
-          <PendingContainer>
-            <SquircleSpinner
-              logo={
-                isProvider ? (
-                  <div
-                    style={{
-                      padding: '12px',
-                      position: 'relative',
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {isStripe && <Logos.Stripe />}
-                    {isCoinbase && <Logos.CoinbasePay />}
-                  </div>
-                ) : undefined
-              }
-              connecting={true}
-            />
-          </PendingContainer>
-        </ModalContent>
-      </PageContent>
-    )
-  }
+  const starting = onramp.status === 'idle' || onramp.loading
 
   return (
-    <PageContent onBack={handleCancel}>
+    <PageContent onBack={handleBack}>
       <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
-        <ModalHeading>Processing Purchase</ModalHeading>
-        <ModalBody>Complete the purchase in the popup window...</ModalBody>
+        <ModalHeading>{starting ? 'Preparing checkout' : 'Processing purchase'}</ModalHeading>
+        <ModalBody>
+          {starting
+            ? 'Please wait…'
+            : onramp.status === 'processing'
+              ? 'Payment received — delivering your funds…'
+              : 'Complete the purchase in the checkout window.'}
+        </ModalBody>
 
         <PendingContainer>
           <SquircleSpinner
@@ -313,26 +123,23 @@ const BuyProcessing = () => {
                   justifyContent: 'center',
                 }}
               >
-                {isStripe && <Logos.Stripe />}
-                {isCoinbase && <Logos.CoinbasePay />}
-                {!isStripe && !isCoinbase && <Logos.Openfort />}
+                <Logos.Openfort />
               </div>
             }
             connecting={true}
           />
         </PendingContainer>
 
-        {showContinueButton && <ModalBody>Click Continue when you are done.</ModalBody>}
-
         {showContinueButton && (
           <>
+            <ModalBody>Finished in the checkout window?</ModalBody>
             <StackedButtonWrapper>
-              <Button variant="primary" onClick={handleContinue}>
+              <Button variant="primary" onClick={() => setRoute(routes.BUY_COMPLETE)}>
                 Continue
               </Button>
             </StackedButtonWrapper>
             <StackedButtonWrapper>
-              <Button variant="secondary" onClick={handleCancel}>
+              <Button variant="secondary" onClick={handleBack}>
                 Cancel
               </Button>
             </StackedButtonWrapper>

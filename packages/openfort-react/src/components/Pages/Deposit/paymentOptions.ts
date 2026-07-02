@@ -95,12 +95,27 @@ const ALL_METHODS: DepositMethod[] = [
 ]
 
 /**
- * A wallet-pay row is shown only on mobile (the native sheet is a phone
- * experience) AND when the device/browser can present that wallet.
+ * Whether this browser can present the Apple Pay sheet — Safari on macOS and
+ * iOS, so desktop Safari counts too. ApplePaySession throws in insecure
+ * contexts; treat any failure as "can't".
+ */
+export function canPresentApplePay(): boolean {
+  try {
+    const session = (window as { ApplePaySession?: { canMakePayments?: () => boolean } }).ApplePaySession
+    return Boolean(session?.canMakePayments?.())
+  } catch {
+    return false
+  }
+}
+
+/**
+ * A wallet-pay row is shown wherever the device/browser can actually present
+ * that wallet — a capability check, not a mobile check (desktop Safari presents
+ * Apple Pay).
  */
 function deviceAllowed(method: DepositMethod, ctx: PaymentOptionsContext): boolean {
-  if (method.device === 'apple') return ctx.isMobile && (ctx.canApplePay ?? false)
-  if (method.device === 'google') return ctx.isMobile && (ctx.canGooglePay ?? false)
+  if (method.device === 'apple') return ctx.canApplePay ?? false
+  if (method.device === 'google') return ctx.canGooglePay ?? false
   return true
 }
 

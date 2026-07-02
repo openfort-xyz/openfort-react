@@ -1,11 +1,14 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { type SyntheticEvent, useEffect, useMemo, useState } from 'react'
+import { type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
+import { useFunding } from '../../../hooks/openfort/useFunding'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
+import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
 import useLocales from '../../../hooks/useLocales'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
@@ -18,18 +21,27 @@ import { PageContent } from '../../PageContent'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
 import { resolveOnrampNetwork } from './onrampApi'
-import { totalFee } from './onrampQuoteApi'
-import { getProviders } from './providers'
 import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
 import {
-  AmountCard,
-  AmountInput,
+  AmountColumnCard,
+  AmountRow,
+  AmountRowInput,
+  ChainLogoImg,
   ContinueButtonWrapper,
+  ConversionLine,
+  CurrencySelect,
   PresetButton,
   PresetList,
-  SelectorButton,
   SelectorRight,
   SelectorTitle,
+  SummaryLabel,
+  SummaryMuted,
+  SummaryRow,
+  SummarySection,
+  SummaryValue,
+  TokenPillButton,
+  TokenPillContent,
+  TokenPillLogo,
 } from './styles'
 import { createCurrencyFormatter, getCurrencySymbol } from './utils'
 
@@ -68,11 +80,12 @@ const Buy = () => {
   // own assets. Both hooks run unconditionally; the active chain picks the list.
   const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
 
-  // Resolve the onramp destination network (where the bought token lands). The
-  // chain is fixed by the wallet's active network — shown read-only on the preview.
+  // The destination chain is fixed by the wallet's active network — shown
+  // read-only on the preview; the labels come from the display map above.
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+  const address = wallet.status === 'connected' ? wallet.address : undefined
   const chainId =
     wallet.status === 'connected' && chainType === ChainTypeEnum.EVM
       ? (wallet as typeof ethereumWallet).chainId
@@ -80,6 +93,37 @@ const Buy = () => {
   const network = resolveOnrampNetwork(chainType, chainId)
   const chainLabel = network ? (CHAIN_LABEL[network] ?? network.charAt(0).toUpperCase() + network.slice(1)) : ''
   const chainLogo = chainLogoUrl(chainId)
+
+  // The fiat rail commits into a funding session (same state machine as the
+  // crypto rails). A session accepts a single payment method, so this screen
+  // mints a fresh one per mount — returning here after an attempt re-mints.
+  const target = useFundingTarget()
+  const { createSession, isAvailable } = useFunding({ useBackendUrl: true })
+  const [session, setSession] = useState<{ id: string; clientSecret: string } | null>(null)
+  const sessionKey = useRef('')
+  const createSessionRef = useRef(createSession)
+  createSessionRef.current = createSession
+  useEffect(() => {
+    if (!isAvailable || !address) return
+    const key = `${target.chain}|${target.currency}|${address}`
+    if (sessionKey.current === key) return
+    sessionKey.current = key
+    let cancelled = false
+    setSession(null)
+    createSessionRef
+      .current({ chain: target.chain, currency: target.currency, address })
+      .then((s) => {
+        if (!cancelled) setSession({ id: s.id, clientSecret: s.clientSecret })
+      })
+      .catch(() => {
+        // The quote and Continue stay disabled; the commit screen surfaces errors.
+        if (!cancelled) setSession(null)
+      })
+    return () => {
+      cancelled = true
+      sessionKey.current = ''
+    }
+  }, [isAvailable, address, target.chain, target.currency])
 
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
@@ -111,12 +155,11 @@ const Buy = () => {
   const currencyFormatter = useMemo(() => createCurrencyFormatter(buyForm.currency), [buyForm.currency])
   const currencySymbol = useMemo(() => getCurrencySymbol(buyForm.currency), [buyForm.currency])
 
-  // A real quote from the resolved provider — refreshes as the amount/token/currency
-  // settle. Re-measure the modal when the estimate appears/disappears.
+  // A real quote priced by the provider the commit would resolve — refreshes as
+  // the amount/currency settle. Re-measure the modal when it appears/disappears.
   const { quote, loading: quoteLoading } = useOnrampQuote({
-    provider: buyForm.providerId,
-    token: selectedToken,
-    network,
+    session,
+    method: backendMethodId(buyForm.method),
     sourceCurrency: buyForm.currency,
     amount: fiatAmount,
   })
@@ -166,15 +209,12 @@ const Buy = () => {
   }
 
   const handleContinue = () => {
-    if (fiatAmount === null || fiatAmount <= 0) return
-    // Provider is resolved by Openfort (set on the deposit hub); skip the picker
-    // and go straight to the provider redirect.
+    if (fiatAmount === null || fiatAmount <= 0 || !session) return
+    // Hand the session to the commit screen — it sets the onramp payment method
+    // and the server resolves the provider (never shown to the user).
+    setBuyForm((prev) => ({ ...prev, session }))
     setRoute(routes.BUY_PROCESSING)
   }
-
-  const providerName =
-    getProviders().find((p) => p.id === buyForm.providerId)?.name ??
-    (buyForm.providerId ? buyForm.providerId.charAt(0).toUpperCase() + buyForm.providerId.slice(1) : 'provider')
 
   const handleBack = () => {
     // Card/Apple Pay is reached via the Add funds hub — back returns there.
@@ -182,7 +222,7 @@ const Buy = () => {
   }
 
   const isPresetSelected = (value: number) => pressedPreset === value
-  const step1Disabled = fiatAmount === null || fiatAmount <= 0
+  const step1Disabled = fiatAmount === null || fiatAmount <= 0 || !session
 
   // The secondary line is the real conversion: how much of the token the entered
   // fiat buys, from the live quote. Falls back to the fiat value when no quote.
@@ -199,10 +239,9 @@ const Buy = () => {
     <PageContent onBack={handleBack}>
       <ModalHeading>{locales.buyScreen_heading}</ModalHeading>
 
-      <AmountCard style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <AmountInput
-            style={{ flex: 1, minWidth: 0, textAlign: 'left' }}
+      <AmountColumnCard>
+        <AmountRow>
+          <AmountRowInput
             value={buyForm.amount}
             onChange={handleAmountChange}
             onBlur={handleAmountBlur}
@@ -210,18 +249,13 @@ const Buy = () => {
             inputMode="decimal"
             autoComplete="off"
           />
-          <SelectorButton
-            type="button"
-            onClick={handleOpenTokenSelector}
-            style={{ width: 'auto', flex: '0 0 auto', padding: '6px 12px', borderRadius: 999 }}
-            title={tokenName}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, overflow: 'hidden' }}>
-              <div style={{ width: 22, flex: '0 0 auto' }}>
+          <TokenPillButton type="button" onClick={handleOpenTokenSelector} title={tokenName}>
+            <TokenPillContent>
+              <TokenPillLogo>
                 <AssetChainLogo assetLogo={tokenLogo ?? ''} chainLogo={chainLogo ?? ''} symbol={tokenSymbol} />
-              </div>
+              </TokenPillLogo>
               <SelectorTitle>{tokenSymbol || 'Select'}</SelectorTitle>
-            </div>
+            </TokenPillContent>
             <SelectorRight>
               <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <ArrowChevron
@@ -232,12 +266,10 @@ const Buy = () => {
                 />
               </Arrow>
             </SelectorRight>
-          </SelectorButton>
-        </div>
-        <div style={{ marginTop: 8, fontSize: 15, fontWeight: 500, color: 'var(--ck-body-color-muted)' }}>
-          {conversionText}
-        </div>
-      </AmountCard>
+          </TokenPillButton>
+        </AmountRow>
+        <ConversionLine>{conversionText}</ConversionLine>
+      </AmountColumnCard>
 
       <PresetList style={{ marginTop: 14 }}>
         {amountPresets.map((preset) => (
@@ -252,70 +284,35 @@ const Buy = () => {
         ))}
       </PresetList>
 
-      <div
-        style={{
-          marginTop: 16,
-          paddingTop: 14,
-          borderTop: '1px solid var(--ck-body-divider, rgba(0,0,0,0.08))',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 10,
-          fontSize: 13,
-        }}
-      >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: 'var(--ck-body-color-muted)' }}>Pay in</span>
-          <select
-            value={buyForm.currency}
-            onChange={handleCurrencyChange}
-            style={{
-              appearance: 'none',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--ck-body-color)',
-              fontSize: 13,
-              fontWeight: 600,
-              cursor: 'pointer',
-              textAlign: 'right',
-              fontFamily: 'inherit',
-            }}
-          >
+      <SummarySection>
+        <SummaryRow>
+          <SummaryLabel>Pay in</SummaryLabel>
+          <CurrencySelect value={buyForm.currency} onChange={handleCurrencyChange}>
             {SOURCE_CURRENCIES.map((c) => (
               <option key={c} value={c}>
                 {c}
               </option>
             ))}
-          </select>
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ color: 'var(--ck-body-color-muted)' }}>Destination</span>
-          <span
-            style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: 'var(--ck-body-color)' }}
-          >
-            {chainLogo && (
-              <img
-                src={chainLogo}
-                alt=""
-                width={16}
-                height={16}
-                style={{ borderRadius: '50%' }}
-                onError={hideBrokenImg}
-              />
-            )}
+          </CurrencySelect>
+        </SummaryRow>
+        <SummaryRow>
+          <SummaryLabel>Destination</SummaryLabel>
+          <SummaryValue>
+            {chainLogo && <ChainLogoImg src={chainLogo} alt="" width={16} height={16} onError={hideBrokenImg} />}
             {chainLabel || '—'}
-          </span>
-        </div>
+          </SummaryValue>
+        </SummaryRow>
         {feeText && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ color: 'var(--ck-body-color-muted)' }}>Fee</span>
-            <span style={{ color: 'var(--ck-body-color-muted)' }}>{feeText}</span>
-          </div>
+          <SummaryRow>
+            <SummaryLabel>Fee</SummaryLabel>
+            <SummaryMuted>{feeText}</SummaryMuted>
+          </SummaryRow>
         )}
-      </div>
+      </SummarySection>
 
       <ContinueButtonWrapper>
         <Button variant="primary" onClick={handleContinue} disabled={step1Disabled}>
-          Buy on {providerName}
+          Continue
         </Button>
       </ContinueButtonWrapper>
     </PageContent>

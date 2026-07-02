@@ -1,35 +1,28 @@
 import { useEffect, useState } from 'react'
-import type { BuyProviderId, FundingMethod } from '../../components/Openfort/types'
+import type { FundingMethod } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import {
-  backendMethodId,
-  fetchOnrampMethods,
-  type ResolvedOnrampMethod,
-} from '../../components/Pages/Buy/onrampMethodsApi'
-import { useFundingTarget } from '../../components/Pages/Deposit/useFundingTarget'
-
-// Providers the Buy flow can execute end-to-end today. A resolved method whose
-// provider isn't here is treated as unavailable (its row hides) — a row that
-// throws when tapped is worse than no row.
-const BUY_PROVIDERS = new Set<BuyProviderId>(['stripe', 'coinbase'])
+import { backendMethodId, fetchOnrampMethods, type ResolvedOnrampMethod } from './onrampMethodsApi'
+import { useFundingTarget } from './useFundingTarget'
 
 type ResolvedFundingMethods = {
   /** True once the resolve request has completed (success or failure). */
   loaded: boolean
   /**
-   * Backend method ids (snake_case) the region/config resolved to an executable
-   * provider. Empty until loaded, and empty on failure — the Deposit hub hides
-   * fiat rows rather than falling back to a static list.
+   * Backend method ids (snake_case) the region/config resolved. The server only
+   * resolves methods whose provider can execute, so every id here is startable.
+   * Empty until loaded, and empty on failure — the Deposit hub hides fiat rows
+   * rather than falling back to a static list.
    */
   availableMethodIds: Set<string>
-  /** The executable Buy-flow provider for a method, when one resolved. */
-  providerFor: (method: FundingMethod) => BuyProviderId | undefined
+  /** The resolved row for a hub method (label/rail/device-check), if available. */
+  rowFor: (method: FundingMethod) => ResolvedOnrampMethod | undefined
 }
 
 /**
- * Resolves the fiat methods for the deposit target + the buyer's region via
- * GET /v1/onramp/methods. On failure `loaded` turns true with an empty set, so
- * the hub shows only the crypto rails (never a fallback fiat list).
+ * Resolves the fiat methods for the deposit target + the buyer's region — the
+ * stateless preview behind the Deposit hub rows (the session-scoped counterpart
+ * is {@link useFundingMethods}). On failure `loaded` turns true with an empty
+ * set, so the hub shows only the crypto rails (never a fallback fiat list).
  */
 export function useResolvedFundingMethods(): ResolvedFundingMethods {
   const { publishableKey, uiConfig } = useOpenfort()
@@ -58,14 +51,12 @@ export function useResolvedFundingMethods(): ResolvedFundingMethods {
     }
   }, [publishableKey, target.chain, target.currency, country])
 
-  const executable = resolved.filter((r) => BUY_PROVIDERS.has(r.provider as BuyProviderId))
-  const availableMethodIds = new Set(executable.map((r) => r.method))
+  const availableMethodIds = new Set(resolved.map((r) => r.method))
 
-  const providerFor = (method: FundingMethod): BuyProviderId | undefined => {
+  const rowFor = (method: FundingMethod): ResolvedOnrampMethod | undefined => {
     const id = backendMethodId(method)
-    const provider = id ? executable.find((r) => r.method === id)?.provider : undefined
-    return provider as BuyProviderId | undefined
+    return id ? resolved.find((r) => r.method === id) : undefined
   }
 
-  return { loaded, availableMethodIds, providerFor }
+  return { loaded, availableMethodIds, rowFor }
 }

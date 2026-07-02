@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
+import { isSolana } from '../../../hooks/openfort/fundingSources'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
@@ -11,7 +12,6 @@ import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress
 import { RouteSelectors } from '../Deposit/RouteSelectors'
 import { SameChainDepositStatus } from '../Deposit/SameChainDepositStatus'
 import { SameChainDepositSuccess } from '../Deposit/SameChainDepositSuccess'
-import { isSolana } from '../Deposit/sources'
 import { TestnetNotice } from '../Deposit/TestnetNotice'
 import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
 import { useDepositRoute } from '../Deposit/useDepositRoute'

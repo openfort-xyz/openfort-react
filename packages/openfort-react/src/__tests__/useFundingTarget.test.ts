@@ -7,7 +7,7 @@ import {
   DEST_USDC,
   DEST_USDC_SOL,
   NATIVE_TOKEN_ADDRESS,
-} from '../components/Pages/Deposit/sources'
+} from '../hooks/openfort/fundingSources'
 
 // useFundingTarget reads uiConfig.funding from useOpenfort, chainType from
 // useOpenfortCore, and the active EVM chain from useEthereumEmbeddedWallet. Stub
@@ -26,7 +26,7 @@ vi.mock('../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => mockEthWallet,
 }))
 
-const { useFundingTarget } = await import('../components/Pages/Deposit/useFundingTarget')
+const { useFundingTarget } = await import('../hooks/openfort/useFundingTarget')
 
 describe('useFundingTarget', () => {
   beforeEach(() => {

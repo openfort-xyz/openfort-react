@@ -40,7 +40,7 @@ vi.mock('../hooks/openfort/useFundingChains', () => ({
   useFundingChains: () => ({ chains: [], railChains: [], loading: false, error: null }),
   nominalUnits: (decimals: number) => `1${'0'.repeat(decimals + 1)}`,
 }))
-vi.mock('../components/Pages/Deposit/useFundingTarget', () => ({
+vi.mock('../hooks/openfort/useFundingTarget', () => ({
   useFundingTarget: () => ({
     chain: mockChainType === ChainTypeEnum.SVM ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'eip155:8453',
     currency: '0xUSDC',

@@ -1,6 +1,6 @@
 import type { Hex } from 'viem'
+import { DEST_USDC } from '../../../hooks/openfort/fundingSources'
 import type { Asset } from '../../Openfort/types'
-import { DEST_USDC } from '../Deposit/sources'
 
 /**
  * Buyable EVM destination currencies for the fiat onramp. USDC is first so it is
