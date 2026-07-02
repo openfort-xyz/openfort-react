@@ -43,9 +43,11 @@ function makeClient() {
   const create = vi.fn()
   const setPaymentMethod = vi.fn()
   const get = vi.fn()
+  const methods = vi.fn()
+  const quote = vi.fn()
   const payLink = vi.fn()
-  const client: FundingClient = { sessions: { create, setPaymentMethod, get }, payLink }
-  return { client, create, setPaymentMethod, get, payLink }
+  const client: FundingClient = { sessions: { create, setPaymentMethod, get, methods, quote }, payLink }
+  return { client, create, setPaymentMethod, get, methods, quote, payLink }
 }
 
 describe('useFunding', () => {

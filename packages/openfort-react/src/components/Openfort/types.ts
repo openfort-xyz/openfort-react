@@ -442,6 +442,14 @@ export type FundingUIOptions = {
    * @example "https://yourapp.com/deposit.html"
    */
   depositPageUrl?: string
+  /**
+   * Buyer-country override (ISO-3166 alpha-2) for fiat-method region routing.
+   * For apps that already know their user's region (or QA) — skips IP detection,
+   * which resolves to rest-of-world when no country can be determined (e.g.
+   * local dev without a CDN geo header).
+   * @example "US"
+   */
+  country?: string
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED

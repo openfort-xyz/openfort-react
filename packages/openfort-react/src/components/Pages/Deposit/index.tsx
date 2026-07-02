@@ -100,13 +100,14 @@ const Deposit = () => {
     methods: uiConfig.funding?.methods,
   })
 
-  // Once Openfort has resolved the region's fiat methods, show only those fiat
-  // rows (crypto rails are always available). Falls back to the static rows when
-  // the resolve request hasn't completed or returned nothing.
-  const visibleOptions =
-    loaded && availableMethodIds.size > 0
-      ? options.filter((o) => o.target.kind !== 'buy' || availableMethodIds.has(backendMethodId(o.id) ?? ''))
-      : options
+  // Fiat rows render ONLY once Openfort has resolved them for the buyer's
+  // region + destination — a row must always be executable when tapped. Until
+  // the resolve settles (and whenever it fails or returns nothing), the crypto
+  // rails stand alone; there is deliberately NO static fiat fallback: showing a
+  // method the region doesn't support is a compliance bug, not a UX nicety.
+  const visibleOptions = options.filter(
+    (o) => o.target.kind !== 'buy' || (loaded && availableMethodIds.has(backendMethodId(o.id) ?? ''))
+  )
 
   // Distinct source-currency logos (USDC, USDT, ETH, …) for the "from address" row.
   const currencyLogos: string[] = []
@@ -145,11 +146,16 @@ const Deposit = () => {
       return
     }
     // Fiat rails reuse the Buy flow. The provider is resolved by Openfort
-    // (region + destination asset) and never shown to the user; default to Stripe
-    // when the resolved provider isn't one the Buy flow executes yet (e.g. MoonPay redirect).
+    // (region + destination asset) and never shown to the user. A row without a
+    // resolved provider can't render (visibleOptions gates on the resolve), so
+    // this only guards a race between resolve state and a just-tapped row.
+    const providerId = providerFor(target.method)
+    if (!providerId) {
+      return
+    }
     setBuyForm((prev) => ({
       ...prev,
-      providerId: providerFor(target.method) ?? 'stripe',
+      providerId,
       // Default the card-buy to USDC per chain family. Without this the EVM default
       // resolves to the wallet's (often empty) asset list — "no supported tokens" —
       // and the Solana native default would resolve to SOL (isSameToken treats any

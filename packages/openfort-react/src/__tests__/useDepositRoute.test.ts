@@ -23,7 +23,9 @@ vi.mock('../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
 vi.mock('../solana/hooks/useSolanaEmbeddedWallet', () => ({
   useSolanaEmbeddedWallet: () => mockSolWallet,
 }))
-vi.mock('../hooks/openfort/useFunding', () => ({
+vi.mock('../hooks/openfort/useFunding', async (importOriginal) => ({
+  // Keep the real pure helpers (cryptoPaymentMethod); stub only the hook.
+  ...(await importOriginal<typeof import('../hooks/openfort/useFunding')>()),
   useFunding: () => ({
     session: null,
     error: null,

@@ -62,15 +62,37 @@ export type FundingFee = {
   currency: string
 }
 
+/** Fiat web2 funding methods — the rail the user sees, never the provider. */
+export type OnrampMethodId = 'apple_pay' | 'google_pay' | 'card' | 'bank_transfer'
+
+/** How a resolved onramp executes: open a hosted `url`, or an in-page provider SDK. */
+export type OnrampAngle = 'iframe' | 'native'
+
 /**
- * Payment-method-per-source input. `evm` and `solana` are self-custody wallet
- * sends (they get wallet deeplinks); `cex` is an exchange withdrawal (no
- * deeplink — exchanges can't be deeplinked into).
+ * Payment-method input. `evm` and `solana` are self-custody wallet sends (they
+ * get wallet deeplinks); `cex` is an exchange withdrawal (no deeplink —
+ * exchanges can't be deeplinked into); `onramp` is a fiat purchase — the server
+ * resolves the provider (buyer region + destination + project config) and the
+ * session advances through the same lifecycle via the provider's settlement
+ * webhook.
  */
 export type PaymentMethodInput =
   | { type: 'evm'; source: FundingSource }
   | { type: 'solana'; source: FundingSource }
   | { type: 'cex'; cex: string; source: FundingSource }
+  | {
+      type: 'onramp'
+      /** The fiat method the user picked (from {@link useFundingMethods}). */
+      method: OnrampMethodId
+      /** Fiat amount to prefill in the checkout, human units (e.g. "100.00"). */
+      sourceAmount?: string
+      /** ISO-4217 fiat currency for `sourceAmount`. */
+      sourceCurrency?: string
+      /** Buyer-country override (ISO-3166 alpha-2); defaults to the request IP. */
+      country?: string
+      /** URL the provider redirects back to after checkout. */
+      redirectUrl?: string
+    }
 
 export type PaymentMethodType = PaymentMethodInput['type']
 
@@ -85,9 +107,9 @@ export type CexGuidance = {
   requiresMemo: boolean
 }
 
-/** A resolved payment method — what the UI renders and the agent reads. */
-export type PaymentMethod = {
-  type: PaymentMethodType
+/** A resolved crypto payment method — what the UI renders and the agent reads. */
+export type CryptoPaymentMethod = {
+  type: 'evm' | 'solana' | 'cex'
   source: FundingSource
   /** Address the user (or their CEX/wallet) sends to. */
   receiverAddress: string
@@ -102,6 +124,63 @@ export type PaymentMethod = {
   fees: FundingFee[]
   /** Minimum to send for this route (source base units), or null. */
   minAmount: string | null
+}
+
+/**
+ * A committed fiat onramp. The executing provider was resolved server-side and
+ * is never part of the response — open `url` (iframe angle) and watch the
+ * session status; settlement is webhook-driven.
+ */
+export type OnrampPaymentMethod = {
+  type: 'onramp'
+  method: OnrampMethodId
+  angle: OnrampAngle
+  /** Hosted checkout URL to open, or null. */
+  url: string | null
+  fees: FundingFee[]
+  minAmount: string | null
+}
+
+export type PaymentMethod = CryptoPaymentMethod | OnrampPaymentMethod
+
+/** The crypto payment method of a session, or null (none set, or fiat). */
+export function cryptoPaymentMethod(pm: PaymentMethod | null | undefined): CryptoPaymentMethod | null {
+  return pm && pm.type !== 'onramp' ? pm : null
+}
+
+/**
+ * One fiat method row to render, resolved by the server for the session's
+ * destination and the buyer's region. `provider` is telemetry — never shown.
+ */
+export type ResolvedFundingMethod = {
+  method: OnrampMethodId
+  provider: string
+  angle: OnrampAngle
+  /** Server-resolved display label; bank_transfer shows the regional rail. */
+  label: string
+  /** The regional bank rail behind `label`, for bank_transfer. */
+  rail?: 'ach' | 'sepa' | 'interac'
+  /** Gate the row on device capability client-side (e.g. Apple Pay on Safari). */
+  requiresDeviceCheck?: boolean
+}
+
+/** The fiat methods resolved for a session + region. */
+export type ResolvedFundingMethods = {
+  /** Resolved ISO-3166 alpha-2 country, or null for rest-of-world. */
+  country: string | null
+  methods: ResolvedFundingMethod[]
+}
+
+/** A priced onramp route: what the entered fiat buys after fees. */
+export type OnrampQuote = {
+  provider: string
+  sourceAmount: string
+  sourceCurrency: string
+  destinationAmount: string
+  destinationCurrency: string
+  destinationNetwork: string
+  fees: Array<{ type: string; amount: string; currency: string }>
+  exchangeRate: string
 }
 
 /** A single deposit attempt. */
@@ -212,11 +291,14 @@ export type UseFundingOptions = {
 }
 
 /**
- * React surface over the funding session API.
- *
- * @returns Session state plus `fund` (run the deposit flow) and `reset`.
+ * Resolve the funding client every funding hook shares, in order of preference:
+ *   1. an explicitly injected client (tests / custom backends),
+ *   2. the SDK's `openfort.funding` namespace once available,
+ *   3. the fetch adapter over `uiConfig.fundingBaseUrl` / the API backend.
+ * The SDK namespace covers sessions; pay-links stay on the backend adapter
+ * until the API exposes them (CEX is deferred), so the two are composed.
  */
-export function useFunding(options?: UseFundingOptions): UseFunding {
+export function useFundingClient(options?: UseFundingOptions): FundingClient | null {
   const { uiConfig, publishableKey } = useOpenfort()
   const { client: coreClient } = useOpenfortCore()
   // The funding JSON API defaults to the Openfort backend (api.openfort.io);
@@ -225,21 +307,26 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
   const backendUrl = SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
   const baseUrl = options?.useBackendUrl ? backendUrl : uiConfig.fundingBaseUrl || backendUrl
   const injected = options?.client
-  // Resolve the client, in order of preference:
-  //   1. an explicitly injected client (tests / custom backends),
-  //   2. the SDK's `openfort.funding` namespace once available,
-  //   3. the fetch adapter over uiConfig.fundingBaseUrl.
-  // The SDK namespace covers sessions; pay-links stay on the backend adapter
-  // until the API exposes them (CEX is deferred), so we compose the two.
-  const client = useMemo<FundingClient | null>(() => {
+  return useMemo<FundingClient | null>(() => {
     if (injected) return injected
     const sdkFunding = (coreClient as unknown as { funding?: Pick<FundingClient, 'sessions'> } | undefined)?.funding
     const fetchClient = baseUrl ? createFetchFundingClient(baseUrl, publishableKey) : null
-    if (sdkFunding) {
+    // Only adopt the SDK namespace once it covers the full session surface
+    // (an older SDK without methods/quote would break the fiat hooks).
+    if (sdkFunding && typeof sdkFunding.sessions?.methods === 'function') {
       return { sessions: sdkFunding.sessions, payLink: fetchClient?.payLink ?? sdkPayLinkUnavailable }
     }
     return fetchClient
   }, [injected, coreClient, baseUrl, publishableKey])
+}
+
+/**
+ * React surface over the funding session API.
+ *
+ * @returns Session state plus `fund` (run the deposit flow) and `reset`.
+ */
+export function useFunding(options?: UseFundingOptions): UseFunding {
+  const client = useFundingClient(options)
   const isAvailable = client != null
 
   const [session, setSession] = useState<FundingSession | null>(null)
@@ -278,8 +365,9 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         currency: target.currency,
         address: target.address,
         paymentMethod: paymentMethod.type,
-        sourceChain: paymentMethod.source.chain,
-        amount: paymentMethod.source.amount,
+        ...(paymentMethod.type === 'onramp'
+          ? { method: paymentMethod.method }
+          : { sourceChain: paymentMethod.source.chain, amount: paymentMethod.source.amount }),
       })
       try {
         if (!client) {
@@ -297,7 +385,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         logger.log('[funding] payment method set', {
           sessionId: current.id,
           status: current.status,
-          receiverAddress: current.paymentMethod?.receiverAddress,
+          receiverAddress: cryptoPaymentMethod(current.paymentMethod)?.receiverAddress,
         })
         // The session status encodes both hops: waiting_payment (awaiting the source
         // deposit, e.g. the Coinbase withdrawal) → processing (deposit arrived on-chain,

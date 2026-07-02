@@ -1,18 +1,28 @@
 import { logger } from '../../utils/logger'
-import type { FundingSession, FundingTarget, PayLinkParams, PaymentMethodInput } from './useFunding'
+import type {
+  FundingSession,
+  FundingTarget,
+  OnrampMethodId,
+  OnrampQuote,
+  PayLinkParams,
+  PaymentMethodInput,
+  ResolvedFundingMethods,
+} from './useFunding'
 
 /**
- * The funding client surface, mirroring the planned `openfort.funding.*`
- * namespace in `@openfort/openfort-js`:
+ * The funding client surface, mirroring the `openfort.funding.*` namespace in
+ * `@openfort/openfort-js`:
  *
  *   openfort.funding.sessions.create({ target })
  *   openfort.funding.sessions.setPaymentMethod(id, { clientSecret, paymentMethod })
  *   openfort.funding.sessions.get(id, { clientSecret? })
+ *   openfort.funding.sessions.methods(id, { clientSecret, country? })
+ *   openfort.funding.sessions.quote(id, { clientSecret, method, sourceAmount, sourceCurrency })
  *   openfort.funding.payLink(params)
  *
- * `useFunding` depends only on this interface. Today it's backed by the
- * fetch adapter below (the standalone funding service); once the SDK ships the
- * namespace, the adapter is swapped for `coreClient.funding` with no hook change.
+ * The hooks depend only on this interface. Today it's backed by the fetch
+ * adapter below; once the SDK's namespace covers all calls, the adapter is
+ * swapped for `coreClient.funding` with no hook change.
  */
 export type FundingClient = {
   sessions: {
@@ -22,6 +32,21 @@ export type FundingClient = {
       params: { clientSecret: string; paymentMethod: PaymentMethodInput }
     ): Promise<FundingSession>
     get(id: string, params?: { clientSecret?: string }): Promise<FundingSession>
+    /** Resolve the fiat methods for this session's destination + buyer region. */
+    methods(id: string, params: { clientSecret: string; country?: string }): Promise<ResolvedFundingMethods>
+    /** Price a fiat route with the exact provider a commit would resolve. */
+    quote(
+      id: string,
+      params: {
+        clientSecret: string
+        method: OnrampMethodId
+        /** Fiat amount in human units, e.g. "100.00". */
+        sourceAmount: string
+        /** ISO-4217 fiat currency, e.g. "USD". */
+        sourceCurrency: string
+        country?: string
+      }
+    ): Promise<OnrampQuote>
   }
   payLink(params: PayLinkParams): Promise<string>
 }
@@ -71,6 +96,23 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
         return readJson<FundingSession>(
           await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}${query}`, { headers: authHeaders() })
         )
+      },
+      async methods(id, { clientSecret, country }) {
+        const query = new URLSearchParams({ clientSecret })
+        if (country) query.set('country', country)
+        return readJson<ResolvedFundingMethods>(
+          await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/methods?${query.toString()}`, {
+            headers: authHeaders(),
+          })
+        )
+      },
+      async quote(id, params) {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/quotes`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(params),
+        })
+        return readJson<OnrampQuote>(res)
       },
     },
     async payLink(params) {

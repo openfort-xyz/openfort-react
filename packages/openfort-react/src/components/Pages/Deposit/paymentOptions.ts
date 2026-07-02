@@ -44,31 +44,34 @@ type ResolvedDepositOption = DepositMethod & {
   disabledReason?: string
 }
 
+// Fiat subtitles carry only the speed of the rail. Fees and limits vary by
+// provider, region, and amount — the real numbers come from the live quote on
+// the amount screen, never hardcoded copy here.
 const ALL_METHODS: DepositMethod[] = [
   {
     id: FundingMethod.APPLE_PAY,
     title: 'Apple Pay',
-    subtitle: 'No min · ~3.5% fee · Instant',
+    subtitle: 'Instant',
     target: { kind: 'buy', method: FundingMethod.APPLE_PAY },
     device: 'apple',
   },
   {
     id: FundingMethod.GOOGLE_PAY,
     title: 'Google Pay',
-    subtitle: 'No min · ~3.5% fee · Instant',
+    subtitle: 'Instant',
     target: { kind: 'buy', method: FundingMethod.GOOGLE_PAY },
     device: 'google',
   },
   {
     id: FundingMethod.CARD,
     title: 'Card',
-    subtitle: 'Min $10 · ~4% fee · Instant',
+    subtitle: 'Instant',
     target: { kind: 'buy', method: FundingMethod.CARD },
   },
   {
     id: FundingMethod.BANK_TRANSFER,
     title: 'Bank transfer',
-    subtitle: 'No fee · 1–3 days',
+    subtitle: '1–3 business days',
     target: { kind: 'buy', method: FundingMethod.BANK_TRANSFER },
   },
   {

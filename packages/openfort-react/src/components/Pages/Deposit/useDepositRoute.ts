@@ -4,7 +4,7 @@ import { AccountTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
-import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
+import { cryptoPaymentMethod, type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
 import {
   type FundingChain,
   type FundingCurrency,
@@ -90,10 +90,9 @@ export function useDepositRoute(kind: DepositRouteKind) {
   // the recipient family already matches the target, and EOAs are always usable.
   const targetChainId = isSolana(target.chain) ? null : Number(target.chain.split(':')[1])
   const accountUnusableOnTarget = targetChainId != null && !accountUsableOnChain(ethWallet.activeWallet, targetChainId)
-  const receiverAddress: string | null = sameChain
-    ? (address ?? null)
-    : (session?.paymentMethod?.receiverAddress ?? null)
-  const pm = session?.paymentMethod ?? null
+  // This route only ever commits crypto payment methods; narrow away onramp.
+  const pm = cryptoPaymentMethod(session?.paymentMethod)
+  const receiverAddress: string | null = sameChain ? (address ?? null) : (pm?.receiverAddress ?? null)
 
   useEffect(() => {
     if (!address || !isAvailable || !activeChain || !activeCurrency) return
