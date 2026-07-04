@@ -321,6 +321,17 @@ export const InnerContainer = styled(motion.div)`
   position: relative;
   overflow-x: hidden;
   overflow-y: auto;
+  /* Page transitions keep both pages mounted, so this container transiently
+     overflows while its height animates. A scrollbar must never render here:
+     wherever scrollbars consume layout width (Windows, macOS with a mouse,
+     host apps that style ::-webkit-scrollbar globally) it shrinks the width
+     that the left-50%-centered pages resolve against, shifting every page
+     sideways on each route change. Pages taller than the 88vh cap stay
+     wheel/touch-scrollable. */
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
   height: var(--height);
   /* Cap at the viewport so a tall page scrolls instead of running off-screen. */
   max-height: 88vh;
