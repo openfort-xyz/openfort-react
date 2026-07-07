@@ -9,12 +9,15 @@ import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
+import { useUser } from '../../../hooks/openfort/useUser'
+import { isWalletPayMethod, needsWalletPayCapture } from '../../../hooks/openfort/walletPay'
 import useLocales from '../../../hooks/useLocales'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import { ModalHeading } from '../../Common/Modal/styles'
+import Checkbox from '../../Common/Checkbox'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -51,6 +54,12 @@ const amountPresets = [10, 20, 50]
 // (some providers reject non-USD and fall back to the buyer's local currency).
 const SOURCE_CURRENCIES = ['USD', 'EUR', 'GBP']
 
+// Coinbase Guest-Checkout requires the buyer to accept these before a native
+// wallet-pay order. TODO: confirm the exact required wording/links against
+// Coinbase's Guest Checkout integration terms before go-live.
+const COINBASE_TERMS_URL = 'https://www.coinbase.com/legal/user_agreement'
+const COINBASE_PRIVACY_URL = 'https://www.coinbase.com/legal/privacy'
+
 // Friendly labels for the onramp destination networks resolveOnrampNetwork returns.
 const CHAIN_LABEL: Record<string, string> = {
   base: 'Base',
@@ -75,6 +84,13 @@ const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
   const locales = useLocales()
   const { chainType } = useOpenfortCore()
+  const { user } = useUser()
+
+  // Apple/Google Pay commit a Coinbase NATIVE order: the buyer must accept
+  // Coinbase's Guest-Checkout terms here (we stamp agreementAcceptedAt), then
+  // verify email + phone before the commit.
+  const isWalletPay = isWalletPayMethod(buyForm.method)
+  const [consented, setConsented] = useState(false)
   const { data: ethAssets } = useEthereumWalletAssets()
   // Solana wallets buy Solana currencies (USDC default, then SOL); EVM reads its
   // own assets. Both hooks run unconditionally; the active chain picks the list.
@@ -210,6 +226,33 @@ const Buy = () => {
 
   const handleContinue = () => {
     if (fiatAmount === null || fiatAmount <= 0 || !session) return
+    if (isWalletPay) {
+      if (!consented) return
+      // Stamp the Guest-Checkout consent now; verify contact next (or skip
+      // straight to commit when the buyer's identity is already complete).
+      const agreementAcceptedAt = new Date().toISOString()
+      if (needsWalletPayCapture(user)) {
+        setBuyForm((prev) => ({
+          ...prev,
+          session,
+          walletPay: { email: user?.email, phoneNumber: user?.phoneNumber, agreementAcceptedAt },
+        }))
+        setRoute(routes.BUY_WALLET_PAY_CONTACT)
+      } else {
+        setBuyForm((prev) => ({
+          ...prev,
+          session,
+          walletPay: {
+            email: user?.email,
+            phoneNumber: user?.phoneNumber,
+            phoneNumberVerifiedAt: agreementAcceptedAt,
+            agreementAcceptedAt,
+          },
+        }))
+        setRoute(routes.BUY_PROCESSING)
+      }
+      return
+    }
     // Hand the session to the commit screen — it sets the onramp payment method
     // and the server resolves the provider (never shown to the user).
     setBuyForm((prev) => ({ ...prev, session }))
@@ -222,7 +265,7 @@ const Buy = () => {
   }
 
   const isPresetSelected = (value: number) => pressedPreset === value
-  const step1Disabled = fiatAmount === null || fiatAmount <= 0 || !session
+  const step1Disabled = fiatAmount === null || fiatAmount <= 0 || !session || (isWalletPay && !consented)
 
   // The secondary line is the real conversion: how much of the token the entered
   // fiat buys, from the live quote. Falls back to the fiat value when no quote.
@@ -309,6 +352,22 @@ const Buy = () => {
           </SummaryRow>
         )}
       </SummarySection>
+
+      {isWalletPay && (
+        <ModalBody style={{ marginTop: 14 }}>
+          <Checkbox checked={consented} onChange={setConsented}>
+            I agree to Coinbase's{' '}
+            <a href={COINBASE_TERMS_URL} target="_blank" rel="noopener noreferrer">
+              User Agreement
+            </a>{' '}
+            and{' '}
+            <a href={COINBASE_PRIVACY_URL} target="_blank" rel="noopener noreferrer">
+              Privacy Policy
+            </a>
+            , and authorize this purchase.
+          </Checkbox>
+        </ModalBody>
+      )}
 
       <ContinueButtonWrapper>
         <Button variant="primary" onClick={handleContinue} disabled={step1Disabled}>

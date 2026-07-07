@@ -60,6 +60,7 @@ export const routes = {
   DEPOSIT_CEX: 'depositCex',
   BUY: 'buy',
   BUY_TOKEN_SELECT: 'buyTokenSelect',
+  BUY_WALLET_PAY_CONTACT: 'buyWalletPayContact',
   BUY_PROCESSING: 'buyProcessing',
   BUY_COMPLETE: 'buyComplete',
 
@@ -583,6 +584,24 @@ export type SignRequest = (
   reject: (reason?: unknown) => void
 }
 
+/**
+ * OTP-verified buyer identity Coinbase's native wallet-pay (Apple/Google Pay)
+ * order requires. Openfort verifies email + phone via its OWN OTP; the widget
+ * stamps the timestamps at the moment of verification / consent.
+ */
+export type WalletPayIdentity = {
+  email: string
+  /** E.164, US mobile. */
+  phoneNumber: string
+  /** ISO-8601 — stamped when the phone OTP is verified (Coinbase's 60-day window). */
+  phoneNumberVerifiedAt: string
+  /** ISO-8601 — stamped when the buyer accepts Coinbase's Guest Checkout terms. */
+  agreementAcceptedAt: string
+}
+
+/** A wallet-pay identity assembled across the consent + OTP steps. */
+export type WalletPayDraft = Partial<WalletPayIdentity>
+
 export type BuyFormState = {
   amount: string
   currency: string
@@ -594,6 +613,12 @@ export type BuyFormState = {
    * mounts. Consumed by the commit — every attempt gets a fresh session.
    */
   session: { id: string; clientSecret: string } | null
+  /**
+   * Buyer identity for the native wallet-pay (Apple/Google Pay) angle, gathered
+   * across the consent (amount step) + OTP-capture screens before the commit.
+   * Null / partial for card & bank transfer, which don't need it.
+   */
+  walletPay?: WalletPayDraft | null
 }
 
 export const defaultBuyFormState: BuyFormState = {
@@ -605,4 +630,5 @@ export const defaultBuyFormState: BuyFormState = {
   },
   method: FundingMethod.CARD,
   session: null,
+  walletPay: null,
 }

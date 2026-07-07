@@ -5,6 +5,8 @@ import { useEffect, useRef, useState } from 'react'
 import Logos from '../../../assets/logos'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useOnramp } from '../../../hooks/openfort/useOnramp'
+import { isCompleteWalletPay, isWalletPayMethod } from '../../../hooks/openfort/walletPay'
+import styled from '../../../styles/styled'
 import Button from '../../Common/Button'
 import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
 import SquircleSpinner from '../../Common/SquircleSpinner'
@@ -12,6 +14,18 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer, StackedButtonWrapper } from '../Buy/styles'
+
+// In-page mount for the Coinbase native Pay button (Apple/Google Pay). The
+// server returns Coinbase's hosted Pay-button URL; `allow="payment"` lets the
+// wallet-pay sheet run inside the frame.
+const WalletPayFrame = styled.iframe`
+  width: 100%;
+  height: 380px;
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+`
 
 /**
  * Commit-and-track screen for a fiat buy. The amount screen minted the funding
@@ -37,6 +51,14 @@ const BuyProcessing = () => {
       setRoute(routes.BUY)
       return
     }
+    // Native wallet pay needs the OTP-verified identity; if it's somehow missing
+    // (e.g. a stale reload), send the buyer back to gather it rather than commit
+    // a request the server will reject.
+    const walletPay = isCompleteWalletPay(buyForm.walletPay) ? buyForm.walletPay : undefined
+    if (isWalletPayMethod(buyForm.method) && !walletPay) {
+      setRoute(routes.BUY_WALLET_PAY_CONTACT)
+      return
+    }
     startedRef.current = true
     const fiatAmount = Number(buyForm.amount)
     openRef
@@ -44,6 +66,7 @@ const BuyProcessing = () => {
         sourceAmount: Number.isFinite(fiatAmount) && fiatAmount > 0 ? fiatAmount.toFixed(2) : undefined,
         sourceCurrency: buyForm.currency,
         redirectUrl: typeof window === 'undefined' ? undefined : `${window.location.origin}?onramp=success`,
+        walletPay,
       })
       .then((session) => {
         if (session.status === 'succeeded') {
@@ -59,7 +82,7 @@ const BuyProcessing = () => {
       .catch((e) => {
         setFailed(e instanceof Error ? e.message : 'Failed to start the purchase.')
       })
-  }, [buyForm.session, buyForm.amount, buyForm.currency, setRoute])
+  }, [buyForm.session, buyForm.amount, buyForm.currency, buyForm.method, buyForm.walletPay, setRoute])
 
   // Re-measure the modal as the state machine advances.
   useEffect(() => {
@@ -67,12 +90,15 @@ const BuyProcessing = () => {
   }, [triggerResize, onramp.status, failed, showContinueButton])
 
   // Offer a manual advance after a while — settlement webhooks can lag the
-  // provider's own success screen.
+  // provider's own success screen. Suppressed while the native Pay button is
+  // mounted (the buyer is still in the sheet — advancing would skip payment);
+  // for native it only appears once payment is received (status 'processing').
   useEffect(() => {
-    if (onramp.status !== 'waiting_payment' && onramp.status !== 'processing') return
+    const nativeAwaitingPayment = onramp.angle === 'native' && onramp.status === 'waiting_payment'
+    if ((onramp.status !== 'waiting_payment' && onramp.status !== 'processing') || nativeAwaitingPayment) return
     const timer = setTimeout(() => setShowContinueButton(true), 5_000)
     return () => clearTimeout(timer)
-  }, [onramp.status])
+  }, [onramp.status, onramp.angle])
 
   const handleBack = () => {
     onramp.reset()
@@ -96,39 +122,51 @@ const BuyProcessing = () => {
   }
 
   const starting = onramp.status === 'idle' || onramp.loading
+  // Native wallet pay mounts Coinbase's in-page Pay button once the commit
+  // returns its URL and while we await payment; every other angle (and the
+  // post-payment 'processing' delivery) shows the spinner.
+  const showWalletPayFrame = onramp.angle === 'native' && !!onramp.url && onramp.status === 'waiting_payment'
 
   return (
     <PageContent onBack={handleBack}>
       <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
-        <ModalHeading>{starting ? 'Preparing checkout' : 'Processing purchase'}</ModalHeading>
+        <ModalHeading>
+          {starting ? 'Preparing checkout' : showWalletPayFrame ? 'Complete your purchase' : 'Processing purchase'}
+        </ModalHeading>
         <ModalBody>
           {starting
             ? 'Please wait…'
-            : onramp.status === 'processing'
-              ? 'Payment received — delivering your funds…'
-              : 'Complete the purchase in the checkout window.'}
+            : showWalletPayFrame
+              ? 'Pay securely with Apple Pay or Google Pay below.'
+              : onramp.status === 'processing'
+                ? 'Payment received — delivering your funds…'
+                : 'Complete the purchase in the checkout window.'}
         </ModalBody>
 
-        <PendingContainer>
-          <SquircleSpinner
-            logo={
-              <div
-                style={{
-                  padding: '12px',
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Logos.Openfort />
-              </div>
-            }
-            connecting={true}
-          />
-        </PendingContainer>
+        {showWalletPayFrame ? (
+          <WalletPayFrame src={onramp.url ?? undefined} title="Coinbase Pay" allow="payment" />
+        ) : (
+          <PendingContainer>
+            <SquircleSpinner
+              logo={
+                <div
+                  style={{
+                    padding: '12px',
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <Logos.Openfort />
+                </div>
+              }
+              connecting={true}
+            />
+          </PendingContainer>
+        )}
 
         {showContinueButton && (
           <>
