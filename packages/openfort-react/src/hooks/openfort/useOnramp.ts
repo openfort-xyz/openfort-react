@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { logger } from '../../utils/logger'
 import {
   type FundingSession,
+  type OnrampAngle,
   type OnrampMethodId,
   type OnrampQuote,
   type ResolvedFundingMethod,
@@ -36,6 +37,22 @@ export type OnrampOpenParams = {
   sourceCurrency?: string
   /** URL the provider redirects back to after checkout. */
   redirectUrl?: string
+  /**
+   * OTP-verified buyer identity — REQUIRED for the native wallet-pay angle
+   * (`apple_pay` / `google_pay`), ignored otherwise. Verify email + phone via
+   * Openfort's own OTP and capture the Coinbase Guest-Checkout consent BEFORE
+   * calling open(); the server rejects the commit if these are missing,
+   * malformed, or past Coinbase's re-verify window.
+   */
+  walletPay?: {
+    email: string
+    /** US mobile in E.164, e.g. "+14155550123". */
+    phoneNumber: string
+    /** ISO-8601 time the phone OTP was verified (Coinbase's 60-day window). */
+    phoneNumberVerifiedAt: string
+    /** ISO-8601 time the buyer accepted Coinbase's Guest Checkout terms. */
+    agreementAcceptedAt: string
+  }
 }
 
 export type UseOnramp = {
@@ -50,8 +67,15 @@ export type UseOnramp = {
   quote: (params: { sourceAmount: string; sourceCurrency: string }) => Promise<OnrampQuote>
   /** Session lifecycle status; 'idle' before open(). */
   status: SessionStatus | 'idle'
-  /** The provider checkout URL once committed (iframe angle), for custom rendering. */
+  /**
+   * The committed checkout URL. For the `iframe` angle it's the provider's hosted
+   * page (auto-presented unless mode is 'manual'); for `native` it's the in-page
+   * Pay-button link the caller mounts itself (never auto-presented). Null before
+   * open() / when the provider returns none.
+   */
   url: string | null
+  /** The committed angle — branch on it to mount (`native`) vs open (`iframe`). */
+  angle: OnrampAngle | null
   session: FundingSession | null
   /** True from open() until the checkout URL is presented (not until settlement). */
   loading: boolean
@@ -65,9 +89,10 @@ export type UseOnramp = {
  *
  * Angle-agnostic to the caller: `iframe` opens the provider's hosted checkout
  * (popup / redirect / manual); `native` (in-page provider SDK, e.g. Coinbase
- * wallet pay) is not implemented yet and falls back to the hosted URL when the
- * server returns one. Under the hood open() = `setPaymentMethod({ type:
- * 'onramp', method })` — one endpoint and one state machine shared with the
+ * wallet pay) commits a provider order from the OTP-verified `walletPay` identity
+ * and surfaces its Pay-button `url` for the caller to mount in-page — the hook
+ * never auto-presents a native url. Under the hood open() = `setPaymentMethod({
+ * type: 'onramp', method })` — one endpoint and one state machine shared with the
  * crypto rails, polled here until terminal.
  *
  * A funding session accepts a single payment method: after open(), retrying
@@ -136,6 +161,9 @@ export function useOnramp(
             sourceCurrency: params?.sourceCurrency,
             redirectUrl: params?.redirectUrl,
             country: options?.country,
+            // Native wallet pay only; spreading `undefined` adds nothing for
+            // card / bank transfer.
+            ...params?.walletPay,
           },
         })
         if (!isCurrent()) return committed
@@ -143,16 +171,20 @@ export function useOnramp(
         setLoading(false)
 
         const pm = committed.paymentMethod
+        const angle = pm?.type === 'onramp' ? pm.angle : null
         const checkoutUrl = pm?.type === 'onramp' ? pm.url : null
         logger.log('[onramp] committed', {
           sessionId: committed.id,
           method: methodId,
-          angle: pm?.type === 'onramp' ? pm.angle : null,
+          angle,
           hasUrl: Boolean(checkoutUrl),
         })
-        if (checkoutUrl && mode === 'popup') {
+        // Only the hosted (iframe) angle is auto-presented. A native url is an
+        // in-page Pay-button link — surfaced via `url`/`angle` for the caller to
+        // mount; auto-opening it would break the in-page sheet.
+        if (checkoutUrl && angle === 'iframe' && mode === 'popup') {
           window.open(checkoutUrl, 'openfort-onramp', 'popup,width=470,height=750')
-        } else if (checkoutUrl && mode === 'redirect') {
+        } else if (checkoutUrl && angle === 'iframe' && mode === 'redirect') {
           window.location.href = checkoutUrl
         }
 
@@ -187,6 +219,7 @@ export function useOnramp(
     quote,
     status: current?.status ?? 'idle',
     url: pm?.type === 'onramp' ? pm.url : null,
+    angle: pm?.type === 'onramp' ? pm.angle : null,
     session: current,
     loading,
     error,

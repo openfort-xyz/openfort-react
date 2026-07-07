@@ -120,6 +120,50 @@ describe('useOnramp', () => {
     expect(result.current.url).toBe('https://crypto.link.com/s?x=1')
   })
 
+  it('native wallet pay forwards the verified PII, never popups, and exposes the mount url + angle', async () => {
+    const { client, setPaymentMethod } = makeClient()
+    setPaymentMethod.mockResolvedValue(
+      makeSession({
+        status: 'succeeded',
+        paymentMethod: onrampPm({ method: 'apple_pay', angle: 'native', url: 'https://pay.coinbase.com/buy/1' }),
+      })
+    )
+
+    const { result } = renderHook(() => useOnramp(sessionRef, 'apple_pay', { client }))
+    await act(async () => {
+      await result.current.open({
+        sourceAmount: '50.00',
+        sourceCurrency: 'USD',
+        walletPay: {
+          email: 'buyer@example.com',
+          phoneNumber: '+14155550123',
+          phoneNumberVerifiedAt: '2026-07-07T12:00:00.000Z',
+          agreementAcceptedAt: '2026-07-07T12:01:00.000Z',
+        },
+      })
+    })
+
+    expect(setPaymentMethod).toHaveBeenCalledWith('fnd_1', {
+      clientSecret: 'cs_1',
+      paymentMethod: {
+        type: 'onramp',
+        method: 'apple_pay',
+        sourceAmount: '50.00',
+        sourceCurrency: 'USD',
+        redirectUrl: undefined,
+        country: undefined,
+        email: 'buyer@example.com',
+        phoneNumber: '+14155550123',
+        phoneNumberVerifiedAt: '2026-07-07T12:00:00.000Z',
+        agreementAcceptedAt: '2026-07-07T12:01:00.000Z',
+      },
+    })
+    // Native is mounted in-page by the caller — the hook must not open a popup.
+    expect(openSpy).not.toHaveBeenCalled()
+    expect(result.current.angle).toBe('native')
+    expect(result.current.url).toBe('https://pay.coinbase.com/buy/1')
+  })
+
   it('polls the session to a terminal status — the popup is never the source of truth', async () => {
     vi.useFakeTimers()
     const { client, setPaymentMethod, get } = makeClient()
