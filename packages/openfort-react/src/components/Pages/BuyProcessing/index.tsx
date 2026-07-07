@@ -144,7 +144,15 @@ const BuyProcessing = () => {
         </ModalBody>
 
         {showWalletPayFrame ? (
-          <WalletPayFrame src={onramp.url ?? undefined} title="Coinbase Pay" allow="payment" />
+          // Coinbase requires these exact iframe attributes for the in-page
+          // Apple/Google Pay sheet to run (headless onramp docs).
+          <WalletPayFrame
+            src={onramp.url ?? undefined}
+            title="Coinbase Pay"
+            allow="payment"
+            sandbox="allow-scripts allow-same-origin"
+            referrerPolicy="no-referrer"
+          />
         ) : (
           <PendingContainer>
             <SquircleSpinner
