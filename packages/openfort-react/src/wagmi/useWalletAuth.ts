@@ -63,7 +63,7 @@ function runConnectWithSiwe(
       }
       const nonce = params.link
         ? (await client.auth.initLinkSiwe({ address })).nonce
-        : (await client.auth.initSiwe({ address })).nonce
+        : (await client.auth.initSiwe({ address, chainId })).nonce
       const siweMsg = createSIWEMessage(address, nonce, chainId)
       if (!siweMsg) throw new Error('SIWE message creation failed (window not available)')
       const messageStr =
@@ -89,6 +89,7 @@ function runConnectWithSiwe(
           connectorType,
           walletClientType,
           address,
+          chainId,
         })
       }
       await updateUser()

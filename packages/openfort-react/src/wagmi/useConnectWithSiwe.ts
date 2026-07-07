@@ -82,7 +82,7 @@ export function useConnectWithSiwe() {
           const resp = await client.auth.initLinkSiwe({ address })
           nonce = resp.nonce
         } else {
-          const resp = await client.auth.initSiwe({ address })
+          const resp = await client.auth.initSiwe({ address, chainId })
           nonce = resp.nonce
         }
 
@@ -107,6 +107,7 @@ export function useConnectWithSiwe() {
             connectorType,
             walletClientType,
             address,
+            chainId,
           })
         }
 
