@@ -1,11 +1,9 @@
 'use client'
 
 import { AccountTypeEnum } from '@openfort/openfort-js'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
+import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
-import { createFundingEmitter } from '../../../hooks/openfort/fundingAnalytics'
 import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
 import {
   type FundingChain,
@@ -52,8 +50,6 @@ function accountUsableOnChain(wallet: ConnectedEmbeddedEthereumWallet | null, ch
 export function useDepositRoute(kind: DepositRouteKind) {
   const ethWallet = useEthereumEmbeddedWallet()
   const solWallet = useSolanaEmbeddedWallet()
-  const { uiConfig } = useOpenfort()
-  const emit = useMemo(() => createFundingEmitter(uiConfig.funding?.onEvent), [uiConfig.funding?.onEvent])
   const { session, status, error, loading, isAvailable, fund, payLink, reset } = useFunding()
   const { chains: allChains, railChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
@@ -120,13 +116,6 @@ export function useDepositRoute(kind: DepositRouteKind) {
       currency: activeCurrency.symbol,
       destChain: target.chain,
     })
-    emit({
-      type: 'funding_route_selected',
-      kind,
-      sourceChain: activeChain.id,
-      sourceCurrency: activeCurrency.symbol,
-      destChain: target.chain,
-    })
     fund(
       { chain: target.chain, currency: target.currency, address },
       paymentMethodFor(activeChain.id, activeCurrency)
@@ -139,7 +128,6 @@ export function useDepositRoute(kind: DepositRouteKind) {
     sameChain,
     targetUnsupported,
     accountUnusableOnTarget,
-    emit,
     fund,
     reset,
     target.chain,
@@ -152,18 +140,6 @@ export function useDepositRoute(kind: DepositRouteKind) {
     if (!isAvailable || chainsLoading || chains.length > 0) return
     logger.warn('[funding:route] no source chains available', { kind, destChain: target.chain })
   }, [isAvailable, chainsLoading, chains.length, kind, target.chain])
-
-  // Emitted when the user copies the deposit address — high-intent, and (paired with
-  // the absence of a later status change) the "copied but never sent" leak. sessionId
-  // is null on same-chain transfers, which have no Relay session.
-  const onAddressCopied = useCallback(() => {
-    emit({
-      type: 'funding_address_copied',
-      sessionId: session?.id ?? null,
-      chain: activeChain?.id ?? chain,
-      asset: activeCurrency?.symbol ?? currencySymbol,
-    })
-  }, [emit, session?.id, activeChain?.id, chain, activeCurrency?.symbol, currencySymbol])
 
   return {
     chains,
@@ -188,6 +164,5 @@ export function useDepositRoute(kind: DepositRouteKind) {
     error,
     isAvailable,
     payLink,
-    onAddressCopied,
   }
 }
