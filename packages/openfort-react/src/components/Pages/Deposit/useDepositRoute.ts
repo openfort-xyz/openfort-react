@@ -1,7 +1,7 @@
 'use client'
 
 import { AccountTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../../components/Openfort/useOpenfort'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
@@ -153,6 +153,18 @@ export function useDepositRoute(kind: DepositRouteKind) {
     logger.warn('[funding:route] no source chains available', { kind, destChain: target.chain })
   }, [isAvailable, chainsLoading, chains.length, kind, target.chain])
 
+  // Emitted when the user copies the deposit address — high-intent, and (paired with
+  // the absence of a later status change) the "copied but never sent" leak. sessionId
+  // is null on same-chain transfers, which have no Relay session.
+  const onAddressCopied = useCallback(() => {
+    emit({
+      type: 'funding_address_copied',
+      sessionId: session?.id ?? null,
+      chain: activeChain?.id ?? chain,
+      asset: activeCurrency?.symbol ?? currencySymbol,
+    })
+  }, [emit, session?.id, activeChain?.id, chain, activeCurrency?.symbol, currencySymbol])
+
   return {
     chains,
     chainsLoading,
@@ -176,5 +188,6 @@ export function useDepositRoute(kind: DepositRouteKind) {
     error,
     isAvailable,
     payLink,
+    onAddressCopied,
   }
 }

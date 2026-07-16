@@ -56,6 +56,16 @@ export type FundingAnalyticsEvent =
       feeKinds: FundingFee['kind'][]
       status: SessionStatus
     }
+  /** The user copied the deposit address — high-intent signal that they're about to send. */
+  | {
+      type: 'funding_address_copied'
+      /** Null for a same-chain transfer (no Relay session — funds go straight to the wallet). */
+      sessionId: string | null
+      /** CAIP-2 source chain the address lives on. */
+      chain: string
+      /** Source currency symbol being sent. */
+      asset: string
+    }
   /** The polled session moved between non-terminal states (e.g. waiting_payment → processing). */
   | {
       type: 'funding_status_changed'
