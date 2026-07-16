@@ -82,7 +82,6 @@ export type { StoreCredentialsResult } from './hooks/openfort/auth/useOAuth'
 export { useOAuth } from './hooks/openfort/auth/useOAuth'
 export { usePhoneOtpAuth } from './hooks/openfort/auth/usePhoneOtpAuth'
 export { useSignOut } from './hooks/openfort/auth/useSignOut'
-export type { FundingAnalyticsEvent, FundingAnalyticsSink } from './hooks/openfort/fundingAnalytics'
 export type { FundingClient } from './hooks/openfort/fundingClient'
 export {
   type SignAuthorizationParameters,

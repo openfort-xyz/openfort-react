@@ -5,7 +5,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
 import { logger } from '../../utils/logger'
-import { createFundingEmitter, type FundingAnalyticsEvent, type FundingAnalyticsSink } from './fundingAnalytics'
 import { createFetchFundingClient, type FundingClient } from './fundingClient'
 
 /** Pay-links aren't exposed by the SDK funding namespace yet (CEX is API-deferred). */
@@ -132,9 +131,7 @@ async function pollUntilTerminal(
   client: FundingClient,
   onUpdate: (session: FundingSession) => void,
   start: FundingSession,
-  isCurrent: () => boolean,
-  emit: (event: FundingAnalyticsEvent) => void,
-  startedAt: number
+  isCurrent: () => boolean
 ): Promise<FundingSession> {
   let current = start
   let prev = current.status
@@ -146,23 +143,18 @@ async function pollUntilTerminal(
     onUpdate(current)
     if (current.status !== prev) {
       logger.log('[funding] status', { sessionId: current.id, prev, status: current.status })
-      emit({ type: 'funding_status_changed', sessionId: current.id, from: prev, to: current.status })
       prev = current.status
     }
   }
-  const secondsToTerminal = Math.max(0, Math.round((Date.now() - startedAt) / 1000))
   if (current.status === 'succeeded') {
-    const txHash = current.metadata?.txHash ?? current.externalId ?? null
-    logger.log('[funding] terminal: delivered', { sessionId: current.id, status: current.status, txHash })
-    emit({ type: 'funding_succeeded', sessionId: current.id, txHash, secondsToTerminal })
+    logger.log('[funding] terminal: delivered', {
+      sessionId: current.id,
+      status: current.status,
+      txHash: current.metadata?.txHash ?? current.externalId ?? null,
+    })
   } else {
     // bounced = source delivered but Relay refunded; expired = nothing arrived in time.
     logger.warn('[funding] terminal: failed', { sessionId: current.id, status: current.status })
-    emit({
-      type: current.status === 'bounced' ? 'funding_bounced' : 'funding_expired',
-      sessionId: current.id,
-      secondsToTerminal,
-    })
   }
   return current
 }
@@ -217,11 +209,6 @@ export type UseFundingOptions = {
    * by the API, not the standalone funding service — `DepositCex` opts in.
    */
   useBackendUrl?: boolean
-  /**
-   * Analytics sink for the funding-session lifecycle. Overrides `uiConfig.funding.onEvent`.
-   * The SDK bundles no analytics vendor — forward these events to PostHog (or elsewhere).
-   */
-  onEvent?: FundingAnalyticsSink
 }
 
 /**
@@ -255,71 +242,35 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
   }, [injected, coreClient, baseUrl, publishableKey])
   const isAvailable = client != null
 
-  // Funding-session analytics: prefer the per-call sink, else the global one on
-  // uiConfig.funding.onEvent. Wrapped so a throwing integrator handler can't break
-  // the deposit flow; a no-op when no sink is configured.
-  const sink = options?.onEvent ?? uiConfig.funding?.onEvent
-  const emit = useMemo(() => createFundingEmitter(sink), [sink])
-
   const [session, setSession] = useState<FundingSession | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [loading, setLoading] = useState(false)
   // Generation guard: only the latest fund()/reset() updates state, so
   // re-selecting a source mid-poll can't be clobbered by a stale request.
   const generation = useRef(0)
-  // Latest session mirrored into a ref so reset()/unmount (both []-dep) can emit an
-  // "abandoned" event when the flow is left before a terminal state.
-  const sessionRef = useRef<FundingSession | null>(null)
-  const setSessionTracked = useCallback((next: FundingSession | null) => {
-    sessionRef.current = next
-    setSession(next)
-  }, [])
-  // Wall-clock start of the active attempt, for time-to-terminal / time-in-session.
-  const startedAtRef = useRef(0)
-  const emitAbandonedIfPending = useCallback(() => {
-    const pending = sessionRef.current
-    if (pending && !TERMINAL.includes(pending.status)) {
-      emit({
-        type: 'funding_session_abandoned',
-        sessionId: pending.id,
-        lastStatus: pending.status,
-        secondsInSession: Math.max(0, Math.round((Date.now() - startedAtRef.current) / 1000)),
-      })
-    }
-  }, [emit])
 
   // Stop any in-flight poll loop on unmount — without this the loop keeps
   // hitting the network until the session turns terminal (up to its 24h TTL).
-  // Read the abandoned-emitter through a ref so this stays a mount-once effect
-  // (re-running it would prematurely stop live poll loops).
-  const emitAbandonedRef = useRef(emitAbandonedIfPending)
-  emitAbandonedRef.current = emitAbandonedIfPending
   useEffect(() => {
     return () => {
       generation.current += 1
-      emitAbandonedRef.current()
       logger.log('[funding] unmounted — poll loop stopped')
     }
   }, [])
 
   const reset = useCallback(() => {
     generation.current += 1
-    emitAbandonedIfPending()
     logger.log('[funding] reset')
-    setSessionTracked(null)
+    setSession(null)
     setError(null)
     setLoading(false)
-  }, [emitAbandonedIfPending, setSessionTracked])
+  }, [])
 
   const fund = useCallback(
     async (target: FundingTarget, paymentMethod: PaymentMethodInput): Promise<FundingSession> => {
       generation.current += 1
       const gen = generation.current
       const isCurrent = () => generation.current === gen
-      // A fresh attempt replaces any pending one — record the abandonment first.
-      emitAbandonedIfPending()
-      const startedAt = Date.now()
-      startedAtRef.current = startedAt
       setError(null)
       setLoading(true)
       logger.log('[funding] fund() start', {
@@ -330,84 +281,49 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         sourceChain: paymentMethod.source.chain,
         amount: paymentMethod.source.amount,
       })
-      let createdId: string | null = null
       try {
         if (!client) {
           throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
         }
         const created = await client.sessions.create({ target })
-        createdId = created.id
         logger.log('[funding] session created', { sessionId: created.id, status: created.status })
-        emit({
-          type: 'funding_session_created',
-          sessionId: created.id,
-          targetChain: target.chain,
-          targetCurrency: target.currency,
-          status: created.status,
-        })
         const current = await client.sessions.setPaymentMethod(created.id, {
           clientSecret: created.clientSecret,
           paymentMethod,
         })
         if (!isCurrent()) return current
-        setSessionTracked(current)
+        setSession(current)
         setLoading(false)
         logger.log('[funding] payment method set', {
           sessionId: current.id,
           status: current.status,
           receiverAddress: current.paymentMethod?.receiverAddress,
         })
-        emit({
-          type: 'funding_payment_method_set',
-          sessionId: current.id,
-          paymentMethodType: paymentMethod.type,
-          sourceChain: paymentMethod.source.chain,
-          sourceCurrency: paymentMethod.source.currency,
-          sourceAmount: paymentMethod.source.amount,
-          receiverAddress: current.paymentMethod?.receiverAddress ?? null,
-          minAmount: current.paymentMethod?.minAmount ?? null,
-          feeKinds: current.paymentMethod?.fees?.map((f) => f.kind) ?? [],
-          status: current.status,
-        })
         // The session status encodes both hops: waiting_payment (awaiting the source
         // deposit, e.g. the Coinbase withdrawal) → processing (deposit arrived on-chain,
         // Relay bridging) → succeeded / bounced (Relay refunded) / expired (no deposit).
-        return pollUntilTerminal(client, setSessionTracked, current, isCurrent, emit, startedAt)
+        return pollUntilTerminal(client, setSession, current, isCurrent)
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e))
         if (isCurrent()) {
           setError(err)
           setLoading(false)
           logger.error('[funding] fund() failed', err)
-          emit({
-            type: 'funding_session_error',
-            sessionId: createdId,
-            stage: createdId ? 'setPaymentMethod' : 'create',
-            message: err.message,
-          })
         }
         throw err
       }
     },
-    [client, emit, emitAbandonedIfPending, setSessionTracked]
+    [client]
   )
 
   const createSession = useCallback(
     async (target: FundingTarget): Promise<FundingSession> => {
       if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
-      startedAtRef.current = Date.now()
       const created = await client.sessions.create({ target })
       logger.log('[funding] session created (cex)', { sessionId: created.id, status: created.status })
-      emit({
-        type: 'funding_session_created',
-        sessionId: created.id,
-        targetChain: target.chain,
-        targetCurrency: target.currency,
-        status: created.status,
-      })
       return created
     },
-    [client, emit]
+    [client]
   )
 
   const track = useCallback(
@@ -416,28 +332,23 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
       generation.current += 1
       const gen = generation.current
       const isCurrent = () => generation.current === gen
-      // Prefer the createSession start (true time-to-terminal for the CEX flow); fall
-      // back to now if track() is called on a session this hook didn't create.
-      const startedAt = startedAtRef.current || Date.now()
-      startedAtRef.current = startedAt
       setError(null)
       try {
         const start = await client.sessions.get(toTrack.id, { clientSecret: toTrack.clientSecret })
         if (!isCurrent()) return start
-        setSessionTracked(start)
+        setSession(start)
         logger.log('[funding] track() start', { sessionId: start.id, status: start.status })
-        return await pollUntilTerminal(client, setSessionTracked, start, isCurrent, emit, startedAt)
+        return await pollUntilTerminal(client, setSession, start, isCurrent)
       } catch (e) {
         const err = e instanceof Error ? e : new Error(String(e))
         if (isCurrent()) {
           setError(err)
           logger.error('[funding] track() failed', err)
-          emit({ type: 'funding_session_error', sessionId: toTrack.id, stage: 'poll', message: err.message })
         }
         throw err
       }
     },
-    [client, emit, setSessionTracked]
+    [client]
   )
 
   const payLink = useCallback(

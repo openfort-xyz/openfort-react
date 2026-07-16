@@ -17,12 +17,6 @@ const mockSolWallet: { status: string; address?: string } = { status: 'disconnec
 vi.mock('../openfort/useOpenfort', () => ({
   useOpenfortCore: () => ({ chainType: mockChainType }),
 }))
-// useDepositRoute reads uiConfig.funding.onEvent to emit funding analytics events.
-// A test can install a sink on mockUiConfig.funding.onEvent to observe them.
-const mockUiConfig: { funding?: { onEvent?: (e: unknown) => void } } = {}
-vi.mock('../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({ uiConfig: mockUiConfig }),
-}))
 vi.mock('../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => mockEthWallet,
 }))
@@ -61,23 +55,6 @@ describe('useDepositRoute', () => {
     mockEthWallet.activeWallet = undefined
     mockSolWallet.status = 'disconnected'
     mockSolWallet.address = undefined
-    mockUiConfig.funding = undefined
-  })
-
-  it('onAddressCopied emits funding_address_copied to the configured sink', () => {
-    const onEvent = vi.fn()
-    mockUiConfig.funding = { onEvent }
-    mockEthWallet.status = 'connected'
-    mockEthWallet.address = '0xEthAddr'
-
-    const { result } = renderHook(() => useDepositRoute('crypto'))
-    result.current.onAddressCopied()
-
-    // No source chains are mocked, so chain falls back to the funding target and there's
-    // no Relay session — sessionId is null. The event still fires for the copy signal.
-    expect(onEvent).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'funding_address_copied', sessionId: null, chain: 'eip155:8453' })
-    )
   })
 
   it('resolves the destination from the Ethereum wallet on EVM', () => {

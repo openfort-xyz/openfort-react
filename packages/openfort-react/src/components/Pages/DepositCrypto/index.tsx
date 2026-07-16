@@ -82,7 +82,6 @@ const DepositCrypto = () => {
             sameChain={route.sameChain}
             loading={route.loading}
             status={route.status}
-            onAddressCopied={route.onAddressCopied}
           />
           {sameChainEnabled && <SameChainDepositStatus />}
           {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}

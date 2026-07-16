@@ -22,8 +22,6 @@ type DepositAddressBlockProps = {
   loading: boolean
   /** Live session status, rendered as the "Waiting for your deposit…" line under the address. */
   status?: SessionStatus | 'idle'
-  /** Fired when the user copies the deposit address (analytics). */
-  onAddressCopied?: () => void
 }
 
 /** The QR + copyable deposit address (plus cross-chain Details) for a route. */
@@ -36,7 +34,6 @@ export function DepositAddressBlock({
   sameChain,
   loading,
   status,
-  onAddressCopied,
 }: DepositAddressBlockProps) {
   if (loading && !sameChain && !pm) {
     return (
@@ -67,7 +64,7 @@ export function DepositAddressBlock({
       <div style={depositAddressLabel}>Your deposit address</div>
       <div style={addressBox}>
         <code style={codeStyle}>{receiverAddress}</code>
-        <CopyIconButton value={receiverAddress} size={28} onCopy={onAddressCopied} />
+        <CopyIconButton value={receiverAddress} size={28} />
       </div>
       {status && <DepositStatus status={status} />}
       {!sameChain && pm && <DepositDetails pm={pm} sourceCurrency={sourceCurrency} />}
