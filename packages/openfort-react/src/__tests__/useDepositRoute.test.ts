@@ -17,6 +17,11 @@ const mockSolWallet: { status: string; address?: string } = { status: 'disconnec
 vi.mock('../openfort/useOpenfort', () => ({
   useOpenfortCore: () => ({ chainType: mockChainType }),
 }))
+// useDepositRoute reads uiConfig.funding.onEvent to emit the route-selected analytics
+// event; no sink is configured in tests, so the emitter is a no-op.
+vi.mock('../components/Openfort/useOpenfort', () => ({
+  useOpenfort: () => ({ uiConfig: {} }),
+}))
 vi.mock('../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => mockEthWallet,
 }))

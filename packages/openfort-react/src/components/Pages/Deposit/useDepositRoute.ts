@@ -1,9 +1,11 @@
 'use client'
 
 import { AccountTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
+import { createFundingEmitter } from '../../../hooks/openfort/fundingAnalytics'
 import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
 import {
   type FundingChain,
@@ -50,6 +52,8 @@ function accountUsableOnChain(wallet: ConnectedEmbeddedEthereumWallet | null, ch
 export function useDepositRoute(kind: DepositRouteKind) {
   const ethWallet = useEthereumEmbeddedWallet()
   const solWallet = useSolanaEmbeddedWallet()
+  const { uiConfig } = useOpenfort()
+  const emit = useMemo(() => createFundingEmitter(uiConfig.funding?.onEvent), [uiConfig.funding?.onEvent])
   const { session, status, error, loading, isAvailable, fund, payLink, reset } = useFunding()
   const { chains: allChains, railChains, loading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
@@ -116,6 +120,13 @@ export function useDepositRoute(kind: DepositRouteKind) {
       currency: activeCurrency.symbol,
       destChain: target.chain,
     })
+    emit({
+      type: 'funding_route_selected',
+      kind,
+      sourceChain: activeChain.id,
+      sourceCurrency: activeCurrency.symbol,
+      destChain: target.chain,
+    })
     fund(
       { chain: target.chain, currency: target.currency, address },
       paymentMethodFor(activeChain.id, activeCurrency)
@@ -128,6 +139,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
     sameChain,
     targetUnsupported,
     accountUnusableOnTarget,
+    emit,
     fund,
     reset,
     target.chain,
