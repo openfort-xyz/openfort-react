@@ -5,6 +5,7 @@ import type { CountryData, CountryIso2, CountrySelectorProps } from 'react-inter
 import type { Hex } from 'viem'
 import type { getAssets } from 'viem/experimental/erc7811'
 import type { EthereumConfig } from '../../ethereum/types'
+import type { FundingAnalyticsSink } from '../../hooks/openfort/fundingAnalytics'
 import type { EthereumUserWallet, SolanaUserWallet } from '../../hooks/openfort/walletTypes'
 import type { SolanaConfig } from '../../solana/types'
 
@@ -440,6 +441,14 @@ export type FundingUIOptions = {
    * @example "https://yourapp.com/deposit.html"
    */
   depositPageUrl?: string
+  /**
+   * Analytics sink for the funding-session lifecycle (crypto/wallet/exchange rail).
+   * The SDK bundles no analytics vendor — forward these typed events to PostHog (or
+   * anywhere). Fires session created / payment-method-set / status-changed /
+   * succeeded / bounced / expired / abandoned / error, plus route selection.
+   * @example onEvent: (e) => posthog.capture(e.type, e)
+   */
+  onEvent?: FundingAnalyticsSink
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED

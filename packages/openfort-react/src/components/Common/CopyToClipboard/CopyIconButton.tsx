@@ -33,13 +33,23 @@ interface CopyIconButtonProps {
   value: string
   /** Button edge length in px (default 48). The icon scales to half. */
   size?: number
+  /** Fired after a non-empty value is copied (e.g. for analytics). */
+  onCopy?: () => void
 }
 
-export const CopyIconButton = ({ value, size = 48 }: CopyIconButtonProps) => {
+export const CopyIconButton = ({ value, size = 48, onCopy }: CopyIconButtonProps) => {
   const { copied, copy } = useCopyToClipboard()
 
   return (
-    <StyledButton $size={size} onClick={() => copy(value)} disabled={!value} type="button">
+    <StyledButton
+      $size={size}
+      onClick={() => {
+        copy(value)
+        if (value) onCopy?.()
+      }}
+      disabled={!value}
+      type="button"
+    >
       <CopyIcon copied={copied} size={Math.round(size / 2)} />
     </StyledButton>
   )
