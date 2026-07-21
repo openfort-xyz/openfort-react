@@ -7,6 +7,7 @@ import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEm
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
+import { useFundingMethods } from '../../../hooks/openfort/useFundingMethods'
 import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
 import { useUser } from '../../../hooks/openfort/useUser'
@@ -86,9 +87,11 @@ const Buy = () => {
   const { chainType } = useOpenfortCore()
   const { user } = useUser()
 
-  // Apple/Google Pay commit a Coinbase NATIVE order: the buyer must accept
-  // Coinbase's Guest-Checkout terms here (we stamp agreementAcceptedAt), then
-  // verify email + phone before the commit.
+  // Apple/Google Pay MAY commit a Coinbase NATIVE order (US buyer + project
+  // CDP creds) — then the buyer must accept Coinbase's Guest-Checkout terms
+  // here (we stamp agreementAcceptedAt) and verify email + phone before the
+  // commit. Everywhere else the server resolves them to the HOSTED checkout
+  // (iframe angle), which needs neither; the resolved angle decides.
   const isWalletPay = isWalletPayMethod(buyForm.method)
   const [consented, setConsented] = useState(false)
   const { data: ethAssets } = useEthereumWalletAssets()
@@ -140,6 +143,18 @@ const Buy = () => {
       sessionKey.current = ''
     }
   }, [isAvailable, address, target.chain, target.currency])
+
+  // Whether THIS buyer's wallet-pay resolves to the native sheet or the hosted
+  // checkout — server-decided per region + project creds. Until the resolve
+  // lands (or when the row is missing) we assume native, the safe direction:
+  // identity capture is never skipped when the commit will require it.
+  const fundingMethods = useFundingMethods(isWalletPay ? session : null, { useBackendUrl: true })
+  const methodId = backendMethodId(buyForm.method)
+  const resolvedRow = fundingMethods.methods.find((m) => m.method === methodId)
+  // Hold Continue only while the resolve is in flight; once settled, a missing
+  // row (resolve failed / older backend) keeps the native assumption.
+  const walletPayAngleKnown = !isWalletPay || fundingMethods.loaded
+  const isNativeWalletPay = isWalletPay && (resolvedRow ? resolvedRow.angle === 'native' : true)
 
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
@@ -225,8 +240,8 @@ const Buy = () => {
   }
 
   const handleContinue = () => {
-    if (fiatAmount === null || fiatAmount <= 0 || !session) return
-    if (isWalletPay) {
+    if (fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown) return
+    if (isNativeWalletPay) {
       if (!consented) return
       // Stamp the Guest-Checkout consent now; verify contact next (or skip
       // straight to commit when the buyer's identity is already complete).
@@ -235,6 +250,7 @@ const Buy = () => {
         setBuyForm((prev) => ({
           ...prev,
           session,
+          walletPayAngle: 'native',
           walletPay: { email: user?.email, phoneNumber: user?.phoneNumber, agreementAcceptedAt },
         }))
         setRoute(routes.BUY_WALLET_PAY_CONTACT)
@@ -242,6 +258,7 @@ const Buy = () => {
         setBuyForm((prev) => ({
           ...prev,
           session,
+          walletPayAngle: 'native',
           walletPay: {
             email: user?.email,
             phoneNumber: user?.phoneNumber,
@@ -253,9 +270,10 @@ const Buy = () => {
       }
       return
     }
-    // Hand the session to the commit screen — it sets the onramp payment method
-    // and the server resolves the provider (never shown to the user).
-    setBuyForm((prev) => ({ ...prev, session }))
+    // Card, bank transfer, and hosted-checkout wallet pay commit directly — the
+    // server resolves the provider (never shown to the user) and the hosted
+    // checkout collects its own consent, so no identity capture here.
+    setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'iframe' : null }))
     setRoute(routes.BUY_PROCESSING)
   }
 
@@ -265,7 +283,8 @@ const Buy = () => {
   }
 
   const isPresetSelected = (value: number) => pressedPreset === value
-  const step1Disabled = fiatAmount === null || fiatAmount <= 0 || !session || (isWalletPay && !consented)
+  const step1Disabled =
+    fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown || (isNativeWalletPay && !consented)
 
   // The secondary line is the real conversion: how much of the token the entered
   // fiat buys, from the live quote. Falls back to the fiat value when no quote.
@@ -353,7 +372,7 @@ const Buy = () => {
         )}
       </SummarySection>
 
-      {isWalletPay && (
+      {isNativeWalletPay && walletPayAngleKnown && (
         <ModalBody style={{ marginTop: 14 }}>
           <Checkbox checked={consented} onChange={setConsented}>
             I agree to Coinbase's{' '}

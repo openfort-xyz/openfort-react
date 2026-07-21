@@ -619,6 +619,13 @@ export type BuyFormState = {
    * Null / partial for card & bank transfer, which don't need it.
    */
   walletPay?: WalletPayDraft | null
+  /**
+   * How the amount step resolved a wallet-pay method for THIS buyer: 'native'
+   * (Coinbase sheet — identity required) or 'iframe' (hosted checkout — none).
+   * Null/absent for non-wallet-pay methods or before resolution; the commit
+   * screen treats unknown as native, the safe direction.
+   */
+  walletPayAngle?: 'native' | 'iframe' | null
 }
 
 export const defaultBuyFormState: BuyFormState = {

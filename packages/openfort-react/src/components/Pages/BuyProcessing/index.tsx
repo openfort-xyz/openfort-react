@@ -51,11 +51,13 @@ const BuyProcessing = () => {
       setRoute(routes.BUY)
       return
     }
-    // Native wallet pay needs the OTP-verified identity; if it's somehow missing
+    // NATIVE wallet pay needs the OTP-verified identity; if it's somehow missing
     // (e.g. a stale reload), send the buyer back to gather it rather than commit
-    // a request the server will reject.
+    // a request the server will reject. Wallet pay resolved to the HOSTED
+    // checkout ('iframe') commits like a card — no identity; unknown angle is
+    // treated as native, the safe direction.
     const walletPay = isCompleteWalletPay(buyForm.walletPay) ? buyForm.walletPay : undefined
-    if (isWalletPayMethod(buyForm.method) && !walletPay) {
+    if (isWalletPayMethod(buyForm.method) && buyForm.walletPayAngle !== 'iframe' && !walletPay) {
       setRoute(routes.BUY_WALLET_PAY_CONTACT)
       return
     }

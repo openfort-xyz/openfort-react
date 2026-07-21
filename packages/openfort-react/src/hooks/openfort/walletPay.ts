@@ -5,11 +5,13 @@ type WalletPayUser = { email?: string; phoneNumber?: string; phoneNumberVerified
 
 /**
  * Helpers for the Coinbase native wallet-pay (Apple/Google Pay) identity the
- * widget assembles before committing. `apple_pay`/`google_pay` always resolve to
- * the native angle server-side, so the method alone is a safe client gate.
+ * widget assembles before committing. The method alone only says wallet pay
+ * MAY need it: the server resolves `apple_pay`/`google_pay` to the native
+ * sheet for US buyers on a project with Coinbase CDP creds and to the hosted
+ * checkout (no identity) everywhere else — the resolved angle decides.
  */
 
-/** True for the wallet-pay methods that commit a Coinbase native order. */
+/** True for the wallet-pay methods that MAY commit a Coinbase native order. */
 export function isWalletPayMethod(method: FundingMethod): boolean {
   return method === FundingMethod.APPLE_PAY || method === FundingMethod.GOOGLE_PAY
 }
