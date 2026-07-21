@@ -107,7 +107,7 @@ const enUS = {
   buyScreen_payWithCard_description: 'Use Stripe or Google Pay for a quick card purchase.',
   buyScreen_payWithCard_url: 'https://pay.coinbase.com/',
   buyScreen_exchange_title: 'Buy from an exchange',
-  buyScreen_exchange_description: 'Purchase on Coinbase, MoonPay, or another exchange and send it here.',
+  buyScreen_exchange_description: 'Purchase on Coinbase, Binance, or another exchange and send it here.',
   buyScreen_exchange_url: 'https://www.coinbase.com/buy',
   buyScreen_wallet_title: 'Transfer from wallet',
   buyScreen_wallet_description: 'Send funds from MetaMask, Phantom, or any other wallet you already use.',

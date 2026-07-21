@@ -382,9 +382,9 @@ type WalletRecoveryOptionsExtended = {
  * which appear and in what order — like `authProviders` for the auth modal.
  */
 export enum FundingMethod {
-  /** Apple Pay (fiat onramp; native wallet sheet via Coinbase, else Swapped). */
+  /** Apple Pay (fiat onramp; Coinbase native sheet in the US, Coinbase hosted checkout elsewhere). */
   APPLE_PAY = 'applePay',
-  /** Google Pay (fiat onramp; native wallet sheet via Coinbase, else Swapped). */
+  /** Google Pay (fiat onramp; Coinbase native sheet in the US, Coinbase hosted checkout elsewhere). */
   GOOGLE_PAY = 'googlePay',
   /** Card (fiat onramp). */
   CARD = 'card',
