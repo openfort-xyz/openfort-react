@@ -418,9 +418,18 @@ export const PageContainer = styled(motion.div)`
 `
 export const PageContents = styled(motion.div)`
   margin: 0 auto;
-  width: fit-content;
+  /* max-content, not fit-content: while the modal's width/height tween between
+     pages, fit-content lets the page shrink with the animating container, so
+     text re-wraps on every frame (button labels vanish mid-transition, lines
+     jump — most visible in Safari's text repainting). max-content keeps each
+     page at its natural width for the whole transition; the animating rounded
+     box clips it instead of reflowing it. Mobile overrides width to 100%. */
+  width: max-content;
   padding: 29px 24px 24px;
   backface-visibility: hidden;
+  /* Promote to a compositing layer: prevents Safari's font-smoothing shimmer
+     while the page opacity-fades over the resizing container. */
+  transform: translateZ(0);
 `
 
 export const ModalContainer = styled.div`
