@@ -1,11 +1,11 @@
 import { createElement } from 'react'
-import { useConnectionStrategy } from '../core/ConnectionStrategyContext'
+import { useConnectionStrategy } from '../core/ConnectionStrategyContext.js'
 import type {
   OpenfortEthereumBridgeConnector,
   OpenfortEthereumBridgeValue,
-} from '../ethereum/OpenfortEthereumBridgeContext'
-import { isCoinbaseWalletConnector, isInjectedConnector } from '../utils'
-import { type WalletConfigProps, walletConfigs } from './walletConfigs'
+} from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { isCoinbaseWalletConnector, isInjectedConnector } from '../utils/index.js'
+import { type WalletConfigProps, walletConfigs } from './walletConfigs.js'
 
 export type ExternalConnectorProps = {
   id: string

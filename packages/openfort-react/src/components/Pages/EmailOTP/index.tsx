@@ -2,17 +2,17 @@
 
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { EmailIcon } from '../../../assets/icons'
-import { useEmailOtpAuth } from '../../../hooks/openfort/auth/useEmailOtpAuth'
-import { logger } from '../../../utils/logger'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { OtpInputStandalone } from '../../Common/OTPInput'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { FloatingGraphic } from '../../FloatingGraphic'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent, type SetOnBackFunction } from '../../PageContent'
-import { Body, FooterButtonText, FooterTextButton, ResultContainer } from './styles'
+import { EmailIcon } from '../../../assets/icons.js'
+import { useEmailOtpAuth } from '../../../hooks/openfort/auth/useEmailOtpAuth.js'
+import { logger } from '../../../utils/logger.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { OtpInputStandalone } from '../../Common/OTPInput/index.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { FloatingGraphic } from '../../FloatingGraphic/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent, type SetOnBackFunction } from '../../PageContent/index.js'
+import { Body, FooterButtonText, FooterTextButton, ResultContainer } from './styles.js'
 
 // TODO: Localize
 

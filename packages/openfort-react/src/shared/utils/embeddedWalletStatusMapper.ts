@@ -1,4 +1,4 @@
-import type { WalletStatus } from '../types'
+import type { WalletStatus } from '../types.js'
 
 type InternalState<TWallet, TProvider> = {
   status: WalletStatus

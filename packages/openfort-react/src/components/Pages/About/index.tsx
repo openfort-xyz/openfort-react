@@ -3,16 +3,25 @@
 import { AnimatePresence, MotionConfig } from 'framer-motion'
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import useLocales from '../../../hooks/useLocales'
+import useLocales from '../../../hooks/useLocales.js'
 
-import Button from '../../Common/Button'
-import FitText from '../../Common/FitText'
-import { OrDivider } from '../../Common/Modal'
-import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { type Easing, SlideOne, SlideThree, SlideTwo } from './graphics'
-import { Dot, Dots, ImageContainer, ImageContainerInner, MobileImageContainer, Slide, Slider, Slides } from './styles'
+import Button from '../../Common/Button/index.js'
+import FitText from '../../Common/FitText/index.js'
+import { OrDivider } from '../../Common/Modal/index.js'
+import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { type Easing, SlideOne, SlideThree, SlideTwo } from './graphics.js'
+import {
+  Dot,
+  Dots,
+  ImageContainer,
+  ImageContainerInner,
+  MobileImageContainer,
+  Slide,
+  Slider,
+  Slides,
+} from './styles.js'
 
 const About: React.FC = () => {
   const locales = useLocales()

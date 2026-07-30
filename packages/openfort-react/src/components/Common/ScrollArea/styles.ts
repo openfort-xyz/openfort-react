@@ -1,5 +1,5 @@
 import { css, keyframes } from 'styled-components'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 export const ScrollContainer = styled.div<{ $fill?: boolean }>`
   position: relative;

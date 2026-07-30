@@ -13,7 +13,7 @@ import type {
   SetActiveEmbeddedWalletOptionsBase,
   SetRecoveryOptions as SetRecoveryOptionsBase,
   WalletDerived,
-} from '../shared/types'
+} from '../shared/types.js'
 
 /**
  * Solana cluster identifier

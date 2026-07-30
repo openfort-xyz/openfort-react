@@ -1,6 +1,6 @@
 import { type CreateConnectorFn, createConnector } from 'wagmi'
-import { embeddedWalletId } from '../constants/openfort'
-import type { OpenfortEmbeddedEthereumWalletProvider } from '../ethereum/types'
+import { embeddedWalletId } from '../constants/openfort.js'
+import type { OpenfortEmbeddedEthereumWalletProvider } from '../ethereum/types.js'
 
 // Module-level provider store — injected when embedded wallet becomes active
 let _provider: OpenfortEmbeddedEthereumWalletProvider | null = null

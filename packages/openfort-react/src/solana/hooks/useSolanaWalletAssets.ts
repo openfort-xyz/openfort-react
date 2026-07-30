@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect } from 'react'
-import { BALANCE_INVALIDATE_EVENT } from '../../hooks/useBalance'
-import { useAsyncData } from '../../shared/hooks/useAsyncData'
-import { useSolanaContext } from '../SolanaContext'
-import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet'
+import { BALANCE_INVALIDATE_EVENT } from '../../hooks/useBalance.js'
+import { useAsyncData } from '../../shared/hooks/useAsyncData.js'
+import { useSolanaContext } from '../SolanaContext.js'
+import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet.js'
 
 /** A holding in the connected Solana wallet: native SOL or an SPL token. */
 type SolanaAsset = {

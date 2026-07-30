@@ -1,4 +1,4 @@
-import { logger } from '../../utils/logger'
+import { logger } from '../../utils/logger.js'
 
 /** Where funds should land. CAIP-2 chain + token contract (or native) + wallet. */
 export type FundingTarget = {

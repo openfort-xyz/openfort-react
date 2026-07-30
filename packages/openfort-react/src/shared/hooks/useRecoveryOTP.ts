@@ -1,10 +1,10 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { logger } from '../../utils/logger'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { logger } from '../../utils/logger.js'
 
 export type OTPResponse = {
   error?: OpenfortError

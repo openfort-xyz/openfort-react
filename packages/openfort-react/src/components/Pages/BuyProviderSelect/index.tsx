@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { type BuyProviderId, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { getProviderQuotes, getProviders } from '../Buy/providers'
-import { createCurrencyFormatter } from '../Buy/utils'
-import { getAssetSymbol, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { type BuyProviderId, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { getProviderQuotes, getProviders } from '../Buy/providers.js'
+import { createCurrencyFormatter } from '../Buy/utils.js'
+import { getAssetSymbol, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils.js'
 import {
   EmptyState,
   ProviderBadge,
@@ -20,7 +20,7 @@ import {
   ProviderQuote,
   ProviderRight,
   ProviderSelectContent,
-} from './styles'
+} from './styles.js'
 
 const BuyProviderSelect = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()

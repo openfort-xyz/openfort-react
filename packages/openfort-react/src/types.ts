@@ -1,5 +1,5 @@
-import type { Languages as Lang } from './localizations'
-import type { CustomTheme } from './styles/customTheme'
+import type { Languages as Lang } from './localizations/index.js'
+import type { CustomTheme } from './styles/customTheme.js'
 
 export type { CustomTheme }
 export type Languages = Lang

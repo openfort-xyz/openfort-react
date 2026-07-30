@@ -1,5 +1,5 @@
 import type { ReactElement } from 'react'
-import { isArgent, isPhantom, isSafe } from '../utils/wallets'
+import { isArgent, isPhantom, isSafe } from '../utils/wallets.js'
 
 const Mock = ({ ...props }) => (
   <svg

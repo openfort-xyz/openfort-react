@@ -1,10 +1,10 @@
 import { ChainTypeEnum, type Openfort } from '@openfort/openfort-js'
-import type { OpenfortWalletConfig } from '../../components/Openfort/types'
-import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext'
-import { logger } from '../../utils/logger'
-import type { ExternalConnectorProps } from '../../wallets/useExternalConnectors'
-import type { ConnectionStrategy } from '../ConnectionStrategy'
-import { resolveEthereumFeeSponsorship } from '../strategyUtils'
+import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { logger } from '../../utils/logger.js'
+import type { ExternalConnectorProps } from '../../wallets/useExternalConnectors.js'
+import type { ConnectionStrategy } from '../ConnectionStrategy.js'
+import { resolveEthereumFeeSponsorship } from '../strategyUtils.js'
 
 /**
  * Creates the EVM strategy when wagmi bridge is present.

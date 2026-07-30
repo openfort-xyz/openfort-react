@@ -2,17 +2,17 @@
 
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { EmailIcon } from '../../../assets/icons'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import { TextLinkButton } from '../../Common/Button/styles'
-import Loader from '../../Common/Loading'
-import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
-import { FloatingGraphic } from '../../FloatingGraphic'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { EmailIcon } from '../../../assets/icons.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { logger } from '../../../utils/logger.js'
+import Button from '../../Common/Button/index.js'
+import { TextLinkButton } from '../../Common/Button/styles.js'
+import Loader from '../../Common/Loading/index.js'
+import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
+import { FloatingGraphic } from '../../FloatingGraphic/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 // TODO: Localize
 type VerificationResponse = {

@@ -1,7 +1,7 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { routes } from '../../components/Openfort/types'
+import { routes } from '../../components/Openfort/types.js'
 
 /**
  * Regression guard for gotoAndOpen (openWallets infinite-loading bug).
@@ -57,7 +57,7 @@ vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
   useSolanaEmbeddedWallet: () => ({ status: state.connected ? 'connected' : 'disconnected' }),
 }))
 
-const { useUI } = await import('../../hooks/openfort/useUI')
+const { useUI } = await import('../../hooks/openfort/useUI.js')
 
 describe('useUI gotoAndOpen', () => {
   beforeEach(() => {

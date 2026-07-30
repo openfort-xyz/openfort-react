@@ -2,9 +2,9 @@
 
 import { SDKConfiguration } from '@openfort/openfort-js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { logger } from '../../utils/logger'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { logger } from '../../utils/logger.js'
 import {
   createFetchFundingClient,
   type FundingClient,
@@ -13,7 +13,7 @@ import {
   type PayLinkParams,
   type PaymentMethodInput,
   type SessionStatus,
-} from './fundingClient'
+} from './fundingClient.js'
 
 /** Pay-links aren't exposed by the SDK funding namespace yet (CEX is API-deferred). */
 const sdkPayLinkUnavailable = async (): Promise<string> => {

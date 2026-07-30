@@ -2,13 +2,13 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import Button from '../../Common/Button'
-import { CopyButton } from '../../Common/CopyToClipboard/CopyButton'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import Button from '../../Common/Button/index.js'
+import { CopyButton } from '../../Common/CopyToClipboard/CopyButton.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 import {
   CopyRow,
   DataItem,
@@ -23,7 +23,7 @@ import {
   SuccessCircle,
   SuccessTitle,
   SuccessWrap,
-} from './styles'
+} from './styles.js'
 
 /** Renders an EIP-712 value as a readable nested bullet list. */
 function DataNode({ value }: { value: unknown }) {

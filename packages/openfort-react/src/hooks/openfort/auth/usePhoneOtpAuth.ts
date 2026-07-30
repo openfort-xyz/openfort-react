@@ -2,13 +2,13 @@
 
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
-import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import type { OpenfortHookOptions } from '../../../types'
-import { onError, onSuccess } from '../hookConsistency'
-import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes'
-import { type BaseFlowState, mapStatus } from './status'
-import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth'
+import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import type { OpenfortHookOptions } from '../../../types.js'
+import { onError, onSuccess } from '../hookConsistency.js'
+import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
+import { type BaseFlowState, mapStatus } from './status.js'
+import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth.js'
 
 type PhoneAuthResult = {
   error?: OpenfortError

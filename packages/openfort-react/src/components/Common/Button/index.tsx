@@ -1,8 +1,8 @@
 import { AnimatePresence } from 'framer-motion'
 import type React from 'react'
-import { flattenChildren } from '../../../utils'
-import FitText from '../FitText'
-import { Spinner } from '../Spinner'
+import { flattenChildren } from '../../../utils/index.js'
+import FitText from '../FitText/index.js'
+import { Spinner } from '../Spinner/index.js'
 import {
   Arrow,
   ArrowChevron,
@@ -14,8 +14,8 @@ import {
   IconContainer,
   InnerContainer,
   SpinnerContainer,
-} from './styles'
-import type { ButtonProps } from './types'
+} from './styles.js'
+import type { ButtonProps } from './types.js'
 
 const transition = {
   duration: 0.4,

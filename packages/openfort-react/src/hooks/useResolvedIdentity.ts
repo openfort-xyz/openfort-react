@@ -9,9 +9,9 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { normalize } from 'viem/ens'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
-import { useAsyncData } from '../shared/hooks/useAsyncData'
-import { getDefaultEthereumRpcUrl } from '../utils/rpc'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { useAsyncData } from '../shared/hooks/useAsyncData.js'
+import { getDefaultEthereumRpcUrl } from '../utils/rpc.js'
 
 /**
  * Resolved identity state - discriminated union

@@ -1,8 +1,8 @@
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockClient, createMockEmbeddedAccount, createMockWalletConfig } from './mocks/openfort-client'
-import { createTestWrapper } from './mocks/wrapper'
+import { createMockClient, createMockEmbeddedAccount, createMockWalletConfig } from './mocks/openfort-client.js'
+import { createTestWrapper } from './mocks/wrapper.js'
 
 // --- Module-level mocks ---
 
@@ -37,7 +37,7 @@ vi.mock('../shared/utils/recovery', () => ({
   buildRecoveryParams: vi.fn().mockResolvedValue({ recoveryMethod: 'AUTOMATIC', encryptionKey: 'mock-key' }),
 }))
 
-const { useConnectToWalletPostAuth } = await import('../hooks/openfort/auth/useConnectToWalletPostAuth')
+const { useConnectToWalletPostAuth } = await import('../hooks/openfort/auth/useConnectToWalletPostAuth.js')
 
 describe('useConnectToWalletPostAuth — tryUseWallet', () => {
   beforeEach(() => {

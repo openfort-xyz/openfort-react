@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
-import Loader from '../../Common/Loading'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import Loader from '../../Common/Loading/index.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 const ConnectedSuccess: React.FC = () => {
   const { setOpen } = useOpenfort()

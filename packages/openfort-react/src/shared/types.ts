@@ -1,5 +1,5 @@
 import type { AccountTypeEnum, EmbeddedAccount, RecoveryMethod, RecoveryParams } from '@openfort/openfort-js'
-import type { OpenfortHookOptions } from '../types'
+import type { OpenfortHookOptions } from '../types.js'
 
 export type RecoverableWallet = {
   address: string

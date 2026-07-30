@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { OpenfortContext } from './context'
+import { OpenfortContext } from './context.js'
 
 export const useOpenfort = () => {
   const context = React.useContext(OpenfortContext)

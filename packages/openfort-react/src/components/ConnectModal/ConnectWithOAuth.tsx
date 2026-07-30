@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { providersLogos } from '../../assets/logos'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { logger } from '../../utils/logger'
-import { parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity'
-import Loader from '../Common/Loading'
-import { routes } from '../Openfort/types'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import { PageContent } from '../PageContent'
+import { providersLogos } from '../../assets/logos.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { logger } from '../../utils/logger.js'
+import { parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity.js'
+import Loader from '../Common/Loading/index.js'
+import { routes } from '../Openfort/types.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import { PageContent } from '../PageContent/index.js'
 
 const states = {
   INIT: 'init',

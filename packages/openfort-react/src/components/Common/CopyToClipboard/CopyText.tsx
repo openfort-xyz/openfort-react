@@ -1,8 +1,8 @@
 import type React from 'react'
 import type { ComponentProps } from 'react'
-import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard'
-import styled from '../../../styles/styled'
-import { CopyIcon } from './CopyIcon'
+import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard.js'
+import styled from '../../../styles/styled/index.js'
+import { CopyIcon } from './CopyIcon.js'
 
 const Container = styled.div<{ $disabled?: boolean }>`
   display: inline-flex;

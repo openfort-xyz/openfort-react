@@ -1,4 +1,4 @@
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
 
 type HandleOtpErrorResult = {
   error: OpenfortError

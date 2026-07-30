@@ -1,9 +1,9 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { createElement, type PropsWithChildren } from 'react'
-import type { OpenfortCoreContextValue } from '../../openfort/CoreOpenfortProvider'
-import { StoreContext } from '../../openfort/context'
-import { createOpenfortStore } from '../../openfort/store'
-import { createMockOpenfortClient } from './openfortClient'
+import type { OpenfortCoreContextValue } from '../../openfort/CoreOpenfortProvider.js'
+import { StoreContext } from '../../openfort/context.js'
+import { createOpenfortStore } from '../../openfort/store.js'
+import { createMockOpenfortClient } from './openfortClient.js'
 
 /**
  * Builds default OpenfortCoreContextValue fields for tests.

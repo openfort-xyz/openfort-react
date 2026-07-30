@@ -2,17 +2,17 @@
 
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
-import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import type { OpenfortHookOptions } from '../../../types'
-import { logger } from '../../../utils/logger'
-import { isValidEmail } from '../../../utils/validation'
-import { onError, onSuccess } from '../hookConsistency'
-import { useUI } from '../useUI'
-import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes'
-import { buildCallbackUrl } from './requestEmailVerification'
-import { type BaseFlowState, mapStatus } from './status'
-import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth'
+import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import type { OpenfortHookOptions } from '../../../types.js'
+import { logger } from '../../../utils/logger.js'
+import { isValidEmail } from '../../../utils/validation.js'
+import { onError, onSuccess } from '../hookConsistency.js'
+import { useUI } from '../useUI.js'
+import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
+import { buildCallbackUrl } from './requestEmailVerification.js'
+import { type BaseFlowState, mapStatus } from './status.js'
+import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth.js'
 
 type EmailAuthResult = {
   error?: OpenfortError

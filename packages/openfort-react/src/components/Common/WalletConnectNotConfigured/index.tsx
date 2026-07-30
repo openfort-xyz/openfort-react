@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { isWalletConnectConnector } from '../../../utils'
-import ErrorFallbackPage from '../ErrorFallbackPage'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { isWalletConnectConnector } from '../../../utils/index.js'
+import ErrorFallbackPage from '../ErrorFallbackPage/index.js'
 
 /** True when a WalletConnect connector is configured (i.e. a projectId was provided). */
 export function useHasWalletConnect(): boolean {

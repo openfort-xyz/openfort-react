@@ -1,9 +1,9 @@
 'use client'
 
 import { useCallback, useRef, useState } from 'react'
-import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext'
-import { isWalletConnectConnector } from '../utils'
-import { logger } from '../utils/logger'
+import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { isWalletConnectConnector } from '../utils/index.js'
+import { logger } from '../utils/logger.js'
 
 export function useWalletConnectModal() {
   const bridge = useEthereumBridge()

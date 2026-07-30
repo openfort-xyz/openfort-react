@@ -1,13 +1,13 @@
-export { default as getDefaultConfig } from './defaultConfig'
+export { default as getDefaultConfig } from './defaultConfig.js'
 export {
   default as getDefaultConnectors,
   default as wallets,
-} from './defaultConnectors'
-export { embeddedWalletConnector, setEmbeddedWalletProvider } from './embeddedConnector'
-export { OpenfortWagmiBridge } from './OpenfortWagmiBridge'
-export { useChainIsSupported } from './useChainIsSupported'
-export { useChains } from './useChains'
-export { useConnectWithSiwe } from './useConnectWithSiwe'
-export { EmbeddedWalletWagmiSync } from './useEmbeddedWalletWagmiSync'
-export type { AvailableWallet } from './useWalletAuth'
-export { useWalletAuth } from './useWalletAuth'
+} from './defaultConnectors.js'
+export { embeddedWalletConnector, setEmbeddedWalletProvider } from './embeddedConnector.js'
+export { OpenfortWagmiBridge } from './OpenfortWagmiBridge.js'
+export { useChainIsSupported } from './useChainIsSupported.js'
+export { useChains } from './useChains.js'
+export { useConnectWithSiwe } from './useConnectWithSiwe.js'
+export { EmbeddedWalletWagmiSync } from './useEmbeddedWalletWagmiSync.js'
+export type { AvailableWallet } from './useWalletAuth.js'
+export { useWalletAuth } from './useWalletAuth.js'

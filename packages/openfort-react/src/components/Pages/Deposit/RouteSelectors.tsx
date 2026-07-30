@@ -1,11 +1,11 @@
 'use client'
 
-import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
-import type { FundingChain } from '../../../hooks/openfort/useFundingChains'
-import { caipToChainId } from '../DepositWallet/walletDeeplinks'
-import { field, twoCol } from './formStyles'
-import { LogoSelect } from './LogoSelect'
-import { Skeleton } from './styles'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos.js'
+import type { FundingChain } from '../../../hooks/openfort/useFundingChains.js'
+import { caipToChainId } from '../DepositWallet/walletDeeplinks.js'
+import { field, twoCol } from './formStyles.js'
+import { LogoSelect } from './LogoSelect.js'
+import { Skeleton } from './styles.js'
 
 type RouteSelectorsProps = {
   chains: FundingChain[]

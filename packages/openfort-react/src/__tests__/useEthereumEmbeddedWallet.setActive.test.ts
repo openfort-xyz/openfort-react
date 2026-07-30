@@ -7,8 +7,8 @@ import {
   createMockWalletConfig,
   MOCK_ADDRESS,
   MOCK_ENCRYPTION_SESSION,
-} from './mocks/openfort-client'
-import { createTestWrapper } from './mocks/wrapper'
+} from './mocks/openfort-client.js'
+import { createTestWrapper } from './mocks/wrapper.js'
 
 // --- Module-level mocks ---
 
@@ -74,7 +74,7 @@ vi.mock('../utils/format', () => ({
 
 // --- Import hook under test (after mocks) ---
 
-const { useEthereumEmbeddedWallet } = await import('../ethereum/hooks/useEthereumEmbeddedWallet')
+const { useEthereumEmbeddedWallet } = await import('../ethereum/hooks/useEthereumEmbeddedWallet.js')
 
 // --- Helpers ---
 

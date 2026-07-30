@@ -1,4 +1,4 @@
-import type { CustomTheme } from '../customTheme'
+import type { CustomTheme } from '../customTheme.js'
 
 const baseTheme: {
   light: CustomTheme

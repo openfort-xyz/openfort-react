@@ -2,13 +2,13 @@
 
 import { useEffect, useMemo } from 'react'
 import { formatUnits } from 'viem'
-import { currencyLogoUrl } from '../../../constants/logos'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
-import { ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { AssetChainLogo } from '../Deposit/AssetChainLogo'
+import { currencyLogoUrl } from '../../../constants/logos.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo.js'
 import {
   ContentWrapper,
   EmptyState,
@@ -20,7 +20,7 @@ import {
   TokenLogoArea,
   TokenName,
   TokenSymbol,
-} from '../SelectToken/styles'
+} from '../SelectToken/styles.js'
 
 const ZERO = BigInt(0)
 

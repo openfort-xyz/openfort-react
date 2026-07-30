@@ -1,7 +1,7 @@
 import { type MotionStyle, motion } from 'framer-motion'
 import { css } from 'styled-components'
-import { CopyToClipboardIcon as Icon } from '../../../assets/icons'
-import styled from '../../../styles/styled'
+import { CopyToClipboardIcon as Icon } from '../../../assets/icons.js'
+import styled from '../../../styles/styled/index.js'
 
 const IconWrapper = styled(motion.div)<{ $copied?: boolean }>`
   display: flex;

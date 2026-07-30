@@ -2,18 +2,18 @@
 
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { useCallback } from 'react'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
-import { DEFAULT_ACCOUNT_TYPE } from '../../../constants/openfort'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { buildRecoveryParams } from '../../../shared/utils/recovery'
-import { logger } from '../../../utils/logger'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
+import { DEFAULT_ACCOUNT_TYPE } from '../../../constants/openfort.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { buildRecoveryParams } from '../../../shared/utils/recovery.js'
+import { logger } from '../../../utils/logger.js'
 import {
   type EthereumUserWallet,
   embeddedAccountToSolanaUserWallet,
   embeddedAccountToUserWallet,
   type SolanaUserWallet,
-} from '../walletTypes'
-import { useSignOut } from './useSignOut'
+} from '../walletTypes.js'
+import { useSignOut } from './useSignOut.js'
 
 /**
  * Options that control the behaviour of {@link useConnectToWalletPostAuth} when attempting to

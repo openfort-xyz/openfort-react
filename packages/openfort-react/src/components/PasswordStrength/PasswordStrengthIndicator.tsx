@@ -2,9 +2,9 @@
 
 import { motion } from 'framer-motion'
 import { useEffect, useMemo } from 'react'
-import styled from '../../styles/styled'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import { getPasswordStrength, getPasswordStrengthLabel } from './password-utility'
+import styled from '../../styles/styled/index.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import { getPasswordStrength, getPasswordStrengthLabel } from './password-utility.js'
 
 const Container = styled.div`
   display: flex;

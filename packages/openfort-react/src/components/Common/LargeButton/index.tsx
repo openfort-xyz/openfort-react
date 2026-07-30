@@ -1,5 +1,5 @@
-import Button from '../Button'
-import { LargeButtonIcon, LargeButtonLabel, LargeButtonStyle } from './styles'
+import Button from '../Button/index.js'
+import { LargeButtonIcon, LargeButtonLabel, LargeButtonStyle } from './styles.js'
 
 export const LargeButton: React.FC<{
   onClick: () => void

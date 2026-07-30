@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest'
-import { logger, setDebugLogsEnabled } from '../../utils/logger'
+import { logger, setDebugLogsEnabled } from '../../utils/logger.js'
 
 // The shared test setup mocks the logger to keep other suites quiet; exercise the real one here.
 vi.unmock('../../utils/logger')

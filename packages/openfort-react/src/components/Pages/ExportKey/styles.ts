@@ -1,4 +1,4 @@
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 /** Press-and-hold reveal button: a fill grows left→right over the hold duration. */
 export const HoldButton = styled.button`

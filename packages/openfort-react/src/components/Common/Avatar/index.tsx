@@ -2,12 +2,12 @@
 
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import useIsMounted from '../../../hooks/useIsMounted'
-import { ResetContainer } from '../../../styles'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { EnsAvatar, ImageContainer } from './styles'
+import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import useIsMounted from '../../../hooks/useIsMounted.js'
+import { ResetContainer } from '../../../styles/index.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { EnsAvatar, ImageContainer } from './styles.js'
 
 /**
  * Displays wallet avatar. Resolves ENS on Ethereum mainnet; falls back to identicon or initials.

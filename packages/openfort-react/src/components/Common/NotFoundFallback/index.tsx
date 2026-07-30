@@ -1,6 +1,6 @@
 'use client'
 
-import ErrorFallbackPage from '../ErrorFallbackPage'
+import ErrorFallbackPage from '../ErrorFallbackPage/index.js'
 
 /**
  * Catch-all page for flows that would otherwise spin forever

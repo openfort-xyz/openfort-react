@@ -1,7 +1,7 @@
 import { base, baseSepolia, bsc, mainnet } from 'viem/chains'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { logger } from '../utils/logger'
-import { buildChainFromConfig, getDefaultEthereumRpcUrl, isTestnetChainId } from '../utils/rpc'
+import { logger } from '../utils/logger.js'
+import { buildChainFromConfig, getDefaultEthereumRpcUrl, isTestnetChainId } from '../utils/rpc.js'
 
 describe('buildChainFromConfig', () => {
   const warn = vi.spyOn(logger, 'warn')

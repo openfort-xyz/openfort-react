@@ -1,6 +1,6 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
-import type { Asset } from '../../Openfort/types'
-import { getAssetSymbol } from '../Send/utils'
+import type { Asset } from '../../Openfort/types.js'
+import { getAssetSymbol } from '../Send/utils.js'
 
 const getBackendUrl = (): string => {
   const sdkConfig = SDKConfiguration.getInstance()

@@ -1,10 +1,10 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import useWindowSize from '../../../hooks/useWindowSize'
+import useWindowSize from '../../../hooks/useWindowSize.js'
 
-import Tooltip from '../Tooltip'
-import { QRCode } from './QRCode'
-import { LogoContainer, LogoIcon, QRCodeContainer, QRCodeContent, QRPlaceholder } from './styles'
-import type { CustomQRCodeProps } from './types'
+import Tooltip from '../Tooltip/index.js'
+import { QRCode } from './QRCode.js'
+import { LogoContainer, LogoIcon, QRCodeContainer, QRCodeContent, QRPlaceholder } from './styles.js'
+import type { CustomQRCodeProps } from './types.js'
 
 function CustomQRCode({
   value,

@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import type { ConnectionStrategy } from '../core/ConnectionStrategy'
-import type { ConnectCallbackProps } from '../openfort/connectCallbackTypes'
-import { useOpenfortStore } from '../openfort/useOpenfortStore'
+import type { ConnectionStrategy } from '../core/ConnectionStrategy.js'
+import type { ConnectCallbackProps } from '../openfort/connectCallbackTypes.js'
+import { useOpenfortStore } from '../openfort/useOpenfortStore.js'
 
 /**
  * Standalone hook: subscribes to connection lifecycle and fires onConnect/onDisconnect

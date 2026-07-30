@@ -38,7 +38,7 @@ describe('Phase 0 regressions', () => {
 
   describe('callback URL origin validation', () => {
     it('rejects cross-origin callback URLs', async () => {
-      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification')
+      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification.js')
 
       expect(() =>
         buildCallbackUrl({
@@ -50,7 +50,7 @@ describe('Phase 0 regressions', () => {
     })
 
     it('accepts same-origin callback URLs', async () => {
-      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification')
+      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification.js')
 
       // happy-dom sets window.location.origin to 'http://localhost'
       const result = buildCallbackUrl({
@@ -65,7 +65,7 @@ describe('Phase 0 regressions', () => {
     })
 
     it('defaults to current origin when no callbackUrl', async () => {
-      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification')
+      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification.js')
 
       const result = buildCallbackUrl({
         provider: 'email',
@@ -77,7 +77,7 @@ describe('Phase 0 regressions', () => {
     })
 
     it('appends email parameter when provided', async () => {
-      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification')
+      const { buildCallbackUrl } = await import('../../hooks/openfort/auth/requestEmailVerification.js')
 
       const result = buildCallbackUrl({
         email: 'user@test.com',
