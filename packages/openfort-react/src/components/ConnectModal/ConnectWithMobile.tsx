@@ -99,7 +99,7 @@ const ConnectWithMobile: React.FC = () => {
         })
         break
     }
-  }, [status])
+  }, [status, connectWithSiwe, setRoute, walletId])
 
   if (!hasWalletConnect) return <WalletConnectNotConfigured />
 
