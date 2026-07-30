@@ -1,0 +1,31 @@
+title = "Openfort React SDK gitleaks config"
+
+# Gitleaks v8 replaces the default ruleset when a config file is present, so
+# the defaults must be extended explicitly for any rules to be applied.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Client-side keys that are published by design"
+regexes = [
+  # PostHog project API keys identify a project to the ingest endpoint and are
+  # meant to ship inside client bundles; they grant no read access.
+  '''phc_[0-9a-zA-Z]{43}''',
+  # Openfort publishable keys and the placeholders used in documentation.
+  '''pk_test_[0-9a-fA-F-]{36}''',
+  '''pk_test_\.\.\.''',
+  # anvil's first prefunded development account. The key is printed by anvil on
+  # every start and controls funds only inside a local fork.
+  '''0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80''',
+]
+
+[[allowlists]]
+description = "Test fixtures use public addresses and obviously fake values"
+paths = [
+  '''packages/openfort-react/src/.*\.test\.tsx?$''',
+  '''packages/openfort-react/src/__tests__/.*''',
+]
+
+[[allowlists]]
+description = "Environment templates hold placeholders, never real values"
+paths = ['''.*\.env\.example$''']
