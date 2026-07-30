@@ -68,6 +68,7 @@
     "size": "size-limit",
     "test": "vitest run",
     "test:build": "publint --strict && attw --pack --profile esm-only",
+    "test:types": "vitest run --typecheck",
     "test:watch": "vitest"
   },
   "keywords": [
