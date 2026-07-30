@@ -353,6 +353,34 @@ describe('useEthereumEmbeddedWallet – create', () => {
     expect(mockUpdateEmbeddedAccounts).toHaveBeenCalledWith({ silent: true })
   })
 
+  it('forwards the configured RPC endpoints when building the provider', async () => {
+    // create() is the first caller of getEthereumProvider — EthereumEmbeddedStrategy
+    // .initProvider is gated on EmbeddedState.READY, which a wallet being created
+    // hasn't reached — and the SDK memoizes the provider on its first caller. Calling
+    // it with no options pinned the session to the SDK's public default endpoints,
+    // whose chain fallback is Base mainnet regardless of the app's configured chain.
+    const rpcUrls = { 84532: 'https://base-sepolia.example' }
+    const mockOpenfortUI = await import('../components/Openfort/useOpenfort')
+    const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortUIContext').mockReturnValue({
+      walletConfig: createMockWalletConfig({
+        ethereum: { accountType: AccountTypeEnum.SMART_ACCOUNT, rpcUrls },
+      }),
+      chainType: ChainTypeEnum.EVM,
+    } as ReturnType<typeof mockOpenfortUI.useOpenfortUIContext>)
+
+    mockClient.embeddedWallet.create.mockResolvedValueOnce(createMockEmbeddedAccount())
+
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+
+    await act(async () => {
+      await result.current.create()
+    })
+
+    expect(mockClient.embeddedWallet.getEthereumProvider).toHaveBeenCalledWith({ chains: rpcUrls })
+
+    spy.mockRestore()
+  })
+
   it('defaults accountType from walletConfig.ethereum when not specified', async () => {
     const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.SMART_ACCOUNT })
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
