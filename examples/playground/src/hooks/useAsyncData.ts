@@ -39,6 +39,7 @@ export function useAsyncData<T>({ queryFn, queryKey, enabled = true }: UseAsyncD
   }, [enabled])
 
   const queryKeyString = JSON.stringify(queryKey)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `queryKeyString` is the refetch trigger — `fetchData` calls the query function through a ref, so a new key has to re-run it
   useEffect(() => {
     if (!enabled) return
     fetchData().catch(() => {})

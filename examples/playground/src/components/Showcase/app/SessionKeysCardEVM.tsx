@@ -1,5 +1,5 @@
 import { useGrantPermissions, useRevokePermissions } from '@openfort/react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { getAddress } from 'viem/utils'
 import { useEthereumAccount } from '@/hooks/useEthereumAdapterHooks'
@@ -27,7 +27,7 @@ export const SessionKeysCardEVM = ({ hook }: { hook?: string }) => {
   const grantDisabled = isLoading || submitting || !mintContractAddress || !isSessionKeySupported
   const isCreating = submitting || isLoading
 
-  const updateSessionKeys = () => {
+  const updateSessionKeys = useCallback(() => {
     const keys = getPrivateKeys(key)
     if (typeof keys[0] === 'string') {
       clearAll()
@@ -35,11 +35,11 @@ export const SessionKeysCardEVM = ({ hook }: { hook?: string }) => {
       return
     }
     setSessionKeys(getPrivateKeys(key))
-  }
+  }, [key, getPrivateKeys, clearAll])
 
   useEffect(() => {
     updateSessionKeys()
-  }, [key])
+  }, [updateSessionKeys])
 
   return (
     <SessionKeysCardShell hook={hook}>
