@@ -3,7 +3,7 @@
 import { ChainTypeEnum, type EmbeddedAccount, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { baseSepolia } from 'viem/chains'
-import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { useOpenfortConfig, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 import { DEFAULT_ACCOUNT_TYPE } from '../../constants/openfort.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
 import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
@@ -80,17 +80,16 @@ function buildConnectedWallet(
  * ```
  */
 export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOptions): EthereumWalletState {
-  const {
-    client,
-    embeddedAccounts,
-    embeddedState,
-    isLoadingAccounts,
-    updateEmbeddedAccounts,
-    setActiveEmbeddedAddress,
-    setWalletStatus,
-    activeEmbeddedAddress,
-  } = useOpenfortCore()
-  const { walletConfig, chainType } = useOpenfort()
+  const client = useOpenfortCore((s) => s.client)
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
+  const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
+  const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
+  const setWalletStatus = useOpenfortCore((s) => s.setWalletStatus)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const { walletConfig } = useOpenfortConfig()
+  const { chainType } = useOpenfortRouting()
   const strategy = useConnectionStrategy()
 
   const creationChainId = options?.chainId ?? strategy?.getChainId() ?? DEFAULT_TESTNET_CHAIN_ID
@@ -142,7 +141,10 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
     })
   }, [ethereumAccounts, getEmbeddedEthereumProvider, state.status, state.activeWallet])
 
+  // The store holds one wallet status for the active chain. Publishing it only while
+  // EVM is active keeps a mounted Solana hook from overwriting this one, and vice versa.
   useEffect(() => {
+    if (chainType !== ChainTypeEnum.EVM) return
     if (state.status === 'creating') {
       setWalletStatus({ status: 'creating' })
     } else if (state.status === 'connecting' && state.activeWallet) {
@@ -150,7 +152,7 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
     } else {
       setWalletStatus({ status: 'idle' })
     }
-  }, [state.status, state.activeWallet, setWalletStatus])
+  }, [chainType, state.status, state.activeWallet, setWalletStatus])
 
   const create = useCallback(
     async (createOptions?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount> => {
