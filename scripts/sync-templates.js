@@ -6,7 +6,7 @@
  */
 
 const { execFileSync } = require('node:child_process');
-const { existsSync, rmSync } = require('node:fs');
+const { existsSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
 const { join, resolve } = require('node:path');
 
 const REPO_ROOT = join(__dirname, '..');
@@ -70,6 +70,14 @@ for (const template of TEMPLATES_TO_SYNC) {
       ],
       { stdio: 'pipe' }
     );
+
+    // The quickstart and the template live in the same pnpm workspace, so the
+    // template needs its own package name. The CLI overwrites it with the
+    // user's app name when scaffolding.
+    const templatePkgPath = join(resolvedTarget, 'package.json');
+    const templatePkg = JSON.parse(readFileSync(templatePkgPath, 'utf8'));
+    templatePkg.name = `create-openfort-template-${template}`;
+    writeFileSync(templatePkgPath, `${JSON.stringify(templatePkg, null, 2)}\n`);
 
     console.log(`✅ ${template} synced successfully`);
   } catch (error) {
