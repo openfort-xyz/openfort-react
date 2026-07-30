@@ -17,14 +17,14 @@ import { ConnectKitThemeProvider } from '../ConnectKitThemeProvider/ConnectKitTh
 import { routes, type SetRouteOptions } from '../Openfort/types'
 import { useOpenfort } from '../Openfort/useOpenfort'
 import About from '../Pages/About'
-import { AssetInventory } from '../Pages/AssetInventory'
+import AssetInventory from '../Pages/AssetInventory'
 import { SolanaAssetInventory } from '../Pages/AssetInventory/SolanaAssetInventory'
 import Buy from '../Pages/Buy'
 import BuyComplete from '../Pages/BuyComplete'
 import BuyProcessing from '../Pages/BuyProcessing'
 import BuyProviderSelect from '../Pages/BuyProviderSelect'
 import BuySelectProvider from '../Pages/BuySelectProvider'
-import { Connected } from '../Pages/Connected'
+import Connected from '../Pages/Connected'
 import ConnectedSuccess from '../Pages/ConnectedSuccess'
 import Connectors from '../Pages/Connectors'
 import CreateGuestUserPage from '../Pages/CreateGuestUserPage'
@@ -45,7 +45,7 @@ import LinkedProviders from '../Pages/LinkedProviders'
 import Loading from '../Pages/Loading'
 import LoadWallets from '../Pages/LoadWallets'
 import MobileConnectors from '../Pages/MobileConnectors'
-import { NoAssetsAvailable } from '../Pages/NoAssetsAvailable'
+import NoAssetsAvailable from '../Pages/NoAssetsAvailable'
 import Onboarding from '../Pages/Onboarding'
 import PhoneOTP from '../Pages/PhoneOTP'
 import Profile from '../Pages/Profile'
@@ -269,35 +269,17 @@ const ConnectModal: React.FC<{
     title.setAttribute('content', appName)
     document.head.prepend(title)
 
-    /*
-    // OLD_TODO:  When pulling data into WalletConnect, figure out which icon gets used and replace with appIcon if available 
-    const appIcon = getAppIcon();
-    const icon = document.createElement('link');
-    if (appIcon) {
-      icon.setAttribute('rel', 'icon');
-      icon.setAttribute('href', appIcon);
-      document.head.prepend(icon);
-    }*/
+    // TODO: Set an og:image meta tag from the app icon once it is known which
+    // icon WalletConnect surfaces to the wallet.
 
     return () => {
       document.head.removeChild(title)
-      //if (appIcon) document.head.removeChild(icon);
     }
   }, [context.open])
 
   return (
     <ConnectKitThemeProvider theme={theme} customTheme={customTheme} mode={mode}>
-      <Modal
-        open={context.open}
-        pages={pages}
-        pageId={effectivePageId}
-        onClose={closeable ? hide : undefined}
-        // TODO: Implement onInfo
-        // onInfo={
-        //   showInfoButton ? () => context.setRoute(routes.ONBOARDING) : undefined
-        // }
-        // onBack={showBackButton ? onBack : undefined}
-      />
+      <Modal open={context.open} pages={pages} pageId={effectivePageId} onClose={closeable ? hide : undefined} />
     </ConnectKitThemeProvider>
   )
 }

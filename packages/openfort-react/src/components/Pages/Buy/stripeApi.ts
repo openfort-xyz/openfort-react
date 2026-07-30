@@ -7,21 +7,6 @@ const getBackendUrl = (): string => {
   return sdkConfig?.backendUrl || 'https://api.openfort.io'
 }
 
-type StripeQuote = {
-  provider: string
-  sourceAmount: string
-  sourceCurrency: string
-  destinationAmount: string
-  destinationCurrency: string
-  destinationNetwork: string
-  fees: Array<{
-    amount: string
-    currency: string
-    type: string
-  }>
-  exchangeRate: string
-}
-
 type StripeOnrampResponse = {
   provider: string
   sessionId: string
@@ -110,54 +95,4 @@ export const createStripeSession = async (
 
   const data: StripeOnrampResponse = await response.json()
   return data
-}
-
-type GetStripeQuoteParams = {
-  sourceCurrency: string
-  destinationCurrency: string
-  destinationNetwork: string
-  sourceAmount: string
-}
-
-/**
- * Get a quote from Stripe
- * This provides fee estimates and exchange rates
- */
-const _getStripeQuote = async (
-  params: Omit<GetStripeQuoteParams, 'destinationCurrency' | 'destinationNetwork'> & {
-    token: Asset
-    network: string
-    publishableKey: string
-  }
-): Promise<StripeQuote> => {
-  const { token, network, publishableKey, ...rest } = params
-
-  if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
-  }
-
-  // Build request body
-  const requestBody: GetStripeQuoteParams & { provider: string } = {
-    provider: 'stripe',
-    destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: network,
-    sourceCurrency: rest.sourceCurrency.toLowerCase(),
-    sourceAmount: rest.sourceAmount,
-  }
-
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to fetch Stripe quote')
-  }
-
-  return response.json()
 }

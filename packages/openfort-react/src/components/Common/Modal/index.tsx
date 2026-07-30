@@ -5,7 +5,6 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTransition } from 'react-transition-state'
 import ResizeObserver from 'resize-observer-polyfill'
-import { AuthIcon } from '../../../assets/icons'
 import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
 import FocusTrap from '../../../hooks/useFocusTrap'
@@ -37,49 +36,6 @@ import {
   TextWithHr,
 } from './styles'
 
-const _ProfileIcon = ({ isSignedIn }: { isSignedIn?: boolean }) => (
-  <div style={{ position: 'relative' }}>
-    {isSignedIn ? (
-      <AuthIcon
-        style={{
-          bottom: -1,
-          right: -1,
-        }}
-      />
-    ) : (
-      <div
-        style={{
-          zIndex: 2,
-          position: 'absolute',
-          top: -2,
-          right: -2,
-          background: '#1A88F8',
-          borderRadius: 8,
-          boxShadow: '0 0 0 2px var(--ck-body-background)',
-          width: 8,
-          height: 8,
-        }}
-      />
-    )}
-    <svg
-      aria-hidden="true"
-      width="20"
-      height="20"
-      viewBox="0 0 20 20"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ overflow: 'visible' }}
-    >
-      <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="2" />
-      <path
-        d="M16.5 16.775C14.8618 15.0649 12.5552 14 10 14C7.44477 14 5.13825 15.0649 3.5 16.775"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
-      <circle cx="10" cy="8" r="3" stroke="currentColor" strokeWidth="2" />
-    </svg>
-  </div>
-)
 const InfoIcon = ({ ...props }) => (
   <svg
     aria-hidden="true"
@@ -115,7 +71,6 @@ const contentTransitionDuration = 0.22
 
 export const contentVariants: Variants = {
   initial: {
-    //willChange: 'transform,opacity',
     zIndex: 2,
     opacity: 0,
   },
@@ -149,7 +104,6 @@ type ModalProps = {
   positionInside?: boolean
   inline?: boolean
   onClose?: () => void
-  // onBack?: () => void
   onInfo?: () => void
 
   demo?: {
@@ -158,17 +112,7 @@ type ModalProps = {
     customTheme: CustomTheme
   }
 }
-const Modal: React.FC<ModalProps> = ({
-  open,
-  pages,
-  pageId,
-  positionInside,
-  inline,
-  demo,
-  onClose,
-  // onBack,
-  onInfo,
-}) => {
+const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inline, demo, onClose, onInfo }) => {
   const context = useOpenfort()
   const themeContext = useThemeContext()
   const mobile = isMobile()
@@ -199,13 +143,7 @@ const Modal: React.FC<ModalProps> = ({
   const route = context.route.route
   const currentDepth = route === routes.PROVIDERS ? 0 : route === routes.DOWNLOAD ? 2 : 1
   const prevDepth = usePrevious(currentDepth, currentDepth)
-  // useEffect(() => {
-  //   console.log('route changed!', { currentDepth, prevDepth, state, pageId, route: route })
-  // }, [route])
-
   useLockBodyScroll(!positionInside ? mounted : false)
-
-  const _prevPage = usePrevious(pageId, pageId)
 
   useEffect(() => {
     setOpen(open)
@@ -305,7 +243,6 @@ const Modal: React.FC<ModalProps> = ({
   }
 
   function getHeading() {
-    // return route
     switch (route) {
       case routes.ABOUT:
         return locales.aboutScreen_heading
@@ -355,14 +292,7 @@ const Modal: React.FC<ModalProps> = ({
         }}
       >
         {!inline && <BackgroundOverlay $active={rendered} onClick={onClose} $blur={context.uiConfig.overlayBlur} />}
-        <Container
-          style={dimensionsCSS}
-          initial={false}
-          // transition={{
-          //   ease: [0.2555, 0.1111, 0.2555, 1.0001],
-          //   duration: !positionInside && state !== 'entered' ? 0 : 0.24,
-          // }}
-        >
+        <Container style={dimensionsCSS} initial={false}>
           <div
             style={{
               pointerEvents: inTransition ? 'all' : 'none', // Block interaction while transitioning
@@ -377,29 +307,6 @@ const Modal: React.FC<ModalProps> = ({
             }}
           />
           <BoxContainer className={`${rendered && 'active'}`}>
-            {/* <AnimatePresence initial={false}>
-              {context.options?.disclaimer &&
-                route === routes.CONNECTORS && (
-                  <DisclaimerBackground
-                    initial={{
-                      opacity: 0,
-                    }}
-                    animate={{
-                      opacity: 1,
-                    }}
-                    exit={{ opacity: 0 }}
-                    transition={{
-                      delay: 0,
-                      duration: 0.2,
-                      ease: [0.25, 0.1, 0.25, 1.0],
-                    }}
-                  >
-                    <Disclaimer>
-                      <div>{context.options?.disclaimer}</div>
-                    </Disclaimer>
-                  </DisclaimerBackground>
-                )}
-            </AnimatePresence> */}
             <ControllerContainer>
               {onClose && (
                 <CloseButton aria-label={flattenChildren(locales.close).toString()} onClick={onClose}>
@@ -479,7 +386,6 @@ const Modal: React.FC<ModalProps> = ({
                     left: 52,
                     right: 52,
                     display: 'flex',
-                    //alignItems: 'center',
                     justifyContent: 'center',
                   }}
                   key={`${route}-${'signedIn'}`}
@@ -500,8 +406,8 @@ const Modal: React.FC<ModalProps> = ({
               {Object.keys(pages).map((key) => {
                 const page = context.uiConfig.customPageComponents?.[key] ?? pages[key]
                 return (
-                  // OLD_TODO: We may need to use the follow check avoid unnecessary computations, but this causes a bug where the content flashes
-                  // (key === pageId || key === prevPage) && (
+                  // TODO: Render only the current and previous page instead of every page.
+                  // Gating on `key === pageId` alone makes the content flash during transitions.
                   <Page
                     key={key}
                     open={key === pageId}

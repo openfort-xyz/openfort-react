@@ -15,28 +15,17 @@ import { type Easing, SlideOne, SlideThree, SlideTwo } from './graphics'
 import { Dot, Dots, ImageContainer, ImageContainerInner, MobileImageContainer, Slide, Slider, Slides } from './styles'
 
 const About: React.FC = () => {
-  const locales = useLocales({
-    //CONNECTORNAME: connector.name,
-  })
+  const locales = useLocales()
   const context = useOpenfort()
 
   const ctaUrl = context.uiConfig.ethereumOnboardingUrl ?? locales.aboutScreen_ctaUrl
 
-  const [_ready, setReady] = useState(true)
+  const [, setReady] = useState(true)
   const [slider, setSlider] = useState(0)
-  const interacted = useRef(false)
   const scrollPos = useRef(0)
 
   const animationEase: Easing = [0.16, 1, 0.3, 1]
   const animationDuration = 600
-  const autoplayDelay = 5100
-
-  let interval: ReturnType<typeof setTimeout>
-  useEffect(() => {
-    //interval = setTimeout(nextSlide, autoplayDelay);
-
-    return () => clearInterval(interval)
-  }, [])
 
   const isSwipe = () => {
     if (sliderRef.current) {
@@ -53,17 +42,6 @@ const About: React.FC = () => {
     } else {
       setSlider(index)
     }
-  }
-
-  const _nextSlide = () => {
-    if (interacted.current) return
-
-    setSlider((prevSlider) => {
-      const index = (prevSlider + 1) % slides.length
-      scrollToSlide(index)
-      return index
-    })
-    interval = setTimeout(_nextSlide, autoplayDelay)
   }
 
   const scrollToSlide = (index: number) => {
@@ -90,29 +68,20 @@ const About: React.FC = () => {
       setSlider(currentSlide)
     }
   }
-  const onTouchMove = () => {
-    didInteract()
-  }
   const onTouchEnd = () => {
     const { offsetWidth: width, scrollLeft: x } = sliderRef.current
     const currentSlide = Math.round(x / width)
     setSlider(currentSlide)
-  }
-  const didInteract = () => {
-    interacted.current = true
-    clearTimeout(interval)
   }
 
   const sliderRef = useRef<any>(null)
   useEffect(() => {
     if (!sliderRef.current) return
     sliderRef.current.addEventListener('scroll', onScroll)
-    sliderRef.current.addEventListener('touchmove', onTouchMove)
     sliderRef.current.addEventListener('touchend', onTouchEnd)
     return () => {
       if (!sliderRef.current) return
       sliderRef.current.removeEventListener('scroll', onScroll)
-      sliderRef.current.removeEventListener('touchmove', onTouchMove)
       sliderRef.current.removeEventListener('touchend', onTouchEnd)
     }
   }, [sliderRef])
@@ -233,14 +202,7 @@ const About: React.FC = () => {
       <OrDivider>
         <Dots>
           {slides.map((s, i) => (
-            <Dot
-              key={s.key}
-              $active={slider === i}
-              onClick={() => {
-                didInteract()
-                gotoSlide(i)
-              }}
-            />
+            <Dot key={s.key} $active={slider === i} onClick={() => gotoSlide(i)} />
           ))}
         </Dots>
       </OrDivider>

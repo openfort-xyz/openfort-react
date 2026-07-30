@@ -99,7 +99,6 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
           const key = token.type === 'erc20' ? token.address : 'native'
           const displaySymbol = getAssetSymbol(token)
           const displayName = (token.metadata?.name as string) || displaySymbol || 'Unknown Token'
-          // const symbolKey = token.metadata?.symbol?.toUpperCase()
           const decimals = getAssetDecimals(token)
 
           const pricePerToken = token.metadata?.fiat?.value

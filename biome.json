@@ -14,7 +14,6 @@
       "!**/.next",
       "!**/coverage",
       "!**/node_modules",
-      "!packages/openfort-react/src/assets",
       "!examples/quickstarts",
       "!packages/create-openfort/template",
       "!packages/create-openfort/.github",
