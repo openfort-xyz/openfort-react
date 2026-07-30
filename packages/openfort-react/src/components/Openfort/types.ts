@@ -586,8 +586,9 @@ export type SignRequest = (
 
 /**
  * OTP-verified buyer identity Coinbase's native wallet-pay (Apple/Google Pay)
- * order requires. Openfort verifies email + phone via its OWN OTP; the widget
- * stamps the timestamps at the moment of verification / consent.
+ * order requires. The OTPs are Coinbase-issued (Verification API, proxied by
+ * the Openfort api); the widget stamps the timestamps at the moment of
+ * verification / consent and attaches the verification record ids.
  */
 export type WalletPayIdentity = {
   email: string
@@ -597,6 +598,10 @@ export type WalletPayIdentity = {
   phoneNumberVerifiedAt: string
   /** ISO-8601 — stamped when the buyer accepts Coinbase's Guest Checkout terms. */
   agreementAcceptedAt: string
+  /** Coinbase Verification API record for the phone (valid 60 days). */
+  smsVerificationId?: string
+  /** Coinbase Verification API record for the email (valid 60 days). */
+  emailVerificationId?: string
 }
 
 /** A wallet-pay identity assembled across the consent + OTP steps. */

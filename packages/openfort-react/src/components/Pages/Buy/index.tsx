@@ -6,6 +6,7 @@ import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { NATIVE_TOKEN_ADDRESS } from '../../../hooks/openfort/fundingSources'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
+import { storedOnrampVerification } from '../../../hooks/openfort/onrampVerificationsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingMethods } from '../../../hooks/openfort/useFundingMethods'
 import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
@@ -225,10 +226,13 @@ const Buy = () => {
     if (fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown) return
     if (isNativeWalletPay) {
       if (!consented) return
-      // Stamp the Guest-Checkout consent now; verify contact next (or skip
-      // straight to commit when the buyer's identity is already complete).
+      // Stamp the Guest-Checkout consent now; verify contact next. The commit
+      // needs Coinbase-issued verification records, so capture is skipped only
+      // when BOTH stored (60-day) verifications cover the user's identity.
       const agreementAcceptedAt = new Date().toISOString()
-      if (needsWalletPayCapture(user)) {
+      const emailVerificationId = user?.email ? storedOnrampVerification('email', user.email) : null
+      const smsVerificationId = user?.phoneNumber ? storedOnrampVerification('sms', user.phoneNumber) : null
+      if (needsWalletPayCapture(user) || !emailVerificationId || !smsVerificationId) {
         setBuyForm((prev) => ({
           ...prev,
           session,
@@ -246,6 +250,8 @@ const Buy = () => {
             phoneNumber: user?.phoneNumber,
             phoneNumberVerifiedAt: agreementAcceptedAt,
             agreementAcceptedAt,
+            emailVerificationId,
+            smsVerificationId,
           },
         }))
         setRoute(routes.BUY_PROCESSING)

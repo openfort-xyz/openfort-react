@@ -2,10 +2,14 @@
 
 import type React from 'react'
 import { useEffect, useMemo, useState } from 'react'
-import { useEmailOtpAuth } from '../../../hooks/openfort/auth/useEmailOtpAuth'
-import { usePhoneOtpAuth } from '../../../hooks/openfort/auth/usePhoneOtpAuth'
+import {
+  startOnrampVerification,
+  storedOnrampVerification,
+  storeOnrampVerification,
+  submitOnrampVerification,
+} from '../../../hooks/openfort/onrampVerificationsApi'
 import { useUser } from '../../../hooks/openfort/useUser'
-import { isValidEmail } from '../../../utils/validation'
+import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
 import Input from '../../Common/Input'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
@@ -17,122 +21,156 @@ import { ContinueButtonWrapper } from '../Buy/styles'
 
 // US mobile in E.164 — mirrors the server guard (`/^\+1[2-9]\d{9}$/`).
 const US_E164 = /^\+1[2-9]\d{9}$/
+// Coinbase's sandbox verification numbers (+1000 + 7 digits) — test mode only.
+const SANDBOX_E164 = /^\+1000\d{7}$/
 
-type Step = 'email' | 'emailCode' | 'phone' | 'code'
+type Step = 'email' | 'emailCode' | 'phone' | 'phoneCode'
 
 /**
  * Gather + OTP-verify the buyer identity Coinbase's native wallet-pay order
- * needs (email + US phone), reusing Openfort's OWN email and phone OTP. Reached
- * from the amount step (which already stamped the Guest-Checkout agreement) only
- * when the user's existing identity is incomplete; each half is skipped when the
- * auth session already collected it. On success it stamps phoneNumberVerifiedAt
- * and hands off to the commit screen.
+ * needs (email + US phone) using COINBASE-issued OTPs (the Verification API,
+ * proxied by the Openfort api) — Coinbase sends and checks the codes itself.
+ * Completed verifications are stored for their 60-day validity, so pieces the
+ * buyer already verified are skipped. Reached from the amount step (which
+ * already stamped the Guest-Checkout agreement); on success it stamps
+ * phoneNumberVerifiedAt, attaches both verification ids, and hands off to the
+ * commit screen.
  */
 const WalletPayContact: React.FC = () => {
-  const { setBuyForm, setRoute, triggerResize } = useOpenfort()
+  const { setBuyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
   const { user } = useUser()
-  const { requestPhoneOtp, linkPhoneOtp, isLoading } = usePhoneOtpAuth({ recoverWalletAutomatically: false })
-  const {
-    requestEmailOtp,
-    verifyEmailOtp,
-    isRequesting: emailRequesting,
-    isLoading: emailVerifying,
-  } = useEmailOtpAuth({ recoverWalletAutomatically: false })
+  // Sandbox destinations (Coinbase test rails) are only meaningful on test keys.
+  const isTestMode = getPublishableKeyEnvironment(publishableKey) === 'test'
 
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState(user?.phoneNumber ?? '')
-  const [step, setStep] = useState<Step>(() => (user?.email ? 'phone' : 'email'))
+  const [emailVerificationId, setEmailVerificationId] = useState<string | null>(() =>
+    user?.email ? storedOnrampVerification('email', user.email) : null
+  )
+  const [pendingVerificationId, setPendingVerificationId] = useState<string | null>(null)
+  const [step, setStep] = useState<Step>(() =>
+    user?.email && storedOnrampVerification('email', user.email) ? 'phone' : 'email'
+  )
   const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [verified, setVerified] = useState(false)
 
   const emailValid = isValidEmail(email)
-  const phoneValid = useMemo(() => US_E164.test(phone.trim()), [phone])
+  const phoneValid = useMemo(() => {
+    const trimmed = phone.trim()
+    return US_E164.test(trimmed) || (isTestMode && SANDBOX_E164.test(trimmed))
+  }, [phone, isTestMode])
 
   useEffect(() => {
     triggerResize()
   }, [triggerResize, step, error])
+
+  const startVerification = async (channel: 'sms' | 'email', destination: string, nextStep: Step) => {
+    setError(null)
+    setLoading(true)
+    try {
+      const started = await startOnrampVerification({ channel, destination, publishableKey })
+      setPendingVerificationId(started.verificationId)
+      setStep(nextStep)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not send the code. Try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSendEmailCode = async () => {
     if (!emailValid) {
       setError('Enter a valid email address.')
       return
     }
-    setError(null)
-    const { error: reqError } = await requestEmailOtp({ email: email.trim() })
-    if (reqError) {
-      setError('Could not send the code. Check the address and try again.')
+    const trimmed = email.trim()
+    // Already verified within Coinbase's 60-day window — no code needed.
+    const stored = storedOnrampVerification('email', trimmed)
+    if (stored) {
+      setEmail(trimmed)
+      setEmailVerificationId(stored)
+      setStep('phone')
       return
     }
-    setStep('emailCode')
+    setEmail(trimmed)
+    await startVerification('email', trimmed, 'emailCode')
   }
 
   const handleVerifyEmail = async (otp: string) => {
+    if (!pendingVerificationId) return
     setVerifying(true)
     setError(null)
-    const { error: verifyError } = await verifyEmailOtp({ email: email.trim(), otp })
-    setVerifying(false)
-    if (verifyError) {
-      setError('Invalid code. Please try again.')
-      return
-    }
-    // Phone was already collected + verified through auth — the identity is now
-    // complete, so hand off without re-verifying it (mirrors the amount step's
-    // skip path, including its client-side verifiedAt stamp).
-    if (user?.phoneNumber && user.phoneNumberVerified) {
-      setVerified(true)
-      const phoneNumber = user.phoneNumber
-      setBuyForm((prev) => ({
-        ...prev,
-        walletPay: {
-          ...prev.walletPay,
-          email: email.trim(),
-          phoneNumber,
-          phoneNumberVerifiedAt: new Date().toISOString(),
-        },
-      }))
-      setRoute(routes.BUY_PROCESSING)
-      return
-    }
-    setStep('phone')
-  }
-
-  const handleSendCode = async () => {
-    if (!phoneValid) {
-      setError('Enter a US mobile number, e.g. +14155550123.')
-      return
-    }
-    setError(null)
-    const { error: reqError } = await requestPhoneOtp({ phoneNumber: phone.trim() })
-    if (reqError) {
-      setError('Could not send the code. Check the number and try again.')
-      return
-    }
-    setStep('code')
-  }
-
-  const handleVerify = async (otp: string) => {
-    setVerifying(true)
-    setError(null)
-    // The buyer is already authenticated (they're funding their wallet), so this
-    // LINKS + verifies the phone on their account rather than logging in.
-    const { error: verifyError } = await linkPhoneOtp({ phoneNumber: phone.trim(), otp })
-    if (verifyError) {
+    try {
+      const record = await submitOnrampVerification({
+        verificationId: pendingVerificationId,
+        otpCode: otp,
+        publishableKey,
+      })
+      storeOnrampVerification('email', email, record)
+      setEmailVerificationId(record.verificationId)
+      setPendingVerificationId(null)
+      setStep('phone')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Verification failed. Try again.')
+    } finally {
       setVerifying(false)
+    }
+  }
+
+  const handleSendPhoneCode = async () => {
+    if (!phoneValid) {
       setError(
-        verifyError.message === 'Invalid OTP' ? 'Invalid code. Please try again.' : 'Verification failed. Try again.'
+        isTestMode
+          ? 'Enter a US mobile (e.g. +14155550123) or a sandbox number (e.g. +10005550100).'
+          : 'Enter a US mobile number, e.g. +14155550123.'
       )
       return
     }
-    setVerified(true)
-    // No server 'verifiedAt' exists — stamp it the instant verification succeeds.
+    const trimmed = phone.trim()
+    const stored = storedOnrampVerification('sms', trimmed)
+    if (stored) {
+      completeWith(stored)
+      return
+    }
+    setPhone(trimmed)
+    await startVerification('sms', trimmed, 'phoneCode')
+  }
+
+  const handleVerifyPhone = async (otp: string) => {
+    if (!pendingVerificationId) return
+    setVerifying(true)
+    setError(null)
+    try {
+      const record = await submitOnrampVerification({
+        verificationId: pendingVerificationId,
+        otpCode: otp,
+        publishableKey,
+      })
+      storeOnrampVerification('sms', phone.trim(), record)
+      setVerified(true)
+      completeWith(record.verificationId)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Verification failed. Try again.')
+    } finally {
+      setVerifying(false)
+    }
+  }
+
+  /** Assemble the order-ready identity and hand off to the commit screen. */
+  const completeWith = (smsVerificationId: string) => {
     setBuyForm((prev) => ({
       ...prev,
       walletPay: {
         ...prev.walletPay,
         email: email.trim(),
         phoneNumber: phone.trim(),
+        // Coinbase holds the server-side verification record (the id below);
+        // the timestamp attests when this widget confirmed it.
         phoneNumberVerifiedAt: new Date().toISOString(),
+        smsVerificationId,
+        ...(emailVerificationId ? { emailVerificationId } : {}),
       },
     }))
     setRoute(routes.BUY_PROCESSING)
@@ -153,12 +191,12 @@ const WalletPayContact: React.FC = () => {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
-            placeholder="you@example.com"
+            placeholder={isTestMode ? 'you@example.com (sandbox: tester@sandbox.test)' : 'you@example.com'}
             autoComplete="email"
           />
           {error && <ModalBody $error>{error}</ModalBody>}
           <ContinueButtonWrapper>
-            <Button variant="primary" onClick={handleSendEmailCode} disabled={!emailValid} waiting={emailRequesting}>
+            <Button variant="primary" onClick={handleSendEmailCode} disabled={!emailValid} waiting={loading}>
               Send code
             </Button>
           </ContinueButtonWrapper>
@@ -172,9 +210,9 @@ const WalletPayContact: React.FC = () => {
           </ModalBody>
           <OtpInputStandalone
             onComplete={handleVerifyEmail}
-            isLoading={verifying || emailVerifying}
+            isLoading={verifying}
             isError={!!error}
-            isSuccess={verified}
+            isSuccess={false}
           />
           {error && <ModalBody $error>{error}</ModalBody>}
         </>
@@ -188,26 +226,26 @@ const WalletPayContact: React.FC = () => {
             onChange={(e) => setPhone(e.target.value)}
             type="tel"
             inputMode="tel"
-            placeholder="+1 415 555 0123"
+            placeholder={isTestMode ? '+1 415 555 0123 (sandbox: +10005550100)' : '+1 415 555 0123'}
             autoComplete="tel"
           />
           {error && <ModalBody $error>{error}</ModalBody>}
           <ContinueButtonWrapper>
-            <Button variant="primary" onClick={handleSendCode} disabled={!phoneValid} waiting={isLoading}>
+            <Button variant="primary" onClick={handleSendPhoneCode} disabled={!phoneValid} waiting={loading}>
               Send code
             </Button>
           </ContinueButtonWrapper>
         </>
       )}
 
-      {step === 'code' && (
+      {step === 'phoneCode' && (
         <>
           <ModalBody>
-            Enter the code we sent to <b>{phone}</b>.
+            Enter the code we sent to <b>{phone.trim()}</b>.
           </ModalBody>
           <OtpInputStandalone
-            onComplete={handleVerify}
-            isLoading={verifying || isLoading}
+            onComplete={handleVerifyPhone}
+            isLoading={verifying}
             isError={!!error}
             isSuccess={verified}
           />

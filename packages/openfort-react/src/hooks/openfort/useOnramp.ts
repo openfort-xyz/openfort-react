@@ -53,6 +53,9 @@ export type OnrampOpenParams = {
     phoneNumberVerifiedAt: string
     /** ISO-8601 time the buyer accepted Coinbase's Guest Checkout terms. */
     agreementAcceptedAt: string
+    /** Coinbase Verification API record ids (Coinbase-issued OTP). */
+    smsVerificationId?: string
+    emailVerificationId?: string
   }
 }
 
