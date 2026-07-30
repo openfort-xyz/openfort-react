@@ -21,7 +21,7 @@
 # Openfort React SDK
 
 [![Downloads](https://img.shields.io/npm/dm/@openfort/react.svg)](https://www.npmjs.com/package/@openfort/react)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-BSD--2--Clause-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-openfort.io-blue)](https://www.openfort.io/docs/products/embedded-wallet/react/)
 [![Version](https://img.shields.io/npm/v/@openfort/react.svg)](https://www.npmjs.org/package/@openfort/react)
 

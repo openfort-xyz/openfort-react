@@ -2,7 +2,7 @@
   "name": "@openfort/react",
   "version": "1.6.3",
   "author": "Openfort (https://www.openfort.io)",
-  "license": "BSD-2-Clause license",
+  "license": "BSD-2-Clause",
   "description": "The easiest way to integrate Openfort to your project.",
   "repository": {
     "type": "git",
@@ -47,7 +47,8 @@
   },
   "files": [
     "build",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "publishConfig": {
