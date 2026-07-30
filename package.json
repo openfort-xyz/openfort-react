@@ -4,14 +4,6 @@
   "description": "The easiest way to integrate Openfort to your project.",
   "main": "packages/openfort-react/src/index.ts",
   "private": true,
-  "workspaces": {
-    "packages": [
-      "packages/**",
-      "examples/**",
-      "packages/create-openfort/template/openfort-templates/*",
-      "!packages/create-openfort/template/backend"
-    ]
-  },
   "scripts": {
     "preinstall": "pnpx only-allow pnpm",
     "postinstall": "git config --unset core.hooksPath 2>/dev/null || true && simple-git-hooks",
@@ -46,18 +38,21 @@
     "build:ci": "pnpm -r run build",
     "start:cli": "pnpm --filter create-openfort start",
     "test": "pnpm --filter @openfort/react test && pnpm --filter playground test",
+    "test:build": "pnpm --filter @openfort/react test:build && pnpm --filter create-openfort test:build",
     "test:unit": "pnpm --filter @openfort/react test",
     "test:e2e": "pnpm --filter playground test",
     "test:ui": "pnpm --filter playground test:ui",
     "test:debug": "pnpm --filter playground test:debug"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@babel/core": "^7.28.5",
     "@biomejs/biome": "^2.2.4",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.7",
     "@playwright/test": "^1.61.0",
     "knip": "^5.64.0",
+    "publint": "0.3.22",
     "rollup": "^2.80.0",
     "simple-git-hooks": "^2.13.1",
     "typescript": "^5.0.4",

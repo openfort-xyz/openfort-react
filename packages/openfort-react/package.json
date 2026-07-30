@@ -65,6 +65,7 @@
     "build": "rollup --config rollup.config.prod.js",
     "format": "biome format --write .",
     "test": "vitest run",
+    "test:build": "publint --strict && attw --pack --profile esm-only --ignore-rules internal-resolution-error",
     "test:watch": "vitest"
   },
   "keywords": [
