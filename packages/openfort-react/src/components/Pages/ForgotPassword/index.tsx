@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect } from 'react'
+import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { logger } from '../../../utils/logger'
 import Button from '../../Common/Button'
@@ -106,49 +107,63 @@ const RequestEmail: React.FC = () => {
 }
 
 const ResetPassword: React.FC = () => {
-  const fixedUrl = window.location.href.replace('?state=', '&state=') // redirectUrl is not working with query params
+  // The reset link carries `state` as the first query parameter, so it arrives as `?state=`
+  // appended after the existing query string. Turn it into a regular parameter before parsing.
+  const fixedUrl = window.location.href.replace('?state=', '&state=')
   const url = new URL(fixedUrl)
 
   const [password, setPassword] = React.useState('')
+  const [error, setError] = React.useState<string>('')
+  const [message, setMessage] = React.useState<string>('')
 
-  // const { setRoute, triggerResize } = useOpenfort()
-  // const { client, updateUser } = useOpenfortCore()
-
-  const [loading, _setLoading] = React.useState(false)
+  const { setRoute, setEmailInput, triggerResize } = useOpenfort()
+  const { resetPassword, signInEmail, isLoading } = useEmailAuth({
+    recoverWalletAutomatically: false,
+  })
 
   const email = url.searchParams.get('email')
+  const state = url.searchParams.get('state')
 
-  // OTP_TODO: Reset password
+  useEffect(() => {
+    triggerResize()
+  }, [error, message])
+
+  const clearResetParams = () => {
+    for (const param of ['openfortForgotPasswordUI', 'state', 'email']) {
+      url.searchParams.delete(param)
+    }
+    window.history.replaceState({}, document.title, url.toString())
+  }
+
   const handleSubmit = async () => {
-    // setLoading(true)
-    // const state = url.searchParams.get('state')
-    // if (!email || !state) {
-    //   logger.log('No email or state found')
-    //   setLoading(false)
-    //   return
-    // }
-    // try {
-    //   await client.auth.resetPassword({
-    //     password: password,
-    //     email,
-    //     state,
-    //   })
-    //   await client.auth.logInWithEmailPassword({
-    //     email,
-    //     password,
-    //   })
-    //   const user = await updateUser()
-    //   if (!user) throw new Error('No user found')
-    //   ;['openfortForgotPasswordUI', 'state', 'email'].forEach((param) => {
-    //     url.searchParams.delete(param)
-    //   })
-    //   window.history.replaceState({}, document.title, url.toString())
-    //   setRoute(routes.LOAD_WALLETS)
-    // } catch (e) {
-    //   logger.log('Reset password error', e)
-    //   setLoading(false)
-    //   triggerResize()
-    // }
+    setError('')
+
+    if (!email || !state) {
+      setError('This reset link is invalid or has expired. Request a new one.')
+      return
+    }
+
+    const { error: resetError } = await resetPassword({ email, password, state })
+    if (resetError) {
+      logger.error('Reset password failed', resetError.message)
+      setError('Could not reset your password. Request a new reset email and try again.')
+      return
+    }
+
+    clearResetParams()
+
+    const { error: signInError, requiresEmailVerification } = await signInEmail({ email, password })
+    if (signInError || requiresEmailVerification) {
+      logger.error('Sign in after password reset failed', signInError?.message)
+      setEmailInput(email)
+      setMessage('Password updated. Sign in to continue.')
+      setTimeout(() => {
+        setRoute(routes.EMAIL_LOGIN)
+      }, 1500)
+      return
+    }
+
+    setRoute(routes.LOAD_WALLETS)
   }
 
   return (
@@ -165,10 +180,15 @@ const ResetPassword: React.FC = () => {
           onChange={(e) => setPassword(e.target.value)}
           type="password"
           placeholder="Enter your new password"
-          disabled={loading}
+          disabled={isLoading || !!message}
         />
-        <Button onClick={handleSubmit} disabled={loading} waiting={loading}>
-          Reset password
+        {error && (
+          <ModalBody style={{ marginTop: 12 }} $error>
+            <FitText>{error}</FitText>
+          </ModalBody>
+        )}
+        <Button onClick={handleSubmit} disabled={isLoading || !!message} waiting={isLoading}>
+          {message ? message : 'Reset password'}
         </Button>
       </form>
     </PageContent>

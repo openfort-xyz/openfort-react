@@ -1,11 +1,24 @@
 const PREFIX = '[Openfort-React]'
 
+let debugLogsEnabled = false
+
+/**
+ * Toggles the verbose `logger.log` output. Warnings and errors are unaffected: they always emit.
+ *
+ * @param enabled - Whether `logger.log` should write to the console.
+ */
+export const setDebugLogsEnabled = (enabled: boolean) => {
+  debugLogsEnabled = enabled
+}
+
 export const logger = {
-  enabled: false,
-  // biome-ignore lint/suspicious/noConsole: allowed for debugging
-  log: (...args: any[]) => (logger.enabled ? console.log(PREFIX, ...args) : null),
-  // biome-ignore lint/suspicious/noConsole: allowed for debugging
-  error: (...args: any[]) => (logger.enabled ? console.error(PREFIX, ...args) : null),
-  // biome-ignore lint/suspicious/noConsole: allowed for debugging
-  warn: (...args: any[]) => (logger.enabled ? console.warn(PREFIX, ...args) : null),
+  log: (...args: unknown[]) => {
+    if (!debugLogsEnabled) return
+    // biome-ignore lint/suspicious/noConsole: verbose logging opted into through debugMode
+    console.log(PREFIX, ...args)
+  },
+  // biome-ignore lint/suspicious/noConsole: errors must reach developers without debug mode
+  error: (...args: unknown[]) => console.error(PREFIX, ...args),
+  // biome-ignore lint/suspicious/noConsole: warnings must reach developers without debug mode
+  warn: (...args: unknown[]) => console.warn(PREFIX, ...args),
 }

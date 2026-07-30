@@ -91,7 +91,7 @@ const LoadWallets: React.FC = () => {
     if (loadingUX) return
     if (isLoadingWallets) return
     if (!wallets) {
-      logger.error('Could not load wallets for user:', user)
+      logger.error('Could not load wallets for user:', user?.id)
       return
     }
     logger.log('User wallets loaded:', wallets.length)
