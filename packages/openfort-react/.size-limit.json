@@ -63,6 +63,27 @@
     ]
   },
   {
+    "name": "@openfort/react/internal",
+    "path": "build/internal/index.js",
+    "import": "*",
+    "limit": "250 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
+  },
+  {
     "name": "@openfort/react/wagmi",
     "path": "build/wagmi/index.js",
     "import": "*",
