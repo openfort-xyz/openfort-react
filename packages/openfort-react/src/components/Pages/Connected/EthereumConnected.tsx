@@ -50,7 +50,7 @@ const EthereumConnected: React.FC = () => {
   const bridge = useEthereumBridge()
 
   const wallet = useEthereumEmbeddedWallet()
-  const { embeddedAccounts } = useOpenfortCore()
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
   const hasEthereumWallets = (embeddedAccounts?.filter((a) => a.chainType === ChainTypeEnum.EVM) ?? []).length > 0
 
   // Use embedded wallet if available, otherwise fall back to bridge (external wallet)
@@ -64,7 +64,7 @@ const EthereumConnected: React.FC = () => {
       : undefined
   const chainId = embeddedConnected ? wallet.chainId : bridgeConnected ? bridge.chainId : undefined
 
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && chainType !== ChainTypeEnum.EVM) {
       logger.warn(

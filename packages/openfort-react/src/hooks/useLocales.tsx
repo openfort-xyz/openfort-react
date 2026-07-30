@@ -3,15 +3,15 @@
 import React, { useMemo } from 'react'
 import Logos from '../assets/logos.js'
 
-import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { useOpenfortConfig } from '../components/Openfort/useOpenfort.js'
 
 import { getLocale } from './../localizations/index.js'
 import type { LocaleProps } from '../localizations/locales/index.js'
 import { logger } from '../utils/logger.js'
 
 export default function useLocales(replacements?: Record<string, string>): LocaleProps {
-  const context = useOpenfort()
-  const language = context.uiConfig.language ?? 'en-US'
+  const { uiConfig } = useOpenfortConfig()
+  const language = uiConfig.language ?? 'en-US'
 
   const translations = useMemo(() => {
     return getLocale(language)

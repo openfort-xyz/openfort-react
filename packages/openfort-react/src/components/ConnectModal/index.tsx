@@ -25,17 +25,20 @@ const ConnectModal: React.FC<{
   const routing = useOpenfortRouting()
   const { chains, uiConfig } = useOpenfortConfig()
   const themeControls = useOpenfortTheme()
-  const core = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
   const strategy = useConnectionStrategy()
   const state = useMemo(
     () => ({
-      user: core.user,
-      embeddedAccounts: core.embeddedAccounts,
-      activeEmbeddedAddress: core.activeEmbeddedAddress,
+      user,
+      embeddedAccounts,
+      activeEmbeddedAddress,
       chainType: routing.chainType,
-      embeddedState: core.embeddedState,
+      embeddedState,
     }),
-    [core.user, core.embeddedAccounts, core.activeEmbeddedAddress, routing.chainType, core.embeddedState]
+    [user, embeddedAccounts, activeEmbeddedAddress, routing.chainType, embeddedState]
   )
   const isConnected = strategy?.isConnected(state) ?? false
   const chainId = strategy?.getChainId()

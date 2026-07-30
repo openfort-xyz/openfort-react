@@ -114,7 +114,7 @@ function WalletRow({
 const CONNECTED_ROUTES = new Set<string>([routes.CONNECTED, routes.ETH_CONNECTED, routes.SOL_CONNECTED])
 
 export default function SelectWalletToRecover() {
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const { previousRoute } = useOpenfort()
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()

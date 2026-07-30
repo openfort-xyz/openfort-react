@@ -30,7 +30,8 @@ type RequestPhoneOtpOptions = {
 type UsePhoneHookOptions = OpenfortHookOptions<PhoneAuthResult> & CreateWalletPostAuthOptions
 
 export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
-  const { client, updateUser } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const updateUser = useOpenfortCore((s) => s.updateUser)
   const [status, setStatus] = useState<BaseFlowState | { status: 'requesting' }>({
     status: 'idle',
   })

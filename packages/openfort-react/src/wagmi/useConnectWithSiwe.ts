@@ -19,7 +19,9 @@ import { logger } from '../utils/logger.js'
  * ```
  */
 export function useConnectWithSiwe() {
-  const { client, user, updateUser } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const user = useOpenfortCore((s) => s.user)
+  const updateUser = useOpenfortCore((s) => s.updateUser)
   const bridge = useEthereumBridge()
 
   // Use a ref so the callback always reads the latest bridge state,

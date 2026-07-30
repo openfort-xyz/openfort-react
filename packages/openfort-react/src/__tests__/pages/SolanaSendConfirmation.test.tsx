@@ -37,8 +37,8 @@ const h = vi.hoisted(() => ({
   sendSplTokenGasless: vi.fn<(...args: unknown[]) => Promise<string>>(),
 }))
 
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     sendForm: { recipient: RECIPIENT, amount: '1', asset: h.asset },
     setRoute: vi.fn(),
     triggerResize: vi.fn(),
@@ -48,8 +48,9 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     setOnBack: vi.fn(),
     setPreviousRoute: vi.fn(),
     setRouteHistory: vi.fn(),
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook, useOpenfortForms: hook }
+})
 vi.mock('../../hooks/openfort/auth/useSignOut', () => ({ useSignOut: () => ({ signOut: vi.fn() }) }))
 vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
   useSolanaEmbeddedWallet: () => ({

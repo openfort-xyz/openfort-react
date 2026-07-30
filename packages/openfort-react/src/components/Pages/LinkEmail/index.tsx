@@ -38,7 +38,7 @@ const textVariants: Variants = {
 
 const LinkEmail: React.FC = () => {
   const { setRoute, triggerResize, emailInput: email, setEmailInput: setEmail } = useOpenfort()
-  const { client } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
 
   const [loginLoading, setLoginLoading] = React.useState(false)
   const [loginError, setLoginError] = React.useState<false | string>(false)

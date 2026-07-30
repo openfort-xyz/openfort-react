@@ -15,7 +15,7 @@ type ErrorFallbackPageProps = {
 /** Shared error page with a single way out: back to the providers (sign-in) screen. */
 const ErrorFallbackPage = ({ header, description }: ErrorFallbackPageProps) => {
   const { setRoute } = useOpenfort()
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
 
   return (
     <PageContent onBack={routes.PROVIDERS}>

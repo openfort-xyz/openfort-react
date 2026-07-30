@@ -13,8 +13,8 @@ const setRoute = vi.fn()
 
 let bridgeValue: { connectors: { id: string }[] } | null = null
 
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     setRoute,
     setConnector: vi.fn(),
     connector: { id: 'metaMask' },
@@ -24,10 +24,14 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     setOnBack: vi.fn(),
     setPreviousRoute: vi.fn(),
     setRouteHistory: vi.fn(),
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook, useOpenfortForms: hook }
+})
 vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({ useEthereumBridge: () => bridgeValue }))
-vi.mock('../../openfort/useOpenfort', () => ({ useOpenfortCore: () => ({ user: null }) }))
+vi.mock('../../openfort/useOpenfort', () => {
+  const getState = () => ({ user: null })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 vi.mock('../../core/ConnectionStrategyContext', () => ({ useConnectionStrategy: () => null }))
 vi.mock('../../hooks/openfort/auth/useSignOut', () => ({ useSignOut: () => ({ signOut: vi.fn() }) }))
 // FitText measures DOM sizes that jsdom cannot provide

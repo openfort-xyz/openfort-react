@@ -13,7 +13,7 @@ vi.mock('../../components/Openfort/useOpenfort', () => {
     walletConfig: { ethereum: { chainId: 80002 } },
     chainType: ChainTypeEnum.EVM,
   })
-  return { useOpenfort: hook, useOpenfortUIContext: hook }
+  return { useOpenfort: hook, useOpenfortUIContext: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
 })
 vi.mock('../../core/ConnectionStrategyContext', () => ({
   useConnectionStrategy: () => ({

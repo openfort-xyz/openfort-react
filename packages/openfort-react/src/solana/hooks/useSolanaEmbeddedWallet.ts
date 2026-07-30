@@ -2,7 +2,7 @@
 
 import { AccountTypeEnum, ChainTypeEnum, type EmbeddedAccount, EmbeddedState } from '@openfort/openfort-js'
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { useOpenfortConfig, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import type {
@@ -54,17 +54,16 @@ type InternalState = {
  * ```
  */
 export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions): SolanaWalletState {
-  const {
-    client,
-    embeddedAccounts,
-    embeddedState,
-    isLoadingAccounts,
-    activeEmbeddedAddress,
-    updateEmbeddedAccounts,
-    setActiveEmbeddedAddress,
-    setWalletStatus,
-  } = useOpenfortCore()
-  const { walletConfig, chainType } = useOpenfort()
+  const client = useOpenfortCore((s) => s.client)
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
+  const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
+  const setWalletStatus = useOpenfortCore((s) => s.setWalletStatus)
+  const { walletConfig } = useOpenfortConfig()
+  const { chainType } = useOpenfortRouting()
 
   const setActiveInProgressRef = useRef<Promise<void> | null>(null)
   const solanaAccountsRef = useRef<EmbeddedAccount[]>([])
@@ -133,7 +132,10 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
     }))
   }, [solanaAccounts, createProviderForAccount])
 
+  // The store holds one wallet status for the active chain. Publishing it only while
+  // Solana is active keeps a mounted Ethereum hook from overwriting this one, and vice versa.
   useEffect(() => {
+    if (chainType !== ChainTypeEnum.SVM) return
     if (state.status === 'creating') {
       setWalletStatus({ status: 'creating' })
     } else if (state.status === 'connecting' && state.activeWallet) {
@@ -141,7 +143,7 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
     } else {
       setWalletStatus({ status: 'idle' })
     }
-  }, [state.status, state.activeWallet, setWalletStatus])
+  }, [chainType, state.status, state.activeWallet, setWalletStatus])
 
   const create = useCallback(
     async (createOptions?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount> => {

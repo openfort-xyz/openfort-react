@@ -36,7 +36,7 @@ import { getAssetSymbol, isSameToken } from '../Send/utils.js'
 
 const BuySelectProvider = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   // Card / Apple Pay settle on mainnet, so a test key can't deliver — block both
   // providers (and Continue) with a clear reason while keeping the screen reachable.
   const testnet = getPublishableKeyEnvironment(publishableKey) === 'test'
