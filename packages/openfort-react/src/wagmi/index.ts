@@ -1,6 +1,7 @@
 export { default as getDefaultConfig } from './defaultConfig.js'
 export {
   default as getDefaultConnectors,
+  /** @deprecated use `getDefaultConnectors` instead */
   default as wallets,
 } from './defaultConnectors.js'
 export { embeddedWalletConnector, setEmbeddedWalletProvider } from './embeddedConnector.js'

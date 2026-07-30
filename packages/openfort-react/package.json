@@ -31,6 +31,11 @@
       "import": "./build/wagmi/index.js",
       "default": "./build/wagmi/index.js"
     },
+    "./internal": {
+      "types": "./build/internal/index.d.ts",
+      "import": "./build/internal/index.js",
+      "default": "./build/internal/index.js"
+    },
     "./package.json": "./package.json"
   },
   "types": "./build/index.d.ts",
@@ -44,6 +49,9 @@
       ],
       "wagmi": [
         "./build/wagmi/index.d.ts"
+      ],
+      "internal": [
+        "./build/internal/index.d.ts"
       ]
     }
   },
@@ -67,7 +75,7 @@
     "format": "biome format --write .",
     "size": "size-limit",
     "test": "vitest run",
-    "test:build": "publint --strict && attw --pack --profile esm-only",
+    "test:build": "node scripts/check-use-client.mjs && publint --strict && attw --pack --profile esm-only",
     "test:cov": "vitest run --coverage",
     "test:types": "vitest run --typecheck",
     "test:watch": "vitest"
