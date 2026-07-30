@@ -71,6 +71,15 @@ pnpm add @openfort/react @tanstack/react-query wagmi viem
 
 and much more...
 
+## Security
+
+Wallet applications are a frequent target for attacks on users' assets. A few things to get started:
+
+- Pin package versions, upgrade deliberately, and read lockfile diffs to reduce exposure to [supply-chain attacks](https://nodejs.org/en/guides/security/#supply-chain-attacks).
+- Delay the installation of freshly published packages with [pnpm](https://pnpm.io)'s [`minimumReleaseAge`](https://pnpm.io/settings#minimumreleaseage) and [`trustPolicy`](https://pnpm.io/settings#trustpolicy), or [npm](https://docs.npmjs.com)'s [`min-release-age`](https://docs.npmjs.com/cli/v11/using-npm/config#min-release-age). This repository sets `minimumReleaseAge: 1440` (24 hours) in `pnpm-workspace.yaml`.
+- Install the [Socket](https://socket.dev) [GitHub App](https://github.com/apps/socket-security) to flag and block supply-chain attacks in pull requests.
+- Add a [Content Security Policy](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html) so external scripts cannot run in your app.
+- Pin [GitHub Actions](https://github.com/actions) to commit SHAs rather than tags, since tags can be moved. [Actions Up](https://github.com/azat-io/actions-up) automates the conversion.
 
 ## Examples
 
