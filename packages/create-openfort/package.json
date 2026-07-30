@@ -6,7 +6,7 @@
   "author": "Openfort (https://www.openfort.xyz)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/openfort-xyz/fortkit.git",
+    "url": "git+https://github.com/openfort-xyz/fortkit.git",
     "directory": "packages/create-openfort"
   },
   "keywords": [
@@ -40,7 +40,8 @@
     "check": "tsc && biome check",
     "build": "tsup",
     "dev": "tsup --watch",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "test:build": "publint --strict"
   },
   "dependencies": {
     "@clack/prompts": "^0.6.3",
