@@ -40,21 +40,28 @@ const ConnectUsing = () => {
     }
   }, [isConnectorAccountId, context])
 
+  const { connector, triggerResize } = context
+
+  // Fall back to the QR flow whenever the selected connector turns out to have no injected
+  // provider. Re-running after the fallback is a no-op because `status` is no longer INJECTOR.
   useEffect(() => {
-    const connector = context.connector
     logger.log('ConnectUsing', { status, isQrCode, isOauth, connector })
 
-    if (isOauth) return
-    // if no provider, change to qrcode
+    if (isOauth || status !== states.INJECTOR) return
+
+    let cancelled = false
     const checkProvider = async () => {
       const res = await wallet?.connector?.getProvider?.()
-      if (!res) {
-        setStatus(states.QRCODE)
-        setTimeout(context.triggerResize, 10) // delay required here for modal to resize
-      }
+      if (cancelled || res) return
+      setStatus(states.QRCODE)
+      setTimeout(triggerResize, 10) // delay required here for modal to resize
     }
-    if (status === states.INJECTOR) checkProvider()
-  }, [])
+    checkProvider()
+
+    return () => {
+      cancelled = true
+    }
+  }, [status, isQrCode, isOauth, connector, wallet, triggerResize])
 
   if (isConnectorAccountId) return null
   if (isOauth) return <ConnectWithOAuth />
