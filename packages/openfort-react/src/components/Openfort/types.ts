@@ -268,64 +268,63 @@ type WalletRecoveryOptions = {
 
 export type PhoneConfig = {
   /**
-   * @description Default country value (iso2).
+   * Default country value (iso2).
    * @default "us"
    */
   defaultCountry?: CountryIso2
   /**
-   * @description Array of available countries for guessing.
+   * Array of available countries for guessing.
    * @default defaultCountries // full country list
    */
   countries?: CountryData[]
   /**
-   * @description Countries to display at the top of the list of dropdown options.
+   * Countries to display at the top of the list of dropdown options.
    * @default []
    */
   preferredCountries?: CountryIso2[]
   /**
-   * @description Disable country guess on value change.
+   * Disable country guess on value change.
    * @default false
    */
   disableCountryGuess?: boolean
   /**
-   * @description
    * Disable dial code prefill on initialization.
-   * Dial code prefill works only when "empty" phone value have been provided.
+   * Dial code prefill works only when an "empty" phone value has been provided.
    * @default false
    */
   disableDialCodePrefill?: boolean
   /**
-   * @description
    * Always display the dial code.
-   * Dial code can't be removed/changed by keyboard events, but it can be changed by pasting another country phone value.
+   * The dial code cannot be removed or changed by keyboard events, but it can be changed by
+   * pasting another country's phone value.
    * @default false
    */
   forceDialCode?: boolean
   /**
-   * @description Display phone value will not include passed *dialCode* and *prefix* if set to *true*.
-   * @ignore *forceDialCode* value will be ignored.
+   * Display phone value will not include the passed *dialCode* and *prefix* if set to *true*.
+   * When enabled, *forceDialCode* is ignored.
    * @default false
    */
   disableDialCodeAndPrefix?: boolean
   /**
-   * @description Disable phone value mask formatting. All formatting characters will not be displayed, but the mask length will be preserved.
+   * Disable phone value mask formatting. All formatting characters will not be displayed, but the
+   * mask length will be preserved.
    * @default false
    */
   disableFormatting?: boolean
   /**
-   * @description Hide the dropdown icon. Make country selection not accessible.
+   * Hide the dropdown icon. Makes country selection inaccessible.
    * @default false
    */
   hideDropdown?: CountrySelectorProps['hideDropdown']
   /**
-   * @description
-   * Show prefix and dial code between country selector and phone input.
-   * Works only when *disableDialCodeAndPrefix* is *true*
+   * Show prefix and dial code between the country selector and the phone input.
+   * Works only when *disableDialCodeAndPrefix* is *true*.
    * @default false
    */
   showDisabledDialCodeAndPrefix?: boolean
   /**
-   * @description Disable auto focus on input field after country select.
+   * Disable auto focus on the input field after country select.
    * @default false
    */
   disableFocusAfterCountrySelect?: boolean

@@ -77,7 +77,8 @@ async function fetchSolanaAssets(addressStr: string, rpcUrl: string): Promise<So
 }
 
 /**
- * The TanStack query result, mirroring {@link useEthereumWalletAssets}: `data`
+ * The TanStack query result, mirroring `useEthereumWalletAssets` from
+ * `@openfort/react/ethereum`: `data`
  * is `null` rather than `undefined` before the first result, and `isIdle`
  * reports that the query is gated off because no wallet or cluster is available.
  */
@@ -89,7 +90,8 @@ type UseSolanaWalletAssetsResult = Omit<UseQueryReturnType<SolanaAsset[], Error>
 /**
  * Returns the connected Solana wallet's balances: native SOL plus SPL token
  * holdings, read directly from the cluster RPC. The SVM counterpart of
- * {@link useEthereumWalletAssets}, feeding the Solana asset inventory.
+ * `useEthereumWalletAssets` from `@openfort/react/ethereum`, feeding the
+ * Solana asset inventory.
  *
  * The result refreshes when balances are invalidated — see `useInvalidateBalance`.
  */
