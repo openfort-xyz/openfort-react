@@ -7,3 +7,84 @@ minimumReleaseAgeExclude:
   - "@openfort/openfort-node"
   - "@openfort/better-auth"
   - "hono"
+
+auditConfig:
+  # Advisories whose fix is not reachable from this repo. `pnpm audit` runs as a
+  # blocking CI gate, so this list is the known-debt baseline: anything NOT
+  # listed here fails the build. Re-check the list whenever the lockfile moves;
+  # an entry that no longer matches is dead and should be deleted.
+  #
+  # Every entry below reaches the tree through `examples/*` or root
+  # devDependencies. None is reachable from the published `@openfort/react`
+  # runtime dependency graph.
+  ignoreCves:
+    # elliptic — nonce/signature handling uses a risky primitive. Low severity,
+    # pulled in transitively by wallet SDKs that have not shipped a bumped
+    # release; the affected code paths are not used for signing here.
+    - CVE-2025-14505
+  ignoreGhsas:
+    # axios <1.18.0 — proxy/prototype-pollution/body-limit cluster. Reached via
+    # `wagmi > @wagmi/connectors > @walletconnect/ethereum-provider > @reown/appkit`
+    # and `@openfort/openfort-node`; both pin axios ranges below the fix.
+    - GHSA-42h9-826w-cgv3
+    - GHSA-xj6q-8x83-jv6g
+    - GHSA-pmv8-rq9r-6j72
+    - GHSA-jqh4-m9w3-8hp9
+    - GHSA-mmx7-hfxf-jppx
+    - GHSA-f4gw-2p7v-4548
+    - GHSA-gcfj-64vw-6mp9
+    - GHSA-hcpx-6fm6-wx23
+    - GHSA-7q8q-rj6j-mhjq
+    - GHSA-mwf2-3pr3-8698
+    # websocket-driver <0.7.5 — message corruption and compression resource
+    # limits. Reached only via `firebase > @firebase/database > faye-websocket`
+    # in the firebase quickstart, which has no release on a patched driver.
+    - GHSA-mp7j-qc5w-4988
+    - GHSA-xv26-6w52-cph6
+    # brace-expansion — quadratic and unbounded expansion DoS. Reached via
+    # `typedoc > minimatch` in the playground; both are build-time only and run
+    # on repo-authored input.
+    - GHSA-3jxr-9vmj-r5cp
+    - GHSA-mh99-v99m-4gvg
+    # js-yaml <4.3.0 — merge-key chains force quadratic CPU. Reached via
+    # `@changesets/cli > @manypkg/get-packages > read-yaml-file`, which parses
+    # only this repo's own workspace files.
+    - GHSA-52cp-r559-cp3m
+    # shell-quote <1.9.0 — quadratic parsing DoS. Reached via the betterauth
+    # quickstart's tooling, which quotes only locally constructed commands.
+    - GHSA-395f-4hp3-45gv
+    # protobufjs — prototype pollution during decoding. Reached via
+    # `posthog-js > @opentelemetry/exporter-logs-otlp-http` in the playground.
+    - GHSA-jfj6-75fj-8934
+    - GHSA-j3f2-48v5-ccww
+    # body-parser <1.20.6 — request parsing DoS. Reached via a nested Express in
+    # the betterauth quickstart server, which is an example, not a deployed service.
+    - GHSA-v422-hmwv-36x6
+    # hono <4.12.27 — routing and header handling issues. Reached via root
+    # devDependencies used by the quickstart backends only.
+    - GHSA-xgm2-5f3f-mvvc
+    - GHSA-hvrm-45r6-mjfj
+    - GHSA-w62v-xxxg-mg59
+    # @hono/node-server — request smuggling surface. Reached via
+    # `better-auth > prisma > @prisma/dev` in the betterauth quickstart.
+    - GHSA-frvp-7c67-39w9
+    - GHSA-9mqv-5hh9-4cgg
+    # linkify-it <5.0.2 — ReDoS on crafted link text. Reached via the
+    # playground's markdown rendering of repo-authored content.
+    - GHSA-v245-v573-v5vm
+    # dompurify <3.4.12 — sanitizer bypass. Reached via `posthog-js` in the
+    # playground; the playground does not render untrusted HTML.
+    - GHSA-c2j3-45gr-mqc4
+    # postcss <8.5.18 — source-map path traversal. Reached via `vite` in the
+    # playground at build time, over this repo's own stylesheets.
+    - GHSA-r28c-9q8g-f849
+    # valibot <1.4.2 — schema validation bypass. Reached via the betterauth
+    # quickstart server's transitive dependencies.
+    - GHSA-5qjj-4xww-7phc
+    # seroval <1.5.3 — deserialization type confusion. Reached via
+    # `@tanstack/react-router > @tanstack/router-core` in the playground, which
+    # deserializes only its own router state.
+    - GHSA-mv8w-475r-vwqw
+    # better-auth <1.6.22 — authentication bypass. Reached only by the
+    # betterauth quickstart, an example app with no production deployment.
+    - GHSA-qq9h-g4jm-xgf3

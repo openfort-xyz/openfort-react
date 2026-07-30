@@ -33,11 +33,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Security audit
-        # npm retired the audit endpoint this hits (HTTP 410), so `pnpm audit`
-        # now fails on every run regardless of dependencies. Keep the step for
-        # visibility but don't let the dead endpoint block CI.
-        run: pnpm audit
-        continue-on-error: true
+        # `--ignore-registry-errors` exits 0 when the registry itself is
+        # unreachable, so a registry outage cannot fail the build while a real
+        # advisory still can. Known-debt advisories are allowlisted with
+        # justifications under `auditConfig` in pnpm-workspace.yaml; anything
+        # outside that allowlist fails here.
+        run: pnpm audit --ignore-registry-errors
 
       - name: Code check (Biome)
         run: pnpm biome check
