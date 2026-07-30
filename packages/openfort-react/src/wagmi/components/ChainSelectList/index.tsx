@@ -3,13 +3,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useId, useState } from 'react'
 import { useAccount, useChainId } from 'wagmi'
-import ChainIcons from '../../../assets/chains'
-import Alert from '../../../components/Common/Alert'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
-import { chainConfigs } from '../../../constants/chainConfigs'
-import useLocales from '../../../hooks/useLocales'
-import { isCoinbaseWalletConnector, isMobile } from '../../../utils'
-import { useSwitchChainFiltered } from '../../useSwitchChainFiltered'
+import ChainIcons from '../../../assets/chains.js'
+import Alert from '../../../components/Common/Alert/index.js'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
+import { chainConfigs } from '../../../constants/chainConfigs.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { isCoinbaseWalletConnector, isMobile } from '../../../utils/index.js'
+import { useSwitchChainFiltered } from '../../useSwitchChainFiltered.js'
 import {
   ChainButton,
   ChainButtonBg,
@@ -20,7 +20,7 @@ import {
   ChainLogoContainer,
   ChainLogoSpinner,
   SwitchNetworksContainer,
-} from './styles'
+} from './styles.js'
 
 const Spinner = () => {
   const id = useId()

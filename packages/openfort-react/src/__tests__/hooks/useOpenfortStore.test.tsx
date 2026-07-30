@@ -3,7 +3,7 @@ import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
 import { createElement, type PropsWithChildren } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { StoreContext } from '../../openfort/context'
+import { StoreContext } from '../../openfort/context.js'
 import {
   selectActiveAddress,
   selectChainType,
@@ -12,10 +12,10 @@ import {
   selectIsLoading,
   selectUser,
   selectWalletStatus,
-} from '../../openfort/selectors'
-import { createOpenfortStore } from '../../openfort/store'
-import { useOpenfortStore } from '../../openfort/useOpenfortStore'
-import { createMockOpenfortClient } from '../mocks/openfortClient'
+} from '../../openfort/selectors.js'
+import { createOpenfortStore } from '../../openfort/store.js'
+import { useOpenfortStore } from '../../openfort/useOpenfortStore.js'
+import { createMockOpenfortClient } from '../mocks/openfortClient.js'
 
 function createStoreWrapper(overrides?: { chainType?: ChainTypeEnum }) {
   const store = createOpenfortStore(

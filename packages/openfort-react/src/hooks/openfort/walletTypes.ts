@@ -1,8 +1,8 @@
 import { type AccountTypeEnum, ChainTypeEnum, type EmbeddedAccount, type RecoveryMethod } from '@openfort/openfort-js'
 import type { Hex } from 'viem'
-import type { ConnectedEmbeddedEthereumWallet } from '../../ethereum/types'
-import type { ConnectedEmbeddedSolanaWallet } from '../../solana/types'
-import type { BaseFlowState } from './auth/status'
+import type { ConnectedEmbeddedEthereumWallet } from '../../ethereum/types.js'
+import type { ConnectedEmbeddedSolanaWallet } from '../../solana/types.js'
+import type { BaseFlowState } from './auth/status.js'
 
 export type EthereumUserWallet = ConnectedEmbeddedEthereumWallet
 

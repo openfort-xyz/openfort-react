@@ -8,8 +8,8 @@
  */
 
 import { createContext, type ReactNode, useContext, useMemo } from 'react'
-import { OpenfortError, OpenfortReactErrorType } from '../core/errors'
-import type { SolanaCluster, SolanaCommitment, SolanaConfig } from './types'
+import { OpenfortError, OpenfortReactErrorType } from '../core/errors.js'
+import type { SolanaCluster, SolanaCommitment, SolanaConfig } from './types.js'
 
 /**
  * Solana context value with resolved configuration

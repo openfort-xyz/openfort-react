@@ -1,8 +1,8 @@
 import { EmbeddedState } from '@openfort/openfort-js'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
-import { createMockOpenfortClient } from '../mocks/openfortClient'
-import { createTestWrapper } from '../mocks/TestWrapper'
+import { createMockOpenfortClient } from '../mocks/openfortClient.js'
+import { createTestWrapper } from '../mocks/TestWrapper.js'
 
 // Mock the wallet hooks that useUser depends on
 vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
@@ -13,7 +13,7 @@ vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
 }))
 
 // Must import after mocks are set up
-const { useUser } = await import('../../hooks/openfort/useUser')
+const { useUser } = await import('../../hooks/openfort/useUser.js')
 
 describe('useUser', () => {
   it('returns isAuthenticated=false when state is NONE', () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { curateChains, type FundingChain } from '../hooks/openfort/useFundingChains'
+import { curateChains, type FundingChain } from '../hooks/openfort/useFundingChains.js'
 
 const cur = (symbol: string, native = false) => ({ symbol, address: `0x${symbol}`, decimals: 6, logo: null, native })
 const chains: FundingChain[] = [

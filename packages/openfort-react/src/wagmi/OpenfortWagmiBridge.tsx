@@ -24,8 +24,8 @@ import {
   type OpenfortEthereumBridgeConnector,
   OpenfortEthereumBridgeContext,
   type OpenfortEthereumBridgeValue,
-} from '../ethereum/OpenfortEthereumBridgeContext'
-import { shouldExcludeConnector } from './connectorFilter'
+} from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { shouldExcludeConnector } from './connectorFilter.js'
 
 function mapConnector(c: {
   id: string

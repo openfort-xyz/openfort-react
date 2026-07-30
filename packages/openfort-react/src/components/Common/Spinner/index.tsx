@@ -1,4 +1,4 @@
-import { SpinnerContainer } from './styles'
+import { SpinnerContainer } from './styles.js'
 
 const transition = {
   duration: 0.4,

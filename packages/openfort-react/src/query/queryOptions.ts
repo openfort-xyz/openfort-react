@@ -1,6 +1,6 @@
 import type { Openfort } from '@openfort/openfort-js'
 import type { queryOptions } from '@tanstack/react-query'
-import { openfortKeys } from './queryKeys'
+import { openfortKeys } from './queryKeys.js'
 
 /**
  * Query options factory for fetching the current user.

@@ -1,7 +1,7 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { routes } from '../../components/Openfort/types'
+import { routes } from '../../components/Openfort/types.js'
 
 /**
  * Watchdog test: the LOADING page must not spin forever. When no state
@@ -46,7 +46,7 @@ vi.mock('../../components/Common/FitText', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
 
-const { default: Loading } = await import('../../components/Pages/Loading')
+const { default: Loading } = await import('../../components/Pages/Loading/index.js')
 
 describe('Loading page watchdog', () => {
   beforeEach(() => {

@@ -1,15 +1,15 @@
 'use client'
 
 import { useCallback, useMemo, useState } from 'react'
-import { embeddedWalletId } from '../constants/openfort'
-import { OpenfortError, OpenfortReactErrorType } from '../core/errors'
-import { type OpenfortEthereumBridgeConnector, useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext'
-import { type BaseFlowState, mapStatus } from '../hooks/openfort/auth/status'
-import { onError, onSuccess } from '../hooks/openfort/hookConsistency'
-import { useOpenfortCore } from '../openfort/useOpenfort'
-import { createSIWEMessage } from '../siwe/create-siwe-message'
-import type { OpenfortHookOptions } from '../types'
-import { logger } from '../utils/logger'
+import { embeddedWalletId } from '../constants/openfort.js'
+import { OpenfortError, OpenfortReactErrorType } from '../core/errors.js'
+import { type OpenfortEthereumBridgeConnector, useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { type BaseFlowState, mapStatus } from '../hooks/openfort/auth/status.js'
+import { onError, onSuccess } from '../hooks/openfort/hookConsistency.js'
+import { useOpenfortCore } from '../openfort/useOpenfort.js'
+import { createSIWEMessage } from '../siwe/create-siwe-message.js'
+import type { OpenfortHookOptions } from '../types.js'
+import { logger } from '../utils/logger.js'
 
 export interface AvailableWallet {
   id: string

@@ -1,5 +1,5 @@
-import styled from '../../../styles/styled'
-import { PageContent } from '../../PageContent'
+import styled from '../../../styles/styled/index.js'
+import { PageContent } from '../../PageContent/index.js'
 
 export const ProviderSelectContent = styled(PageContent)`
   display: flex;

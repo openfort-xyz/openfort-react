@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import Logos from '../assets/chains'
+import Logos from '../assets/chains.js'
 
 type Chain = {
   id: number

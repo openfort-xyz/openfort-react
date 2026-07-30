@@ -5,21 +5,21 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTransition } from 'react-transition-state'
 import ResizeObserver from 'resize-observer-polyfill'
-import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import FocusTrap from '../../../hooks/useFocusTrap'
-import useLocales from '../../../hooks/useLocales'
-import useLockBodyScroll from '../../../hooks/useLockBodyScroll'
-import usePrevious from '../../../hooks/usePrevious'
-import { ResetContainer } from '../../../styles'
-import type { CustomTheme } from '../../../types'
-import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../utils'
-import { useExternalConnector } from '../../../wallets/useExternalConnectors'
-import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import FitText from '../FitText'
-import Portal from '../Portal'
+import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import FocusTrap from '../../../hooks/useFocusTrap.js'
+import useLocales from '../../../hooks/useLocales.js'
+import useLockBodyScroll from '../../../hooks/useLockBodyScroll.js'
+import usePrevious from '../../../hooks/usePrevious.js'
+import { ResetContainer } from '../../../styles/index.js'
+import type { CustomTheme } from '../../../types.js'
+import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../utils/index.js'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
+import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import FitText from '../FitText/index.js'
+import Portal from '../Portal/index.js'
 import {
   BackButton,
   BackgroundOverlay,
@@ -34,7 +34,7 @@ import {
   PageContainer,
   PageContents,
   TextWithHr,
-} from './styles'
+} from './styles.js'
 
 const InfoIcon = ({ ...props }) => (
   <svg

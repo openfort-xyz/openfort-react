@@ -1,13 +1,13 @@
 'use client'
 
-import type { PaymentMethod, SessionStatus } from '../../../hooks/openfort/fundingClient'
-import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton'
-import CustomQRCode from '../../Common/CustomQRCode'
-import { AssetChainLogo } from './AssetChainLogo'
-import { DepositStatus } from './DepositStatus'
-import { DepositDetails } from './Details'
-import { addressBox, codeStyle, depositAddressLabel } from './formStyles'
-import { QRWrapper, Skeleton } from './styles'
+import type { PaymentMethod, SessionStatus } from '../../../hooks/openfort/fundingClient.js'
+import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton.js'
+import CustomQRCode from '../../Common/CustomQRCode/index.js'
+import { AssetChainLogo } from './AssetChainLogo.js'
+import { DepositStatus } from './DepositStatus.js'
+import { DepositDetails } from './Details.js'
+import { addressBox, codeStyle, depositAddressLabel } from './formStyles.js'
+import { QRWrapper, Skeleton } from './styles.js'
 
 type DepositAddressBlockProps = {
   /** Logo URLs for the QR badge (token over chain). */

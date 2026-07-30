@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 

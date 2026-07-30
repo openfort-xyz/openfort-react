@@ -1,7 +1,7 @@
 import { RecoveryMethod, type RecoveryParams } from '@openfort/openfort-js'
-import type { BuildRecoveryParamsConfig } from '../../shared/utils/recovery'
-import { buildRecoveryParams } from '../../shared/utils/recovery'
-import type { SetActiveSolanaWalletOptions } from '../types'
+import type { BuildRecoveryParamsConfig } from '../../shared/utils/recovery.js'
+import { buildRecoveryParams } from '../../shared/utils/recovery.js'
+import type { SetActiveSolanaWalletOptions } from '../types.js'
 
 type ResolveRecoveryResult = { needsRecovery: true } | { needsRecovery: false; recoveryParams: RecoveryParams }
 

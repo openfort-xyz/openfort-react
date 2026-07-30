@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import { hexToP3 } from '../utils/p3'
-import type { CustomTheme } from './customTheme'
-import styled from './styled'
-import predefinedThemes from './themes'
+import { hexToP3 } from '../utils/p3.js'
+import type { CustomTheme } from './customTheme.js'
+import styled from './styled/index.js'
+import predefinedThemes from './themes/index.js'
 
 /** A map of CSS custom property names to values. Falsy entries are skipped. */
 type ThemeScheme = Record<string, string | number | undefined>

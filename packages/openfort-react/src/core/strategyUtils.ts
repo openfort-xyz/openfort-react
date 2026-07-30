@@ -1,6 +1,6 @@
 import type { ChainTypeEnum, EmbeddedAccount } from '@openfort/openfort-js'
 import { RecoveryMethod } from '@openfort/openfort-js'
-import type { OpenfortWalletConfig } from '../components/Openfort/types'
+import type { OpenfortWalletConfig } from '../components/Openfort/types.js'
 
 export function firstEmbeddedAddress(
   accounts: EmbeddedAccount[] | undefined,

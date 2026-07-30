@@ -1,11 +1,11 @@
-import { BuyIcon, DollarIcon } from '../../../assets/icons'
-import Button from '../../Common/Button'
-import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
-import { FloatingGraphic } from '../../FloatingGraphic'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ButtonsContainer } from './styles'
+import { BuyIcon, DollarIcon } from '../../../assets/icons.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
+import { FloatingGraphic } from '../../FloatingGraphic/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ButtonsContainer } from './styles.js'
 
 const NoAssetsAvailable = () => {
   const { setRoute } = useOpenfort()

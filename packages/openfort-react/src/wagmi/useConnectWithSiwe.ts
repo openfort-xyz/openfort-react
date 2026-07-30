@@ -2,10 +2,10 @@
 
 import { OpenfortError } from '@openfort/openfort-js'
 import { useCallback, useRef } from 'react'
-import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext'
-import { useOpenfortCore } from '../openfort/useOpenfort'
-import { createSIWEMessage } from '../siwe/create-siwe-message'
-import { logger } from '../utils/logger'
+import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { useOpenfortCore } from '../openfort/useOpenfort.js'
+import { createSIWEMessage } from '../siwe/create-siwe-message.js'
+import { logger } from '../utils/logger.js'
 
 /**
  * Returns connectWithSiwe for linking external wallets via SIWE.

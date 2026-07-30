@@ -1,5 +1,5 @@
-import styled from '../../../styles/styled'
-import { ButtonContainer } from '../../Common/Button/styles'
+import styled from '../../../styles/styled/index.js'
+import { ButtonContainer } from '../../Common/Button/styles.js'
 
 export const Section = styled.div`
   display: flex;

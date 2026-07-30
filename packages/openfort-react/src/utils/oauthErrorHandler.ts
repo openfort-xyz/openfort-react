@@ -2,7 +2,7 @@
  * Utility to handle and provide better error messages for OAuth configuration errors
  */
 
-import { logger } from './logger'
+import { logger } from './logger.js'
 
 export function handleOAuthConfigError(error: unknown): void {
   const message =

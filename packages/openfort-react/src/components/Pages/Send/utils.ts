@@ -1,5 +1,5 @@
 import { formatUnits } from 'viem'
-import type { Asset } from '../../Openfort/types'
+import type { Asset } from '../../Openfort/types.js'
 
 export function sanitizeAmountInput(value: string): string {
   const normalized = value.replace(/,/g, '.')

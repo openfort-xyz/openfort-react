@@ -4,11 +4,11 @@ import type { ReactNode } from 'react'
 import type { CountryData, CountryIso2, CountrySelectorProps } from 'react-international-phone'
 import type { Hex } from 'viem'
 import type { getAssets } from 'viem/experimental/erc7811'
-import type { EthereumConfig } from '../../ethereum/types'
-import type { EthereumUserWallet, SolanaUserWallet } from '../../hooks/openfort/walletTypes'
-import type { SolanaConfig } from '../../solana/types'
+import type { EthereumConfig } from '../../ethereum/types.js'
+import type { EthereumUserWallet, SolanaUserWallet } from '../../hooks/openfort/walletTypes.js'
+import type { SolanaConfig } from '../../solana/types.js'
 
-import type { CustomAvatarProps, CustomTheme, Languages, Mode, Theme } from '../../types'
+import type { CustomAvatarProps, CustomTheme, Languages, Mode, Theme } from '../../types.js'
 
 export const routes = {
   PROVIDERS: 'providers',

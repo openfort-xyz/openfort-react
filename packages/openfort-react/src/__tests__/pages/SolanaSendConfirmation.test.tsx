@@ -9,7 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  *    amount is scaled to base units by the token's decimals.
  */
 
-import type { Asset } from '../../components/Openfort/types'
+import type { Asset } from '../../components/Openfort/types.js'
 
 const FROM = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'
 const RECIPIENT = '9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde'
@@ -66,7 +66,7 @@ vi.mock('../../solana/transfer', () => ({
   sendSplTokenGasless: h.sendSplTokenGasless,
 }))
 
-const { SolanaSendConfirmation } = await import('../../components/Pages/SendConfirmation/SolanaSendConfirmation')
+const { SolanaSendConfirmation } = await import('../../components/Pages/SendConfirmation/SolanaSendConfirmation.js')
 
 describe('SolanaSendConfirmation', () => {
   beforeEach(() => {

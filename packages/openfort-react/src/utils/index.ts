@@ -1,7 +1,7 @@
 import { detect } from 'detect-browser'
 import React from 'react'
-import { formatWithDynamicDecimals } from '../components/Pages/Buy/utils'
-import { truncateEthAddress, truncateSolanaAddress } from './format'
+import { formatWithDynamicDecimals } from '../components/Pages/Buy/utils.js'
+import { truncateEthAddress, truncateSolanaAddress } from './format.js'
 
 const nFormatter = (num: number, digits: number = 2) => {
   // Handle zero case

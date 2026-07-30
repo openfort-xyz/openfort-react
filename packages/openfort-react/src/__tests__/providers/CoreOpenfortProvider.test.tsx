@@ -3,8 +3,8 @@ import { act, render } from '@testing-library/react'
 import { createElement, useContext } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { useStore } from 'zustand'
-import { StoreContext } from '../../openfort/context'
-import { createMockOpenfortClient, type MockOpenfortClient } from '../mocks/openfortClient'
+import { StoreContext } from '../../openfort/context.js'
+import { createMockOpenfortClient, type MockOpenfortClient } from '../mocks/openfortClient.js'
 
 let mockClient: MockOpenfortClient
 
@@ -36,7 +36,7 @@ vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({
   OpenfortEthereumBridgeContext: { Provider: ({ children }: any) => children },
 }))
 
-const { CoreOpenfortProvider } = await import('../../openfort/CoreOpenfortProvider')
+const { CoreOpenfortProvider } = await import('../../openfort/CoreOpenfortProvider.js')
 
 function StoreReaderInner({ store, onValue }: { store: any; onValue: (v: any) => void }) {
   const state = useStore(store)

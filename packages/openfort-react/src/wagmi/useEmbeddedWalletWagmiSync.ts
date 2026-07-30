@@ -2,10 +2,10 @@
 
 import { useEffect, useRef } from 'react'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
-import { embeddedWalletId } from '../constants/openfort'
-import { useEthereumEmbeddedWallet } from '../ethereum/hooks/useEthereumEmbeddedWallet'
-import { logger } from '../utils/logger'
-import { setEmbeddedWalletProvider } from './embeddedConnector'
+import { embeddedWalletId } from '../constants/openfort.js'
+import { useEthereumEmbeddedWallet } from '../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { logger } from '../utils/logger.js'
+import { setEmbeddedWalletProvider } from './embeddedConnector.js'
 
 /** Null component — rendered inside CoreOpenfortProvider + WagmiProvider to sync embedded wallet into wagmi. */
 export function EmbeddedWalletWagmiSync(): null {

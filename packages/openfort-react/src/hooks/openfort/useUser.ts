@@ -2,8 +2,8 @@
 
 import { EmbeddedState } from '@openfort/openfort-js'
 import { useCallback } from 'react'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { handleOAuthConfigError } from '../../utils/oauthErrorHandler'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { handleOAuthConfigError } from '../../utils/oauthErrorHandler.js'
 
 /**
  * Returns the current user, linked accounts, auth state, and token helpers.

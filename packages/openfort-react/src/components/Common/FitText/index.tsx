@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback } from 'react'
-import useFitText from '../../../hooks/useFitText'
+import useFitText from '../../../hooks/useFitText.js'
 
 const FitText = ({
   children,

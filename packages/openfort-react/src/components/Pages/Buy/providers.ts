@@ -1,4 +1,4 @@
-import type { BuyProviderId } from '../../Openfort/types'
+import type { BuyProviderId } from '../../Openfort/types.js'
 
 type ProviderDefinition = {
   id: BuyProviderId

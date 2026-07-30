@@ -2,8 +2,8 @@
 
 import type React from 'react'
 import { useEffect, useRef } from 'react'
-import useIsMobile from '../../../hooks/useIsMobile'
-import { MoreIndicator, ScrollAreaContainer, ScrollContainer } from './styles'
+import useIsMobile from '../../../hooks/useIsMobile.js'
+import { MoreIndicator, ScrollAreaContainer, ScrollContainer } from './styles.js'
 
 const ArrowDown = () => (
   <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">

@@ -1,7 +1,7 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { fireEvent, render, renderHook, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { routes } from '../../components/Openfort/types'
+import { routes } from '../../components/Openfort/types.js'
 
 /**
  * When no WalletConnect projectId is configured (missing env variable),
@@ -36,9 +36,9 @@ vi.mock('../../components/Common/FitText', () => ({
 }))
 
 const { default: WalletConnectNotConfigured, useHasWalletConnect } = await import(
-  '../../components/Common/WalletConnectNotConfigured'
+  '../../components/Common/WalletConnectNotConfigured/index.js'
 )
-const { default: MobileConnectors } = await import('../../components/Pages/MobileConnectors')
+const { default: MobileConnectors } = await import('../../components/Pages/MobileConnectors/index.js')
 
 describe('useHasWalletConnect', () => {
   it('is false without a bridge (embedded-only)', () => {

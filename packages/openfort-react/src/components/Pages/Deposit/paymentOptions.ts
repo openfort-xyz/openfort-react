@@ -1,4 +1,4 @@
-import { type BuyProviderId, FundingMethod } from '../../Openfort/types'
+import { type BuyProviderId, FundingMethod } from '../../Openfort/types.js'
 
 /**
  * What a row routes into:

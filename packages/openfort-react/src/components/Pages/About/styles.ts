@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import defaultTheme from '../../../constants/defaultTheme'
-import styled from '../../../styles/styled'
+import defaultTheme from '../../../constants/defaultTheme.js'
+import styled from '../../../styles/styled/index.js'
 
 const imageHeight = 208
 

@@ -1,8 +1,8 @@
 import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
-import type { OTPResponse } from '../../../shared/hooks/useRecoveryOTP'
-import type { RecoverableWallet } from '../../../shared/types'
-import { handleOtpRecoveryError } from '../../../shared/utils/otpError'
-import { routes, type SetRouteOptions } from '../../Openfort/types'
+import type { OTPResponse } from '../../../shared/hooks/useRecoveryOTP.js'
+import type { RecoverableWallet } from '../../../shared/types.js'
+import { handleOtpRecoveryError } from '../../../shared/utils/otpError.js'
+import { routes, type SetRouteOptions } from '../../Openfort/types.js'
 
 type RecoveryContext = {
   setActive: (opts: {

@@ -3,36 +3,44 @@
 import type { ChangeEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
-import logos from '../../../assets/logos'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import useIsMobile from '../../../hooks/useIsMobile'
-import styled from '../../../styles/styled'
-import { isIOS } from '../../../utils'
-import { TextLinkButton } from '../../Common/Button/styles'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { ScrollArea } from '../../Common/ScrollArea'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
-import { AddressPageLink } from '../Deposit/AddressPageLink'
-import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
-import { walletListBtn } from '../Deposit/formStyles'
-import { RouteSelectors } from '../Deposit/RouteSelectors'
-import { isSolana } from '../Deposit/sources'
-import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles'
-import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
-import { useDepositRoute } from '../Deposit/useDepositRoute'
-import { sanitizeAmountInput } from '../Send/utils'
-import { DepositWalletDesktop } from './DepositWalletDesktop'
+import logos from '../../../assets/logos.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import useIsMobile from '../../../hooks/useIsMobile.js'
+import styled from '../../../styles/styled/index.js'
+import { isIOS } from '../../../utils/index.js'
+import { TextLinkButton } from '../../Common/Button/styles.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { ScrollArea } from '../../Common/ScrollArea/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import {
+  AmountCard,
+  AmountInput,
+  CurrencySymbol,
+  PresetButton,
+  PresetList,
+  Section,
+  SectionLabel,
+} from '../Buy/styles.js'
+import { AddressPageLink } from '../Deposit/AddressPageLink.js'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress.js'
+import { walletListBtn } from '../Deposit/formStyles.js'
+import { RouteSelectors } from '../Deposit/RouteSelectors.js'
+import { isSolana } from '../Deposit/sources.js'
+import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles.js'
+import { TestnetNotice } from '../Deposit/TestnetNotice.js'
+import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice.js'
+import { useDepositRoute } from '../Deposit/useDepositRoute.js'
+import { sanitizeAmountInput } from '../Send/utils.js'
+import { DepositWalletDesktop } from './DepositWalletDesktop.js'
 import {
   buildDepositPageUrl,
   buildOpenDappLinks,
   caipToChainId,
   OPENFORT_DEPOSIT_PAGE_URL,
   type VmType,
-} from './walletDeeplinks'
+} from './walletDeeplinks.js'
 
 // Flex column capped at the modal viewport so the page never overflows
 // InnerContainer (which caps at 88vh and would otherwise scroll the footer off

@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import Logos from '../assets/logos'
+import Logos from '../assets/logos.js'
 
-import { useOpenfort } from '../components/Openfort/useOpenfort'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
 
-import { getLocale } from './../localizations'
-import type { LocaleProps } from '../localizations/locales'
-import { logger } from '../utils/logger'
+import { getLocale } from './../localizations/index.js'
+import type { LocaleProps } from '../localizations/locales/index.js'
+import { logger } from '../utils/logger.js'
 
 export default function useLocales(replacements?: Record<string, string>): LocaleProps {
   const context = useOpenfort()

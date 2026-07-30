@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
-import styled from '../../../styles/styled'
-import type { TooltipSizeProps } from './types'
+import styled from '../../../styles/styled/index.js'
+import type { TooltipSizeProps } from './types.js'
 
 export const TooltipWindow = styled(motion.div)`
   z-index: 2147483647;

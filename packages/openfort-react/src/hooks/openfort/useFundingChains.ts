@@ -2,8 +2,8 @@
 
 import { SDKConfiguration } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { getPublishableKeyEnvironment } from '../../utils/validation'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { getPublishableKeyEnvironment } from '../../utils/validation.js'
 
 /** A source currency available on a chain (sourced live from Relay via the backend). */
 export type FundingCurrency = {

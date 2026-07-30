@@ -3,28 +3,28 @@
 import { ChainTypeEnum, type EmbeddedAccount, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { baseSepolia } from 'viem/chains'
-import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort'
-import { DEFAULT_ACCOUNT_TYPE } from '../../constants/openfort'
-import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { DEFAULT_ACCOUNT_TYPE } from '../../constants/openfort.js'
+import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import type {
   CreateEmbeddedWalletOptions,
   ImportEmbeddedWalletOptions,
   SetRecoveryOptions,
   WalletStatus,
-} from '../../shared/types'
-import { buildEmbeddedWalletStatusResult } from '../../shared/utils/embeddedWalletStatusMapper'
-import { buildRecoveryParams } from '../../shared/utils/recovery'
-import { toConnectedStateProperties } from '../../shared/utils/walletStatusProps'
-import { formatAddress } from '../../utils/format'
+} from '../../shared/types.js'
+import { buildEmbeddedWalletStatusResult } from '../../shared/utils/embeddedWalletStatusMapper.js'
+import { buildRecoveryParams } from '../../shared/utils/recovery.js'
+import { toConnectedStateProperties } from '../../shared/utils/walletStatusProps.js'
+import { formatAddress } from '../../utils/format.js'
 import type {
   ConnectedEmbeddedEthereumWallet,
   EthereumWalletState,
   OpenfortEmbeddedEthereumWalletProvider,
   SetActiveEthereumWalletOptions,
   UseEmbeddedEthereumWalletOptions,
-} from '../types'
+} from '../types.js'
 
 type InternalState = {
   status: WalletStatus

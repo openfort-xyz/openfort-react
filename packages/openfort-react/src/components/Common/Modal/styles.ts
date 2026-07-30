@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { keyframes } from 'styled-components'
-import defaultTheme from '../../../constants/defaultTheme'
-import styled from '../../../styles/styled'
-import { PageContentStyle } from '../../PageContent/styles'
+import defaultTheme from '../../../constants/defaultTheme.js'
+import styled from '../../../styles/styled/index.js'
+import { PageContentStyle } from '../../PageContent/styles.js'
 
 const FadeIn = keyframes`
 from { opacity: 0; }
