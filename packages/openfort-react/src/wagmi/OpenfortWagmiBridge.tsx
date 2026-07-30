@@ -207,6 +207,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       bridgeConnectors,
       chains,
       switchChain,
+      switchChainAsync,
       isSwitchChainPending,
       switchChainError,
       ensName,
