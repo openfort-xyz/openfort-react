@@ -60,3 +60,6 @@ jobs:
         # excluded until the emitted specifiers carry extensions.
         run: pnpm test:build
 
+      - name: Check bundle-size budgets
+        run: pnpm size
+
