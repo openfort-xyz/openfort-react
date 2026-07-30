@@ -20,9 +20,8 @@ export type WalletConfigProps = {
   iconShouldShrink?: boolean
   // Links to download the wallet
   downloadUrls?: {
-    // Download redirect, hosted by Family.co
-    // This URL redirects to the correct download URL based on the user's device
-    // Note: this will eventually be automated by the below data
+    // Wallet's own download page, shown as a QR code so the user can open it on
+    // the device they want to install on
     download?: string
     // wallet's website
     website?: string
@@ -53,7 +52,6 @@ export const walletConfigs: {
     name: 'Argent',
     icon: <Logos.Argent />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/argent',
       android: 'https://play.google.com/store/apps/details?id=im.argent.contractwalletclient',
       ios: 'https://apps.apple.com/app/argent/id1358741926',
     },
@@ -67,7 +65,7 @@ export const walletConfigs: {
     icon: <Logos.Coinbase background />,
     iconShape: 'squircle',
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/coinbasewallet',
+      download: 'https://www.coinbase.com/wallet/downloads',
       website: 'https://www.coinbase.com/wallet/getting-started-extension',
       android: 'https://play.google.com/store/apps/details?id=org.toshi',
       ios: 'https://apps.apple.com/app/coinbase-wallet-store-crypto/id1278383455',
@@ -83,7 +81,7 @@ export const walletConfigs: {
     icon: <Logos.Coinbase background />,
     iconShape: 'circle',
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/coinbasewallet',
+      download: 'https://www.coinbase.com/wallet/downloads',
       website: 'https://www.coinbase.com/wallet/getting-started-extension',
       android: 'https://play.google.com/store/apps/details?id=org.toshi',
       ios: 'https://apps.apple.com/app/coinbase-wallet-store-crypto/id1278383455',
@@ -112,7 +110,7 @@ export const walletConfigs: {
     icon: <Logos.Family />,
     iconShape: 'squircle',
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/family',
+      download: 'https://family.co/download',
       website: 'https://family.co',
       ios: 'https://family.co/download',
     },
@@ -132,7 +130,7 @@ export const walletConfigs: {
     icon: <Logos.Frame />,
     iconShouldShrink: true,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/frame',
+      download: 'https://frame.sh',
       website: 'https://frame.sh',
       chrome: 'https://chrome.google.com/webstore/detail/frame-companion/ldcoohedfbjoobcadoglnnmmfbdlmmhf',
       firefox: 'https://addons.mozilla.org/en-US/firefox/addon/frame-extension',
@@ -145,7 +143,7 @@ export const walletConfigs: {
     shortName: 'Frontier',
     icon: <Logos.Frontier />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/frontier',
+      download: 'https://frontier.xyz/download',
       ios: 'https://apps.apple.com/app/frontier-crypto-defi-wallet/id1482380988',
       android: 'https://play.google.com/store/apps/details?id=com.frontierwallet',
       website: 'https://frontier.xyz/',
@@ -166,7 +164,7 @@ export const walletConfigs: {
     iconConnector: <Logos.MetaMask />,
     iconShouldShrink: true,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/metamask',
+      download: 'https://metamask.io/download',
       website: 'https://metamask.io/download/',
       android: 'https://play.google.com/store/apps/details?id=io.metamask',
       ios: 'https://apps.apple.com/app/metamask/id1438144202',
@@ -189,17 +187,16 @@ export const walletConfigs: {
     icon: <Logos.Rainbow />,
     iconShape: 'squircle',
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/rainbow',
-      website: 'https://rainbow.me/?utm_source=connectkit',
-      android:
-        'https://play.google.com/store/apps/details?id=me.rainbow&referrer=utm_source%3Dconnectkit&utm_source=connectkit',
-      ios: 'https://apps.apple.com/app/rainbow-ethereum-wallet/id1457119021?pt=119997837&ct=connectkit&mt=8',
-      chrome: 'https://rainbow.me/extension?utm_source=connectkit',
-      edge: 'https://rainbow.me/extension?utm_source=connectkit',
-      brave: 'https://rainbow.me/extension?utm_source=connectkit',
+      download: 'https://rainbow.me/download',
+      website: 'https://rainbow.me',
+      android: 'https://play.google.com/store/apps/details?id=me.rainbow',
+      ios: 'https://apps.apple.com/app/rainbow-ethereum-wallet/id1457119021',
+      chrome: 'https://rainbow.me/extension',
+      edge: 'https://rainbow.me/extension',
+      brave: 'https://rainbow.me/extension',
     },
     getWalletConnectDeeplink: (uri: string) => {
-      return `https://rnbwapp.com/wc?uri=${encodeURIComponent(uri)}&connector=connectkit`
+      return `https://rnbwapp.com/wc?uri=${encodeURIComponent(uri)}`
     },
   },
   'io.rabby': {
@@ -214,7 +211,7 @@ export const walletConfigs: {
     name: 'Safe',
     icon: <Logos.Safe />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/safe',
+      download: 'https://safe.global/wallet',
       website: 'https://safe.global/',
       ios: 'https://apps.apple.com/app/id1515759131',
       android: 'https://play.google.com/store/apps/details?id=io.gnosis.safe',
@@ -240,7 +237,7 @@ export const walletConfigs: {
     icon: <Logos.Trust />,
     iconShouldShrink: true,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/trust',
+      download: 'https://trustwallet.com/download',
       android: 'https://play.google.com/store/apps/details?id=com.wallet.crypto.trustapp',
       ios: 'https://apps.apple.com/app/trust-crypto-bitcoin-wallet/id1288339409',
     },
@@ -252,7 +249,7 @@ export const walletConfigs: {
     name: 'Infinity Wallet',
     icon: <Logos.InfinityWallet />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/infinityWallet',
+      download: 'https://infinitywallet.io/download',
       website: 'https://infinitywallet.io/download',
       chrome: 'https://infinitywallet.io/download',
       firefox: 'https://infinitywallet.io/download',
@@ -264,8 +261,8 @@ export const walletConfigs: {
     name: 'imToken',
     icon: <Logos.ImToken />,
     downloadUrls: {
-      //website: 'https://support.token.im/hc/en-us/categories/360000925393',
-      download: 'https://connect.family.co/v0/download/imToken',
+      download: 'https://token.im/download',
+      website: 'https://token.im',
       android: 'https://play.google.com/store/apps/details?id=im.token.app',
       ios: 'https://itunes.apple.com/us/app/imtoken2/id1384798940',
     },
@@ -277,7 +274,7 @@ export const walletConfigs: {
     name: 'Unstoppable',
     icon: <Logos.Unstoppable />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/unstoppable',
+      download: 'https://unstoppable.money/',
       ios: 'https://apps.apple.com/app/bank-bitcoin-wallet/id1447619907',
       android: 'https://play.google.com/store/apps/details?id=io.horizontalsystems.bankwallet',
     },
@@ -289,7 +286,7 @@ export const walletConfigs: {
     name: 'ONTO',
     icon: <Logos.ONTO />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/onto',
+      download: 'https://onto.app/en/download/',
       ios: 'https://apps.apple.com/app/onto-an-ontology-dapp/id1436009823',
       android: 'https://play.google.com/store/apps/details?id=com.github.ontio.onto',
       website: 'https://onto.app/en/download/',
@@ -302,7 +299,7 @@ export const walletConfigs: {
     name: 'Steak',
     icon: <Logos.Steak />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/steak',
+      download: 'https://steakwallet.fi/download',
       android: 'https://play.google.com/store/apps/details?id=fi.steakwallet.app',
       ios: 'https://apps.apple.com/app/steakwallet/id1569375204',
       website: 'https://steakwallet.fi/download',
@@ -316,8 +313,8 @@ export const walletConfigs: {
     shortName: 'Ledger',
     icon: <Logos.Ledger />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/ledger',
-      website: 'https://www.ledger.com/ledger-live/download#download-device-2',
+      download: 'https://www.ledger.com/ledger-live/download',
+      website: 'https://www.ledger.com/ledger-live/download',
       android: 'https://play.google.com/store/apps/details?id=com.ledger.live',
       ios: 'https://apps.apple.com/app/ledger-live-web3-wallet/id1361671700',
     },
@@ -330,7 +327,7 @@ export const walletConfigs: {
     name: 'Zerion',
     icon: <Logos.Zerion />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/zerion',
+      download: 'https://zerion.io/download',
       ios: 'https://apps.apple.com/app/apple-store/id1456732565',
       android: 'https://play.google.com/store/apps/details?id=io.zerion.android',
       website: 'https://zerion.io/',
@@ -343,7 +340,7 @@ export const walletConfigs: {
     name: 'Slope',
     icon: <Logos.Slope />,
     downloadUrls: {
-      download: 'https://connect.family.co/v0/download/slope',
+      download: 'https://slope.finance/',
       ios: 'https://apps.apple.com/app/slope-wallet/id1574624530',
       android: 'https://play.google.com/store/apps/details?id=com.wd.wallet',
       chrome: 'https://chrome.google.com/webstore/detail/slope-wallet/pocmplpaccanhmnllbbkpgfliimjljgo',
