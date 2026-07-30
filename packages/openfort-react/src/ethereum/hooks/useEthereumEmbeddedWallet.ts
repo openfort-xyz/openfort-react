@@ -113,14 +113,22 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
   ethereumAccountsRef.current = ethereumAccounts
 
   const getEmbeddedEthereumProvider = useCallback(async (): Promise<OpenfortEmbeddedEthereumWalletProvider> => {
-    const provider = await client.embeddedWallet.getEthereumProvider()
+    // The SDK memoizes the provider on its first caller, so the configured RPC
+    // endpoints have to be passed here too. EthereumEmbeddedStrategy.initProvider
+    // is the only other caller that passes them, and it is gated on
+    // EmbeddedState.READY — which a wallet still being created has not reached.
+    // So create() gets here first and would otherwise pin the whole session to
+    // the SDK's public default endpoints.
+    const provider = await client.embeddedWallet.getEthereumProvider({
+      chains: walletConfig?.ethereum?.rpcUrls,
+    })
     // Ensure the current account is authorized on the provider.
     // Without this, signing after password recovery can fail with
     // "Unauthorized - call eth_requestAccounts first" because the provider
     // was obtained before initProvider ran with proper config.
     await provider.request({ method: 'eth_requestAccounts' })
     return provider as OpenfortEmbeddedEthereumWalletProvider
-  }, [client])
+  }, [client, walletConfig?.ethereum?.rpcUrls])
 
   const wallets = useMemo<ConnectedEmbeddedEthereumWallet[]>(() => {
     const uniqueAddresses = new Map<string, EmbeddedAccount>()
