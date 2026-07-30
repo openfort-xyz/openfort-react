@@ -1,3 +1,5 @@
+'use client'
+
 import { embeddedWalletId } from '../../../constants/openfort.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
 import { useFamilyAccountsConnector, useFamilyConnector } from '../../../hooks/useConnectors.js'

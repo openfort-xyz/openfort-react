@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import type { ComponentProps } from 'react'
 import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard.js'

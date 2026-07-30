@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import { useProviders } from '../../../hooks/openfort/useProviders.js'
 import { ModalHeading } from '../../Common/Modal/styles.js'

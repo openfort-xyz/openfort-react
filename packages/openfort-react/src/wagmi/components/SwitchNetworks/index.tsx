@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import { useChainId } from 'wagmi'
 import { DisconnectIcon } from '../../../assets/icons.js'
