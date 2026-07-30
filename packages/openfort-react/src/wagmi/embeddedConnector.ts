@@ -1,5 +1,7 @@
 import { type CreateConnectorFn, createConnector } from 'wagmi'
 import { embeddedWalletId } from '../constants/openfort.js'
+import { ChainNotConfiguredError } from '../errors/config.js'
+import { ProviderNotReadyError } from '../errors/wallet.js'
 import type { OpenfortEmbeddedEthereumWalletProvider } from '../ethereum/types.js'
 
 // Module-level provider store — injected when embedded wallet becomes active
@@ -38,7 +40,7 @@ export function embeddedWalletConnector(): CreateConnectorFn<OpenfortEmbeddedEth
         withCapabilities?: withCapabilities | boolean
       } = {}) {
         const provider = _provider
-        if (!provider) throw new Error('Embedded wallet provider not ready')
+        if (!provider) throw new ProviderNotReadyError('Embedded wallet provider not ready.')
         const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as readonly `0x${string}`[]
         const currentChainId = await this.getChainId()
         provider.on('accountsChanged', accountsChangedHandler)
@@ -74,9 +76,9 @@ export function embeddedWalletConnector(): CreateConnectorFn<OpenfortEmbeddedEth
 
       async switchChain({ chainId }) {
         const provider = _provider
-        if (!provider) throw new Error('Embedded wallet provider not ready')
+        if (!provider) throw new ProviderNotReadyError('Embedded wallet provider not ready.')
         const chain = config.chains.find((c) => c.id === chainId)
-        if (!chain) throw new Error(`Chain ${chainId} is not configured`)
+        if (!chain) throw new ChainNotConfiguredError({ chainId })
         await provider.request({
           method: 'wallet_switchEthereumChain',
           params: [{ chainId: `0x${chainId.toString(16)}` }],

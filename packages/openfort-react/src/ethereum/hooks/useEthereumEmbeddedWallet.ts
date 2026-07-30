@@ -6,7 +6,16 @@ import { baseSepolia } from 'viem/chains'
 import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort.js'
 import { DEFAULT_ACCOUNT_TYPE } from '../../constants/openfort.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { asOpenfortError } from '../../errors/base.js'
+import { WalletConfigNotFoundError } from '../../errors/config.js'
+import {
+  ProviderNotReadyError,
+  RecoveryError,
+  SetActiveWalletError,
+  WalletCreationError,
+  WalletImportError,
+  WalletNotFoundError,
+} from '../../errors/wallet.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import type {
   CreateEmbeddedWalletOptions,
@@ -158,7 +167,7 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
 
       try {
         if (!walletConfig) {
-          throw new OpenfortError('Wallet config not found', OpenfortReactErrorType.CONFIGURATION_ERROR)
+          throw new WalletConfigNotFoundError()
         }
 
         const recoveryParams = await buildRecoveryParams(
@@ -211,10 +220,7 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
         createOptions?.onSuccess?.({ account })
         return account
       } catch (err) {
-        const error =
-          err instanceof OpenfortError
-            ? err
-            : new OpenfortError('Failed to create Ethereum wallet', OpenfortReactErrorType.WALLET_ERROR, { error: err })
+        const error = asOpenfortError(err, (cause) => new WalletCreationError({ chain: 'Ethereum', cause }))
 
         setState((s) => ({
           ...s,
@@ -242,7 +248,7 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
 
       try {
         if (!walletConfig) {
-          throw new OpenfortError('Wallet config not found', OpenfortReactErrorType.CONFIGURATION_ERROR)
+          throw new WalletConfigNotFoundError()
         }
 
         const recoveryParams = await buildRecoveryParams(
@@ -291,10 +297,7 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
         importOptions.onSuccess?.({ account })
         return account
       } catch (err) {
-        const error =
-          err instanceof OpenfortError
-            ? err
-            : new OpenfortError('Failed to import Ethereum wallet', OpenfortReactErrorType.WALLET_ERROR, { error: err })
+        const error = asOpenfortError(err, (cause) => new WalletImportError({ chain: 'Ethereum', cause }))
 
         setState((s) => ({
           ...s,
@@ -323,16 +326,14 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
         const account = accounts.find((acc) => acc.address.toLowerCase() === activeOptions.address.toLowerCase())
 
         if (!account) {
-          throw new OpenfortError('Embedded wallet not found', OpenfortReactErrorType.WALLET_ERROR, {
-            address: activeOptions.address,
-          })
+          throw new WalletNotFoundError(`Embedded wallet ${activeOptions.address} not found.`)
         }
 
         const connectingStub = buildConnectedWallet(account, accounts.indexOf(account), getEmbeddedEthereumProvider, {
           isActive: false,
           isConnecting: true,
           getProvider: async () => {
-            throw new OpenfortError('Provider not ready yet', OpenfortReactErrorType.WALLET_ERROR)
+            throw new ProviderNotReadyError()
           },
         })
         setState((s) => ({ ...s, status: 'connecting', activeWallet: connectingStub, error: null }))
@@ -401,12 +402,7 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
           })
           setActiveEmbeddedAddress(account.address)
         } catch (err) {
-          const error =
-            err instanceof OpenfortError
-              ? err
-              : new OpenfortError('Failed to set active Ethereum wallet', OpenfortReactErrorType.WALLET_ERROR, {
-                  error: err,
-                })
+          const error = asOpenfortError(err, (cause) => new SetActiveWalletError({ chain: 'Ethereum', cause }))
 
           setState((s) => ({
             ...s,
@@ -443,10 +439,7 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
         await client.embeddedWallet.setRecoveryMethod(recoveryOptions.previousRecovery, recoveryOptions.newRecovery)
         await updateEmbeddedAccounts({ silent: true })
       } catch (err) {
-        const error =
-          err instanceof OpenfortError
-            ? err
-            : new OpenfortError('Failed to set recovery method', OpenfortReactErrorType.WALLET_ERROR, { error: err })
+        const error = asOpenfortError(err, (cause) => new RecoveryError('Failed to set recovery method.', { cause }))
         throw error
       }
     },

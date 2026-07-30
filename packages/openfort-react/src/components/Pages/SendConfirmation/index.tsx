@@ -13,6 +13,7 @@ import type { Abi, Address } from 'viem'
 import { createPublicClient, encodeFunctionData, erc20Abi, http, isAddress, parseUnits } from 'viem'
 import { TickIcon } from '../../../assets/icons.js'
 import { chainLogoUrl } from '../../../constants/logos.js'
+import { WalletNotConnectedError } from '../../../errors/wallet.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
 import { useBalance } from '../../../hooks/useBalance.js'
@@ -147,7 +148,7 @@ const SendConfirmation = () => {
     setIsNativePending(true)
     setNativeError(null)
     try {
-      if (!wallet.activeWallet) throw new Error('Wallet not available')
+      if (!wallet.activeWallet) throw new WalletNotConnectedError('Wallet not available.')
       const provider = await wallet.activeWallet.getProvider()
       const hash = (await provider.request({
         method: 'eth_sendTransaction',
@@ -180,7 +181,7 @@ const SendConfirmation = () => {
     setIsTokenPending(true)
     setErc20Error(null)
     try {
-      if (!wallet.activeWallet) throw new Error('Wallet not available')
+      if (!wallet.activeWallet) throw new WalletNotConnectedError('Wallet not available.')
       const provider = await wallet.activeWallet.getProvider()
       const data = encodeFunctionData({
         abi: params.abi as Abi,

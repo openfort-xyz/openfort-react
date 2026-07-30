@@ -319,7 +319,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       act(async () => {
         await result.current.create({ recoveryMethod: RecoveryMethod.PASSWORD })
       })
-    ).rejects.toThrow('Password is required')
+    ).rejects.toThrow('`password` is required.')
   })
 
   it('throws when no encryption session config is available', async () => {

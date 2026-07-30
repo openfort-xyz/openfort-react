@@ -11,6 +11,7 @@ import {
   useState,
 } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
+import { UnsupportedOperationError } from '../../errors/operation.js'
 import { logger } from '../../utils/logger.js'
 import type { OpenfortStore } from '../store.js'
 
@@ -109,7 +110,7 @@ export function useEmbeddedStateMachine({
       }
 
       default:
-        throw new Error(`Unknown embedded state: ${storeEmbeddedState}`)
+        throw new UnsupportedOperationError({ operation: `Embedded state "${storeEmbeddedState}"` })
     }
 
     return () => {

@@ -11,6 +11,7 @@ import type React from 'react'
 import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { DEFAULT_DEV_CHAIN_ID } from '../../core/ConnectionStrategy.js'
 
+import { OpenfortConfigError } from '../../errors/config.js'
 import { OpenfortEthereumBridgeContext } from '../../ethereum/OpenfortEthereumBridgeContext.js'
 import { useThemeFont } from '../../hooks/useGoogleFont.js'
 import { CoreOpenfortProvider } from '../../openfort/CoreOpenfortProvider.js'
@@ -117,7 +118,9 @@ export const OpenfortProvider = ({
   // Only allow for mounting OpenfortProvider once, so we avoid weird global
   // state collisions.
   if (useContext(OpenfortContext)) {
-    throw new Error('Multiple, nested usages of OpenfortProvider detected. Please use only one.')
+    throw new OpenfortConfigError('Multiple, nested usages of `OpenfortProvider` detected.', {
+      metaMessages: ['Render exactly one `OpenfortProvider` at the root of the app.'],
+    })
   }
 
   const debugModeOptions: Required<DebugModeOptions & { debugRoutes?: boolean }> = useMemo(() => {

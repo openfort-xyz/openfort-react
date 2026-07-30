@@ -5,6 +5,8 @@ import { useEffect, useState } from 'react'
 import { type Address, type EIP1193Provider, encodeFunctionData, erc20Abi, formatUnits, parseUnits } from 'viem'
 import { WalletIcon } from '../../../assets/icons.js'
 import logos from '../../../assets/logos.js'
+import { ProviderNotFoundError } from '../../../errors/connection.js'
+import { WalletNotConnectedError } from '../../../errors/wallet.js'
 import {
   type OpenfortEthereumBridgeConnector,
   useEthereumBridge,
@@ -90,11 +92,11 @@ export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurre
     setSent(false)
     try {
       const provider = (await c.getProvider?.()) as EIP1193Provider | undefined
-      if (!provider) throw new Error('Wallet provider unavailable')
+      if (!provider) throw new ProviderNotFoundError('Wallet provider unavailable.')
 
       const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[]
       const from = accounts?.[0] as Address | undefined
-      if (!from) throw new Error('No account in wallet')
+      if (!from) throw new WalletNotConnectedError('No account in wallet.')
 
       // Ask the wallet to switch to the source chain (ignored if already there).
       await provider

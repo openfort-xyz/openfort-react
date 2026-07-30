@@ -193,7 +193,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
       act(async () => {
         await result.current.setActive({ address: 'UnknownAddressXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' })
       })
-    ).rejects.toThrow('Embedded wallet not found')
+    ).rejects.toThrow(/^Embedded wallet \w+ not found\./)
   })
 
   it('transitions status: connecting → connected', async () => {
