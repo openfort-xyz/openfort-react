@@ -1,155 +1,18 @@
 'use client'
 
-import { ChainTypeEnum, OAuthProvider } from '@openfort/openfort-js'
-import { lazy, Suspense, useEffect, useMemo, useRef } from 'react'
-
-type ValueOf<T> = T[keyof T]
-
+import { OAuthProvider } from '@openfort/openfort-js'
+import { useEffect, useMemo, useRef } from 'react'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import type { CustomTheme, Languages, Mode, Theme } from '../../types.js'
 import { logger } from '../../utils/logger.js'
-
-const LazySwitchNetworks = lazy(() => import('../../wagmi/components/SwitchNetworks/index.js'))
-
 import Modal from '../Common/Modal/index.js'
 import { ConnectKitThemeProvider } from '../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
 import { routes, type SetRouteOptions } from '../Openfort/types.js'
 import { useOpenfort } from '../Openfort/useOpenfort.js'
-import About from '../Pages/About/index.js'
-import AssetInventory from '../Pages/AssetInventory/index.js'
-import { SolanaAssetInventory } from '../Pages/AssetInventory/SolanaAssetInventory.js'
-import Buy from '../Pages/Buy/index.js'
-import BuyComplete from '../Pages/BuyComplete/index.js'
-import BuyProcessing from '../Pages/BuyProcessing/index.js'
-import BuyProviderSelect from '../Pages/BuyProviderSelect/index.js'
-import BuySelectProvider from '../Pages/BuySelectProvider/index.js'
-import Connected from '../Pages/Connected/index.js'
-import ConnectedSuccess from '../Pages/ConnectedSuccess/index.js'
-import Connectors from '../Pages/Connectors/index.js'
-import CreateGuestUserPage from '../Pages/CreateGuestUserPage/index.js'
-import CreateWallet from '../Pages/CreateWallet/index.js'
-import Deposit from '../Pages/Deposit/index.js'
-import DepositCex from '../Pages/DepositCex/index.js'
-import DepositCrypto from '../Pages/DepositCrypto/index.js'
-import DepositWallet from '../Pages/DepositWallet/index.js'
-import DownloadApp from '../Pages/DownloadApp/index.js'
-import EmailLogin from '../Pages/EmailLogin/index.js'
-import EmailOTP from '../Pages/EmailOTP/index.js'
-import EmailVerification from '../Pages/EmailVerification/index.js'
-import ExportKey from '../Pages/ExportKey/index.js'
-import ForgotPassword from '../Pages/ForgotPassword/index.js'
-import LinkEmail from '../Pages/LinkEmail/index.js'
-import LinkedProvider from '../Pages/LinkedProvider/index.js'
-import LinkedProviders from '../Pages/LinkedProviders/index.js'
-import Loading from '../Pages/Loading/index.js'
-import LoadWallets from '../Pages/LoadWallets/index.js'
-import MobileConnectors from '../Pages/MobileConnectors/index.js'
-import NoAssetsAvailable from '../Pages/NoAssetsAvailable/index.js'
-import Onboarding from '../Pages/Onboarding/index.js'
-import PhoneOTP from '../Pages/PhoneOTP/index.js'
-import Profile from '../Pages/Profile/index.js'
-import Providers from '../Pages/Providers/index.js'
-import Receive from '../Pages/Receive/index.js'
-import RecoverPage from '../Pages/Recover/index.js'
-import RemoveLinkedProvider from '../Pages/RemoveLinkedProvider/index.js'
-import SelectToken from '../Pages/SelectToken/index.js'
-import { SolanaSelectToken } from '../Pages/SelectToken/SolanaSelectToken.js'
-import SelectWalletToRecover from '../Pages/SelectWalletToRecover/index.js'
-import Send from '../Pages/Send/index.js'
-import { SolanaSend } from '../Pages/Send/SolanaSend.js'
-import SendConfirmation from '../Pages/SendConfirmation/index.js'
-import { SolanaSendConfirmation } from '../Pages/SendConfirmation/SolanaSendConfirmation.js'
-import SignMessage from '../Pages/SignMessage/index.js'
-import SocialProviders from '../Pages/SocialProviders/index.js'
-import ConnectUsing from './ConnectUsing.js'
-import ConnectWithMobile from './ConnectWithMobile.js'
+import { chainPrefixedPages, defaultConnectedRoute, sharedPages } from './pageRegistry.js'
 
-type RoutePages = Partial<Record<ValueOf<typeof routes>, React.ReactNode>>
-
-function buildSharedPages(): RoutePages {
-  return {
-    onboarding: <Onboarding />,
-    about: <About />,
-    loading: <Loading />,
-    loadWallets: <LoadWallets />,
-    connectedSuccess: <ConnectedSuccess />,
-    createGuestUser: <CreateGuestUserPage />,
-    socialProviders: <SocialProviders />,
-    emailLogin: <EmailLogin />,
-    emailOtp: <EmailOTP />,
-    phoneOtp: <PhoneOTP />,
-    forgotPassword: <ForgotPassword />,
-    emailVerification: <EmailVerification />,
-    linkEmail: <LinkEmail />,
-    createWallet: <CreateWallet />,
-    recoverWallets: <RecoverPage />,
-    download: <DownloadApp />,
-    connectors: <Connectors />,
-    mobileConnectors: <MobileConnectors />,
-    selectWalletToRecover: <SelectWalletToRecover />,
-    providers: <Providers />,
-    connect: <ConnectUsing />,
-    connected: <Connected />,
-    profile: <Profile />,
-    linkedProviders: <LinkedProviders />,
-    linkedProvider: <LinkedProvider />,
-    removeLinkedProvider: <RemoveLinkedProvider />,
-    connectWithMobile: <ConnectWithMobile />,
-    noAssetsAvailable: <NoAssetsAvailable />,
-    assetInventory: <AssetInventory />,
-    send: <Send />,
-    sendConfirmation: <SendConfirmation />,
-    sendTokenSelect: <SelectToken isBuyFlow={false} />,
-    buyTokenSelect: <SelectToken isBuyFlow={true} />,
-    buySelectProvider: <BuySelectProvider />,
-    buyProcessing: <BuyProcessing />,
-    buyComplete: <BuyComplete />,
-    buyProviderSelect: <BuyProviderSelect />,
-    receive: <Receive />,
-    buy: <Buy />,
-    deposit: <Deposit />,
-    depositCrypto: <DepositCrypto />,
-    depositWallet: <DepositWallet />,
-    depositCex: <DepositCex />,
-    exportKey: <ExportKey />,
-    signMessage: <SignMessage />,
-    walletOverview: <Connected />,
-  }
-}
-
-const CHAIN_PREFIXED_PAGES: Record<ChainTypeEnum, RoutePages> = {
-  [ChainTypeEnum.EVM]: {
-    'eth:connected': <Connected />,
-    'eth:createWallet': <CreateWallet />,
-    'eth:recoverWallet': <RecoverPage />,
-    'eth:switchNetworks': (
-      <Suspense fallback={null}>
-        <LazySwitchNetworks />
-      </Suspense>
-    ),
-    'eth:send': <Send />,
-    'eth:receive': <Receive />,
-    'eth:buy': <Buy />,
-    'eth:connectors': <Connectors />,
-  },
-  [ChainTypeEnum.SVM]: {
-    'sol:connected': <Connected />,
-    'sol:createWallet': <CreateWallet />,
-    'sol:recoverWallet': <RecoverPage />,
-    'sol:send': <SolanaSend />,
-    'sol:sendTokenSelect': <SolanaSelectToken />,
-    'sol:sendConfirmation': <SolanaSendConfirmation />,
-    'sol:receive': <Receive />,
-    'sol:assetInventory': <SolanaAssetInventory />,
-    // 'sol:wallets': <SolanaWallets />,
-  },
-}
-
-const DEFAULT_CONNECTED_ROUTE: Record<ChainTypeEnum, ValueOf<typeof routes>> = {
-  [ChainTypeEnum.EVM]: routes.ETH_CONNECTED,
-  [ChainTypeEnum.SVM]: routes.SOL_CONNECTED,
-}
+type ValueOf<T> = T[keyof T]
 
 const customThemeDefault: object = {}
 
@@ -204,10 +67,9 @@ const ConnectModal: React.FC<{
   const route = context.route.route
   const chainType = context.chainType
 
-  const sharedPages = useMemo(buildSharedPages, [])
-  const pages = useMemo(() => ({ ...sharedPages, ...CHAIN_PREFIXED_PAGES[chainType] }), [sharedPages, chainType])
+  const pages = useMemo(() => ({ ...sharedPages, ...chainPrefixedPages[chainType] }), [chainType])
   const effectivePageId =
-    route in pages && pages[route as ValueOf<typeof routes>] != null ? route : DEFAULT_CONNECTED_ROUTE[chainType]
+    route in pages && pages[route as ValueOf<typeof routes>] != null ? route : defaultConnectedRoute[chainType]
 
   useEffect(() => {
     if (effectivePageId !== route) {
