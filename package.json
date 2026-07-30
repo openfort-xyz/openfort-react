@@ -6,8 +6,9 @@
   "private": true,
   "scripts": {
     "preinstall": "pnpx only-allow pnpm",
-    "postinstall": "git config --unset core.hooksPath 2>/dev/null || true && simple-git-hooks",
+    "postinstall": "[ -n \"$CI\" ] || { git config --unset core.hooksPath 2>/dev/null || true; simple-git-hooks && ./.husky/install_gitleaks.sh; }",
     "check": "biome check",
+    "scan:secrets": "./.husky/run_gitleaks.sh",
     "check:fix": "biome check --write --unsafe",
     "check:types": "tsc --noEmit -p packages/openfort-react/tsconfig.check.json",
     "check:unused": "knip",
@@ -159,6 +160,6 @@
     ]
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm check --staged --no-errors-on-unmatched"
+    "pre-commit": "./.husky/run_gitleaks.sh && pnpm check --staged --no-errors-on-unmatched"
   }
 }

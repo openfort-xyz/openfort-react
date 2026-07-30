@@ -7,6 +7,53 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  secret-scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # Full clone so the BASE_SHA..HEAD range below is resolvable; the
+          # scan itself covers only the commits this run introduces.
+          fetch-depth: 0
+
+      # The gitleaks binary is used directly rather than gitleaks-action, which
+      # requires a paid licence for organisation-owned repositories. Rules come
+      # from .gitleaks.toml, which extends the default ruleset.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          # Pinned checksum of the release asset; a substituted binary would
+          # otherwise execute as the CI user on every PR.
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check
+          tar -xz -C /usr/local/bin -f gitleaks.tar.gz gitleaks
+          rm gitleaks.tar.gz
+          gitleaks version
+
+      # Only the commits this run introduces are scanned. A full-history scan
+      # would fail on pre-existing findings unrelated to the change. Run
+      # `pnpm scan:secrets` locally for the staged-change equivalent.
+      - name: Scan for secrets
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            RANGE="$BASE_SHA..HEAD"
+          else
+            RANGE="HEAD~1..HEAD"
+          fi
+          echo "Scanning $RANGE"
+          gitleaks git --redact -v --exit-code 1 --log-opts="$RANGE"
+
   pnpm-build:
     name: pnpm build
     runs-on: ubuntu-latest
