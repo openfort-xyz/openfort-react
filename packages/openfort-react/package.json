@@ -2,11 +2,11 @@
   "name": "@openfort/react",
   "version": "1.6.3",
   "author": "Openfort (https://www.openfort.io)",
-  "license": "BSD-2-Clause license",
+  "license": "BSD-2-Clause",
   "description": "The easiest way to integrate Openfort to your project.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openfort-xyz/openfort-react.git",
+    "url": "git+https://github.com/openfort-xyz/fortkit.git",
     "directory": "packages/openfort-react"
   },
   "type": "module",
@@ -43,11 +43,12 @@
     }
   },
   "engines": {
-    "node": ">=12.4"
+    "node": ">=20"
   },
   "files": [
     "build",
-    "README.md"
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "publishConfig": {

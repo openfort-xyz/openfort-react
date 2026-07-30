@@ -4,14 +4,6 @@
   "description": "The easiest way to integrate Openfort to your project.",
   "main": "packages/openfort-react/src/index.ts",
   "private": true,
-  "workspaces": {
-    "packages": [
-      "packages/**",
-      "examples/**",
-      "packages/create-openfort/template/openfort-templates/*",
-      "!packages/create-openfort/template/backend"
-    ]
-  },
   "scripts": {
     "preinstall": "pnpx only-allow pnpm",
     "postinstall": "git config --unset core.hooksPath 2>/dev/null || true && simple-git-hooks",
@@ -25,7 +17,7 @@
     "check:cli": "pnpm --filter create-openfort check",
     "sync-templates": "node scripts/sync-templates.js",
     "changeset": "changeset",
-    "changeset:version": "node scripts/sync-templates.js && pnpm install --lockfile-only && changeset version && node scripts/change-version.js && cp packages/openfort-react/CHANGELOG.md CHANGELOG.md",
+    "changeset:version": "node scripts/sync-templates.js && pnpm install --lockfile-only && changeset version && node scripts/update-version.mjs && cp packages/openfort-react/CHANGELOG.md CHANGELOG.md",
     "changeset:publish": "pnpm build && pnpm build:cli && changeset publish",
     "changeset:prepublish": "pnpm build",
     "dev": "pnpm --filter @openfort/react dev",
@@ -34,7 +26,7 @@
     "dev:headless": "cd examples/quickstarts/headless && pnpm dev",
     "dev:openfort-ui": "cd examples/quickstarts/openfort-ui && pnpm dev",
     "dev:playground": "pnpm --filter playground dev",
-    "build": "node scripts/change-version.js && pnpm --filter @openfort/react build && cp README.md packages/openfort-react/README.md",
+    "build": "node scripts/update-version.mjs && pnpm --filter @openfort/react build && cp README.md packages/openfort-react/README.md",
     "build:cli": "pnpm --filter create-openfort build",
     "build:firebase": "cd examples/quickstarts/firebase && pnpm build",
     "build:headless": "cd examples/quickstarts/headless && pnpm build",
