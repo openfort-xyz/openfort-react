@@ -1,13 +1,13 @@
-import { ChainTypeEnum, SDKConfiguration } from '@openfort/openfort-js'
-import { ApiRequestError } from '../../../errors/operation.js'
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import { MissingParameterError } from '../../../errors/validation.js'
 import type { Asset } from '../../Openfort/types.js'
 import { getAssetSymbol } from '../Send/utils.js'
+import { postOnramp } from './onrampRequest.js'
 
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
+/** Backend endpoint every provider opens its onramp session against. */
+export const ONRAMP_SESSIONS_PATH = '/v1/onramp/sessions'
+
+const ONRAMP_QUOTES_PATH = '/v1/onramp/quotes'
 
 // Generic quote response type (matches backend OnrampQuoteResponse)
 export type OnrampQuote = {
@@ -77,25 +77,12 @@ export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQu
     sourceAmount,
   }
 
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
+  const data = await postOnramp<OnrampQuote | OnrampQuote[]>({
+    path: ONRAMP_QUOTES_PATH,
+    body: requestBody,
+    publishableKey,
+    operation: 'Onramp quote lookup',
   })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new ApiRequestError({
-      operation: 'Onramp quote lookup',
-      status: response.status,
-      body: errorData.error || errorData.errorMessage,
-    })
-  }
-
-  const data = await response.json()
 
   // Backend returns array when provider is not specified
   return Array.isArray(data) ? data : [data]

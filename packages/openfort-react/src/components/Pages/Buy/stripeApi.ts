@@ -1,13 +1,8 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
-import { ApiRequestError, UnsupportedOperationError } from '../../../errors/operation.js'
 import { MissingParameterError } from '../../../errors/validation.js'
 import type { Asset } from '../../Openfort/types.js'
 import { getAssetSymbol } from '../Send/utils.js'
-
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
+import { ONRAMP_SESSIONS_PATH } from './onrampApi.js'
+import { createCurrencySupport, postOnramp } from './onrampRequest.js'
 
 type StripeOnrampResponse = {
   provider: string
@@ -29,32 +24,10 @@ type CreateStripeSessionParams = {
 // Stripe supported currencies
 const STRIPE_SUPPORTED_CURRENCIES = ['btc', 'eth', 'xlm', 'matic', 'pol', 'sol', 'usdc', 'avax', 'wld'] as const
 
-type SupportedCurrency = (typeof STRIPE_SUPPORTED_CURRENCIES)[number]
-
-const isSupportedCurrency = (symbol: string): symbol is SupportedCurrency =>
-  (STRIPE_SUPPORTED_CURRENCIES as readonly string[]).includes(symbol)
+const stripeCurrencies = createCurrencySupport('Stripe', STRIPE_SUPPORTED_CURRENCIES)
 
 // Check if a token is supported by Stripe
-export const isStripeSupported = (token: Asset): boolean => {
-  const symbol = getAssetSymbol(token)
-  return isSupportedCurrency(symbol.toLowerCase())
-}
-
-// Map token symbol to Stripe currency code
-const getCurrencyCode = (token: Asset): string => {
-  const symbol = getAssetSymbol(token)
-  const lowercaseSymbol = symbol.toLowerCase()
-
-  // Validate that the currency is supported by Stripe
-  if (!isSupportedCurrency(lowercaseSymbol)) {
-    throw new UnsupportedOperationError({
-      operation: `Currency "${symbol}" on Stripe`,
-      details: `Supported currencies are: ${STRIPE_SUPPORTED_CURRENCIES.join(', ')}.`,
-    })
-  }
-
-  return lowercaseSymbol
-}
+export const isStripeSupported = (token: Asset): boolean => stripeCurrencies.isSupported(getAssetSymbol(token))
 
 /**
  * Create a Stripe onramp session
@@ -73,38 +46,24 @@ export const createStripeSession = async (
     throw new MissingParameterError({ params: ['publishableKey'] })
   }
 
-  const destinationCurrency = getCurrencyCode(token)
-  const destinationNetwork = network
+  const symbol = getAssetSymbol(token)
+  stripeCurrencies.assertSupported(symbol)
 
-  // Build request body for backend API
+  // Stripe expects lowercase currency codes.
   const requestBody: CreateStripeSessionParams & { provider: string } = {
     provider: 'stripe',
-    destinationCurrency,
-    destinationNetwork,
+    destinationCurrency: symbol.toLowerCase(),
+    destinationNetwork: network,
     destinationAddress,
     sourceAmount,
     sourceCurrency: sourceCurrency?.toLowerCase(),
     redirectUrl,
   }
 
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/sessions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
+  return postOnramp<StripeOnrampResponse>({
+    path: ONRAMP_SESSIONS_PATH,
+    body: requestBody,
+    publishableKey,
+    operation: 'Stripe session creation',
   })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new ApiRequestError({
-      operation: 'Stripe session creation',
-      status: response.status,
-      body: errorData.error || errorData.errorMessage,
-    })
-  }
-
-  const data: StripeOnrampResponse = await response.json()
-  return data
 }
