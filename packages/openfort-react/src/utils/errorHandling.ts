@@ -1,388 +1,408 @@
-/**
- * Parses common Web3/RPC errors and returns user-friendly error messages
- * Covers errors from viem, wagmi, and blockchain interactions
- * Based on viem error types: https://v1.viem.sh/docs/glossary/errors.html
- */
-export function parseTransactionError(error: unknown): {
+import {
+  CallExecutionError,
+  ChainDisconnectedError,
+  ChainMismatchError,
+  ChainNotFoundError,
+  ContractFunctionExecutionError,
+  ContractFunctionRevertedError,
+  ContractFunctionZeroDataError,
+  EstimateGasExecutionError,
+  ExecutionRevertedError,
+  FeeCapTooHighError,
+  FeeCapTooLowError,
+  HttpRequestError,
+  InsufficientFundsError,
+  InternalRpcError,
+  IntrinsicGasTooHighError,
+  IntrinsicGasTooLowError,
+  InvalidChainIdError,
+  InvalidInputRpcError,
+  InvalidParamsRpcError,
+  InvalidRequestRpcError,
+  LimitExceededRpcError,
+  MethodNotFoundRpcError,
+  MethodNotSupportedRpcError,
+  NonceMaxValueError,
+  NonceTooHighError,
+  NonceTooLowError,
+  ProviderDisconnectedError,
+  RawContractError,
+  ResourceNotFoundRpcError,
+  ResourceUnavailableRpcError,
+  RpcRequestError,
+  SwitchChainError,
+  TimeoutError,
+  TipAboveFeeCapError,
+  TransactionExecutionError,
+  TransactionRejectedRpcError,
+  TransactionTypeNotSupportedError,
+  UnauthorizedProviderError,
+  UnknownRpcError,
+  UnsupportedProviderMethodError,
+  UserRejectedRequestError,
+  BaseError as ViemBaseError,
+  WaitForTransactionReceiptTimeoutError,
+  WebSocketRequestError,
+} from 'viem'
+import { OpenfortError } from '../errors/base.js'
+import { ProviderNotFoundError } from '../errors/connection.js'
+import { WalletNotConnectedError } from '../errors/wallet.js'
+
+/** A failure translated into copy the transaction screens can render directly. */
+export type TransactionErrorDetails = {
   title: string
   message: string
   action?: string
-} {
-  if (!error) {
-    return {
-      title: 'Transaction failed',
-      message: 'An unknown error occurred.',
-    }
-  }
+}
 
-  const errorMessage = error instanceof Error ? error.message : String(error)
-  const errorString = errorMessage.toLowerCase()
-  const errorName = error instanceof Error ? error.name : ''
+type ErrorClass = abstract new (...args: never[]) => Error
 
-  // UserRejectedRequestError - User explicitly denied/rejected the request
-  // https://v1.viem.sh/docs/glossary/errors.html#userrejectedrequesterror
-  if (
-    errorName === 'UserRejectedRequestError' ||
-    errorString.includes('user rejected') ||
-    errorString.includes('user denied') ||
-    errorString.includes('user cancelled') ||
-    errorString.includes('user canceled') ||
-    errorString.includes('rejected the request') ||
-    errorString.includes('transaction was rejected')
-  ) {
-    return {
-      title: 'Transaction cancelled',
-      message: 'You cancelled the transaction.',
-    }
-  }
+/**
+ * True when `error`, or anything in its `cause` chain, is an instance of one of
+ * `classes`.
+ *
+ * viem and the SDK both nest the original failure under `cause` — an RPC
+ * rejection surfaces as a `TransactionExecutionError` wrapping a
+ * `UserRejectedRequestError` — so only a walk of the whole chain classifies
+ * reliably.
+ */
+function matches(error: unknown, classes: readonly ErrorClass[]): boolean {
+  const is = (candidate: unknown) => classes.some((cls) => candidate instanceof cls)
+  if (is(error)) return true
+  if (error instanceof ViemBaseError) return error.walk(is) !== null
+  if (error instanceof OpenfortError) return is(error.walk(is))
+  return false
+}
 
-  // AccountNotFoundError - No account provided to action that requires one
-  // https://v1.viem.sh/docs/glossary/errors.html#accountnotfounderror
-  if (errorName === 'AccountNotFoundError' || errorString.includes('account not found')) {
-    return {
-      title: 'Account not found',
-      message: 'No account is connected.',
-      action: 'Please connect your wallet and try again.',
-    }
-  }
-
-  // InsufficientFundsError - Not enough funds for gas
-  // https://v1.viem.sh/docs/glossary/errors.html#insufficientfundserror
-  if (
-    errorName === 'InsufficientFundsError' ||
-    errorString.includes('insufficient funds') ||
-    errorString.includes('insufficient balance') ||
-    errorString.includes('exceeds balance') ||
-    errorString.includes('insufficient eth') ||
-    errorString.includes("sender doesn't have enough funds")
-  ) {
-    return {
+/** Ordered classification table: the first entry whose classes match wins. */
+const RULES: readonly { classes: readonly ErrorClass[]; details: TransactionErrorDetails }[] = [
+  {
+    classes: [UserRejectedRequestError],
+    details: { title: 'Transaction cancelled', message: 'You cancelled the transaction.' },
+  },
+  {
+    classes: [InsufficientFundsError],
+    details: {
       title: 'Insufficient funds',
       message: "You don't have enough ETH to pay for the gas fee.",
       action: 'Add more ETH to your wallet to cover the transaction fee.',
-    }
-  }
-
-  // EstimateGasExecutionError - Gas estimation failed
-  // https://v1.viem.sh/docs/glossary/errors.html#estimategasexecutionerror
-  if (
-    errorName === 'EstimateGasExecutionError' ||
-    errorString.includes('gas estimation failed') ||
-    errorString.includes('cannot estimate gas') ||
-    errorString.includes('gas required exceeds allowance') ||
-    errorString.includes('out of gas')
-  ) {
-    // Check for specific reasons
-    if (errorString.includes('insufficient funds')) {
-      return {
-        title: 'Insufficient funds',
-        message: "You don't have enough ETH to pay for this transaction.",
-        action: 'Add more ETH to your wallet.',
-      }
-    }
-
-    return {
-      title: 'Transaction would fail',
-      message: 'This transaction is likely to fail.',
-      action: 'Please check the recipient address and amount, then try again.',
-    }
-  }
-
-  // IntrinsicGasTooHighError / IntrinsicGasTooLowError - Gas limit issues
-  // https://v1.viem.sh/docs/glossary/errors.html#intrinsicgastoohigherror
-  if (
-    errorName === 'IntrinsicGasTooHighError' ||
-    errorName === 'IntrinsicGasTooLowError' ||
-    errorString.includes('intrinsic gas too high') ||
-    errorString.includes('intrinsic gas too low') ||
-    errorString.includes('gas limit')
-  ) {
-    return {
-      title: 'Gas limit error',
-      message: 'The gas limit for this transaction is incorrect.',
-      action: 'Please try again or contact support.',
-    }
-  }
-
-  // NonceTooLowError / NonceTooHighError - Nonce issues
-  // https://v1.viem.sh/docs/glossary/errors.html#noncetoolowerror
-  if (errorName === 'NonceTooLowError' || errorString.includes('nonce too low')) {
-    return {
-      title: 'Transaction pending',
-      message: 'A transaction is already pending.',
-      action: 'Please wait for your pending transaction to complete.',
-    }
-  }
-
-  if (
-    errorName === 'NonceTooHighError' ||
-    errorName === 'NonceMaxValueError' ||
-    errorString.includes('nonce too high')
-  ) {
-    return {
-      title: 'Transaction error',
-      message: 'Transaction nonce is invalid.',
-      action: 'Please refresh the page and try again.',
-    }
-  }
-
-  // FeeCapTooHighError / FeeCapTooLowError / TipAboveFeeCapError
-  // https://v1.viem.sh/docs/glossary/errors.html#feecaptoohigherror
-  if (
-    errorName === 'FeeCapTooLowError' ||
-    errorName === 'TipAboveFeeCapError' ||
-    errorString.includes('transaction underpriced') ||
-    errorString.includes('replacement transaction underpriced') ||
-    errorString.includes('fee cap too low')
-  ) {
-    return {
-      title: 'Gas fee too low',
-      message: 'The gas fee is too low for this transaction.',
-      action: 'Try again with a higher gas fee.',
-    }
-  }
-
-  if (errorName === 'FeeCapTooHighError' || errorString.includes('fee cap too high')) {
-    return {
-      title: 'Gas fee too high',
-      message: 'The gas fee is unusually high.',
-      action: 'Please check the fee and try again.',
-    }
-  }
-
-  // TransactionTypeNotSupportedError
-  // https://v1.viem.sh/docs/glossary/errors.html#transactiontypenotsupportederror
-  if (errorName === 'TransactionTypeNotSupportedError' || errorString.includes('transaction type not supported')) {
-    return {
-      title: 'Transaction not supported',
-      message: 'This transaction type is not supported on this network.',
-      action: 'Please try a different transaction method.',
-    }
-  }
-
-  // TransactionExecutionError - General transaction execution failure
-  // https://v1.viem.sh/docs/glossary/errors.html#transactionexecutionerror
-  if (errorName === 'TransactionExecutionError') {
-    return {
-      title: 'Transaction failed',
-      message: 'The transaction failed to execute.',
-      action: 'Please check the transaction details and try again.',
-    }
-  }
-
-  // WaitForTransactionReceiptTimeoutError
-  // https://v1.viem.sh/docs/glossary/errors.html#waitfortransactionreceipttimeouterror
-  if (errorName === 'WaitForTransactionReceiptTimeoutError' || errorString.includes('timeout')) {
-    return {
-      title: 'Transaction timeout',
-      message: 'The transaction is taking longer than expected.',
-      action: 'It may still be processing. Check your wallet or block explorer.',
-    }
-  }
-
-  // ExecutionRevertedError - Contract execution reverted
-  // https://v1.viem.sh/docs/glossary/errors.html#executionrevertederror
-  if (errorName === 'ExecutionRevertedError' || errorString.includes('execution reverted')) {
-    return {
-      title: 'Transaction failed',
-      message: 'The transaction was rejected by the contract.',
-      action: 'Please check the transaction details and try again.',
-    }
-  }
-
-  // ContractFunctionExecutionError / ContractFunctionRevertedError / CallExecutionError
-  // https://v1.viem.sh/docs/glossary/errors.html#contractfunctionexecutionerror
-  if (
-    errorName === 'ContractFunctionExecutionError' ||
-    errorName === 'ContractFunctionRevertedError' ||
-    errorName === 'CallExecutionError' ||
-    errorName === 'RawContractError'
-  ) {
-    return {
-      title: 'Contract error',
-      message: 'The contract rejected this transaction.',
-      action: 'Please verify the transaction parameters and try again.',
-    }
-  }
-
-  // ContractFunctionZeroDataError - No data returned when expected
-  // https://v1.viem.sh/docs/glossary/errors.html#contractfunctionzerodataerror
-  if (errorName === 'ContractFunctionZeroDataError') {
-    return {
-      title: 'Contract error',
-      message: 'The contract returned no data.',
-      action: 'This contract may not exist on this network.',
-    }
-  }
-
-  // ABI-related errors
-  // https://v1.viem.sh/docs/glossary/errors.html#abi
-  if (errorName.includes('Abi') || errorString.includes('abi encoding') || errorString.includes('abi decoding')) {
-    return {
-      title: 'Contract error',
-      message: 'Unable to encode or decode the contract data.',
-      action: 'Please contact support if this issue persists.',
-    }
-  }
-
-  // ChainMismatchError / ChainNotFoundError / InvalidChainIdError
-  // https://v1.viem.sh/docs/glossary/errors.html#chainmismatcherror
-  if (
-    errorName === 'ChainMismatchError' ||
-    errorName === 'ChainNotFoundError' ||
-    errorName === 'InvalidChainIdError' ||
-    (errorString.includes('chain') && (errorString.includes('mismatch') || errorString.includes('wrong')))
-  ) {
-    return {
-      title: 'Wrong network',
-      message: 'Your wallet is connected to a different network.',
-      action: 'Please switch to the correct network in your wallet.',
-    }
-  }
-
-  // SwitchChainError
-  // https://v1.viem.sh/docs/glossary/errors.html#switchchainerror
-  if (errorName === 'SwitchChainError' || errorString.includes('switch chain')) {
-    return {
-      title: 'Network switch failed',
-      message: 'Unable to switch to the requested network.',
-      action: 'Please manually switch networks in your wallet.',
-    }
-  }
-
-  // ChainDisconnectedError / ProviderDisconnectedError
-  // https://v1.viem.sh/docs/glossary/errors.html#chaindisconnectederror
-  if (
-    errorName === 'ChainDisconnectedError' ||
-    errorName === 'ProviderDisconnectedError' ||
-    errorString.includes('disconnected')
-  ) {
-    return {
-      title: 'Connection lost',
-      message: 'Lost connection to the network.',
-      action: 'Please check your internet connection and try again.',
-    }
-  }
-
-  // HttpRequestError / WebSocketRequestError / RpcRequestError / TimeoutError
-  // https://v1.viem.sh/docs/glossary/errors.html#httprequesterror
-  if (
-    errorName === 'HttpRequestError' ||
-    errorName === 'WebSocketRequestError' ||
-    errorName === 'RpcRequestError' ||
-    errorName === 'TimeoutError' ||
-    errorString.includes('network') ||
-    errorString.includes('timed out') ||
-    errorString.includes('connection') ||
-    errorString.includes('failed to fetch') ||
-    errorString.includes('request failed') ||
-    errorString.includes('could not detect network') ||
-    errorString.includes('bad gateway') ||
-    errorString.includes('service unavailable')
-  ) {
-    return {
-      title: 'Network error',
-      message: 'Unable to connect to the network.',
-      action: 'Check your internet connection and try again.',
-    }
-  }
-
-  // InternalRpcError / UnknownRpcError
-  // https://v1.viem.sh/docs/glossary/errors.html#internalrpcerror
-  if (
-    errorName === 'InternalRpcError' ||
-    errorName === 'UnknownRpcError' ||
-    errorString.includes('internal json-rpc error') ||
-    errorString.includes('internal error')
-  ) {
-    return {
-      title: 'Network error',
-      message: 'The network encountered an internal error.',
-      action: 'Please try again in a moment.',
-    }
-  }
-
-  // MethodNotFoundRpcError / MethodNotSupportedRpcError
-  // https://v1.viem.sh/docs/glossary/errors.html#methodnotfoundrpcerror
-  if (
-    errorName === 'MethodNotFoundRpcError' ||
-    errorName === 'MethodNotSupportedRpcError' ||
-    errorName === 'UnsupportedProviderMethodError' ||
-    (errorString.includes('method') && (errorString.includes('not found') || errorString.includes('not supported')))
-  ) {
-    return {
-      title: 'Method not supported',
-      message: 'This operation is not supported by the current network.',
-      action: 'Try switching to a different RPC provider.',
-    }
-  }
-
-  // InvalidInputRpcError / InvalidParamsRpcError / InvalidRequestRpcError
-  // https://v1.viem.sh/docs/glossary/errors.html#invalidinputrpcerror
-  if (
-    errorName === 'InvalidInputRpcError' ||
-    errorName === 'InvalidParamsRpcError' ||
-    errorName === 'InvalidRequestRpcError'
-  ) {
-    return {
-      title: 'Invalid request',
-      message: 'The request contains invalid parameters.',
-      action: 'Please check the transaction details and try again.',
-    }
-  }
-
-  // TransactionRejectedRpcError
-  // https://v1.viem.sh/docs/glossary/errors.html#transactionrejectedrpcerror
-  if (errorName === 'TransactionRejectedRpcError' || errorString.includes('transaction rejected')) {
-    return {
-      title: 'Transaction rejected',
-      message: 'The network rejected this transaction.',
-      action: 'Please check the transaction details and try again.',
-    }
-  }
-
-  // LimitExceededRpcError / ResourceNotFoundRpcError / ResourceUnavailableRpcError
-  // https://v1.viem.sh/docs/glossary/errors.html#limitexceededrpcerror
-  if (
-    errorName === 'LimitExceededRpcError' ||
-    errorName === 'ResourceNotFoundRpcError' ||
-    errorName === 'ResourceUnavailableRpcError'
-  ) {
-    return {
-      title: 'Network busy',
-      message: 'The network is currently busy or unavailable.',
-      action: 'Please wait a moment and try again.',
-    }
-  }
-
-  // UnauthorizedProviderError
-  // https://v1.viem.sh/docs/glossary/errors.html#unauthorizedprovidererror
-  if (errorName === 'UnauthorizedProviderError' || errorString.includes('unauthorized')) {
-    return {
-      title: 'Unauthorized',
-      message: 'This action requires authorization.',
-      action: 'Please connect your wallet and try again.',
-    }
-  }
-
-  // Wallet/Provider not found
-  if (errorString.includes('wallet') && (errorString.includes('not connected') || errorString.includes('not found'))) {
-    return {
+    },
+  },
+  {
+    classes: [WalletNotConnectedError],
+    details: {
       title: 'Wallet not connected',
       message: 'Your wallet is not connected.',
       action: 'Please connect your wallet and try again.',
-    }
-  }
-
-  if (errorString.includes('provider') && errorString.includes('not found')) {
-    return {
+    },
+  },
+  {
+    classes: [ProviderNotFoundError],
+    details: {
       title: 'Wallet not found',
       message: 'No wallet extension detected.',
       action: 'Please install a wallet extension and try again.',
-    }
+    },
+  },
+  {
+    classes: [ChainMismatchError, ChainNotFoundError, InvalidChainIdError],
+    details: {
+      title: 'Wrong network',
+      message: 'Your wallet is connected to a different network.',
+      action: 'Please switch to the correct network in your wallet.',
+    },
+  },
+  {
+    classes: [SwitchChainError],
+    details: {
+      title: 'Network switch failed',
+      message: 'Unable to switch to the requested network.',
+      action: 'Please manually switch networks in your wallet.',
+    },
+  },
+  {
+    classes: [EstimateGasExecutionError],
+    details: {
+      title: 'Transaction would fail',
+      message: 'This transaction is likely to fail.',
+      action: 'Please check the recipient address and amount, then try again.',
+    },
+  },
+  {
+    classes: [IntrinsicGasTooHighError, IntrinsicGasTooLowError],
+    details: {
+      title: 'Gas limit error',
+      message: 'The gas limit for this transaction is incorrect.',
+      action: 'Please try again or contact support.',
+    },
+  },
+  {
+    classes: [NonceTooLowError],
+    details: {
+      title: 'Transaction pending',
+      message: 'A transaction is already pending.',
+      action: 'Please wait for your pending transaction to complete.',
+    },
+  },
+  {
+    classes: [NonceTooHighError, NonceMaxValueError],
+    details: {
+      title: 'Transaction error',
+      message: 'Transaction nonce is invalid.',
+      action: 'Please refresh the page and try again.',
+    },
+  },
+  {
+    classes: [FeeCapTooLowError, TipAboveFeeCapError],
+    details: {
+      title: 'Gas fee too low',
+      message: 'The gas fee is too low for this transaction.',
+      action: 'Try again with a higher gas fee.',
+    },
+  },
+  {
+    classes: [FeeCapTooHighError],
+    details: {
+      title: 'Gas fee too high',
+      message: 'The gas fee is unusually high.',
+      action: 'Please check the fee and try again.',
+    },
+  },
+  {
+    classes: [TransactionTypeNotSupportedError],
+    details: {
+      title: 'Transaction not supported',
+      message: 'This transaction type is not supported on this network.',
+      action: 'Please try a different transaction method.',
+    },
+  },
+  {
+    classes: [WaitForTransactionReceiptTimeoutError, TimeoutError],
+    details: {
+      title: 'Transaction timeout',
+      message: 'The transaction is taking longer than expected.',
+      action: 'It may still be processing. Check your wallet or block explorer.',
+    },
+  },
+  {
+    classes: [ExecutionRevertedError],
+    details: {
+      title: 'Transaction failed',
+      message: 'The transaction was rejected by the contract.',
+      action: 'Please check the transaction details and try again.',
+    },
+  },
+  {
+    classes: [ContractFunctionZeroDataError],
+    details: {
+      title: 'Contract error',
+      message: 'The contract returned no data.',
+      action: 'This contract may not exist on this network.',
+    },
+  },
+  {
+    classes: [ContractFunctionExecutionError, ContractFunctionRevertedError, CallExecutionError, RawContractError],
+    details: {
+      title: 'Contract error',
+      message: 'The contract rejected this transaction.',
+      action: 'Please verify the transaction parameters and try again.',
+    },
+  },
+  {
+    classes: [ChainDisconnectedError, ProviderDisconnectedError],
+    details: {
+      title: 'Connection lost',
+      message: 'Lost connection to the network.',
+      action: 'Please check your internet connection and try again.',
+    },
+  },
+  {
+    classes: [InternalRpcError, UnknownRpcError],
+    details: {
+      title: 'Network error',
+      message: 'The network encountered an internal error.',
+      action: 'Please try again in a moment.',
+    },
+  },
+  {
+    classes: [MethodNotFoundRpcError, MethodNotSupportedRpcError, UnsupportedProviderMethodError],
+    details: {
+      title: 'Method not supported',
+      message: 'This operation is not supported by the current network.',
+      action: 'Try switching to a different RPC provider.',
+    },
+  },
+  {
+    classes: [InvalidInputRpcError, InvalidParamsRpcError, InvalidRequestRpcError],
+    details: {
+      title: 'Invalid request',
+      message: 'The request contains invalid parameters.',
+      action: 'Please check the transaction details and try again.',
+    },
+  },
+  {
+    classes: [TransactionRejectedRpcError],
+    details: {
+      title: 'Transaction rejected',
+      message: 'The network rejected this transaction.',
+      action: 'Please check the transaction details and try again.',
+    },
+  },
+  {
+    classes: [LimitExceededRpcError, ResourceNotFoundRpcError, ResourceUnavailableRpcError],
+    details: {
+      title: 'Network busy',
+      message: 'The network is currently busy or unavailable.',
+      action: 'Please wait a moment and try again.',
+    },
+  },
+  {
+    classes: [UnauthorizedProviderError],
+    details: {
+      title: 'Unauthorized',
+      message: 'This action requires authorization.',
+      action: 'Please connect your wallet and try again.',
+    },
+  },
+  {
+    classes: [HttpRequestError, WebSocketRequestError, RpcRequestError],
+    details: {
+      title: 'Network error',
+      message: 'Unable to connect to the network.',
+      action: 'Check your internet connection and try again.',
+    },
+  },
+  {
+    classes: [TransactionExecutionError],
+    details: {
+      title: 'Transaction failed',
+      message: 'The transaction failed to execute.',
+      action: 'Please check the transaction details and try again.',
+    },
+  },
+]
+
+/**
+ * The send screens call `provider.request` on the EIP-1193 provider directly, so
+ * a wallet's rejection never passes through viem and never becomes a
+ * `UserRejectedRequestError`. EIP-1193 assigns these codes, which is the
+ * structured signal to key on. Ordered lowest to highest for readability only.
+ */
+const PROVIDER_ERROR_CODES = new Map<number, TransactionErrorDetails>([
+  // -32000 is the de-facto "server error" node code; wallets reuse it for gas failures.
+  [
+    -32000,
+    {
+      title: 'Transaction would fail',
+      message: 'This transaction is likely to fail.',
+      action: 'Please check the recipient address and amount, then try again.',
+    },
+  ],
+  [-32603, { title: 'Network error', message: 'The network encountered an internal error.' }],
+  [4001, { title: 'Transaction cancelled', message: 'You cancelled the transaction.' }],
+  [
+    4100,
+    {
+      title: 'Unauthorized',
+      message: 'This action requires authorization.',
+      action: 'Please connect your wallet and try again.',
+    },
+  ],
+  [
+    4200,
+    {
+      title: 'Method not supported',
+      message: 'This operation is not supported by the current network.',
+      action: 'Try switching to a different RPC provider.',
+    },
+  ],
+  [
+    4900,
+    {
+      title: 'Connection lost',
+      message: 'Lost connection to the network.',
+      action: 'Please check your internet connection and try again.',
+    },
+  ],
+  [
+    4901,
+    {
+      title: 'Wrong network',
+      message: 'Your wallet is connected to a different network.',
+      action: 'Please switch to the correct network in your wallet.',
+    },
+  ],
+])
+
+/**
+ * Phrases matched on text because no class or code reaches this function for them.
+ *
+ * - Rejections: some wallets throw a bare `Error` for a declined prompt without
+ *   the EIP-1193 code 4001, so the wording is the only signal left.
+ * - Network: `fetch` rejects with a plain `TypeError` on a dropped connection,
+ *   which carries neither a viem class nor an RPC code.
+ */
+const TEXT_RULES: readonly { pattern: RegExp; details: TransactionErrorDetails }[] = [
+  {
+    pattern: /user (rejected|denied|cancell?ed)|rejected the request|transaction was rejected/i,
+    details: { title: 'Transaction cancelled', message: 'You cancelled the transaction.' },
+  },
+  {
+    pattern: /failed to fetch|network ?error|networkerror when attempting/i,
+    details: {
+      title: 'Network error',
+      message: 'Unable to connect to the network.',
+      action: 'Check your internet connection and try again.',
+    },
+  },
+]
+
+/** Reads the EIP-1193 error code off `error` or the first cause that carries one. */
+function providerErrorCode(error: unknown): number | undefined {
+  let current: unknown = error
+  for (let depth = 0; current != null && depth < 10; depth++) {
+    const code = (current as { code?: unknown }).code
+    if (typeof code === 'number' && PROVIDER_ERROR_CODES.has(code)) return code
+    current = (current as { cause?: unknown }).cause
+  }
+  return undefined
+}
+
+/** True when `error` or any of its causes has a message matching `pattern`. */
+function messageMatches(error: unknown, pattern: RegExp): boolean {
+  let current: unknown = error
+  for (let depth = 0; current != null && depth < 10; depth++) {
+    if (current instanceof Error && pattern.test(current.message)) return true
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
+
+/**
+ * Turns a transaction failure into user-facing copy.
+ *
+ * The raw message is never surfaced: RPC errors leak node internals and revert
+ * data that mean nothing to the person who pressed "Send".
+ */
+export function parseTransactionError(error: unknown): TransactionErrorDetails {
+  if (!error) {
+    return { title: 'Transaction failed', message: 'An unknown error occurred.' }
   }
 
-  // Generic fallback (never expose raw error messages to users)
+  for (const rule of RULES) {
+    if (matches(error, rule.classes)) return rule.details
+  }
+
+  const code = providerErrorCode(error)
+  if (code !== undefined) {
+    const details = PROVIDER_ERROR_CODES.get(code)
+    if (details) return details
+  }
+
+  for (const rule of TEXT_RULES) {
+    if (messageMatches(error, rule.pattern)) return rule.details
+  }
+
   return {
     title: 'Transaction failed',
     message: 'An error occurred while processing your transaction.',
