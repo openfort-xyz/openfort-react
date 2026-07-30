@@ -1,3 +1,4 @@
+import type { OpenfortError } from './errors/index.js'
 import type { Languages as Lang } from './localizations/index.js'
 import type { CustomTheme } from './styles/customTheme.js'
 
@@ -23,40 +24,7 @@ export type CustomAvatarProps = {
   radius: number
 }
 
-export enum OpenfortReactErrorType {
-  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
-  WALLET_ERROR = 'WALLET_ERROR',
-  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  UNEXPECTED_ERROR = 'UNEXPECTED_ERROR',
-}
-
-interface OpenfortErrorData {
-  [key: string]: unknown
-}
-
-export class OpenfortError extends Error {
-  type: OpenfortReactErrorType
-  data: OpenfortErrorData
-
-  constructor(message: string, type: OpenfortReactErrorType, data?: OpenfortErrorData) {
-    if (data?.error instanceof OpenfortError) {
-      super(data.error.message)
-      this.data = Object.freeze(data.error.data)
-      this.type = data.error.type
-      this.name = data.error.name
-      return
-    }
-    if (data?.error instanceof Error) {
-      super(data.error.message)
-    } else {
-      super(message)
-    }
-    this.type = type
-    this.data = Object.freeze(data ?? {})
-    this.name = 'OpenfortError'
-  }
-}
+export { OpenfortError, OpenfortReactErrorType } from './errors/index.js'
 
 /**
  * Callbacks accepted by every Openfort action hook, at the hook level and again

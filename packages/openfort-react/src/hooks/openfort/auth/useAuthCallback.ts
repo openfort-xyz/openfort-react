@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { UIAuthProvider } from '../../../components/Openfort/types.js'
-import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors.js'
+import { AuthenticationError } from '../../../errors/auth.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity.js'
@@ -193,7 +193,7 @@ export const useAuthCallback = ({
           removeParams()
         } else {
           restoreReferrer()
-          const err = new OpenfortError('No email found in URL', OpenfortReactErrorType.AUTHENTICATION_ERROR)
+          const err = new AuthenticationError('No email found in URL.')
           logger.error('No email found in URL')
           callbacks.onError?.(err)
           return
@@ -208,10 +208,7 @@ export const useAuthCallback = ({
             hasUserId: !!userId,
             hasToken: !!token,
           })
-          const err = new OpenfortError(
-            'Missing player id or access token or refresh token',
-            OpenfortReactErrorType.AUTHENTICATION_ERROR
-          )
+          const err = new AuthenticationError('Missing player id or access token or refresh token.')
           callbacks.onError?.(err)
 
           return

@@ -72,11 +72,77 @@ export type {
 export { FundingMethod, LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types.js'
 export { embeddedWalletId } from './constants/openfort.js'
 export {
+  ApiRequestError,
+  type ApiRequestErrorType,
+  AuthenticationError,
+  type AuthenticationErrorType,
+  ChainNotConfiguredError,
+  type ChainNotConfiguredErrorType,
+  ClientNotInitializedError,
+  type ClientNotInitializedErrorType,
+  ConnectorNotFoundError,
+  type ConnectorNotFoundErrorType,
+  ConnectorTypeMismatchError,
+  type ConnectorTypeMismatchErrorType,
+  type ErrorType,
+  FundingError,
+  type FundingErrorType,
+  FundingNotConfiguredError,
+  type FundingNotConfiguredErrorType,
+  InvalidEmailError,
+  type InvalidEmailErrorType,
+  MissingParameterError,
+  type MissingParameterErrorType,
+  NotAuthenticatedError,
+  type NotAuthenticatedErrorType,
+  OpenfortConfigError,
+  type OpenfortConfigErrorType,
   OpenfortError,
-  /** @deprecated use `OpenfortErrorType` instead */
+  type OpenfortErrorOptions,
+  /**
+   * @deprecated Narrow on `error.name` (or `instanceof`) instead. The concrete
+   * error classes carry far more information than these five buckets; the enum
+   * stays populated on every instance's `type` field and is removed in the next major.
+   */
   OpenfortReactErrorType,
+  /**
+   * @deprecated Narrow on `error.name` (or `instanceof`) instead. Removed in the next major.
+   */
   OpenfortReactErrorType as OpenfortErrorType,
-} from './core/errors.js'
+  OtpRequiredError,
+  type OtpRequiredErrorType,
+  ProviderNotFoundError,
+  type ProviderNotFoundErrorType,
+  ProviderNotReadyError,
+  type ProviderNotReadyErrorType,
+  RecoveryError,
+  type RecoveryErrorType,
+  RpcUrlNotConfiguredError,
+  type RpcUrlNotConfiguredErrorType,
+  SetActiveWalletError,
+  type SetActiveWalletErrorType,
+  SiweMessageError,
+  type SiweMessageErrorType,
+  SolanaClusterNotSupportedError,
+  type SolanaClusterNotSupportedErrorType,
+  UnsupportedOperationError,
+  type UnsupportedOperationErrorType,
+  ValidationError,
+  type ValidationErrorType,
+  type WalletChain,
+  WalletConfigNotFoundError,
+  type WalletConfigNotFoundErrorType,
+  WalletCreationError,
+  type WalletCreationErrorType,
+  WalletError,
+  type WalletErrorType,
+  WalletImportError,
+  type WalletImportErrorType,
+  WalletNotConnectedError,
+  type WalletNotConnectedErrorType,
+  WalletNotFoundError,
+  type WalletNotFoundErrorType,
+} from './errors/index.js'
 export type {
   ConnectedEmbeddedEthereumWallet,
   EthereumWalletState,

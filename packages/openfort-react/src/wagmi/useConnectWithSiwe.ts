@@ -2,6 +2,7 @@
 
 import { OpenfortError } from '@openfort/openfort-js'
 import { useCallback, useRef } from 'react'
+import { SiweMessageError } from '../errors/connection.js'
 import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
 import { useOpenfortCore } from '../openfort/useOpenfort.js'
 import { createSIWEMessage } from '../siwe/create-siwe-message.js'
@@ -89,7 +90,7 @@ export function useConnectWithSiwe() {
         }
 
         const SIWEMessage = createSIWEMessage(address, nonce, chainId)
-        if (!SIWEMessage) throw new Error('SIWE message creation failed (window not available)')
+        if (!SIWEMessage) throw new SiweMessageError()
 
         const signature = await signMessage({ message: SIWEMessage })
 
