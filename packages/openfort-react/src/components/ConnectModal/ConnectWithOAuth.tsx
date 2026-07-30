@@ -56,9 +56,10 @@ const ConnectWithOAuth: React.FC = () => {
           restoreReferrer()
 
           if (!userId || !token || error) {
-            logger.error(
-              `Missing user id or access token: userId=${userId}, accessToken=${token ? `${token.substring(0, 10)}...` : token}`
-            )
+            logger.error('Missing user id or access token', {
+              hasUserId: !!userId,
+              hasToken: !!token,
+            })
             setStatus(states.ERROR)
             if (error) {
               switch (error) {

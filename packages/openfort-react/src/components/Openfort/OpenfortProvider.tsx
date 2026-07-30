@@ -16,7 +16,7 @@ import { useThemeFont } from '../../hooks/useGoogleFont'
 import { CoreOpenfortProvider } from '../../openfort/CoreOpenfortProvider'
 import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes'
 import type { CustomTheme, Languages, Mode, Theme } from '../../types'
-import { logger } from '../../utils/logger'
+import { logger, setDebugLogsEnabled } from '../../utils/logger'
 import { buildChainFromConfig } from '../../utils/rpc'
 import { isFamily } from '../../utils/wallets'
 
@@ -123,9 +123,12 @@ export const OpenfortProvider = ({
               openfortReactDebugMode: debugMode.openfortReactDebugMode ?? false,
               debugRoutes: debugMode.debugRoutes ?? false,
             }
-    logger.enabled = result.openfortReactDebugMode
     return result
   }, [debugMode])
+
+  useEffect(() => {
+    setDebugLogsEnabled(debugModeOptions.openfortReactDebugMode)
+  }, [debugModeOptions.openfortReactDebugMode])
 
   const injectedConnector = bridge?.connectors?.find((c) => c.id === 'injected')
   const allowAutomaticRecovery = !!(walletConfig?.createEncryptedSessionEndpoint || walletConfig?.getEncryptionSession)
