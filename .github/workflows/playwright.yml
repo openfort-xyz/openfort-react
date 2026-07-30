@@ -39,9 +39,19 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Run unit tests
-        run: pnpm test
+      - name: Run unit tests with coverage
+        # `CI` is set by GitHub Actions, which switches the vitest coverage
+        # reporter to lcov.
+        run: pnpm test:cov
         working-directory: packages/openfort-react
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-lcov
+          path: packages/openfort-react/coverage/lcov.info
+          retention-days: 30
 
       - name: Install Playwright Browsers
         run: pnpm playwright install --with-deps
