@@ -11,15 +11,15 @@
     "check:fix": "biome check --write --unsafe",
     "check:types": "tsc --noEmit",
     "check:unused": "knip",
-    "check:audit": "pnpm audit --audit-level=moderate",
+    "check:audit": "pnpm audit --ignore-registry-errors",
     "check:quickstarts": "pnpm --filter quickstart-headless check",
     "check:all": "pnpm check && pnpm check:types && pnpm check:unused && pnpm check:audit",
     "check:cli": "pnpm --filter create-openfort check",
     "sync-templates": "node scripts/sync-templates.js",
     "changeset": "changeset",
     "changeset:version": "node scripts/sync-templates.js && pnpm install --lockfile-only && changeset version && node scripts/update-version.mjs && cp packages/openfort-react/CHANGELOG.md CHANGELOG.md",
-    "changeset:publish": "pnpm build && pnpm build:cli && changeset publish",
-    "changeset:prepublish": "pnpm build",
+    "changeset:prepublish": "pnpm build && pnpm build:cli",
+    "changeset:publish": "pnpm changeset:prepublish && changeset publish",
     "dev": "pnpm --filter @openfort/react dev",
     "dev:cli": "pnpm --filter create-openfort dev",
     "dev:firebase": "cd examples/quickstarts/firebase && pnpm dev",
@@ -115,15 +115,6 @@
       "dompurify@<3.4.11": ">=3.4.11",
       "@opentelemetry/core@<2.8.0": ">=2.8.0",
       "@babel/core@<7.29.6": ">=7.29.6 <8"
-    },
-    "auditConfig": {
-      "ignoreCves": [
-        "CVE-2024-53384",
-        "CVE-2025-57319",
-        "CVE-2025-14505",
-        "CVE-2026-39356",
-        "CVE-2026-39365"
-      ]
     }
   },
   "knip": {
