@@ -35,6 +35,7 @@ function useEmbeddedWalletWagmiSync() {
   }, [activeConnector])
 
   // Reset failure flag when provider changes (new session = fresh attempt)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `provider` is the trigger — a new provider means a new session, which is allowed one more connect attempt
   useEffect(() => {
     connectFailedRef.current = false
   }, [provider])

@@ -196,7 +196,7 @@ const ConnectModal: React.FC<{
     if (!openedConnectedRef.current && !wasConnected && isConnected && context.open) {
       context.setOpen(false)
     }
-  }, [isConnected, context.open])
+  }, [isConnected, context.open, context.setOpen])
 
   //if chain is unsupported we enforce a "switch chain" prompt
   const closeable = !(context.uiConfig.enforceSupportedChains && isConnected && !chainIsSupported)
@@ -252,12 +252,12 @@ const ConnectModal: React.FC<{
       context.setConnector({ id: provider, type: 'oauth' })
       context.setRoute({ route: routes.CONNECT, connectType: 'linkIfUserConnectIfNoUser' })
     }
-  }, [])
+  }, [context.setOpen, context.setRoute, context.setConnector])
 
-  useEffect(() => context.setMode(mode), [mode])
-  useEffect(() => context.setTheme(theme), [theme])
-  useEffect(() => context.setCustomTheme(customTheme), [customTheme])
-  useEffect(() => context.setLang(lang), [lang])
+  useEffect(() => context.setMode(mode), [mode, context.setMode])
+  useEffect(() => context.setTheme(theme), [theme, context.setTheme])
+  useEffect(() => context.setCustomTheme(customTheme), [customTheme, context.setCustomTheme])
+  useEffect(() => context.setLang(lang), [lang, context.setLang])
 
   /* When pulling data into WalletConnect, it prioritises the og:title tag over the title tag */
   useEffect(() => {
@@ -275,7 +275,7 @@ const ConnectModal: React.FC<{
     return () => {
       document.head.removeChild(title)
     }
-  }, [context.open])
+  }, [context.open, context.uiConfig.appName])
 
   return (
     <ConnectKitThemeProvider theme={theme} customTheme={customTheme} mode={mode}>

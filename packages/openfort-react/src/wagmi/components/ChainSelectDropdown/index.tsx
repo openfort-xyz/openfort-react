@@ -91,24 +91,17 @@ const ChainSelectDropdown: React.FC<{
     return () => {
       document.removeEventListener('keydown', listener)
     }
-  }, [open])
+  }, [open, onClose])
 
   const targetRef = useRef<HTMLDivElement | null>(null)
-  const innerRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      if (!node) return
-      targetRef.current = node
-      refresh()
-    },
-    [open]
-  )
   const [ref, bounds] = useMeasure({
     debounce: 120, // waits until modal transition has finished before measuring
     offsetSize: true,
     scroll: true,
   })
 
-  const refresh = () => {
+  // Pin the dropdown window just below the measured trigger.
+  const refresh = useCallback(() => {
     if (
       !targetRef.current ||
       bounds.top + bounds.bottom + bounds.left + bounds.right + bounds.height + bounds.width === 0
@@ -121,24 +114,28 @@ const ChainSelectDropdown: React.FC<{
 
     targetRef.current.style.left = `${x}px`
     targetRef.current.style.top = `${y}px`
-  }
+  }, [bounds, offsetX, offsetY])
+
+  const innerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return
+      targetRef.current = node
+      refresh()
+    },
+    [refresh]
+  )
 
   const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
-  useIsomorphicLayoutEffect(refresh, [targetRef.current, bounds, open])
+  useIsomorphicLayoutEffect(refresh, [refresh, open])
 
-  useEffect(refresh, [open, targetRef.current])
-
-  const onScroll = onClose
-  const onResize = onClose
   useEffect(() => {
-    refresh()
-    window.addEventListener('scroll', onScroll)
-    window.addEventListener('resize', onResize)
+    window.addEventListener('scroll', onClose)
+    window.addEventListener('resize', onClose)
     return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onClose)
+      window.removeEventListener('resize', onClose)
     }
-  }, [])
+  }, [onClose])
 
   return (
     <>

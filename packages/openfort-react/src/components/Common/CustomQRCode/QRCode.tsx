@@ -118,7 +118,7 @@ export function QRCode({
     })
 
     return dots
-  }, [ecl, size, uri])
+  }, [ecl, size, uri, image, imageBackground, logoSize])
 
   return (
     <svg

@@ -99,9 +99,10 @@ const ConnectWithQRCode = () => {
   const bridge = useEthereumBridge()
   const isConnected = bridge?.account?.isConnected ?? false
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `isConnected` is the trigger — connecting swaps the QR code for the SIWE prompt, which is a different height
   useEffect(() => {
     triggerResize()
-  }, [isConnected])
+  }, [isConnected, triggerResize])
 
   const wallet = useExternalConnector(connector.id)
 

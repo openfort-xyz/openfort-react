@@ -41,9 +41,10 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
 
   const [viewAllAssets, setViewAllAssets] = useState(false)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `viewAllAssets` is the trigger — expanding the list changes the page height
   useEffect(() => {
     triggerResize()
-  }, [viewAllAssets])
+  }, [viewAllAssets, triggerResize])
 
   const { chainType } = useOpenfortCore()
   const { chainId } = useEthereumEmbeddedWallet()
@@ -81,9 +82,10 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
     setRoute(routes.SEND)
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers — the token count sets the list height and the flow decides which list is shown
   useEffect(() => {
     triggerResize()
-  }, [selectableTokens.length, isBuyFlow])
+  }, [selectableTokens.length, isBuyFlow, triggerResize])
 
   const renderContent = () => {
     if (!selectableTokens.length) {

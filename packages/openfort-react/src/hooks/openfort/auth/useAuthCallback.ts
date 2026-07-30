@@ -109,10 +109,25 @@ export const useAuthCallback = ({
 
   const callbackProcessedRef = useRef(false)
 
+  // The callback effect below re-runs only when `enabled` flips, so it reads the handlers and
+  // consumer options through this ref to always invoke the current ones. Depending on their
+  // identities directly would re-run the effect on every render for no gain: `callbackProcessedRef`
+  // makes every run after the first a no-op, and the URL parameters are consumed exactly once.
+  const latestRef = useRef({ verifyEmail, storeCredentials, hookOptions })
+  useEffect(() => {
+    latestRef.current = { verifyEmail, storeCredentials, hookOptions }
+  })
+
   useEffect(() => {
     if (!enabled) return
     if (callbackProcessedRef.current) return
     callbackProcessedRef.current = true
+
+    const {
+      verifyEmail: runVerifyEmail,
+      storeCredentials: runStoreCredentials,
+      hookOptions: callbacks,
+    } = latestRef.current
 
     // Parse callback URL (fixes OF-1013 duplicate `?` issue)
     const url = parseCallbackUrl(window.location.href)
@@ -156,23 +171,23 @@ export const useAuthCallback = ({
           // State present — verify client-side as well
           const options: OpenfortHookOptions<Omit<CallbackResult, 'type'>> = {
             onSuccess: (data) => {
-              hookOptions.onSuccess?.({
+              callbacks.onSuccess?.({
                 ...data,
                 type: 'verifyEmail',
               })
             },
-            onError: hookOptions.onError,
-            throwOnError: hookOptions.throwOnError,
+            onError: callbacks.onError,
+            throwOnError: callbacks.throwOnError,
           }
 
-          await verifyEmail({ email, state, ...options })
+          await runVerifyEmail({ email, state, ...options })
           setEmail(email)
           removeParams()
         } else if (email) {
           // No state — backend already verified the email, just signal success
           setEmail(email)
           setAlreadyVerified(true)
-          hookOptions.onSuccess?.({
+          callbacks.onSuccess?.({
             email,
             type: 'verifyEmail',
           })
@@ -181,8 +196,8 @@ export const useAuthCallback = ({
           restoreReferrer()
           const err = new OpenfortError('No email found in URL', OpenfortReactErrorType.AUTHENTICATION_ERROR)
           logger.error('No email found in URL')
-          hookOptions.onError?.(err)
-          if (hookOptions.throwOnError) throw err
+          callbacks.onError?.(err)
+          if (callbacks.throwOnError) throw err
           return
         }
       } else {
@@ -199,8 +214,8 @@ export const useAuthCallback = ({
             'Missing player id or access token or refresh token',
             OpenfortReactErrorType.AUTHENTICATION_ERROR
           )
-          hookOptions.onError?.(err)
-          if (hookOptions.throwOnError) throw err
+          callbacks.onError?.(err)
+          if (callbacks.throwOnError) throw err
 
           return
         }
@@ -217,26 +232,26 @@ export const useAuthCallback = ({
 
         const options: OpenfortHookOptions<Omit<CallbackResult, 'type'>> = {
           onSuccess: (data) => {
-            hookOptions.onSuccess?.({
+            callbacks.onSuccess?.({
               ...data,
               type: 'storeCredentials',
             })
           },
-          onError: hookOptions.onError,
-          throwOnError: hookOptions.throwOnError,
+          onError: callbacks.onError,
+          throwOnError: callbacks.throwOnError,
         }
 
-        await storeCredentials({
+        await runStoreCredentials({
           userId,
           token,
-          logoutOnError: hookOptions.logoutOnError,
-          recoverWalletAutomatically: hookOptions.recoverWalletAutomatically,
+          logoutOnError: callbacks.logoutOnError,
+          recoverWalletAutomatically: callbacks.recoverWalletAutomatically,
           ...options,
         })
         removeParams()
       }
     })()
-  }, []) // intentionally empty — runs once on mount to process the URL callback
+  }, [enabled])
 
   return {
     email,

@@ -69,6 +69,7 @@ export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurre
   // Grow the modal when the busy / error / sent feedback toggles, so the "Confirm
   // in your wallet…" and insufficient-balance messages are revealed instead of
   // clipped below the fold (which reads as "nothing happened" after a click).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     triggerResize()
   }, [busyId, error, sent, triggerResize])

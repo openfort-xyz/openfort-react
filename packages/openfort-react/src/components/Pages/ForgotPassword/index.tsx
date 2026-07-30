@@ -22,9 +22,10 @@ const RequestEmail: React.FC = () => {
   const [message, setMessage] = React.useState<string>('')
   const [error, setError] = React.useState<string>('')
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the presence of an error is the trigger — the error banner adds a row to the form
   useEffect(() => {
     triggerResize()
-  }, [!error])
+  }, [!error, triggerResize])
 
   useEffect(() => {
     if (message) {
@@ -126,9 +127,10 @@ const ResetPassword: React.FC = () => {
   const email = url.searchParams.get('email')
   const state = url.searchParams.get('state')
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `error` and `message` are re-measure triggers — each banner adds a row to the form
   useEffect(() => {
     triggerResize()
-  }, [error, message])
+  }, [error, message, triggerResize])
 
   const clearResetParams = () => {
     for (const param of ['openfortForgotPasswordUI', 'state', 'email']) {

@@ -17,6 +17,7 @@ const CreateGuestUserPage = () => {
 
   const initialized = useRef(false)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one guest sign-up per visit — `initialized` latches on the first run, and `signUpGuest` changes identity on every render because the hook options are an object literal
   useEffect(() => {
     if (initialized.current) return
     initialized.current = true

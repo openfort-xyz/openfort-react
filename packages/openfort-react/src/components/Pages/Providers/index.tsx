@@ -350,7 +350,6 @@ const SocialProvidersButton = ({ thereAreSocialsAlready }: { thereAreSocialsAlre
 
 const Providers: React.FC = () => {
   const { user } = useOpenfortCore()
-  const { previousRoute } = useOpenfort()
   const { mainProviders, hasExcessProviders } = useProviders()
   const { chainType } = useOpenfortCore()
 
@@ -367,7 +366,7 @@ const Providers: React.FC = () => {
       return 'back'
     }
     return null
-  }, [previousRoute, user])
+  }, [user])
 
   if (address && !user) {
     return <AddressButNoUserCase />

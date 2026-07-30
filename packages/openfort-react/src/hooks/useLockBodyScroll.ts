@@ -1,13 +1,12 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 import { useOpenfort } from '../components/Openfort/useOpenfort.js'
 
 const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
 
-export default function useLockBodyScroll(initialLocked: boolean) {
-  const [locked, setLocked] = useState(initialLocked)
-
+/** Freezes body scrolling while `locked` is true, restoring the original styles on unlock. */
+export default function useLockBodyScroll(locked: boolean) {
   const context = useOpenfort()
 
   useIsomorphicLayoutEffect(() => {
@@ -52,11 +51,5 @@ export default function useLockBodyScroll(initialLocked: boolean) {
         document.body.style.paddingRight = original.paddingRight
       }
     }
-  }, [locked])
-
-  useEffect(() => {
-    if (locked !== initialLocked) setLocked(initialLocked)
-  }, [initialLocked])
-
-  return [locked, setLocked]
+  }, [locked, context.uiConfig.avoidLayoutShift])
 }

@@ -96,6 +96,10 @@ const SolanaCreateAutomatic = ({ onBack, logoutOnBack }: { onBack: SetOnBackFunc
     }
   }
 
+  // Wallet creation is not idempotent, so this runs on the `shouldCreate` edge alone: re-running it
+  // for a new `embeddedWallet.create` or `requestOTP` identity would issue a second create call for
+  // the same intent.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one create call per `shouldCreate` edge, see above
   useEffect(() => {
     if (!shouldCreate) return
     ;(async () => {
@@ -221,6 +225,9 @@ const SolanaCreatePasskey = ({
   const [shouldCreate, setShouldCreate] = useState(false)
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
 
+  // Wallet creation is not idempotent, so this runs on the `shouldCreate` edge alone: re-running it
+  // for a new `embeddedWallet.create` identity would prompt the user for a second passkey.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one create call per `shouldCreate` edge, see above
   useEffect(() => {
     if (!shouldCreate) return
     ;(async () => {
@@ -245,7 +252,7 @@ const SolanaCreatePasskey = ({
 
   useEffect(() => {
     if (recoveryError) triggerResize()
-  }, [recoveryError])
+  }, [recoveryError, triggerResize])
 
   return (
     <PageContent onBack={onBack} logoutOnBack={logoutOnBack}>
@@ -298,7 +305,7 @@ const SolanaCreatePassword = ({
 
   useEffect(() => {
     if (recoveryError) triggerResize()
-  }, [recoveryError])
+  }, [recoveryError, triggerResize])
 
   return (
     <PageContent onBack={onBack} logoutOnBack={logoutOnBack}>
@@ -419,9 +426,10 @@ const SolanaCreateWallet = ({ onBack, logoutOnBack }: { onBack: SetOnBackFunctio
   const { uiConfig, triggerResize } = useOpenfort()
   const [userSelectedMethod, setUserSelectedMethod] = useState<RecoveryMethodSelection | null>(null)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `userSelectedMethod` is the trigger — each recovery method renders a differently sized page
   useEffect(() => {
     triggerResize()
-  }, [userSelectedMethod])
+  }, [userSelectedMethod, triggerResize])
 
   const method = userSelectedMethod ?? uiConfig.walletRecovery.defaultMethod
   const Component = recoveryMethodComponents[method]

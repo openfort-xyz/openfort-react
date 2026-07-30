@@ -86,7 +86,7 @@ const PhoneOTP: React.FC = () => {
         setStatus('success')
       }
     },
-    [phone, logInWithPhoneOtp]
+    [phone, logInWithPhoneOtp, linkPhoneOtp, user]
   )
 
   // Handle status changes and side effects

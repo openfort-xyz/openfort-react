@@ -61,6 +61,7 @@ const BuyProcessing = () => {
 
   // Create session and open popup once wallet is ready
   const sessionStartedRef = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: exactly one onramp session per visit — `sessionStartedRef` latches on the first run with a wallet, so the order form is read once and a later edit must not open a second popup
   useEffect(() => {
     if (!address || !network) return
     if (sessionStartedRef.current) return
@@ -154,7 +155,7 @@ const BuyProcessing = () => {
     createSessionAndOpenPopup()
   }, [address, network]) // Run when wallet becomes ready
 
-  // Trigger resize on mount and when state changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — each of the three states swaps in a differently sized body (spinner, continue button, error)
   useEffect(() => {
     triggerResize()
   }, [triggerResize, isCreatingSession, showContinueButton, sessionError])

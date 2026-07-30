@@ -61,9 +61,17 @@ export function OtpInputStandalone({
     }
   }
 
+  // Callers usually pass an inline `onComplete`, so it is invoked through a ref: filling the last
+  // box is what submits the code, and depending on the prop identity would re-submit on every
+  // render once the boxes are full.
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => {
+    onCompleteRef.current = onComplete
+  })
+
   useEffect(() => {
     if (values.every((v) => v !== '')) {
-      onComplete?.(values.join(''))
+      onCompleteRef.current?.(values.join(''))
     }
   }, [values])
 
@@ -126,7 +134,7 @@ export function OtpInputStandalone({
       setActiveIndex(0)
       inputsRef.current[0]?.focus()
     }
-  }, [isError])
+  }, [isError, length])
 
   return (
     <OtpContainer showBorder={!isSuccess} scale={scale}>

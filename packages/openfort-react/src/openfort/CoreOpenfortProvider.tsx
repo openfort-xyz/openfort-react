@@ -111,6 +111,13 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
   bridgeRef.current = bridge
 
   // ---- Openfort instance ----
+  // The client is a per-provider singleton: it owns the embedded-signer session, is published
+  // as the module-level default client, and its identity gates the store, the embedded-state
+  // watcher subscription and every callback below. Consumers pass `openfortConfig` as an object
+  // literal, so depending on it would rebuild the client on every render and drop the session.
+  // Contract: credentials are read once per provider mount — to switch `publishableKey` or
+  // `shieldConfiguration` at runtime, remount the provider (e.g. give it a React `key`).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: openfortConfig is read once at mount by design, see above
   const openfort = useMemo(() => {
     logger.log('Creating Openfort instance.', openfortConfig)
 
@@ -132,6 +139,12 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     return newClient
   }, [])
 
+  // The store is the single source of truth shared by every consumer through StoreContext, so it
+  // is created once per provider mount: recreating it would reset user, accounts and embedded
+  // state and detach all existing subscriptions. `chainType` and `connectOnLogin` therefore only
+  // seed it — chainType is kept in sync by the layout effect below, and connectOnLogin is read
+  // from the wallet config as it stands at mount.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the store must outlive its seed values, see above
   const store = useMemo(() => {
     return createOpenfortStore(
       chainType,
@@ -153,6 +166,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
 
   // Recompute isLoading when bridge address changes (bridge connects/disconnects)
   const address = bridge?.account.address
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `address` is the trigger, not an input — recomputeIsLoading reads the current bridge account through the store's own getter
   useEffect(() => {
     store.getState().recomputeIsLoading()
   }, [store, address])
@@ -211,12 +225,14 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
           err && typeof err === 'object' && 'response' in err
             ? (err as { response?: { status?: number } }).response?.status
             : undefined
+        // Read logout from the store rather than capturing it: the store holds the live
+        // implementation, injected by the layout effect at the bottom of this provider.
         if (status === 404) {
           logger.log('User not found, logging out')
-          logout()
+          store.getState().logout()
         } else if (status === 401) {
           logger.log('User not authenticated, logging out')
-          logout()
+          store.getState().logout()
         }
         return null
       }
@@ -361,7 +377,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
       // re-fire initProvider → repeated /v2/accounts/switch-chain 422s.
       cancelled = true
     }
-  }, [openfort, walletConfig, strategy, evmChainId, storeEmbeddedState, storeActiveEmbeddedAddress])
+  }, [openfort, walletConfig, strategy, evmChainId, storeEmbeddedState, store, fetchEmbeddedAccounts])
 
   // On refresh, embeddedState reaches READY before the user is loaded, so
   // fetchEmbeddedAccounts (called inside initProvider) returns empty. Re-fetch
@@ -429,7 +445,16 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     connectingRef.current = true
     setIsConnectedWithEmbeddedSigner(true)
     bridge.connect({ connector: openfortConnector })
-  }, [bridge, address, storeUser, chainType, storeEmbeddedState, isConnectedWithEmbeddedSigner])
+  }, [
+    bridge,
+    address,
+    storeUser,
+    chainType,
+    storeEmbeddedState,
+    isConnectedWithEmbeddedSigner,
+    connectingRef,
+    setIsConnectedWithEmbeddedSigner,
+  ])
 
   // ---- Auth functions ----
 
@@ -449,7 +474,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
       await bridge.disconnect()
       bridge.reset()
     }
-  }, [openfort, bridge, store])
+  }, [openfort, bridge, store, connectingRef, setIsConnectedWithEmbeddedSigner])
 
   const signUpGuest = useCallback(async () => {
     if (!openfort) return

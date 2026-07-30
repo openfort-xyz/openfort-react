@@ -51,7 +51,7 @@ const LinkedProvidersGroup: React.FC = () => {
 
   useEffect(() => {
     if (!isLoading) triggerResize()
-  }, [isLoading])
+  }, [isLoading, triggerResize])
 
   // TODO: Show loading
   if (isLoading) {
