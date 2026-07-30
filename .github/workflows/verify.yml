@@ -48,6 +48,15 @@ jobs:
       - name: Check TypeScript types
         run: pnpm check:types
 
+      - name: Check CLI (tsc + Biome)
+        run: pnpm check:cli
+
+      - name: Run CLI unit tests
+        run: pnpm test:cli
+
+      - name: Check quickstart example
+        run: pnpm check:quickstarts
+
       - name: Check for unused files and exports
         run: pnpm check:unused
 
