@@ -50,6 +50,7 @@ const ChainSelector: React.FC = () => {
     if (!open) setIsOpen(false)
   }, [open])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `chainId` is the trigger — the selector label changes width with the active chain, so the modal has to re-measure
   useEffect(() => {
     triggerResize()
   }, [chainId, triggerResize])
