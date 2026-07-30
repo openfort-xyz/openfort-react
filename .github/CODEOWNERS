@@ -1,0 +1,3 @@
+# Every path needs a reviewer. Narrow rules can be added below this line;
+# the last matching rule wins, so keep this catch-all first.
+* @openfort-xyz/engineering

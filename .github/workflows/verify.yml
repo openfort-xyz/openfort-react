@@ -17,13 +17,15 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
 
       - name: Install pnpm
         uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
           node-version: 24
           cache: pnpm
@@ -33,11 +35,12 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Security audit
-        # npm retired the audit endpoint this hits (HTTP 410), so `pnpm audit`
-        # now fails on every run regardless of dependencies. Keep the step for
-        # visibility but don't let the dead endpoint block CI.
-        run: pnpm audit
-        continue-on-error: true
+        # `--ignore-registry-errors` exits 0 when the registry itself is
+        # unreachable, so a registry outage cannot fail the build while a real
+        # advisory still can. Known-debt advisories are allowlisted with
+        # justifications under `auditConfig` in pnpm-workspace.yaml; anything
+        # outside that allowlist fails here.
+        run: pnpm audit --ignore-registry-errors
 
       - name: Code check (Biome)
         run: pnpm biome check
@@ -49,5 +52,68 @@ jobs:
         run: pnpm check:unused
 
       - name: Build project
+        run: pnpm build
+
+  types:
+    name: Types (React ${{ matrix.react-version }}, viem ${{ matrix.viem-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      # One failing combination is a useful signal on its own, so let the rest
+      # finish and report.
+      fail-fast: false
+      matrix:
+        # Both ends of the supported peer range.
+        react-version: ['18', '19']
+        # The version the lockfile resolves to, plus whatever consumers get
+        # today, so a breaking viem release surfaces here first.
+        viem-version: ['2.52.2', 'latest']
+        # TypeScript is not an axis here: the build type-checks through
+        # rollup-plugin-typescript2, which needs the JavaScript implementation
+        # of TypeScript, and TypeScript 7 ships only the native port.
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install matrix versions
+        # `pnpm.overrides` pins react and viem for every workspace project, so
+        # those pins have to go before the matrix versions can take effect.
+        # React is installed into the package workspace because that is where
+        # the typecheck resolves its react types from.
+        run: |
+          node -e "
+            const fs = require('fs')
+            const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'))
+            for (const name of ['react', 'react-dom', '@types/react', '@types/react-dom', 'viem'])
+              delete pkg.pnpm.overrides[name]
+            fs.writeFileSync('package.json', JSON.stringify(pkg, null, 2))
+          "
+          pnpm add -D -w viem@${{ matrix.viem-version }}
+          pnpm --filter @openfort/react add -D \
+            react@${{ matrix.react-version }} \
+            react-dom@${{ matrix.react-version }} \
+            @types/react@${{ matrix.react-version }} \
+            @types/react-dom@${{ matrix.react-version }}
+
+      - name: Check types
+        # rollup-plugin-typescript2 type-checks the package sources as it
+        # builds, so a type error under this react/viem pair fails the job.
         run: pnpm build
 
