@@ -1,5 +1,6 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -74,6 +75,10 @@ vi.mock('viem', async (importOriginal) => {
 })
 
 const { default: SendConfirmation } = await import('../../components/Pages/SendConfirmation/index.js')
+const { createTestWrapper } = await import('../mocks/wrapper.js')
+
+/** The page reads balances, fees and receipts through queries, so it needs a QueryClient in scope. */
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: createTestWrapper() })
 
 describe('SendConfirmation', () => {
   beforeEach(() => {

@@ -111,7 +111,7 @@ export { useSignMessage } from './hooks/openfort/useSignMessage.js'
 export { useUI } from './hooks/openfort/useUI.js'
 export { useUser } from './hooks/openfort/useUser.js'
 export type { UserWallet } from './hooks/openfort/walletTypes.js'
-export { invalidateBalance } from './hooks/useBalance.js'
+export { useInvalidateBalance } from './hooks/useBalance.js'
 export { StoreContext } from './openfort/context.js'
 // ── Store / selectors ────────────────────────────────────────────────────────
 export {
