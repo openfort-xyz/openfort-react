@@ -230,8 +230,8 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   } as React.CSSProperties
 
   // A wallet without a deeplink, or one already installed, connects through the
-  // injector flow; the rest are paired by scanning a QR code.
-  const showsQrCode = !!wallet && !(!wallet.getWalletConnectDeeplink || wallet.isInstalled)
+  // injector flow — which also owns the failure states. The rest pair by QR code.
+  const showsQrCode = !!wallet?.getWalletConnectDeeplink && !wallet.isInstalled
   const heading = getRouteHeading(route, locales, {
     name: walletInfo.name,
     connectorId: wallet?.connector?.id,
