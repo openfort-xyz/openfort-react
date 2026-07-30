@@ -52,6 +52,27 @@ export class DashboardPage {
   }
 
   /**
+   * Full address of the connected account. The header truncates it, so hover the
+   * truncated span and read the tooltip, which carries the untruncated value.
+   */
+  async connectedAddress(): Promise<`0x${string}`> {
+    const truncated = this.page
+      .locator('p')
+      .filter({ hasText: /^Connected with/i })
+      .locator('[data-slot="tooltip-trigger"]')
+      .first()
+    await expect(truncated).toBeVisible({ timeout: 60_000 })
+    await truncated.hover()
+
+    const tooltip = this.page.locator('[data-slot="tooltip-content"]').first()
+    await expect(tooltip).toContainText(/^0x[a-fA-F0-9]{40}$/, { timeout: 30_000 })
+    const address = (await tooltip.textContent())?.trim()
+
+    if (!address?.startsWith('0x')) throw new Error(`Expected a 0x address in the tooltip, got "${address}"`)
+    return address as `0x${string}`
+  }
+
+  /**
    * Sign a message through the Openfort UI widget: open the modal from the
    * "Openfort UI" card, confirm, wait for the success screen, then close it.
    * (The message content is fixed by the widget demo, so the argument is unused.)
