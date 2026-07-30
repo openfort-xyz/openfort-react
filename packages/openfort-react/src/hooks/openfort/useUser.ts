@@ -2,6 +2,7 @@
 
 import { EmbeddedState } from '@openfort/openfort-js'
 import { useCallback } from 'react'
+import { isAuthenticatedState } from '../../openfort/selectors.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { handleOAuthConfigError } from '../../utils/oauthErrorHandler.js'
 
@@ -28,7 +29,7 @@ import { handleOAuthConfigError } from '../../utils/oauthErrorHandler.js'
 export function useUser() {
   const { user, client, embeddedState, linkedAccounts, activeEmbeddedAddress, isLoading } = useOpenfortCore()
 
-  const isAuthenticated = embeddedState !== EmbeddedState.NONE && embeddedState !== EmbeddedState.UNAUTHENTICATED
+  const isAuthenticated = isAuthenticatedState(embeddedState)
   const isConnected = embeddedState === EmbeddedState.READY && !!activeEmbeddedAddress
 
   const getAccessTokenAndUpdate = useCallback(async () => {
