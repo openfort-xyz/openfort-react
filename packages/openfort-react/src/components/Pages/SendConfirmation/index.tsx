@@ -115,7 +115,7 @@ const SendConfirmation = () => {
       logger.log('INVALID - recipientAddress:', recipientAddress, 'parsedAmount:', parsedAmount)
       // setRoute(routes.SEND)
     }
-  }, [recipientAddress, parsedAmount, setRoute])
+  }, [recipientAddress, parsedAmount])
 
   // Get current balance value from discriminated unions
   const nativeBalanceValue = nativeBalance.status === 'success' ? nativeBalance.value : undefined
@@ -345,6 +345,7 @@ const SendConfirmation = () => {
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — an error, an insufficient-balance warning or a receipt link each change the page height
   useEffect(() => {
     setTimeout(triggerResize, 10) // delay required here for modal to resize
   }, [errorDetails, insufficientBalance, receipt?.transactionHash, isLoading, triggerResize])

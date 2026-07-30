@@ -39,6 +39,7 @@ export function useSameChainArrival({
   const [arrived, setArrived] = useState(false)
   const baselineRef = useRef<bigint | null>(null)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `chainId` is a restart trigger — the poll below reads balances for the chain whose RPC URL was derived from it, so a chain switch has to start a fresh poll from a new baseline
   useEffect(() => {
     if (!enabled || !address) return
 

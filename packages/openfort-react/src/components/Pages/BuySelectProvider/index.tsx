@@ -111,7 +111,9 @@ const BuySelectProvider = () => {
     }
   }, [fiatAmount])
 
-  // Fetch quotes from all providers
+  // Fetch quotes from all providers. `refetchTrigger` is incremented by the countdown above and is
+  // a trigger rather than an input: quotes expire after a minute and have to be re-requested.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetchTrigger is a refresh trigger, see above
   useEffect(() => {
     const fetchQuotes = async () => {
       if (!address || !network || !fiatAmount || fiatAmount <= 0) {
@@ -155,16 +157,7 @@ const BuySelectProvider = () => {
     // Debounce the quote fetching
     const timeoutId = setTimeout(fetchQuotes, 500)
     return () => clearTimeout(timeoutId)
-  }, [
-    fiatAmount,
-    selectedToken.metadata,
-    selectedToken.type,
-    buyForm.currency,
-    network,
-    address,
-    publishableKey,
-    refetchTrigger,
-  ])
+  }, [fiatAmount, selectedToken, buyForm.currency, network, address, publishableKey, refetchTrigger])
 
   const handleSelectProvider = (id: string) => {
     setBuyForm((prev) => ({

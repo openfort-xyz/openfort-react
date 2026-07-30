@@ -57,7 +57,7 @@ const LOADING_TIMEOUT_MS = 10_000
 
 const LoadWallets: React.FC = () => {
   const { chainType, user, isLoadingAccounts } = useOpenfortCore()
-  const { triggerResize, setRoute, setConnector, walletConfig } = useOpenfort()
+  const { triggerResize, setRoute, walletConfig } = useOpenfort()
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
@@ -124,7 +124,17 @@ const LoadWallets: React.FC = () => {
       // Not auto-connecting: close modal (go to connected page which triggers auto-close)
       setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_CONNECTED : routes.ETH_CONNECTED)
     }
-  }, [loadingUX, isLoadingWallets, wallets, user, chainType, setRoute, setConnector, walletConfig, connectOnLogin])
+  }, [
+    loadingUX,
+    isLoadingWallets,
+    wallets,
+    user,
+    chainType,
+    setRoute,
+    connectOnLogin,
+    embeddedWallet.status,
+    embeddedWallet.address,
+  ])
 
   const { isError: isErrorFromChain, message: errorMessageFromChain } = errorForChainRegistry[chainType](errorWallets)
   const isError = !user || isErrorFromChain

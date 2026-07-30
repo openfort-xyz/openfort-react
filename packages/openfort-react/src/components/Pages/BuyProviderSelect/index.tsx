@@ -37,9 +37,10 @@ const BuyProviderSelect = () => {
   }, [normalizedAmount])
 
   const quotes = useMemo(() => getProviderQuotes(fiatAmount), [fiatAmount])
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `quotes.length` is the trigger — each quote row adds height to the page
   useEffect(() => {
     triggerResize()
-  }, [quotes.length])
+  }, [quotes.length, triggerResize])
   const currencyFormatter = useMemo(() => createCurrencyFormatter(buyForm.currency), [buyForm.currency])
 
   const tokenSymbol = getAssetSymbol(buyForm.asset)

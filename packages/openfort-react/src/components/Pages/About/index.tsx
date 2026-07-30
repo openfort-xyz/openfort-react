@@ -2,7 +2,7 @@
 
 import { AnimatePresence, MotionConfig } from 'framer-motion'
 import type React from 'react'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import useLocales from '../../../hooks/useLocales.js'
 
 import Button from '../../Common/Button/index.js'
@@ -62,7 +62,7 @@ const About: React.FC = () => {
   }
 
   // This event should not fire on mobile
-  const onScroll = () => {
+  const onScroll = useCallback(() => {
     if (!sliderRef.current) return
 
     const { offsetWidth: width, scrollLeft: x } = sliderRef.current
@@ -76,25 +76,26 @@ const About: React.FC = () => {
       const currentSlide = Math.round(x / width)
       setSlider(currentSlide)
     }
-  }
-  const onTouchEnd = () => {
+  }, [])
+
+  const onTouchEnd = useCallback(() => {
     if (!sliderRef.current) return
     const { offsetWidth: width, scrollLeft: x } = sliderRef.current
     const currentSlide = Math.round(x / width)
     setSlider(currentSlide)
-  }
+  }, [])
 
   const sliderRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
-    if (!sliderRef.current) return
-    sliderRef.current.addEventListener('scroll', onScroll)
-    sliderRef.current.addEventListener('touchend', onTouchEnd)
+    const slider = sliderRef.current
+    if (!slider) return
+    slider.addEventListener('scroll', onScroll)
+    slider.addEventListener('touchend', onTouchEnd)
     return () => {
-      if (!sliderRef.current) return
-      sliderRef.current.removeEventListener('scroll', onScroll)
-      sliderRef.current.removeEventListener('touchend', onTouchEnd)
+      slider.removeEventListener('scroll', onScroll)
+      slider.removeEventListener('touchend', onTouchEnd)
     }
-  }, [sliderRef])
+  }, [onScroll, onTouchEnd])
 
   const graphics: React.ReactNode[] = [
     <SlideOne key="slide-one" layoutId={'graphicCircle'} duration={animationDuration} ease={animationEase} />,

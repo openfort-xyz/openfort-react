@@ -43,7 +43,7 @@ const RemoveLinkedProvider: React.FC = () => {
 
   useEffect(() => {
     if (error) triggerResize()
-  }, [error])
+  }, [error, triggerResize])
 
   useEffect(() => {
     if (isSuccess) {
@@ -60,7 +60,7 @@ const RemoveLinkedProvider: React.FC = () => {
         })
       })
     }
-  }, [isSuccess])
+  }, [isSuccess, updateUser, triggerResize, setOnBack, setRouteHistory, setRoute])
 
   const handleRemove = async () => {
     if (!provider) return
