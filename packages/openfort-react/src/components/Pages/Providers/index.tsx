@@ -62,7 +62,7 @@ const GuestButton: React.FC = () => {
 
 const WalletButton: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { setRoute } = useOpenfort()
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
   return (
     <ProviderButtonBase
       onClick={() => setRoute({ route: routes.CONNECTORS, connectType: user ? 'link' : 'connect' })}
@@ -153,7 +153,7 @@ const EmailButton: React.FC<{ handleSubmit: () => void }> = ({ handleSubmit }) =
 
 const EmailPasswordButton: React.FC = () => {
   const { setRoute } = useOpenfort()
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
 
   const handleSubmit = () => {
     setRoute(user ? routes.LINK_EMAIL : routes.EMAIL_LOGIN)
@@ -307,7 +307,8 @@ const authProviderToOAuthProviderMap: Record<UIAuthProvider, React.ReactNode> = 
 }
 
 export const ProviderButton: React.FC<{ provider: UIAuthProvider }> = ({ provider }) => {
-  const { user, chainType } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const chainType = useOpenfortCore((s) => s.chainType)
   if (user && (provider === UIAuthProvider.EMAIL_OTP || provider === UIAuthProvider.EMAIL_PASSWORD)) {
     return <EmailPasswordButton />
   }
@@ -319,8 +320,8 @@ export const ProviderButton: React.FC<{ provider: UIAuthProvider }> = ({ provide
 
 // This accounts for the case where the user has an address but no user, which can happen if the user has not signed up yet, but logged in with a wallet
 const AddressButNoUserCase: React.FC = () => {
-  const { updateUser } = useOpenfortCore()
-  const { logout } = useOpenfortCore()
+  const updateUser = useOpenfortCore((s) => s.updateUser)
+  const logout = useOpenfortCore((s) => s.logout)
 
   useEffect(() => {
     updateUser()
@@ -349,9 +350,9 @@ const SocialProvidersButton = ({ thereAreSocialsAlready }: { thereAreSocialsAlre
 }
 
 const Providers: React.FC = () => {
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
   const { mainProviders, hasExcessProviders } = useProviders()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()

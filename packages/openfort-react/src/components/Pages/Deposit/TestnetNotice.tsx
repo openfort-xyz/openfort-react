@@ -144,7 +144,7 @@ const DocsLink = styled.a`
  */
 export function TestnetNotice() {
   const { triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const [open, setOpen] = useState(false)

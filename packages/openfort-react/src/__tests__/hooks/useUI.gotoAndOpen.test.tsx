@@ -29,7 +29,7 @@ const setOpen = vi.fn((value: boolean) => {
 const setConnector = vi.fn()
 
 vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+  useOpenfortRouting: () => ({
     open: state.open,
     setOpen,
     setRoute,
@@ -37,25 +37,24 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     connector: { id: '' },
     chainType: ChainTypeEnum.EVM,
   }),
+  useOpenfortForms: () => ({ setSendForm: vi.fn() }),
 }))
-vi.mock('../../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({
+vi.mock('../../openfort/useOpenfort', () => {
+  const getState = () => ({
     isLoading: false,
     user: null,
     needsRecovery: false,
     embeddedAccounts: undefined,
     activeEmbeddedAddress: undefined,
     embeddedState: EmbeddedState.UNAUTHENTICATED,
-  }),
+  })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
+// The active chain's strategy decides what counts as connected.
+vi.mock('../../core/ConnectionStrategyContext', () => ({
+  useConnectionStrategy: () => ({ kind: 'embedded', isConnected: () => state.connected }),
 }))
-vi.mock('../../core/ConnectionStrategyContext', () => ({ useConnectionStrategy: () => null }))
 vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({ useEthereumBridge: () => null }))
-vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
-  useEthereumEmbeddedWallet: () => ({ status: state.connected ? 'connected' : 'disconnected' }),
-}))
-vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
-  useSolanaEmbeddedWallet: () => ({ status: state.connected ? 'connected' : 'disconnected' }),
-}))
 
 const { useUI } = await import('../../hooks/openfort/useUI.js')
 

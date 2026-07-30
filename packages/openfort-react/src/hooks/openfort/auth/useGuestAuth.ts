@@ -79,7 +79,9 @@ type GuestHookOptions = OpenfortHookOptions<GuestHookResult> & CreateWalletPostA
  * ```
  */
 export const useGuestAuth = (hookOptions: GuestHookOptions = {}) => {
-  const { client, updateUser, updateEmbeddedAccounts } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const updateUser = useOpenfortCore((s) => s.updateUser)
+  const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })

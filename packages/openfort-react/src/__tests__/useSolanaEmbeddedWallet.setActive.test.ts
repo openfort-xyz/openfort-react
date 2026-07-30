@@ -37,8 +37,8 @@ const passkeyAccount = createMockSolanaEmbeddedAccount({
 
 const mockEmbeddedAccounts = [automaticAccount, passwordAccount, passkeyAccount]
 
-vi.mock('../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({
+vi.mock('../openfort/useOpenfort', () => {
+  const getState = () => ({
     client: mockClient,
     embeddedAccounts: mockEmbeddedAccounts,
     embeddedState: undefined,
@@ -47,19 +47,17 @@ vi.mock('../openfort/useOpenfort', () => ({
     setActiveEmbeddedAddress: mockSetActiveEmbeddedAddress,
     setWalletStatus: mockSetWalletStatus,
     activeEmbeddedAddress: mockActiveEmbeddedAddress,
-  }),
-}))
+  })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 
-vi.mock('../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     walletConfig: mockWalletConfig,
     chainType: ChainTypeEnum.SVM,
-  }),
-  useOpenfortUIContext: () => ({
-    walletConfig: mockWalletConfig,
-    chainType: ChainTypeEnum.SVM,
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortUIContext: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
+})
 
 vi.mock('../utils/format', () => ({
   formatAddress: (addr: string) => addr,

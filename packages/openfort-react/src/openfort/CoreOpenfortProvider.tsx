@@ -17,7 +17,7 @@ import {
 } from 'react'
 import { useStore } from 'zustand'
 import { routes } from '../components/Openfort/types.js'
-import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { useOpenfortConfig, useOpenfortRouting } from '../components/Openfort/useOpenfort.js'
 import { embeddedWalletId } from '../constants/openfort.js'
 import type { ConnectionStrategy } from '../core/ConnectionStrategy.js'
 import { ConnectionStrategyProvider, useConnectionStrategy } from '../core/ConnectionStrategyContext.js'
@@ -75,7 +75,8 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
 }) => {
   const queryClient = useQueryClient()
   const bridge = useContext(OpenfortEthereumBridgeContext)
-  const { walletConfig, chainType, setChainType, uiConfig, open, route, connector } = useOpenfort()
+  const { walletConfig, uiConfig } = useOpenfortConfig()
+  const { chainType, setChainType, open, route, connector } = useOpenfortRouting()
 
   const bridgeConnectors = useMemo(() => {
     if (!bridge) return []

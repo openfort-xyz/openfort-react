@@ -13,7 +13,7 @@ vi.mock('../../components/Openfort/useOpenfort', () => {
     walletConfig: { solana: { cluster: 'devnet' } },
     chainType: ChainTypeEnum.SVM,
   })
-  return { useOpenfort: hook, useOpenfortUIContext: hook }
+  return { useOpenfort: hook, useOpenfortUIContext: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
 })
 
 const { useSolanaEmbeddedWallet } = await import('../../solana/hooks/useSolanaEmbeddedWallet.js')

@@ -42,7 +42,7 @@ import { ButtonRow, ErrorAction, ErrorContainer, ErrorMessage, ErrorTitle, FeesV
 
 const SendConfirmation = () => {
   const wallet = useEthereumEmbeddedWallet()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const { sendForm, setRoute, triggerResize, walletConfig, chains } = useOpenfort()
 
   const address = wallet.status === 'connected' ? (wallet.address as `0x${string}`) : undefined

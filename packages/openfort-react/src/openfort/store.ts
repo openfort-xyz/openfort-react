@@ -74,6 +74,15 @@ function computeIsLoading(
   }
 }
 
+/**
+ * Wallet status carries only `status`, an optional address and an optional error,
+ * so comparing those three fields is a full equality check.
+ */
+function isSameWalletStatus(a: WalletFlowStatus, b: WalletFlowStatus): boolean {
+  const addressOf = (status: WalletFlowStatus) => ('address' in status ? status.address : undefined)
+  return a.status === b.status && addressOf(a) === addressOf(b) && a.error === b.error
+}
+
 function computeNeedsRecovery(embeddedState: EmbeddedState, embeddedAccounts: EmbeddedAccount[] | undefined): boolean {
   return embeddedState === EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED && (embeddedAccounts?.length ?? 0) > 0
 }
@@ -84,7 +93,7 @@ export function createOpenfortStore(
   getBridgeInfo?: () => { hasBridge: boolean; address: string | undefined },
   connectOnLogin = true
 ): StoreApi<OpenfortStore> {
-  const store = createStore<OpenfortStore>((set) => ({
+  const store = createStore<OpenfortStore>((set, get) => ({
     user: null,
     linkedAccounts: [],
     embeddedState: EmbeddedState.NONE,
@@ -115,7 +124,10 @@ export function createOpenfortStore(
     setActiveEmbeddedAddress: (activeEmbeddedAddress) => {
       set({ activeEmbeddedAddress })
     },
+    // Both embedded-wallet hooks push their status here on every render pass, so
+    // identical writes are dropped to keep subscribers from re-rendering.
     setWalletStatus: (walletStatus) => {
+      if (isSameWalletStatus(get().walletStatus, walletStatus)) return
       set({ walletStatus })
     },
     setRecoveryError: (recoveryError) => {

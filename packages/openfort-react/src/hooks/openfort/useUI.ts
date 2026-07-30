@@ -3,12 +3,10 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import React from 'react'
 import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types.js'
-import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { useOpenfortForms, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
-import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
-import { useSolanaEmbeddedWallet } from '../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { logger } from '../../utils/logger.js'
 
 type ModalRoutes = RoutesWithoutOptions['route'] | RouteOptions
@@ -81,13 +79,16 @@ function isAccountId(id: string): boolean {
  * fire them directly and let the modal route the user through auth first.
  */
 export function useUI() {
-  const { open, setOpen, setRoute, setConnector, setSendForm, connector, chainType } = useOpenfort()
-  const { isLoading, user, needsRecovery, embeddedAccounts, activeEmbeddedAddress, embeddedState } = useOpenfortCore()
+  const { open, setOpen, setRoute, setConnector, connector, chainType } = useOpenfortRouting()
+  const { setSendForm } = useOpenfortForms()
+  const isLoading = useOpenfortCore((s) => s.isLoading)
+  const user = useOpenfortCore((s) => s.user)
+  const needsRecovery = useOpenfortCore((s) => s.needsRecovery)
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
   const bridge = useEthereumBridge()
   const strategy = useConnectionStrategy()
-  const ethereumWallet = useEthereumEmbeddedWallet()
-  const solanaWallet = useSolanaEmbeddedWallet()
-  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
 
   const state = React.useMemo(
     () => ({
@@ -99,9 +100,10 @@ export function useUI() {
     }),
     [user, embeddedAccounts, activeEmbeddedAddress, chainType, embeddedState]
   )
-  // Bridge: strategy owns connection. Embedded: wallet hooks are source of truth.
-  const isConnected =
-    strategy?.kind === 'bridge' ? (strategy?.isConnected(state) ?? false) : wallet.status === 'connected'
+  // The strategy for the active chain owns what "connected" means: the bridge
+  // reports its account, the embedded strategies read the store. Deriving it here
+  // keeps useUI off the embedded-wallet hooks, which hold a provider each.
+  const isConnected = strategy?.isConnected(state) ?? false
 
   function defaultOpen() {
     setOpen(true)

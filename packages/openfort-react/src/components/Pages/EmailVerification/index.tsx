@@ -22,7 +22,7 @@ type VerificationResponse = {
 
 const EmailVerification: React.FC = () => {
   const { setRoute, emailInput, setEmailInput } = useOpenfort()
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
   const isLinkFlow = !!user
 
   const [loading, setLoading] = useState(true)

@@ -46,7 +46,7 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
     triggerResize()
   }, [viewAllAssets, triggerResize])
 
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const { chainId } = useEthereumEmbeddedWallet()
   const { data: walletAssets, isLoading: isBalancesLoading } = useEthereumWalletAssets()
 

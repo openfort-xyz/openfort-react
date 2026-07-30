@@ -19,8 +19,12 @@ const LOADING_TIMEOUT_MS = 10_000
 
 const Loading: React.FC = () => {
   const { setRoute, walletConfig } = useOpenfort()
-  const { user, isLoadingAccounts, isLoading, needsRecovery, embeddedState } = useOpenfortCore()
-  const { chainType } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
+  const isLoading = useOpenfortCore((s) => s.isLoading)
+  const needsRecovery = useOpenfortCore((s) => s.needsRecovery)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const chainType = useOpenfortCore((s) => s.chainType)
   const bridge = useEthereumBridge()
 
   // Use chain-specific hooks

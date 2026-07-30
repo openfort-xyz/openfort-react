@@ -15,7 +15,7 @@ import { PageContent } from '../../PageContent/index.js'
 // TODO: Localize
 const RequestEmail: React.FC = () => {
   const { triggerResize, emailInput: email, setEmailInput: setEmail, setRoute } = useOpenfort()
-  const { client } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
 
   const [loading, setLoading] = React.useState(false)
 

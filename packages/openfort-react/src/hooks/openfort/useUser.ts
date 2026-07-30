@@ -27,7 +27,12 @@ import { handleOAuthConfigError } from '../../utils/oauthErrorHandler.js'
  * ```
  */
 export function useUser() {
-  const { user, client, embeddedState, linkedAccounts, activeEmbeddedAddress, isLoading } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const client = useOpenfortCore((s) => s.client)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const linkedAccounts = useOpenfortCore((s) => s.linkedAccounts)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const isLoading = useOpenfortCore((s) => s.isLoading)
 
   const isAuthenticated = isAuthenticatedState(embeddedState)
   const isConnected = embeddedState === EmbeddedState.READY && !!activeEmbeddedAddress
