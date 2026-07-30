@@ -3,14 +3,14 @@
 // Based on https://hiddedevries.nl/en/blog/2017-01-29-using-javascript-to-trap-focus-in-an-element
 
 import type React from 'react'
-import { useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 const KEYCODE_TAB = 9
 
 function useFocusTrap() {
   const elRef = useRef<HTMLDivElement | null>(null)
 
-  function handleFocus(e: KeyboardEvent) {
+  const handleFocus = useCallback((e: KeyboardEvent) => {
     if (!elRef.current) return
     var focusableEls = elRef.current.querySelectorAll<HTMLElement>(`
         a[href]:not(:disabled),
@@ -41,30 +41,23 @@ function useFocusTrap() {
         e.preventDefault()
       }
     }
-  }
+  }, [])
 
   useEffect(() => {
-    if (elRef.current) {
-      elRef.current.addEventListener('keydown', handleFocus)
-      elRef.current.focus({ preventScroll: true })
-    }
+    const el = elRef.current
+    if (!el) return
+    el.addEventListener('keydown', handleFocus)
+    el.focus({ preventScroll: true })
     return () => {
-      if (elRef.current) {
-        elRef.current.removeEventListener('keydown', handleFocus)
-      }
+      el.removeEventListener('keydown', handleFocus)
     }
-  }, [])
+  }, [handleFocus])
 
   return elRef
 }
 
 export default function FocusTrap(props: { children?: React.ReactNode }) {
   const elRef = useFocusTrap()
-
-  useEffect(() => {
-    if (!elRef.current) return
-    elRef.current.focus({ preventScroll: true })
-  }, [])
 
   return <div ref={elRef}>{props.children}</div>
 }

@@ -150,6 +150,7 @@ export function TestnetNotice() {
   const [open, setOpen] = useState(false)
 
   // Re-measure the modal when the details expand/collapse so it grows/shrinks to fit.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `open` is the trigger, not an input
   useEffect(() => {
     triggerResize()
   }, [open, triggerResize])

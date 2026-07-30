@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { providersLogos } from '../../assets/logos.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
@@ -24,7 +24,18 @@ const ConnectWithOAuth: React.FC = () => {
   const [status, setStatus] = useState(states.INIT)
   const [description, setDescription] = useState<string | undefined>(undefined)
 
+  // The effect below is a state machine driven solely by `status`: each transition consumes the
+  // OAuth query parameters and then strips them from the URL, so it must run once per state. It
+  // reads its other inputs from this ref, which holds the values as of the transition — depending
+  // on them would replay a transition whose parameters are already gone. `user`, in particular,
+  // lands in the store moments after the credentials are stored.
+  const latestRef = useRef({ connector, user, client, setRoute, triggerResize })
   useEffect(() => {
+    latestRef.current = { connector, user, client, setRoute, triggerResize }
+  })
+
+  useEffect(() => {
+    const { connector, user, client, setRoute, triggerResize } = latestRef.current
     ;(async () => {
       const win = typeof window !== 'undefined' ? window : null
       const doc = typeof document !== 'undefined' ? document : null

@@ -66,6 +66,7 @@ export const PasswordStrengthIndicator = ({
 
   const { triggerResize } = useOpenfort()
   // Grow/shrink the modal as the meter appears/disappears so it isn't clipped.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     triggerResize()
   }, [!!password, showPasswordIsTooWeakError, triggerResize])

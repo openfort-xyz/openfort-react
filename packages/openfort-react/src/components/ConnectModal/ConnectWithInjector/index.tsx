@@ -2,7 +2,7 @@
 
 import { AnimatePresence, type Variants } from 'framer-motion'
 import type React from 'react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { AlertIcon, RetryIconCircle, TickIcon } from '../../../assets/icons.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
 import { useUser } from '../../../hooks/openfort/useUser.js'
@@ -84,6 +84,9 @@ const ConnectWithInjector: React.FC<{
   const id = c.id
   const wallet = useExternalConnector(id)
 
+  /** Address the user must reconnect with, when the modal was opened to recover a linked wallet. */
+  const recoverAddress = 'wallet' in props ? props.wallet?.address : undefined
+
   const onConnect = useCallback(() => {
     setStatus(states.CONNECTED)
     setTimeout(() => {
@@ -105,7 +108,7 @@ const ConnectWithInjector: React.FC<{
 
       if (props.connectType === 'recover' && getConnectorAccounts) {
         const acc = await getConnectorAccounts(walletItem.connector)
-        if (acc.some((v) => v === props.wallet?.address)) {
+        if (acc.some((v) => v === recoverAddress)) {
           onConnect()
         } else {
           setStatus(states.RECOVER_ADDRESS_MISMATCH)
@@ -146,15 +149,7 @@ const ConnectWithInjector: React.FC<{
         },
       })
     },
-    [
-      bridge,
-      user,
-      linkedAccounts,
-      onConnect,
-      props.connectType,
-      'wallet' in props ? props.wallet?.address : undefined,
-      connectWithSiwe,
-    ]
+    [bridge, user, linkedAccounts, onConnect, props.connectType, recoverAddress, connectWithSiwe]
   )
 
   const handleConnectError = useCallback((error: { code?: number; message?: string }) => {
@@ -262,12 +257,20 @@ const ConnectWithInjector: React.FC<{
     setTimeout(triggerResize, 100)
   }, [bridge, wallet, props.connectType, handleConnectSettled, handleConnectError, triggerResize])
 
-  let connectTimeout: ReturnType<typeof setTimeout>
+  const runConnectRef = useRef(runConnect)
+  useEffect(() => {
+    runConnectRef.current = runConnect
+  })
+
+  // One connect attempt per mount: the guard reads the initial status, and `runConnect` is invoked
+  // through a ref so the delayed call uses the implementation built from the bridge and wallet as
+  // they stand when the timer fires, not as they were at mount.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: single attempt on mount by design, see above
   useEffect(() => {
     if (status === states.UNAVAILABLE) return
 
     // UX: Give user time to see the UI before opening the extension
-    connectTimeout = setTimeout(runConnect, 600)
+    const connectTimeout = setTimeout(() => runConnectRef.current(), 600)
     return () => {
       clearTimeout(connectTimeout)
     }

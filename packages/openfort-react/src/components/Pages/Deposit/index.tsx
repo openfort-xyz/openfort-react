@@ -77,6 +77,7 @@ const Deposit = () => {
 
   // Content swaps between the option list and the notice once chains resolve; the
   // modal only re-measures on an explicit resize, so nudge it when that flips.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `targetUnsupported` is the trigger, not an input
   useEffect(() => {
     triggerResize()
   }, [targetUnsupported, triggerResize])

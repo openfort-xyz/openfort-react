@@ -101,7 +101,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, updateUser, hookOptions, tryUseWallet]
   )
 
   const requestPhoneOtp = useCallback(
@@ -153,7 +153,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, hookOptions]
   )
 
   const linkPhoneOtp = useCallback(
@@ -210,7 +210,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, updateUser, hookOptions]
   )
 
   return {

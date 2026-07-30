@@ -46,18 +46,15 @@ export function useSessionKeysStorage_backendSimulation() {
     }))
   }, [])
 
-  const getPrivateKeys = useCallback(
-    (chain: Key): StoredData[] => {
-      if (typeof window === 'undefined') return []
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        return stored ? (JSON.parse(stored)[chain] ?? []) : []
-      } catch {
-        return []
-      }
-    },
-    [keys]
-  )
+  const getPrivateKeys = useCallback((chain: Key): StoredData[] => {
+    if (typeof window === 'undefined') return []
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      return stored ? (JSON.parse(stored)[chain] ?? []) : []
+    } catch {
+      return []
+    }
+  }, [])
 
   const updatePrivateKey = useCallback((chain: Key, privateKey: Partial<StoredData>) => {
     setKeys((prev) => {

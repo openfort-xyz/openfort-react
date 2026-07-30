@@ -115,7 +115,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, updateUser, hookOptions, tryUseWallet]
   )
 
   const requestEmailOtp = useCallback(
@@ -180,7 +180,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, hookOptions]
   )
 
   return {

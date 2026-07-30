@@ -162,6 +162,7 @@ const DepositCex = () => {
   const payReady = infraReady && amountValid
 
   // Resize when a block that changes the modal's height toggles.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     triggerResize()
   }, [isAvailable, chainSupported, session, error, opened, amountTooLow, triggerResize])

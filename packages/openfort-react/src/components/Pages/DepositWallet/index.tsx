@@ -159,6 +159,7 @@ const DepositWallet = () => {
   const WALLET_LIMIT = 3
   const visibleDeeplinks = showAllWallets ? deeplinks : deeplinks.slice(0, WALLET_LIMIT)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the deposit state, the wallet count and the "show all" toggle each change the page height
   useEffect(() => {
     triggerResize()
   }, [route.receiverAddress, route.loading, route.status, deeplinks.length, showAllWallets, triggerResize])

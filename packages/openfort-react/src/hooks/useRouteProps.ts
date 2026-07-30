@@ -11,6 +11,10 @@ export const useRouteProps = <T extends RouteOptions['route']>(currentRoute: T) 
   const { route } = useOpenfort()
   const [savedRoute, setSavedRoute] = useState<Extract<RouteOptions, { route: T }>>()
 
+  // Snapshot the route once, on mount, so the page keeps rendering its own props while it
+  // animates out after navigation. Re-running on every `route` change would overwrite that
+  // snapshot with the destination route and report a mismatch for an ordinary navigation.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mount-only snapshot by design, see above
   useEffect(() => {
     if (route.route !== currentRoute) {
       logger.error(

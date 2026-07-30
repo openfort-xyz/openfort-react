@@ -68,6 +68,9 @@ type OpenfortProviderProps = {
 
 let openfortProviderWarnedNoWagmi = false
 
+/** Placeholder connector for a modal session that has not picked one yet. */
+const initialConnector: ContextValue['connector'] = { id: '' }
+
 /**
  * Root provider for Openfort. Wrap your app with this to enable connect modal, auth, and wallet features.
  * Requires publishableKey. Use with wagmi's OpenfortProvider for EVM + wagmi.
@@ -207,7 +210,6 @@ export const OpenfortProvider = ({
   const [ckCustomTheme, setCustomTheme] = useState<CustomTheme | undefined>(safeUiConfig.customTheme ?? {})
   const [ckLang, setLang] = useState<Languages>('en-US')
   const [open, setOpenWithoutHistory] = useState<boolean>(false)
-  const initialConnector: ContextValue['connector'] = { id: '' }
   const [connector, setConnector] = useState<ContextValue['connector']>(initialConnector)
   const [route, setRoute] = useState<RouteOptions>({ route: routes.LOADING })
   const [routeHistory, setRouteHistory] = useState<RouteOptions[]>([])
@@ -255,7 +257,7 @@ export const OpenfortProvider = ({
       return chainIds.map((id) => buildChainFromConfig(id, rpcUrls))
     }
     return []
-  }, [bridge?.switchChain?.chains, walletConfig?.ethereum?.rpcUrls, walletConfig?.ethereum?.chainId])
+  }, [bridge?.switchChain?.chains, walletConfig?.ethereum])
 
   const chain = bridge?.account.chain
   const isConnected = bridge?.account.isConnected ?? false
@@ -266,7 +268,7 @@ export const OpenfortProvider = ({
       setOpen(true)
       setRoute({ route: routes.ETH_SWITCH_NETWORK })
     }
-  }, [hasWagmi, isConnected, isChainSupported, safeUiConfig.enforceSupportedChains, setOpen, setRoute])
+  }, [hasWagmi, isConnected, isChainSupported, safeUiConfig.enforceSupportedChains, setOpen])
 
   useEffect(() => {
     if (hasWagmi && isFamily() && injectedConnector && bridge) {
@@ -354,7 +356,6 @@ export const OpenfortProvider = ({
       ckMode,
       ckLang,
       chainType,
-      setChainType,
       open,
       setOpen,
       route,
@@ -411,12 +412,8 @@ export const OpenfortProvider = ({
       ckTheme,
       safeUiConfig.mode,
       ckMode,
-      setTheme,
-      setMode,
       sendForm,
       buyForm,
-      setSendForm,
-      setBuyForm,
       triggerResize,
     ]
   )

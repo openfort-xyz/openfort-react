@@ -66,6 +66,7 @@ const Receive = () => {
     return <Logos.Openfort />
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `address` is the trigger — a resolved address renders the QR code and the copy row, changing the page height
   useEffect(() => {
     const timer = setTimeout(() => context.triggerResize(), 100)
     return () => clearTimeout(timer)

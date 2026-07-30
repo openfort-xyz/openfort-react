@@ -28,6 +28,8 @@ const EmailVerification: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [verificationResponse, setVerificationResponse] = useState<VerificationResponse | null>(null)
 
+  // `isVerifying` keeps this to a single pass: the effect consumes the verification query
+  // parameters and then strips them from the URL, so a second run has nothing left to read.
   const isVerifying = useRef(false)
   useEffect(() => {
     if (isVerifying.current) return
@@ -74,7 +76,7 @@ const EmailVerification: React.FC = () => {
       removeParams()
       setLoading(false)
     }
-  }, [])
+  }, [emailInput, setEmailInput, setRoute])
 
   if (loading) {
     return (

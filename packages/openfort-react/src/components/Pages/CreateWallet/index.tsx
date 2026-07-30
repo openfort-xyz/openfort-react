@@ -164,7 +164,7 @@ const CreateWalletAutomaticRecovery = ({
       }
       triggerResize()
     })()
-  }, [shouldCreateWallet, create, isWalletRecoveryOTPEnabled, requestOTP, triggerResize, isLoadingAccounts])
+  }, [shouldCreateWallet, create, isWalletRecoveryOTPEnabled, requestOTP, triggerResize, isLoadingAccounts, setRoute])
 
   useEffect(() => {
     if (embeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
@@ -315,7 +315,7 @@ const CreateWalletPasskeyRecovery = ({
         isCreatingRef.current = false
       }
     })()
-  }, [shouldCreateWallet, create])
+  }, [shouldCreateWallet, create, setRoute])
 
   useEffect(() => {
     if (embeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
@@ -327,7 +327,7 @@ const CreateWalletPasskeyRecovery = ({
 
   useEffect(() => {
     if (recoveryError) triggerResize()
-  }, [recoveryError])
+  }, [recoveryError, triggerResize])
 
   return (
     <PageContent onBack={onBack} logoutOnBack={logoutOnBack}>
@@ -381,7 +381,7 @@ const CreateWalletPasswordRecovery = ({
 
   useEffect(() => {
     if (recoveryError) triggerResize()
-  }, [recoveryError])
+  }, [recoveryError, triggerResize])
 
   return (
     <PageContent onBack={onBack} logoutOnBack={logoutOnBack}>
@@ -498,9 +498,10 @@ const CreateEmbeddedWallet = ({ onBack, logoutOnBack }: { onBack: SetOnBackFunct
   const { uiConfig, triggerResize } = useOpenfort()
   const [userSelectedMethod, setUserSelectedMethod] = useState<RecoveryMethod | 'other' | null>(null)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `userSelectedMethod` is the trigger — each recovery method renders a differently sized page
   useEffect(() => {
     triggerResize()
-  }, [userSelectedMethod])
+  }, [userSelectedMethod, triggerResize])
 
   const method = userSelectedMethod ?? uiConfig.walletRecovery.defaultMethod
   switch (method) {

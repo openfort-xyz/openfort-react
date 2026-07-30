@@ -55,6 +55,11 @@ export function useEmbeddedStateMachine({
     userRef.current = storeUser
   }, [storeUser])
 
+  // `updateUserRef` and `fetchEmbeddedAccountsRef` are latest-value refs: they are read at call
+  // time so the transition handlers always use the current implementations. Depending on their
+  // `.current` values would re-run this reactor whenever the caller re-creates those callbacks,
+  // replaying the side effects for a state transition that never happened.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the ref reads are deliberate latest-value lookups, see above
   useEffect(() => {
     if (!openfort) return
     let cancelled = false

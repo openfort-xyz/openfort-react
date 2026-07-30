@@ -71,6 +71,7 @@ export const SolanaSendConfirmation = () => {
   const [error, setError] = useState<string | null>(null)
 
   // Re-measure the modal when the result/error appears.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     const id = setTimeout(triggerResize, 10)
     return () => clearTimeout(id)

@@ -99,7 +99,7 @@ export function useSignOut(hookOptions: OpenfortHookOptions = {}) {
         })
       }
     },
-    [logout, setStatus, hookOptions]
+    [logout, hookOptions]
   )
 
   return {
