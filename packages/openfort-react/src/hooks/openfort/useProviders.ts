@@ -3,7 +3,7 @@
 import { useEffect, useMemo } from 'react'
 import { socialProviders, UIAuthProvider } from '../../components/Openfort/types.js'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { OpenfortConfigError } from '../../errors/config.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
 
@@ -33,10 +33,9 @@ export function useProviders() {
     if (thirdPartyAuth) {
       setOpen(false)
       logger.error(
-        new OpenfortError(
-          'When using external third party auth providers, openfort Auth providers are not available. Either remove the `thirdPartyAuth` or authenticate your users using Auth hooks.',
-          OpenfortReactErrorType.CONFIGURATION_ERROR
-        )
+        new OpenfortConfigError('Openfort auth providers are unavailable when `thirdPartyAuth` is set.', {
+          metaMessages: ['Remove `thirdPartyAuth`, or authenticate users through the auth hooks instead.'],
+        })
       )
     }
   }, [thirdPartyAuth, setOpen])

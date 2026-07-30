@@ -1,3 +1,4 @@
+import { ApiRequestError } from '../../errors/operation.js'
 import { logger } from '../../utils/logger.js'
 
 /** Where funds should land. CAIP-2 chain + token contract (or native) + wallet. */
@@ -137,7 +138,7 @@ async function readJson<T>(res: Response): Promise<T> {
     const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } | string }
     const message = typeof body.error === 'string' ? body.error : body.error?.message
     logger.error('[funding:client] request failed', { status: res.status, message })
-    throw new Error(message ?? `Funding request failed (${res.status})`)
+    throw new ApiRequestError({ operation: 'Funding request', status: res.status, body: message })
   }
   return res.json() as Promise<T>
 }

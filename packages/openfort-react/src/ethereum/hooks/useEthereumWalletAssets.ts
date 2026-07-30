@@ -7,7 +7,10 @@ import { erc7811Actions } from 'viem/experimental'
 import type { getAssets } from 'viem/experimental/erc7811'
 import type { Asset, MultiChainAsset } from '../../components/Openfort/types.js'
 import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort.js'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { NotAuthenticatedError } from '../../errors/auth.js'
+import { OpenfortError, toError } from '../../errors/base.js'
+import { ApiRequestError, UnsupportedOperationError } from '../../errors/operation.js'
+import { WalletNotConnectedError } from '../../errors/wallet.js'
 import type { EthereumConfig } from '../../ethereum/types.js'
 import { useUser } from '../../hooks/openfort/useUser.js'
 import { getWalletAssetsQueryScope } from '../../query/queryOptions.js'
@@ -172,10 +175,7 @@ export const useEthereumWalletAssets = ({
       const accessToken = await thirdPartyAuth.getAccessToken()
 
       if (!accessToken) {
-        throw new OpenfortError(
-          'Failed to get access token from third party auth provider',
-          OpenfortReactErrorType.AUTHENTICATION_ERROR
-        )
+        throw new NotAuthenticatedError('Failed to get access token from third party auth provider.')
       }
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
@@ -225,7 +225,7 @@ export const useEthereumWalletAssets = ({
           const data = await res.json()
 
           if (data.error) {
-            throw new Error(data.error.message)
+            throw new ApiRequestError({ operation: 'Wallet asset lookup', body: data.error.message })
           }
 
           return data.result
@@ -261,7 +261,7 @@ export const useEthereumWalletAssets = ({
     queryFn: async (): Promise<readonly Asset[] | readonly MultiChainAsset[]> => {
       if (multiChain) {
         if (!address) {
-          throw new OpenfortError('No wallet address available', OpenfortReactErrorType.UNEXPECTED_ERROR)
+          throw new WalletNotConnectedError('No wallet address available.')
         }
         const headers = await buildHeaders()
         const defaultRequest = fetch(`${backendUrl}/rpc`, {
@@ -383,8 +383,8 @@ export const useEthereumWalletAssets = ({
 
       // Single-chain path
       if (!address || !chainId || !chain) {
-        throw new OpenfortError('Wallet not connected', OpenfortReactErrorType.UNEXPECTED_ERROR, {
-          error: new Error('Address, chainId, or chain not available'),
+        throw new WalletNotConnectedError('Wallet not connected.', {
+          details: 'Address, chainId, or chain not available.',
         })
       }
 
@@ -459,7 +459,7 @@ export const useEthereumWalletAssets = ({
               raw: a,
             }
           } else {
-            throw new OpenfortError('Unsupported asset type', OpenfortReactErrorType.UNEXPECTED_ERROR, { error: a })
+            throw new UnsupportedOperationError({ operation: `Asset type "${a.type}"` })
           }
           return asset
         })
@@ -540,7 +540,7 @@ export const useEthereumWalletAssets = ({
       return error
     }
 
-    return new OpenfortError('Failed to fetch wallet assets', OpenfortReactErrorType.UNEXPECTED_ERROR, { error })
+    return new OpenfortError('Failed to fetch wallet assets.', { cause: toError(error) })
   }, [error])
 
   return {

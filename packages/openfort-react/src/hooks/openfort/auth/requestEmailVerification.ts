@@ -1,3 +1,4 @@
+import { ValidationError } from '../../../errors/validation.js'
 export const buildCallbackUrl = ({
   email,
   callbackUrl,
@@ -16,9 +17,9 @@ export const buildCallbackUrl = ({
 
   // Validate that the redirect URL stays on the same origin to prevent open redirect attacks
   if (redirectUrl.origin !== window.location.origin) {
-    throw new Error(
-      `Invalid callbackUrl: origin "${redirectUrl.origin}" does not match current origin "${window.location.origin}"`
-    )
+    throw new ValidationError('Invalid `callbackUrl`.', {
+      details: `Origin "${redirectUrl.origin}" does not match the current origin "${window.location.origin}".`,
+    })
   }
 
   redirectUrl.searchParams.append('openfortAuthProvider', provider)

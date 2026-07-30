@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { providersLogos } from '../../assets/logos.js'
+import { ConnectorTypeMismatchError } from '../../errors/connection.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
 import { parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity.js'
@@ -40,7 +41,8 @@ const ConnectWithOAuth: React.FC = () => {
       const win = typeof window !== 'undefined' ? window : null
       const doc = typeof document !== 'undefined' ? document : null
       if (!win || !doc) return
-      if (connector.type !== 'oauth') throw new Error('Invalid connector type')
+      if (connector.type !== 'oauth')
+        throw new ConnectorTypeMismatchError({ expected: 'oauth', received: connector.type })
 
       const url = parseCallbackUrl(win.location.href)
       const hasProvider = !!url.searchParams.get('openfortAuthProviderUI')

@@ -20,6 +20,7 @@ import {
   useSwitchChain,
   useWalletClient,
 } from 'wagmi'
+import { ConnectorNotFoundError, ProviderNotFoundError } from '../errors/connection.js'
 import {
   type OpenfortEthereumBridgeConnector,
   OpenfortEthereumBridgeContext,
@@ -83,7 +84,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
   const connectAsyncBridge = useCallback(
     async (params: { connector: OpenfortEthereumBridgeConnector }) => {
       const c = stableConnectors.find((x) => x.id === params.connector.id)
-      if (!c) throw new Error('Connector not found')
+      if (!c) throw new ConnectorNotFoundError({ connectorId: params.connector.id })
       return wagmiConnectAsync({ connector: c })
     },
     [stableConnectors, wagmiConnectAsync]
@@ -134,7 +135,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
 
   const signMessage = useCallback(
     async (params: { message: string }): Promise<`0x${string}`> => {
-      if (!signMessageAsync) throw new Error('signMessage not available')
+      if (!signMessageAsync) throw new ProviderNotFoundError('`signMessage` is not available on the connected wallet.')
       return signMessageAsync({ message: params.message })
     },
     [signMessageAsync]

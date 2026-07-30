@@ -3,6 +3,8 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { FundingNotConfiguredError } from '../../errors/funding.js'
+import { UnsupportedOperationError } from '../../errors/operation.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
 import {
@@ -17,7 +19,7 @@ import {
 
 /** Pay-links aren't exposed by the SDK funding namespace yet (CEX is API-deferred). */
 const sdkPayLinkUnavailable = async (): Promise<string> => {
-  throw new Error('Exchange pay-links are not available through the SDK yet')
+  throw new UnsupportedOperationError({ operation: 'Exchange pay-links' })
 }
 
 const TERMINAL: SessionStatus[] = ['succeeded', 'bounced', 'expired']
@@ -182,7 +184,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
       })
       try {
         if (!client) {
-          throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
+          throw new FundingNotConfiguredError()
         }
         const created = await client.sessions.create({ target })
         logger.log('[funding] session created', { sessionId: created.id, status: created.status })
@@ -217,7 +219,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
 
   const createSession = useCallback(
     async (target: FundingTarget): Promise<FundingSession> => {
-      if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
+      if (!client) throw new FundingNotConfiguredError()
       const created = await client.sessions.create({ target })
       logger.log('[funding] session created (cex)', { sessionId: created.id, status: created.status })
       return created
@@ -227,7 +229,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
 
   const track = useCallback(
     async (toTrack: { id: string; clientSecret: string }): Promise<FundingSession> => {
-      if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
+      if (!client) throw new FundingNotConfiguredError()
       generation.current += 1
       const gen = generation.current
       const isCurrent = () => generation.current === gen
@@ -252,7 +254,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
 
   const payLink = useCallback(
     async (params: PayLinkParams): Promise<string> => {
-      if (!client) throw new Error('Funding is not configured (set uiConfig.fundingBaseUrl)')
+      if (!client) throw new FundingNotConfiguredError()
       return client.payLink(params)
     },
     [client]

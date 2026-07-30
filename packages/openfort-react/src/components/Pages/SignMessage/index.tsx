@@ -2,6 +2,8 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
+import { UnsupportedOperationError } from '../../../errors/operation.js'
+import { WalletNotConnectedError } from '../../../errors/wallet.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
@@ -91,12 +93,13 @@ const SignMessage = () => {
     try {
       let signed: string
       if (chainType === ChainTypeEnum.SVM) {
-        if (signRequest.kind !== 'message') throw new Error('Typed data signing is not supported on Solana.')
-        if (solana.status !== 'connected') throw new Error('No connected wallet to sign with')
+        if (signRequest.kind !== 'message')
+          throw new UnsupportedOperationError({ operation: 'Typed data signing on Solana' })
+        if (solana.status !== 'connected') throw new WalletNotConnectedError('No connected wallet to sign with.')
         signed = await solana.provider.signMessage(signRequest.message)
       } else {
         const provider = await wallet.activeWallet?.getProvider()
-        if (!provider) throw new Error('No connected wallet to sign with')
+        if (!provider) throw new WalletNotConnectedError('No connected wallet to sign with.')
 
         // Use the address the provider will actually sign with as `from`. The core
         // SDK resolves the signing account from storage, which can diverge from the
@@ -105,7 +108,7 @@ const SignMessage = () => {
         // "personal_sign requires the signer to be the from address".
         const accounts = (await provider.request({ method: 'eth_accounts' })) as string[]
         const address = accounts?.[0] ?? wallet.address
-        if (!address) throw new Error('No connected wallet to sign with')
+        if (!address) throw new WalletNotConnectedError('No connected wallet to sign with.')
 
         signed = (
           signRequest.kind === 'message'
