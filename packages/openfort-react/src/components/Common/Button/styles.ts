@@ -174,6 +174,7 @@ export const ButtonContainer = styled.button<{
         );
       `
     }
+    return undefined
   }}
 
   appearance: none;

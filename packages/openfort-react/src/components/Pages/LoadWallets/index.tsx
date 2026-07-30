@@ -17,10 +17,10 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 
-/** Pick the best wallet to auto-recover: automatic > passkey > first available */
+/** Pick the best wallet to auto-recover: automatic > passkey > first available. Undefined for an empty list. */
 function pickBestWallet(
   wallets: ReadonlyArray<ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet>
-): ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet {
+): ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet | undefined {
   return (
     wallets.find((w) => w.recoveryMethod === RecoveryMethod.AUTOMATIC) ??
     wallets.find((w) => w.recoveryMethod === RecoveryMethod.PASSKEY) ??
@@ -119,7 +119,7 @@ const LoadWallets: React.FC = () => {
     if (connectOnLogin) {
       // Auto-connect: pick the best wallet (automatic > passkey > password) and recover it
       const best = pickBestWallet(wallets)
-      routeToRecover(best, chainType, setRoute)
+      if (best) routeToRecover(best, chainType, setRoute)
     } else {
       // Not auto-connecting: close modal (go to connected page which triggers auto-close)
       setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_CONNECTED : routes.ETH_CONNECTED)

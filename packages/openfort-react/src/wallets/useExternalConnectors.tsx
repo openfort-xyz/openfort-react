@@ -33,8 +33,7 @@ export function mapBridgeConnectorsToWalletProps(
     if (!walletId && connector.id === 'injected' && connector.name) {
       const nameLower = connector.name.toLowerCase()
       if (nameLower.includes('metamask')) {
-        walletId =
-          Object.keys(walletConfigs).find((k) => walletConfigs[k].name?.toLowerCase() === 'metamask') ?? undefined
+        walletId = Object.entries(walletConfigs).find(([, config]) => config.name?.toLowerCase() === 'metamask')?.[0]
       }
     }
 

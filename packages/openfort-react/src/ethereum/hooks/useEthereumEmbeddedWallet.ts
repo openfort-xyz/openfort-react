@@ -487,18 +487,18 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
       if (!activeEmbeddedAddress && (s.status === 'connected' || s.status === 'needs-recovery')) {
         setState({ status: 'disconnected', activeWallet: null, provider: null, error: null })
       }
-      return
+      return undefined
     }
 
     // Don't interrupt in-progress operations
     if (s.status === 'connecting' || s.status === 'reconnecting' || s.status === 'creating') {
-      return
+      return undefined
     }
 
     // Logout / address cleared
     if (!activeEmbeddedAddress && s.status === 'connected') {
       setState({ status: 'disconnected', activeWallet: null, provider: null, error: null })
-      return
+      return undefined
     }
 
     // Find matching account
@@ -508,14 +508,14 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
 
     // Already synced to the right address
     if (s.status === 'connected' && s.activeWallet?.address.toLowerCase() === activeEmbeddedAddress?.toLowerCase()) {
-      return
+      return undefined
     }
 
     // Activate the matching account
     if (accountByAddress) {
       // Already syncing this address — skip duplicate async work
       if (syncInProgressRef.current === accountByAddress.address.toLowerCase()) {
-        return
+        return undefined
       }
 
       syncInProgressRef.current = accountByAddress.address.toLowerCase()
@@ -564,14 +564,16 @@ export function useEthereumEmbeddedWallet(options?: UseEmbeddedEthereumWalletOpt
     // activeEmbeddedAddress is from another chain (e.g. SVM); auto-activate first EVM wallet.
     // Also fires from 'error': if setActive failed and address still points to a SVM wallet,
     // re-point to the EVM wallet so the sync can self-heal.
+    const firstEvmAccount = ethereumAccounts[0]
     if (
       chainType === ChainTypeEnum.EVM &&
       activeEmbeddedAddress &&
-      ethereumAccounts.length > 0 &&
+      firstEvmAccount &&
       (s.status === 'disconnected' || s.status === 'error')
     ) {
-      setActiveEmbeddedAddress(ethereumAccounts[0].address)
+      setActiveEmbeddedAddress(firstEvmAccount.address)
     }
+    return undefined
   }, [
     activeEmbeddedAddress,
     embeddedState,

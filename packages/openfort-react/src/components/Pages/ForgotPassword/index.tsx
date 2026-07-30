@@ -34,6 +34,7 @@ const RequestEmail: React.FC = () => {
 
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [message])
 
   useEffect(() => {
@@ -44,6 +45,7 @@ const RequestEmail: React.FC = () => {
 
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [error])
 
   const handleSubmit = async () => {

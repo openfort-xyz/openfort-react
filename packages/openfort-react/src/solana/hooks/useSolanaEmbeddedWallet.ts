@@ -469,14 +469,15 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
     // Also runs from 'error' state: if setActive failed (e.g. recover() threw) but the
     // address still points to an EVM wallet, we need to re-point to the SVM wallet so
     // the sync effect above can self-heal via createProviderForAccount.
+    const firstSolanaAccount = solanaAccounts[0]
     if (
       chainType === ChainTypeEnum.SVM &&
       !accountByAddress &&
       activeEmbeddedAddress &&
-      solanaAccounts.length > 0 &&
+      firstSolanaAccount &&
       (state.status === 'disconnected' || state.status === 'error')
     ) {
-      setActiveEmbeddedAddress(solanaAccounts[0].address)
+      setActiveEmbeddedAddress(firstSolanaAccount.address)
     }
   }, [
     isLoadingAccounts,

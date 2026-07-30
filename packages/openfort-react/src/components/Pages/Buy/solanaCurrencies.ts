@@ -9,7 +9,7 @@ import { DEST_USDC_SOL } from '../Deposit/sources'
  * feeds the onramp `destinationCurrency`. The USDC `address` is the SPL mint cast
  * to `Hex` to fit the shared `Asset` type; it's only read by `getAssetSymbol`.
  */
-export const SOLANA_BUY_CURRENCIES: Asset[] = [
+export const SOLANA_BUY_CURRENCIES: [Asset, ...Asset[]] = [
   {
     type: 'erc20',
     address: DEST_USDC_SOL as Hex,

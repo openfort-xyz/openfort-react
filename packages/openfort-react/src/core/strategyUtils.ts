@@ -17,7 +17,7 @@ export function firstEmbeddedAddress(
   const passkey = forChain.find((a) => a.recoveryMethod === RecoveryMethod.PASSKEY)
   if (passkey) return passkey.address
 
-  return forChain[0].address
+  return forChain[0]?.address
 }
 
 export function resolveEthereumFeeSponsorship(
@@ -27,8 +27,9 @@ export function resolveEthereumFeeSponsorship(
   const feeSponsorship = config?.ethereum?.ethereumFeeSponsorshipId
   if (!feeSponsorship) return undefined
   if (typeof feeSponsorship === 'string') return { policy: feeSponsorship }
-  if (typeof feeSponsorship === 'object' && chainId in feeSponsorship) {
-    return { policy: (feeSponsorship as Record<number, string>)[chainId] }
+  if (typeof feeSponsorship === 'object') {
+    const policy = (feeSponsorship as Record<number, string | undefined>)[chainId]
+    if (policy) return { policy }
   }
   return undefined
 }

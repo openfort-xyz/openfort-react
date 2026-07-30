@@ -99,7 +99,8 @@ export const contentVariants: Variants = {
 
 type ModalProps = {
   open?: boolean
-  pages: any
+  /** Route id to page element. Keys are route ids; a missing route renders nothing. */
+  pages: Partial<Record<string, React.ReactNode>>
   pageId: string
   positionInside?: boolean
   inline?: boolean
@@ -404,7 +405,9 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
 
             <InnerContainer>
               {Object.keys(pages).map((key) => {
-                const page = context.uiConfig.customPageComponents?.[key] ?? pages[key]
+                const customPages: Partial<Record<string, React.ReactElement>> =
+                  context.uiConfig.customPageComponents ?? {}
+                const page = customPages[key] ?? pages[key]
                 return (
                   // TODO: Render only the current and previous page instead of every page.
                   // Gating on `key === pageId` alone makes the content flash during transitions.

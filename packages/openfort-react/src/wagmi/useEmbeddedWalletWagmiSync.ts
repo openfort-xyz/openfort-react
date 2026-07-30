@@ -47,6 +47,7 @@ function useEmbeddedWalletWagmiSync() {
         setEmbeddedWalletProvider(null)
       }
     }
+    return undefined
   }, [status, provider])
 
   // Connect wagmi once the embedded wallet is ready AND wagmi has settled (not mid-reconnect)

@@ -188,15 +188,16 @@ const ConnectWithInjector: React.FC<{
 
   const browser = detectBrowser()
 
-  const extensionUrl = wallet?.downloadUrls?.[browser]
+  const downloadUrls: Partial<Record<string, string>> = wallet?.downloadUrls ?? {}
+  const extensionUrl = downloadUrls[browser]
 
-  const suggestedExtension = wallet?.downloadUrls
+  const [firstDownload] = Object.keys(downloadUrls)
+  const suggestedExtension = firstDownload
     ? {
-        name: Object.keys(wallet?.downloadUrls)[0],
-        label:
-          Object.keys(wallet?.downloadUrls)[0]?.charAt(0).toUpperCase() +
-          Object.keys(wallet?.downloadUrls)[0]?.slice(1), // Capitalise first letter, but this might be better suited as a lookup table
-        url: wallet?.downloadUrls[Object.keys(wallet?.downloadUrls)[0]],
+        name: firstDownload,
+        // Capitalise first letter, but this might be better suited as a lookup table
+        label: firstDownload.charAt(0).toUpperCase() + firstDownload.slice(1),
+        url: downloadUrls[firstDownload],
       }
     : undefined
 
