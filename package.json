@@ -42,6 +42,7 @@
     "test:build": "pnpm --filter @openfort/react test:build && pnpm --filter create-openfort test:build",
     "test:unit": "pnpm --filter @openfort/react test",
     "test:types": "pnpm --filter @openfort/react test:types",
+    "test:cov": "pnpm --filter @openfort/react test:cov",
     "test:e2e": "pnpm --filter playground test",
     "test:ui": "pnpm --filter playground test:ui",
     "test:debug": "pnpm --filter playground test:debug"
