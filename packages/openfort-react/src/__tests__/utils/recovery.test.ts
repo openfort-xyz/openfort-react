@@ -11,10 +11,11 @@ const BASE_CONFIG = {
 
 describe('buildRecoveryParams', () => {
   describe('PASSWORD method', () => {
-    it('throws CONFIGURATION_ERROR when password is missing', async () => {
+    it('throws VALIDATION_ERROR when password is missing', async () => {
       await expect(buildRecoveryParams({ recoveryMethod: RecoveryMethod.PASSWORD }, BASE_CONFIG)).rejects.toMatchObject(
         {
-          type: OpenfortReactErrorType.CONFIGURATION_ERROR,
+          name: 'MissingParameterError',
+          type: OpenfortReactErrorType.VALIDATION_ERROR,
         }
       )
     })
@@ -64,7 +65,7 @@ describe('buildRecoveryParams', () => {
         )
       ).rejects.toMatchObject({
         type: OpenfortReactErrorType.WALLET_ERROR,
-        message: 'Invalid encryption session response',
+        shortMessage: 'Invalid encryption session response.',
       })
     })
 
@@ -149,7 +150,7 @@ describe('buildRecoveryParams', () => {
         )
       ).rejects.toMatchObject({
         type: OpenfortReactErrorType.WALLET_ERROR,
-        message: 'getEncryptionSession returned invalid session',
+        shortMessage: '`getEncryptionSession` returned an invalid session.',
       })
     })
 

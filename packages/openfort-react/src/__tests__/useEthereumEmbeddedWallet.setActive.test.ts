@@ -180,7 +180,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
       act(async () => {
         await result.current.setActive({ address: '0x0000000000000000000000000000000000000000' })
       })
-    ).rejects.toThrow('Embedded wallet not found')
+    ).rejects.toThrow(/^Embedded wallet 0x\w+ not found\./)
   })
 
   it('transitions status: connecting → connected', async () => {

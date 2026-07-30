@@ -2,7 +2,9 @@
 
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
-import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors.js'
+import { AuthenticationError } from '../../../errors/auth.js'
+import { type OpenfortError, toError } from '../../../errors/base.js'
+import { MissingParameterError } from '../../../errors/validation.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { onError, onSuccess } from '../hookConsistency.js'
@@ -51,7 +53,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
         })
 
         if (!options.phoneNumber || !options.otp) {
-          const error = new OpenfortError('Phone and OTP are required', OpenfortReactErrorType.VALIDATION_ERROR)
+          const error = new MissingParameterError({ params: ['phone', 'otp'] })
           setStatus({
             status: 'error',
             error,
@@ -86,9 +88,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
           options,
         })
       } catch (e) {
-        const error = new OpenfortError('Failed to login with phone OTP', OpenfortReactErrorType.AUTHENTICATION_ERROR, {
-          error: e,
-        })
+        const error = new AuthenticationError('Failed to login with phone OTP.', { cause: toError(e) })
 
         setStatus({
           status: 'error',
@@ -113,7 +113,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
         })
 
         if (!options.phoneNumber) {
-          const error = new OpenfortError('Phone number is required', OpenfortReactErrorType.VALIDATION_ERROR)
+          const error = new MissingParameterError({ params: ['phoneNumber'] })
           setStatus({
             status: 'error',
             error,
@@ -138,9 +138,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
           options,
         })
       } catch (e) {
-        const error = new OpenfortError('Failed to request phone OTP', OpenfortReactErrorType.AUTHENTICATION_ERROR, {
-          error: e,
-        })
+        const error = new AuthenticationError('Failed to request phone OTP.', { cause: toError(e) })
 
         setStatus({
           status: 'error',
@@ -165,7 +163,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
         })
 
         if (!options.phoneNumber || !options.otp) {
-          const error = new OpenfortError('Phone and OTP are required', OpenfortReactErrorType.VALIDATION_ERROR)
+          const error = new MissingParameterError({ params: ['phone', 'otp'] })
           setStatus({
             status: 'error',
             error,
@@ -195,9 +193,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = {}) => {
           options,
         })
       } catch (e) {
-        const error = new OpenfortError('Failed to link phone OTP', OpenfortReactErrorType.AUTHENTICATION_ERROR, {
-          error: e,
-        })
+        const error = new AuthenticationError('Failed to link phone OTP.', { cause: toError(e) })
 
         setStatus({
           status: 'error',

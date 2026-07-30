@@ -8,7 +8,7 @@
  * Always set hashMessage: false when signing.
  */
 
-import { OpenfortError, OpenfortReactErrorType } from '../core/errors.js'
+import { UnsupportedOperationError } from '../errors/operation.js'
 
 import type { SolanaTransaction } from './types.js'
 
@@ -39,5 +39,5 @@ export function getTransactionBytes(transaction: SolanaTransaction): Uint8Array 
     return transaction.serializeMessage()
   }
 
-  throw new OpenfortError('Unsupported Solana transaction format', OpenfortReactErrorType.CONFIGURATION_ERROR)
+  throw new UnsupportedOperationError({ operation: 'This Solana transaction format' })
 }

@@ -6,7 +6,9 @@ import { createWalletClient, custom } from 'viem'
 import { erc7715Actions, type GrantPermissionsParameters, type GrantPermissionsReturnType } from 'viem/experimental'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
 import { DEFAULT_TESTNET_CHAIN_ID } from '../../core/ConnectionStrategy.js'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { type OpenfortError, toError } from '../../errors/base.js'
+import { ChainNotConfiguredError } from '../../errors/config.js'
+import { WalletError, WalletNotConnectedError } from '../../errors/wallet.js'
 import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
 import type { OpenfortEmbeddedEthereumWalletProvider } from '../../ethereum/types.js'
@@ -115,7 +117,7 @@ type GrantPermissionsHookOptions = OpenfortHookOptions<GrantPermissionsHookResul
  */
 async function getEmbeddedWalletClientWithErc7715(provider: OpenfortEmbeddedEthereumWalletProvider, chain: Chain) {
   const accounts = (await provider.request({ method: 'eth_accounts' })) as `0x${string}`[]
-  if (!accounts?.length) throw new OpenfortError('No accounts available', OpenfortReactErrorType.WALLET_ERROR)
+  if (!accounts?.length) throw new WalletNotConnectedError('No accounts available.')
   const account = accounts[0]
   const transport = custom(provider)
   const baseClient = createWalletClient({ account, chain, transport })
@@ -155,7 +157,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
 
         const chain = chains.find((c) => c.id === chainId)
         if (!chain) {
-          throw new OpenfortError('No chain configured', OpenfortReactErrorType.CONFIGURATION_ERROR)
+          throw new ChainNotConfiguredError({ chainId })
         }
 
         setStatus({
@@ -175,11 +177,11 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
             if (rawClient) break
           }
           if (!rawClient) {
-            throw new OpenfortError('Wallet client not available', OpenfortReactErrorType.WALLET_ERROR)
+            throw new WalletNotConnectedError('Wallet client not available.')
           }
           const walletClient = rawClient.extend(erc7715Actions())
           const [addr] = await walletClient.getAddresses()
-          if (!addr) throw new OpenfortError('No account on wallet client', OpenfortReactErrorType.WALLET_ERROR)
+          if (!addr) throw new WalletNotConnectedError('No account on wallet client.')
           account = addr
           grantPermissionsResult = await walletClient.grantPermissions(request)
         } else {
@@ -192,7 +194,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
           }
           const walletClient = await getEmbeddedWalletClientWithErc7715(provider, chain)
           const [addr] = await walletClient.getAddresses()
-          if (!addr) throw new OpenfortError('No account on wallet client', OpenfortReactErrorType.WALLET_ERROR)
+          if (!addr) throw new WalletNotConnectedError('No account on wallet client.')
           account = addr
           grantPermissionsResult = await walletClient.grantPermissions(request)
         }
@@ -221,11 +223,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
         const message = isUnsupported
           ? 'Session keys (grantPermissions) are not supported by the embedded wallet provider. Use an external wallet for this flow.'
           : undefined
-        const openfortError = new OpenfortError(
-          message ?? 'Failed to grant permissions',
-          OpenfortReactErrorType.WALLET_ERROR,
-          { error }
-        )
+        const openfortError = new WalletError(message ?? 'Failed to grant permissions.', { cause: toError(error) })
 
         setStatus({
           status: 'error',

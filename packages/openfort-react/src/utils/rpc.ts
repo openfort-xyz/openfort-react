@@ -22,6 +22,7 @@ import {
   polygonAmoy,
   sepolia,
 } from 'viem/chains'
+import { RpcUrlNotConfiguredError } from '../errors/config.js'
 import type { SolanaCluster } from '../solana/types.js'
 import { logger } from './logger.js'
 
@@ -142,7 +143,7 @@ export function buildChainFromConfig(chainId: number, rpcUrls?: Record<number, s
 
   const rpcUrl = customRpcUrl ?? knownChain?.rpcUrls.default.http[0]
   if (!rpcUrl) {
-    throw new Error(`No RPC URL configured for chain ${chainId}. Provide walletConfig.ethereum.rpcUrls[${chainId}].`)
+    throw new RpcUrlNotConfiguredError({ chainId })
   }
 
   const native = knownChain?.nativeCurrency ?? { name: 'Ether', symbol: 'ETH', decimals: 18 }

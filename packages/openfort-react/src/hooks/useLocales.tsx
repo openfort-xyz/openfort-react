@@ -4,7 +4,7 @@ import React, { useMemo } from 'react'
 import Logos from '../assets/logos.js'
 
 import { useOpenfortConfig } from '../components/Openfort/useOpenfort.js'
-
+import { OpenfortConfigError } from '../errors/config.js'
 import { getLocale } from './../localizations/index.js'
 import type { LocaleProps } from '../localizations/locales/index.js'
 import { logger } from '../utils/logger.js'
@@ -19,7 +19,7 @@ export default function useLocales(replacements?: Record<string, string>): Local
 
   if (!translations) {
     logger.error(`Missing translations for: ${language}`)
-    throw new Error(`Missing translations for: ${language}`)
+    throw new OpenfortConfigError(`Missing translations for language "${language}".`)
   }
 
   const translated: Record<string, unknown> = {}

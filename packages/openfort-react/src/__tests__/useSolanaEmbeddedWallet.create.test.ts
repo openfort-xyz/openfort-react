@@ -197,7 +197,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
       act(async () => {
         await result.current.create({ recoveryMethod: RecoveryMethod.PASSWORD })
       })
-    ).rejects.toThrow('Password is required')
+    ).rejects.toThrow('`password` is required.')
   })
 
   it('calls updateEmbeddedAccounts after successful create', async () => {

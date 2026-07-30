@@ -46,7 +46,7 @@ describe('Phase 0 regressions', () => {
           callbackUrl: 'https://evil.com/callback',
           isOpen: false,
         })
-      ).toThrow(/does not match current origin/)
+      ).toThrow(/does not match the current origin/)
     })
 
     it('accepts same-origin callback URLs', async () => {

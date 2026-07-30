@@ -1,4 +1,6 @@
 import { ChainTypeEnum, SDKConfiguration } from '@openfort/openfort-js'
+import { ApiRequestError } from '../../../errors/operation.js'
+import { MissingParameterError } from '../../../errors/validation.js'
 import type { Asset } from '../../Openfort/types.js'
 import { getAssetSymbol } from '../Send/utils.js'
 
@@ -64,7 +66,7 @@ export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQu
   const { token, network, publishableKey, sourceCurrency, sourceAmount } = params
 
   if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
+    throw new MissingParameterError({ params: ['publishableKey'] })
   }
 
   // Build request body WITHOUT provider to get all quotes
@@ -86,7 +88,11 @@ export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQu
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to fetch quotes')
+    throw new ApiRequestError({
+      operation: 'Onramp quote lookup',
+      status: response.status,
+      body: errorData.error || errorData.errorMessage,
+    })
   }
 
   const data = await response.json()

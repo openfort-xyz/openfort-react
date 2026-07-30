@@ -4,6 +4,7 @@ import { SDKConfiguration } from '@openfort/openfort-js'
 import type { QueryKey } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { ApiRequestError } from '../../errors/operation.js'
 import { openfortKeys } from '../../query/queryKeys.js'
 import { useQuery } from '../../query/useQuery.js'
 import { getPublishableKeyEnvironment } from '../../utils/validation.js'
@@ -104,7 +105,7 @@ export function useFundingChains(): UseFundingChains {
     queryKey: openfortKeys.fundingChains({ baseUrl, livemode }),
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/v2/funding/chains?livemode=${livemode}`)
-      if (!response.ok) throw new Error(`Failed to load chains (${response.status})`)
+      if (!response.ok) throw new ApiRequestError({ operation: 'Funding chain lookup', status: response.status })
       const body = (await response.json()) as { chains?: FundingChain[] }
       return body.chains ?? []
     },

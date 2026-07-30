@@ -13,6 +13,8 @@
  */
 
 import type { Address, SignatureBytes, SignatureDictionary, TransactionSigner } from '@solana/kit'
+import { ApiRequestError } from '../errors/operation.js'
+import { WalletError } from '../errors/wallet.js'
 import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster } from './types.js'
 
 type Kit = typeof import('@solana/kit')
@@ -32,7 +34,7 @@ function solToLamports(amountSol: number): bigint {
 function toEd25519Signature(raw: Uint8Array): SignatureBytes {
   const trimmed = raw.length === 65 ? raw.slice(0, 64) : raw
   if (trimmed.length !== 64) {
-    throw new Error(`Invalid Ed25519 signature: expected 64 bytes, got ${trimmed.length}`)
+    throw new WalletError(`Invalid Ed25519 signature: expected 64 bytes, got ${trimmed.length}.`)
   }
   return trimmed as SignatureBytes
 }
@@ -262,7 +264,7 @@ async function sendViaKora({
   // Kora's request takes a JS number; fail loudly rather than silently corrupt
   // an amount that can't be represented exactly.
   if (amountBaseUnits > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new Error('Amount is too large to sponsor through the paymaster.')
+    throw new WalletError('Amount is too large to sponsor through the paymaster.')
   }
 
   const kit = await import('@solana/kit')
@@ -325,7 +327,7 @@ async function sendViaKora({
     const wireBytes = Uint8Array.from(atob(signedTxB64), (c) => c.charCodeAt(0))
     return kit.getBase58Decoder().decode(wireBytes.slice(1, 65))
   }
-  throw new Error('Failed to extract transaction signature from the Kora response')
+  throw new ApiRequestError({ operation: 'Kora transaction signature extraction' })
 }
 
 type SendSolGaslessParams = {

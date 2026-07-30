@@ -1,4 +1,6 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
+import { ApiRequestError, UnsupportedOperationError } from '../../../errors/operation.js'
+import { MissingParameterError } from '../../../errors/validation.js'
 import type { Asset } from '../../Openfort/types.js'
 import { getAssetSymbol } from '../Send/utils.js'
 
@@ -45,9 +47,10 @@ const getCurrencyCode = (token: Asset): string => {
 
   // Validate that the currency is supported by Stripe
   if (!isSupportedCurrency(lowercaseSymbol)) {
-    throw new Error(
-      `Unsupported currency for Stripe: ${symbol}. Supported currencies are: ${STRIPE_SUPPORTED_CURRENCIES.join(', ')}`
-    )
+    throw new UnsupportedOperationError({
+      operation: `Currency "${symbol}" on Stripe`,
+      details: `Supported currencies are: ${STRIPE_SUPPORTED_CURRENCIES.join(', ')}.`,
+    })
   }
 
   return lowercaseSymbol
@@ -67,7 +70,7 @@ export const createStripeSession = async (
   const { token, network, publishableKey, destinationAddress, sourceAmount, sourceCurrency, redirectUrl } = params
 
   if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
+    throw new MissingParameterError({ params: ['publishableKey'] })
   }
 
   const destinationCurrency = getCurrencyCode(token)
@@ -95,7 +98,11 @@ export const createStripeSession = async (
 
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to create Stripe session')
+    throw new ApiRequestError({
+      operation: 'Stripe session creation',
+      status: response.status,
+      body: errorData.error || errorData.errorMessage,
+    })
   }
 
   const data: StripeOnrampResponse = await response.json()
