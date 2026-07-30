@@ -15,8 +15,8 @@ vi.mock('../../openfort/core', () => ({
 }))
 
 // Mock heavy dependencies to avoid importing the entire component tree
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     walletConfig: undefined,
     chainType: ChainTypeEnum.EVM,
     setChainType: () => {},
@@ -24,8 +24,9 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     open: false,
     route: null,
     connector: null,
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
+})
 vi.mock('../../wallets/useExternalConnectors', () => ({
   mapBridgeConnectorsToWalletProps: () => [],
 }))
