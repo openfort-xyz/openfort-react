@@ -5,7 +5,6 @@
     "noImplicitAny": false,
 
     // Emit — `rollup-plugin-typescript2` reads these to place declarations next to the bundles.
-    "composite": true, // Lets the root tsconfig reference this project for `tsc --build`.
     "rootDir": "src",
     "outDir": "build",
     "declaration": true,
