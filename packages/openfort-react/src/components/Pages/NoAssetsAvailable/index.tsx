@@ -7,7 +7,7 @@ import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ButtonsContainer } from './styles'
 
-export const NoAssetsAvailable = () => {
+const NoAssetsAvailable = () => {
   const { setRoute } = useOpenfort()
 
   return (
@@ -51,3 +51,5 @@ export const NoAssetsAvailable = () => {
     </PageContent>
   )
 }
+
+export default NoAssetsAvailable
