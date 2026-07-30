@@ -13,20 +13,25 @@
   "exports": {
     ".": {
       "types": "./build/index.d.ts",
-      "import": "./build/index.js"
+      "import": "./build/index.js",
+      "default": "./build/index.js"
     },
     "./solana": {
       "types": "./build/solana/index.d.ts",
-      "import": "./build/solana/index.js"
+      "import": "./build/solana/index.js",
+      "default": "./build/solana/index.js"
     },
     "./ethereum": {
       "types": "./build/ethereum/index.d.ts",
-      "import": "./build/ethereum/index.js"
+      "import": "./build/ethereum/index.js",
+      "default": "./build/ethereum/index.js"
     },
     "./wagmi": {
       "types": "./build/wagmi/index.d.ts",
-      "import": "./build/wagmi/index.js"
-    }
+      "import": "./build/wagmi/index.js",
+      "default": "./build/wagmi/index.js"
+    },
+    "./package.json": "./package.json"
   },
   "types": "./build/index.d.ts",
   "typesVersions": {
