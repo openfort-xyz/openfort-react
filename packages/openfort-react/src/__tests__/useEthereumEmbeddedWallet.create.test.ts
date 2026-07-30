@@ -20,8 +20,8 @@ const mockSetActiveEmbeddedAddress = vi.fn((addr: string) => {
 })
 const mockSetWalletStatus = vi.fn()
 
-vi.mock('../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({
+vi.mock('../openfort/useOpenfort', () => {
+  const getState = () => ({
     client: mockClient,
     embeddedAccounts: [],
     embeddedState: undefined,
@@ -30,19 +30,17 @@ vi.mock('../openfort/useOpenfort', () => ({
     setActiveEmbeddedAddress: mockSetActiveEmbeddedAddress,
     setWalletStatus: mockSetWalletStatus,
     activeEmbeddedAddress: mockActiveEmbeddedAddress,
-  }),
-}))
+  })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 
-vi.mock('../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     walletConfig: mockWalletConfig,
     chainType: ChainTypeEnum.EVM,
-  }),
-  useOpenfortUIContext: () => ({
-    walletConfig: mockWalletConfig,
-    chainType: ChainTypeEnum.EVM,
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortUIContext: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
+})
 
 vi.mock('../core/ConnectionStrategyContext', () => ({
   useConnectionStrategy: () => null,
@@ -296,10 +294,10 @@ describe('useEthereumEmbeddedWallet – create', () => {
   it('throws when walletConfig is missing', async () => {
     // Override walletConfig to null for this test
     const mockOpenfortUI = await import('../components/Openfort/useOpenfort.js')
-    const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortUIContext').mockReturnValue({
+    const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortConfig').mockReturnValue({
       walletConfig: null,
       chainType: ChainTypeEnum.EVM,
-    } as ReturnType<typeof mockOpenfortUI.useOpenfortUIContext>)
+    } as ReturnType<typeof mockOpenfortUI.useOpenfortConfig>)
 
     const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
 
@@ -324,10 +322,10 @@ describe('useEthereumEmbeddedWallet – create', () => {
 
   it('throws when no encryption session config is available', async () => {
     const mockOpenfortUI = await import('../components/Openfort/useOpenfort.js')
-    const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortUIContext').mockReturnValue({
+    const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortConfig').mockReturnValue({
       walletConfig: { connectOnLogin: true },
       chainType: ChainTypeEnum.EVM,
-    } as ReturnType<typeof mockOpenfortUI.useOpenfortUIContext>)
+    } as ReturnType<typeof mockOpenfortUI.useOpenfortConfig>)
 
     const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
 

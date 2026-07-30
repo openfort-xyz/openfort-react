@@ -20,8 +20,8 @@ const mockSetActiveEmbeddedAddress = vi.fn((addr: string) => {
 })
 const mockSetWalletStatus = vi.fn()
 
-vi.mock('../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({
+vi.mock('../openfort/useOpenfort', () => {
+  const getState = () => ({
     client: mockClient,
     embeddedAccounts: [],
     embeddedState: undefined,
@@ -30,19 +30,17 @@ vi.mock('../openfort/useOpenfort', () => ({
     setActiveEmbeddedAddress: mockSetActiveEmbeddedAddress,
     setWalletStatus: mockSetWalletStatus,
     activeEmbeddedAddress: mockActiveEmbeddedAddress,
-  }),
-}))
+  })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 
-vi.mock('../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     walletConfig: mockWalletConfig,
     chainType: ChainTypeEnum.SVM,
-  }),
-  useOpenfortUIContext: () => ({
-    walletConfig: mockWalletConfig,
-    chainType: ChainTypeEnum.SVM,
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortUIContext: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
+})
 
 vi.mock('../utils/format', () => ({
   formatAddress: (addr: string) => addr,
@@ -176,10 +174,10 @@ describe('useSolanaEmbeddedWallet – create', () => {
 
   it('throws when walletConfig is missing', async () => {
     const mockOpenfortUI = await import('../components/Openfort/useOpenfort.js')
-    const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortUIContext').mockReturnValue({
+    const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortConfig').mockReturnValue({
       walletConfig: null,
       chainType: ChainTypeEnum.SVM,
-    } as ReturnType<typeof mockOpenfortUI.useOpenfortUIContext>)
+    } as ReturnType<typeof mockOpenfortUI.useOpenfortConfig>)
 
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
 
