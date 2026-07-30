@@ -12,8 +12,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  # Blocking gate. The e2e it runs assert on-chain state served by a local anvil
+  # fork pinned to a fixed block, so a failure means the code changed — not that a
+  # public testnet was slow or a faucet ran dry.
   test:
-    timeout-minutes: 60
+    name: Unit tests and fork-backed e2e
+    timeout-minutes: 40
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -43,11 +47,72 @@ jobs:
         run: pnpm test
         working-directory: packages/openfort-react
 
+      # Provides the `anvil` binary that the Playwright global setup forks with.
+      - name: Setup Foundry
+        uses: foundry-rs/foundry-toolchain@908c540300062bd5a7e473851cdb4282204cee09 # v1.9.1
+        with:
+          version: stable
+
       - name: Install Playwright Browsers
         run: pnpm playwright install --with-deps
         working-directory: examples/playground
 
-      - name: Run Playwright tests
+      - name: Run fork-backed Playwright tests
+        env:
+          # Signing in still goes through live Openfort; only chain state is local.
+          VITE_OPENFORT_PUBLISHABLE_KEY: ${{ vars.VITE_OPENFORT_PUBLISHABLE_KEY }}
+          VITE_SHIELD_PUBLISHABLE_KEY: ${{ vars.VITE_SHIELD_PUBLISHABLE_KEY }}
+          VITE_FEE_SPONSORSHIP_ID: ${{ vars.VITE_FEE_SPONSORSHIP_ID }}
+          VITE_CREATE_ENCRYPTED_SESSION_ENDPOINT: ${{ vars.VITE_CREATE_ENCRYPTED_SESSION_ENDPOINT }}
+          # Optional: a dedicated Base Sepolia endpoint for anvil to fork from. The
+          # suite falls back to the public node when unset.
+          EVM_FORK_URL: ${{ vars.EVM_FORK_URL }}
+        run: pnpm test:fork
+        working-directory: examples/playground
+
+      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-fork
+          path: playwright-report
+          retention-days: 30
+
+  # Signal, not a gate. These suites drive real testnet transactions through live
+  # Openfort infrastructure, so they fail for reasons outside this repository.
+  e2e-live:
+    name: Live-infra e2e (non-blocking)
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
+
+      - name: Install Playwright Browsers
+        run: pnpm playwright install --with-deps
+        working-directory: examples/playground
+
+      - name: Run live Playwright tests
         env:
           VITE_OPENFORT_PUBLISHABLE_KEY: ${{ vars.VITE_OPENFORT_PUBLISHABLE_KEY }}
           VITE_SHIELD_PUBLISHABLE_KEY: ${{ vars.VITE_SHIELD_PUBLISHABLE_KEY }}
@@ -61,6 +126,6 @@ jobs:
       - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
         if: ${{ !cancelled() }}
         with:
-          name: playwright-report
+          name: playwright-report-live
           path: playwright-report
           retention-days: 30
