@@ -135,17 +135,6 @@
     }
   },
   "knip": {
-    "workspaces": {
-      "examples/playground": {
-        "ignoreDependencies": [
-          "typedoc"
-        ],
-        "ignoreBinaries": [
-          "vite",
-          "typedoc"
-        ]
-      }
-    },
     "ignore": [
       "packages/openfort-react/rollup.config.dev.js",
       "packages/openfort-react/rollup.config.prod.js",
