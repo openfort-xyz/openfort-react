@@ -6,7 +6,7 @@
   "description": "The easiest way to integrate Openfort to your project.",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openfort-xyz/openfort-react.git",
+    "url": "git+https://github.com/openfort-xyz/fortkit.git",
     "directory": "packages/openfort-react"
   },
   "type": "module",
@@ -43,7 +43,7 @@
     }
   },
   "engines": {
-    "node": ">=12.4"
+    "node": ">=20"
   },
   "files": [
     "build",

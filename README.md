@@ -74,15 +74,15 @@ and much more...
 
 ## Examples
 
-There are various runnable examples included in this repository in the [examples folder](https://github.com/openfort-xyz/openfort-react/tree/main/examples)
+There are various runnable examples included in this repository in the [examples folder](https://github.com/openfort-xyz/fortkit/tree/main/examples)
 
 ### Running Examples Locally
 
 Clone the project and install the necessary dependencies:
 
 ```sh
-git clone git@github.com:openfort-xyz/openfort-react.git
-cd openfort
+git clone git@github.com:openfort-xyz/fortkit.git
+cd fortkit
 pnpm install
 ```
 
@@ -102,8 +102,8 @@ pnpm dev:openfort-ui # Openfort UI
 
 ## License
 
-See [LICENSE](https://github.com/openfort-xyz/openfort-react/blob/main/LICENSE) for more information.
+See [LICENSE](https://github.com/openfort-xyz/fortkit/blob/main/LICENSE) for more information.
 
 ## Credits
 
-Openfort is a fork of [Connectkit](https://github.com/openfort-xyz/openfort-react) developed by [Family](https://family.co). We're grateful to them for making Connectkit fast, beautiful and open-source.
+Openfort is a fork of [Connectkit](https://github.com/family/connectkit) developed by [Family](https://family.co). We're grateful to them for making Connectkit fast, beautiful and open-source.

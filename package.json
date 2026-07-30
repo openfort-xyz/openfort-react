@@ -4,14 +4,6 @@
   "description": "The easiest way to integrate Openfort to your project.",
   "main": "packages/openfort-react/src/index.ts",
   "private": true,
-  "workspaces": {
-    "packages": [
-      "packages/**",
-      "examples/**",
-      "packages/create-openfort/template/openfort-templates/*",
-      "!packages/create-openfort/template/backend"
-    ]
-  },
   "scripts": {
     "preinstall": "pnpx only-allow pnpm",
     "postinstall": "git config --unset core.hooksPath 2>/dev/null || true && simple-git-hooks",

@@ -7,7 +7,7 @@ This is a comprehensive example application demonstrating Openfort React integra
 Download this example using gitpick:
 
 ```bash
-npx gitpick openfort-xyz/openfort-react/tree/main/examples/playground openfort-playground && cd openfort-playground
+npx gitpick openfort-xyz/fortkit/tree/main/examples/playground openfort-playground && cd openfort-playground
 ```
 
 ## Features
