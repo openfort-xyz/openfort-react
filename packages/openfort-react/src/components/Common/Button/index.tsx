@@ -50,7 +50,7 @@ const Button: React.FC<ButtonProps> = ({
       className={className}
       as={href ? 'a' : type ? 'button' : undefined}
       type={type}
-      onClick={(event: any) => {
+      onClick={(event: React.MouseEvent<HTMLElement>) => {
         if (!disabled && onClick) onClick(event)
       }}
       href={href && hrefUrl}

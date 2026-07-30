@@ -30,7 +30,7 @@ const Avatar: React.FC<{
   // Only resolve ENS on mainnet (1); testnets throw "network does not support ENS"
   const useEns = strategy?.kind === 'bridge' && !!bridge && (bridge.chainId ?? 0) === 1
 
-  const imageRef = useRef<any>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
   const [loaded, setLoaded] = useState(true)
   const [ens, setEns] = useState<{ address?: string; name?: string; avatar?: string }>({})
 

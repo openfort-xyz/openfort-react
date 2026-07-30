@@ -1,17 +1,11 @@
 'use client'
 
+import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { OPENFORT_VERSION } from '../../../version'
 
-const Portal = (props: any) => {
-  props = {
-    selector: '__OPENFORT__',
-    ...props,
-  }
-
-  const { selector, children } = props
-
+const Portal = ({ selector = '__OPENFORT__', children }: { selector?: string; children?: React.ReactNode }) => {
   const ref = useRef<Element | null>(null)
   const [mounted, setMounted] = useState<boolean>(false)
 

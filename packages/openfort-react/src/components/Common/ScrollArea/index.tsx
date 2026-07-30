@@ -49,8 +49,9 @@ export const ScrollArea = ({
       }
     }
 
-    const handleScroll = (e: any) => {
-      const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = e.target
+    // `scroll` doesn't bubble, so the listener only ever fires for `el` itself.
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = el
 
       if (moreRef.current) {
         if (scrollTop > 0) {
@@ -72,7 +73,7 @@ export const ScrollArea = ({
     }
 
     el.addEventListener('scroll', handleScroll)
-    handleScroll({ target: el })
+    handleScroll()
 
     return () => {
       el.removeEventListener('scroll', handleScroll)
