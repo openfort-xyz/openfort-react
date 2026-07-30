@@ -28,8 +28,8 @@ const h = vi.hoisted(() => ({
   providerRequest: vi.fn<(args: { method: string; params?: unknown[] }) => Promise<unknown>>(),
 }))
 
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     sendForm: { recipient: RECIPIENT, amount: '0.1', asset: nativeAsset },
     setRoute: vi.fn(),
     triggerResize: vi.fn(),
@@ -38,11 +38,13 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     setOnBack: vi.fn(),
     setPreviousRoute: vi.fn(),
     setRouteHistory: vi.fn(),
-  }),
-}))
-vi.mock('../../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({ chainType: ChainTypeEnum.EVM }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook, useOpenfortForms: hook }
+})
+vi.mock('../../openfort/useOpenfort', () => {
+  const getState = () => ({ chainType: ChainTypeEnum.EVM })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => ({
     status: 'connected',

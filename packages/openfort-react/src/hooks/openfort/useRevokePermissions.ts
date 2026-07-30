@@ -66,7 +66,7 @@ type RevokePermissionsHookOptions = OpenfortHookOptions<RevokePermissionsHookRes
  */
 export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = {}) => {
   const { chains } = useOpenfort()
-  const { client } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
   const ethereum = useEthereumEmbeddedWallet()
   const chainId = ethereum.chainId ?? DEFAULT_TESTNET_CHAIN_ID
   const [status, setStatus] = useState<BaseFlowState>({

@@ -12,8 +12,8 @@ import { routes } from '../../components/Openfort/types.js'
 
 const setRoute = vi.fn()
 
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     setRoute,
     walletConfig: undefined,
     uiConfig: {},
@@ -21,18 +21,20 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     setOnBack: vi.fn(),
     setPreviousRoute: vi.fn(),
     setRouteHistory: vi.fn(),
-  }),
-}))
-vi.mock('../../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({
+  })
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook, useOpenfortForms: hook }
+})
+vi.mock('../../openfort/useOpenfort', () => {
+  const getState = () => ({
     user: null,
     isLoading: false,
     isLoadingAccounts: false,
     needsRecovery: false,
     embeddedState: EmbeddedState.UNAUTHENTICATED,
     chainType: ChainTypeEnum.EVM,
-  }),
-}))
+  })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({ useEthereumBridge: () => null }))
 vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => ({ status: 'disconnected' }),

@@ -14,7 +14,8 @@ export type OTPResponse = {
 }
 
 export function useRecoveryOTP(): { isEnabled: boolean; requestOTP: () => Promise<OTPResponse> } {
-  const { client, user } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const user = useOpenfortCore((s) => s.user)
   const { walletConfig } = useOpenfort()
 
   const isEnabled = useMemo(() => {

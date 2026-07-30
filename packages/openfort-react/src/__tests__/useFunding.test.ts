@@ -10,14 +10,16 @@ import type {
 // useFunding reads only uiConfig.fundingBaseUrl from useOpenfort; stub it so the
 // hook resolves no default client and we inject a mock instead.
 const mockUiConfig: { fundingBaseUrl?: string } = {}
-vi.mock('../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({ uiConfig: mockUiConfig }),
-}))
+vi.mock('../components/Openfort/useOpenfort', () => {
+  const hook = () => ({ uiConfig: mockUiConfig })
+  return { useOpenfort: hook, useOpenfortConfig: hook }
+})
 
 // No SDK funding namespace in tests — the injected client is used instead.
-vi.mock('../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({ client: undefined }),
-}))
+vi.mock('../openfort/useOpenfort', () => {
+  const getState = () => ({ client: undefined })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 
 const { useFunding } = await import('../hooks/openfort/useFunding.js')
 

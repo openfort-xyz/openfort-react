@@ -117,7 +117,7 @@ export type UseFundingOptions = {
  */
 export function useFunding(options?: UseFundingOptions): UseFunding {
   const { uiConfig, publishableKey } = useOpenfort()
-  const { client: coreClient } = useOpenfortCore()
+  const coreClient = useOpenfortCore((s) => s.client)
   // The funding JSON API defaults to the Openfort backend (api.openfort.io);
   // integrators can point the crypto rails at a custom service via
   // uiConfig.fundingBaseUrl. The CEX rail always uses the backend (Coinbase pay-link).

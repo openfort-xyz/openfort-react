@@ -82,7 +82,7 @@ const DepositCex = () => {
   // standalone funding service — resolve this rail's base URL from the API backend.
   const { isAvailable, createSession, track, payLink, status } = useFunding({ useBackendUrl: true })
   const wallet = useEthereumEmbeddedWallet()
-  const { embeddedAccounts } = useOpenfortCore()
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
   const { chains } = useFundingChains()
   const invalidateBalance = useInvalidateBalance()
 

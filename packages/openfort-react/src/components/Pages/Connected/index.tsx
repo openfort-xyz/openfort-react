@@ -12,7 +12,7 @@ const CONNECTED_REGISTRY: Partial<Record<ChainTypeEnum, React.FC>> = {
 }
 
 const Connected: React.FC = () => {
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const Component = CONNECTED_REGISTRY[chainType]
   return Component ? <Component /> : null
 }

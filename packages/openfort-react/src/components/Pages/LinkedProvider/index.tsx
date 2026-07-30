@@ -50,7 +50,7 @@ export const ProviderIconInner = styled.div`
 const SiweContent = ({ account }: { account: LinkedAccount }) => {
   const address = account.accountId as Hex
   const context = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const themeContext = useThemeContext()
 
   const identity = useResolvedIdentity({

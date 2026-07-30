@@ -64,7 +64,7 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
  */
 const Deposit = () => {
   const { setRoute, setBuyForm, uiConfig, triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
   const { chains, railChains, isLoading: chainsLoading } = useFundingChains()
