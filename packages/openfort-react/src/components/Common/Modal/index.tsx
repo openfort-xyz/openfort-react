@@ -161,20 +161,16 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const [inTransition, setInTransition] = useState<boolean | undefined>(undefined)
 
   // Calculate new content bounds
-  const updateBounds = (node: any) => {
-    const bounds = {
-      width: node?.offsetWidth,
-      height: node?.offsetHeight,
-    }
+  const updateBounds = (node: HTMLElement) => {
     setDimensions({
-      width: `${bounds?.width}px`,
-      height: `${bounds?.height}px`,
+      width: `${node.offsetWidth}px`,
+      height: `${node.offsetHeight}px`,
     })
   }
 
   let blockTimeout: ReturnType<typeof setTimeout>
   const contentRef = useCallback(
-    (node: any) => {
+    (node: HTMLElement | null) => {
       if (!node) return
       ref.current = node
 
@@ -205,7 +201,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const chainId = strategy?.getChainId() ?? bridge?.account?.chain?.id ?? bridge?.chainId
   const switchChain = bridge?.switchChain?.switchChain
 
-  const ref = useRef<any>(null)
+  const ref = useRef<HTMLElement | null>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
   useEffect(() => {
     if (ref.current) updateBounds(ref.current)

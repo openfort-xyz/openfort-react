@@ -15,6 +15,38 @@ import { ResetContainer } from '../../../styles'
 import ChainSelectList from '../ChainSelectList'
 import { DropdownContainer, DropdownHeading, DropdownOverlay, DropdownWindow } from './styles'
 
+const FOCUSABLE_SELECTOR = `
+  a[href]:not(:disabled),
+  button:not(:disabled),
+  textarea:not(:disabled),
+  input[type="text"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  select:not(:disabled)
+`
+
+const isDisabled = (element: Element): boolean =>
+  (element instanceof HTMLButtonElement ||
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement ||
+    element instanceof HTMLTextAreaElement) &&
+  element.disabled
+
+/**
+ * Move focus to the enabled sibling of the active element in `direction`,
+ * skipping disabled controls. Falls back to `wrapTo` at either end of the list.
+ */
+const focusSibling = (direction: 'previous' | 'next', wrapTo: HTMLElement) => {
+  const step = (element: Element): Element | null =>
+    direction === 'previous' ? element.previousElementSibling : element.nextElementSibling
+
+  const active = document.activeElement
+  let candidate = active ? step(active) : null
+  while (candidate && isDisabled(candidate)) candidate = step(candidate)
+  if (candidate instanceof HTMLElement) candidate.focus()
+  else wrapTo.focus()
+}
+
 const ChainSelectDropdown: React.FC<{
   children?: React.ReactNode
   open: boolean
@@ -41,36 +73,17 @@ const ChainSelectDropdown: React.FC<{
         if (!contentRef.current) return
         e.preventDefault()
 
-        const focusableEls: any = contentRef.current?.querySelectorAll(`
-            a[href]:not(:disabled),
-            button:not(:disabled),
-            textarea:not(:disabled),
-            input[type="text"]:not(:disabled),
-            input[type="radio"]:not(:disabled),
-            input[type="checkbox"]:not(:disabled),
-            select:not(:disabled)
-          `),
-          firstFocusableEl: any = focusableEls[0],
-          lastFocusableEl: any = focusableEls[focusableEls.length - 1]
+        const focusableEls = contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        const firstFocusableEl = focusableEls[0]
+        const lastFocusableEl = focusableEls[focusableEls.length - 1]
+        if (!firstFocusableEl || !lastFocusableEl) return
 
         if (e.key === 'ArrowUp') {
-          if (document.activeElement === firstFocusableEl) {
-            lastFocusableEl.focus()
-          } else {
-            let focusItem: any = document?.activeElement?.previousSibling
-            if (!focusItem) focusItem = lastFocusableEl
-            while (focusItem.disabled) focusItem = focusItem.previousSibling
-            focusItem.focus()
-          }
+          if (document.activeElement === firstFocusableEl) lastFocusableEl.focus()
+          else focusSibling('previous', lastFocusableEl)
         } else {
-          if (document.activeElement === lastFocusableEl) {
-            firstFocusableEl.focus()
-          } else {
-            let focusItem: any = document?.activeElement?.nextSibling
-            if (!focusItem) focusItem = firstFocusableEl
-            while (focusItem.disabled) focusItem = focusItem.nextSibling
-            focusItem.focus()
-          }
+          if (document.activeElement === lastFocusableEl) firstFocusableEl.focus()
+          else focusSibling('next', firstFocusableEl)
         }
       }
     }
@@ -80,9 +93,9 @@ const ChainSelectDropdown: React.FC<{
     }
   }, [open])
 
-  const targetRef = useRef<any>(null)
+  const targetRef = useRef<HTMLDivElement | null>(null)
   const innerRef = useCallback(
-    (node: any) => {
+    (node: HTMLDivElement | null) => {
       if (!node) return
       targetRef.current = node
       refresh()

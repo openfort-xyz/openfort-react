@@ -23,7 +23,7 @@ const Tooltip: React.FC<TooltipProps> = ({ children, message, open, xOffset = 0,
 
   const [currentRoute] = useState(context.route)
 
-  const targetRef = useRef<any>(null)
+  const targetRef = useRef<HTMLDivElement | null>(null)
   const [ref, bounds] = useMeasure({
     debounce: !ready ? 220 : 0, // fix alignment initial state
     offsetSize: true,

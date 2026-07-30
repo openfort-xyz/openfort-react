@@ -255,7 +255,7 @@ const ConnectWithInjector: React.FC<{
     setTimeout(triggerResize, 100)
   }, [bridge, wallet, props.connectType, handleConnectSettled, handleConnectError, triggerResize])
 
-  let connectTimeout: any
+  let connectTimeout: ReturnType<typeof setTimeout>
   useEffect(() => {
     if (status === states.UNAVAILABLE) return
 

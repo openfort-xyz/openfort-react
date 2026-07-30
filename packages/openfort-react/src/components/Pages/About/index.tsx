@@ -69,12 +69,13 @@ const About: React.FC = () => {
     }
   }
   const onTouchEnd = () => {
+    if (!sliderRef.current) return
     const { offsetWidth: width, scrollLeft: x } = sliderRef.current
     const currentSlide = Math.round(x / width)
     setSlider(currentSlide)
   }
 
-  const sliderRef = useRef<any>(null)
+  const sliderRef = useRef<HTMLDivElement | null>(null)
   useEffect(() => {
     if (!sliderRef.current) return
     sliderRef.current.addEventListener('scroll', onScroll)
