@@ -1,3 +1,5 @@
+'use client'
+
 import useLocales from '../../../hooks/useLocales.js'
 import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
 import CustomQRCode from '../../Common/CustomQRCode/index.js'

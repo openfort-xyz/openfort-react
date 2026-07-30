@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import useLocales from '../../../hooks/useLocales.js'
 import { useWalletConnectModal } from '../../../hooks/useWalletConnectModal.js'

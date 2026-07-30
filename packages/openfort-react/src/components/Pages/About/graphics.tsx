@@ -1,3 +1,5 @@
+'use client'
+
 import { type EasingFunction, motion } from 'framer-motion'
 import { useId } from 'react'
 import { keyframes } from 'styled-components'

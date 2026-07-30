@@ -1,3 +1,5 @@
+'use client'
+
 import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard.js'
 import styled from '../../../styles/styled/index.js'
 import { CopyIcon } from './CopyIcon.js'

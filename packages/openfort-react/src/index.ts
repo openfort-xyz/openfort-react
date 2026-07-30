@@ -73,6 +73,7 @@ export { FundingMethod, LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider
 export { embeddedWalletId } from './constants/openfort.js'
 export {
   OpenfortError,
+  /** @deprecated use `OpenfortErrorType` instead */
   OpenfortReactErrorType,
   OpenfortReactErrorType as OpenfortErrorType,
 } from './core/errors.js'
@@ -112,19 +113,36 @@ export { useUI } from './hooks/openfort/useUI.js'
 export { useUser } from './hooks/openfort/useUser.js'
 export type { UserWallet } from './hooks/openfort/walletTypes.js'
 export { invalidateBalance } from './hooks/useBalance.js'
-export { StoreContext } from './openfort/context.js'
-// ── Store / selectors ────────────────────────────────────────────────────────
+// ── Store internals (moved to `@openfort/react/internal`) ────────────────────
+export type {
+  /** @deprecated import from `@openfort/react/internal` instead */
+  OpenfortStore,
+  /** @deprecated import from `@openfort/react/internal` instead */
+  OpenfortStoreState,
+} from './internal/index.js'
 export {
+  /** @deprecated import from `@openfort/react/internal` instead */
+  StoreContext,
+  /** @deprecated import from `@openfort/react/internal` instead */
   selectActiveAddress,
+  /** @deprecated import from `@openfort/react/internal` instead */
   selectChainType,
+  /** @deprecated import from `@openfort/react/internal` instead */
   selectEmbeddedState,
+  /** @deprecated import from `@openfort/react/internal` instead */
   selectIsAuthenticated,
+  /** @deprecated import from `@openfort/react/internal` instead */
   selectIsLoading,
+  /** @deprecated import from `@openfort/react/internal` instead */
   selectUser,
+  /** @deprecated import from `@openfort/react/internal` instead */
   selectWalletStatus,
-} from './openfort/selectors.js'
-export type { OpenfortStore, OpenfortStoreState } from './openfort/store.js'
-export { useOpenfortCore as useOpenfort, useOpenfortCore } from './openfort/useOpenfort.js'
+} from './internal/index.js'
+export {
+  useOpenfortCore as useOpenfort,
+  /** @deprecated use `useOpenfort` instead */
+  useOpenfortCore,
+} from './openfort/useOpenfort.js'
 export { getEmbeddedAccountsQueryOptions, getUserQueryOptions, openfortKeys } from './query/index.js'
 export type {
   CreateEmbeddedWalletOptions,
