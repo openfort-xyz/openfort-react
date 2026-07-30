@@ -15,14 +15,15 @@ const uiConfig = {}
 const connector = { id: '' }
 
 vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+  useOpenfortRouting: () => ({
     route: { route: currentRoute },
     connector,
-    uiConfig,
     onBack: null,
     headerLeftSlot: null,
     resize: 0,
   }),
+  useOpenfortConfig: () => ({ uiConfig }),
+  useOpenfort: () => ({ uiConfig }),
 }))
 vi.mock('../../components/ConnectKitThemeProvider/ConnectKitThemeProvider', () => ({
   useThemeContext: () => ({ theme: 'auto', mode: 'auto', customTheme: {} }),

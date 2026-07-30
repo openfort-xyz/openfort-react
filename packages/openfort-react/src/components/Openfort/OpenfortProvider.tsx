@@ -20,7 +20,18 @@ import { logger, setDebugLogsEnabled } from '../../utils/logger.js'
 import { buildChainFromConfig } from '../../utils/rpc.js'
 import { isFamily } from '../../utils/wallets.js'
 
-import { type ContextValue, OpenfortContext, UIContext, type UIContextValue } from './context.js'
+import {
+  type ConfigContextValue,
+  FormContext,
+  type FormContextValue,
+  OpenfortContext,
+  RoutingContext,
+  type RoutingContextValue,
+  type ThemeContextValue,
+  ThemeStateContext,
+  UIContext,
+  type UIContextValue,
+} from './context.js'
 import {
   type BuyFormState,
   type ConnectUIOptions,
@@ -69,7 +80,7 @@ type OpenfortProviderProps = {
 let openfortProviderWarnedNoWagmi = false
 
 /** Placeholder connector for a modal session that has not picked one yet. */
-const initialConnector: ContextValue['connector'] = { id: '' }
+const initialConnector: RoutingContextValue['connector'] = { id: '' }
 
 /**
  * Root provider for Openfort. Wrap your app with this to enable connect modal, auth, and wallet features.
@@ -210,7 +221,7 @@ export const OpenfortProvider = ({
   const [ckCustomTheme, setCustomTheme] = useState<CustomTheme | undefined>(safeUiConfig.customTheme ?? {})
   const [ckLang, setLang] = useState<Languages>('en-US')
   const [open, setOpenWithoutHistory] = useState<boolean>(false)
-  const [connector, setConnector] = useState<ContextValue['connector']>(initialConnector)
+  const [connector, setConnector] = useState<RoutingContextValue['connector']>(initialConnector)
   const [route, setRoute] = useState<RouteOptions>({ route: routes.LOADING })
   const [routeHistory, setRouteHistory] = useState<RouteOptions[]>([])
 
@@ -306,16 +317,22 @@ export const OpenfortProvider = ({
 
   const [onBack, setOnBack] = useState<(() => void) | null>(null)
 
-  const value: ContextValue = useMemo(
+  const themeValue: ThemeContextValue = useMemo(
     () => ({
       setTheme,
-      chainType,
-      setChainType,
       mode: ckMode,
       setMode,
       setCustomTheme,
       lang: ckLang,
       setLang,
+    }),
+    [ckMode, ckLang]
+  )
+
+  const routingValue: RoutingContextValue = useMemo(
+    () => ({
+      chainType,
+      setChainType,
       open,
       setOpen,
       route,
@@ -330,14 +347,27 @@ export const OpenfortProvider = ({
       setRouteHistory,
       connector,
       setConnector,
-      debugMode: debugModeOptions,
       resize,
       triggerResize,
-      publishableKey,
-      uiConfig: safeUiConfig,
-      walletConfig,
-      overrides,
-      thirdPartyAuth,
+    }),
+    [
+      chainType,
+      open,
+      setOpen,
+      route,
+      typedSetRoute,
+      onBack,
+      headerLeftSlot,
+      routeHistory,
+      setPreviousRoute,
+      connector,
+      resize,
+      triggerResize,
+    ]
+  )
+
+  const formValue: FormContextValue = useMemo(
+    () => ({
       emailInput,
       setEmailInput,
       phoneInput,
@@ -348,36 +378,29 @@ export const OpenfortProvider = ({
       setBuyForm,
       signRequest,
       setSignRequest,
+    }),
+    [emailInput, phoneInput, sendForm, buyForm, signRequest]
+  )
+
+  const configValue: ConfigContextValue = useMemo(
+    () => ({
+      debugMode: debugModeOptions,
+      publishableKey,
+      uiConfig: safeUiConfig,
+      walletConfig,
+      overrides,
+      thirdPartyAuth,
       onConnect,
       onDisconnect,
       chains,
     }),
     [
-      ckMode,
-      ckLang,
-      chainType,
-      open,
-      setOpen,
-      route,
-      typedSetRoute,
-      onBack,
-      setPreviousRoute,
-      routeHistory,
-      connector,
       debugModeOptions,
-      resize,
-      triggerResize,
-      safeUiConfig,
       publishableKey,
+      safeUiConfig,
       walletConfig,
       overrides,
       thirdPartyAuth,
-      emailInput,
-      phoneInput,
-      sendForm,
-      buyForm,
-      signRequest,
-      headerLeftSlot,
       onConnect,
       onDisconnect,
       chains,
@@ -465,34 +488,40 @@ export const OpenfortProvider = ({
 
   return (
     <UIContext.Provider value={connectUIValue}>
-      <OpenfortContext.Provider value={value}>
-        <CoreOpenfortProvider
-          openfortConfig={{
-            baseConfiguration: { publishableKey },
-            shieldConfiguration: walletConfig
-              ? {
-                  shieldPublishableKey: walletConfig.shieldPublishableKey,
-                  debug: debugModeOptions.shieldDebugMode,
-                  ...(walletConfig.passkeyDisplayName && {
-                    passkeyRpName: walletConfig.passkeyDisplayName,
-                  }),
-                }
-              : undefined,
-            debug: debugModeOptions.openfortCoreDebugMode,
-            overrides,
-            thirdPartyAuth,
-          }}
-          onConnect={onConnect}
-          onDisconnect={onDisconnect}
-        >
-          {hasSolana ? (
-            <Suspense fallback={null}>
-              <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
-            </Suspense>
-          ) : (
-            innerChildren
-          )}
-        </CoreOpenfortProvider>
+      <OpenfortContext.Provider value={configValue}>
+        <ThemeStateContext.Provider value={themeValue}>
+          <RoutingContext.Provider value={routingValue}>
+            <FormContext.Provider value={formValue}>
+              <CoreOpenfortProvider
+                openfortConfig={{
+                  baseConfiguration: { publishableKey },
+                  shieldConfiguration: walletConfig
+                    ? {
+                        shieldPublishableKey: walletConfig.shieldPublishableKey,
+                        debug: debugModeOptions.shieldDebugMode,
+                        ...(walletConfig.passkeyDisplayName && {
+                          passkeyRpName: walletConfig.passkeyDisplayName,
+                        }),
+                      }
+                    : undefined,
+                  debug: debugModeOptions.openfortCoreDebugMode,
+                  overrides,
+                  thirdPartyAuth,
+                }}
+                onConnect={onConnect}
+                onDisconnect={onDisconnect}
+              >
+                {hasSolana ? (
+                  <Suspense fallback={null}>
+                    <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
+                  </Suspense>
+                ) : (
+                  innerChildren
+                )}
+              </CoreOpenfortProvider>
+            </FormContext.Provider>
+          </RoutingContext.Provider>
+        </ThemeStateContext.Provider>
       </OpenfortContext.Provider>
     </UIContext.Provider>
   )
