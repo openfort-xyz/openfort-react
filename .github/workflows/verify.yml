@@ -10,7 +10,7 @@ jobs:
   pnpm-build:
     name: pnpm build
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     permissions:
       contents: read
       # packages: read    # required for pulling packages from GHCR
@@ -53,6 +53,18 @@ jobs:
 
       - name: Build project
         run: pnpm build
+
+      - name: Build CLI
+        run: pnpm build:cli
+
+      - name: Check publishable packages (publint + attw)
+        # Declaration files reference relative modules without a file extension,
+        # which Node16 ESM type resolution cannot follow, so that rule is
+        # excluded until the emitted specifiers carry extensions.
+        run: pnpm test:build
+
+      - name: Check bundle-size budgets
+        run: pnpm size
 
   types:
     name: Types (React ${{ matrix.react-version }}, viem ${{ matrix.viem-version }})
@@ -116,4 +128,3 @@ jobs:
         # rollup-plugin-typescript2 type-checks the package sources as it
         # builds, so a type error under this react/viem pair fails the job.
         run: pnpm build
-
