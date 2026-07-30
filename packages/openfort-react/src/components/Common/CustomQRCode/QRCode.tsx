@@ -97,7 +97,6 @@ export function QRCode({
         if (matrix[i][j]) {
           // Do not render dots under position squares
           if (!((i < 7 && j < 7) || (i > matrix.length - 8 && j < 7) || (i < 7 && j > matrix.length - 8))) {
-            //if (image && i > matrix.length - 9 && j > matrix.length - 9) return;
             if (
               image ||
               !(i > matrixMiddleStart && i < matrixMiddleEnd && j > matrixMiddleStart && j < matrixMiddleEnd)

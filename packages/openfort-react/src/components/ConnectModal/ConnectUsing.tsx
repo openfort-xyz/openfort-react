@@ -83,7 +83,6 @@ const ConnectUsing = () => {
         >
           <ConnectWithInjector
             switchConnectMethod={(_id?: string) => {
-              //if (id) setId(id);
               setStatus(states.QRCODE)
               setTimeout(context.triggerResize, 10) // delay required here for modal to resize
             }}
