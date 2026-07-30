@@ -5,13 +5,10 @@ export {
   type NotAuthenticatedErrorType,
 } from './auth.js'
 export {
-  asOpenfortError,
   type ErrorType,
   OpenfortError,
   type OpenfortErrorOptions,
-  type OpenfortErrorType,
   OpenfortReactErrorType,
-  toError,
 } from './base.js'
 export {
   ChainNotConfiguredError,

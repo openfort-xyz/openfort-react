@@ -36,8 +36,6 @@ export type OpenfortErrorOptions = {
   type?: OpenfortReactErrorType | undefined
 }
 
-export type OpenfortErrorType = OpenfortError & { name: 'OpenfortError' }
-
 /**
  * Base class for every error the SDK produces.
  *
@@ -100,17 +98,18 @@ export class OpenfortError extends Error {
    * Walks the `cause` chain and returns the first error matching `fn`.
    *
    * Without a predicate it returns the deepest cause; when nothing matches it
-   * returns the deepest cause too, so the result is never `undefined`.
+   * returns the deepest cause too, so the result is never `undefined`. Callers
+   * looking for a specific error must re-test the returned value.
    */
   walk(fn?: (err: unknown) => boolean) {
-    return this.#walk(this, fn)
+    return walk(this, fn)
   }
+}
 
-  #walk(err: unknown, fn?: (err: unknown) => boolean): unknown {
-    if (fn?.(err)) return err
-    if ((err as Error).cause) return this.#walk((err as Error).cause, fn)
-    return err
-  }
+function walk(err: unknown, fn?: (err: unknown) => boolean): unknown {
+  if (fn?.(err)) return err
+  if (err != null && typeof err === 'object' && 'cause' in err && err.cause != null) return walk(err.cause, fn)
+  return err
 }
 
 /**

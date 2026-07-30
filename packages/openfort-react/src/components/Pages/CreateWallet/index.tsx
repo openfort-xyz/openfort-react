@@ -14,7 +14,7 @@ import {
   ShieldIcon,
 } from '../../../assets/icons.js'
 import Logos from '../../../assets/logos.js'
-import { OpenfortError } from '../../../core/errors.js'
+import { OpenfortError } from '../../../errors/base.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import type { OTPResponse } from '../../../shared/hooks/useRecoveryOTP.js'

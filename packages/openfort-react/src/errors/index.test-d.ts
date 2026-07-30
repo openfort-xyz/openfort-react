@@ -2,12 +2,13 @@ import { assertType, expectTypeOf, test } from 'vitest'
 
 import {
   AuthenticationError,
+  type AuthenticationErrorType,
   MissingParameterError,
   OpenfortError,
-  type OpenfortErrorType,
   OpenfortReactErrorType,
   WalletCreationError,
-} from './errors.js'
+  type WalletCreationErrorType,
+} from './index.js'
 
 test('constructor signature', () => {
   expectTypeOf(OpenfortError).toBeConstructibleWith('boom')
@@ -35,7 +36,8 @@ test('instance shape', () => {
 
 test('name-based narrowing', () => {
   // The `XErrorType` companions pin `name`, so a union of them narrows on `error.name`.
-  expectTypeOf<OpenfortErrorType['name']>().toEqualTypeOf<'OpenfortError'>()
+  expectTypeOf<WalletCreationErrorType['name']>().toEqualTypeOf<'WalletCreationError'>()
+  expectTypeOf<AuthenticationErrorType['name']>().toEqualTypeOf<'AuthenticationError'>()
 })
 
 test('subclass constructors', () => {
