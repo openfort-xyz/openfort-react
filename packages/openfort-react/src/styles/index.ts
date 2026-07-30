@@ -301,6 +301,7 @@ export const ResetContainer = styled(motion.div)<{
     if (props.$customTheme) {
       return createCssColors(props.$customTheme, true)
     }
+    return undefined
   }}
 
   all: initial;

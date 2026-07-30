@@ -54,7 +54,7 @@ export const BuyIcon = ({ ...props }) => (
   </svg>
 )
 
-export const DollarIcon = (props) => (
+export const DollarIcon = ({ ...props }) => (
   <svg
     width="800px"
     height="800px"

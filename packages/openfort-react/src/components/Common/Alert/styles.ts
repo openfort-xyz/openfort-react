@@ -36,6 +36,7 @@ export const AlertContainer = styled(motion.div)<{ $error?: boolean }>`
         color: #fff;
         background: var(--ck-body-color-danger, red);
       `
+    return undefined
   }}
 `
 

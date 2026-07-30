@@ -292,11 +292,8 @@ export const OpenfortProvider = ({
     setRouteHistory((prev) => {
       const newHistory = [...prev]
       newHistory.pop()
-      if (newHistory.length > 0) {
-        setRoute(newHistory[newHistory.length - 1])
-      } else {
-        setRoute({ route: routes.CONNECTED })
-      }
+      const previous = newHistory[newHistory.length - 1]
+      setRoute(previous ?? { route: routes.CONNECTED })
       return newHistory
     })
   }, [])
@@ -325,7 +322,7 @@ export const OpenfortProvider = ({
       setOnBack,
       headerLeftSlot,
       setHeaderLeftSlot,
-      previousRoute: routeHistory.length > 1 ? routeHistory[routeHistory.length - 2] : null,
+      previousRoute: routeHistory[routeHistory.length - 2] ?? null,
       setPreviousRoute,
       routeHistory,
       setRouteHistory,

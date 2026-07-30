@@ -54,11 +54,8 @@ const RemoveLinkedProvider: React.FC = () => {
           const newHistory = [...prev]
           newHistory.pop()
           newHistory.pop()
-          if (newHistory.length > 0) {
-            setRoute(newHistory[newHistory.length - 1])
-          } else {
-            setRoute({ route: routes.CONNECTED })
-          }
+          const previous = newHistory[newHistory.length - 1]
+          setRoute(previous ?? { route: routes.CONNECTED })
           return newHistory
         })
       })

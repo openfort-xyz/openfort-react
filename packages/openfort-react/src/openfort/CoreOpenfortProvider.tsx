@@ -337,7 +337,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     strategy
       .initProvider(openfort, walletConfig, evmChainId)
       .then(() => {
-        if (cancelled) return
+        if (cancelled) return undefined
         lastInitRef.current = initKey
 
         // Only fetch accounts when authenticated — avoids SessionError on callback pages
@@ -348,6 +348,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
           '[CoreProvider] initProvider: not fetching accounts, state is',
           EmbeddedState[store.getState().embeddedState]
         )
+        return undefined
       })
       .catch((_err) => {})
       .finally(() => {

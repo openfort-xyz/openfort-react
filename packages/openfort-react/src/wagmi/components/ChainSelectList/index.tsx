@@ -70,8 +70,9 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
     if (!bridgeIsPending) setPendingChainId(undefined)
   }, [bridgeIsPending])
 
-  // biome-ignore lint/complexity/useLiteralKeys: SwitchChainErrorType doesn't expose 'code' property but it exists at runtime
-  const isError = bridgeError?.['code'] === 4902 // Wallet cannot switch networks
+  // 4902 means the wallet cannot switch networks. Providers put that on `code`, which
+  // isn't part of SwitchChainErrorType, so the property is narrowed before it's read.
+  const isError = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4902
   const disabled = isError || !switchChainFn
 
   const handleSwitchNetwork = (chainId: number) => {

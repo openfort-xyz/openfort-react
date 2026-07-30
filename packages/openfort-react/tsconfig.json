@@ -2,7 +2,13 @@
   "compilerOptions": {
     // Type checking
     "strict": true,
-    "noImplicitAny": false,
+    "noFallthroughCasesInSwitch": true, // Not enabled by default in `strict` mode.
+    "noImplicitOverride": true, // Not enabled by default in `strict` mode.
+    "noImplicitReturns": true, // Not enabled by default in `strict` mode.
+    "noUncheckedIndexedAccess": true, // Array and record lookups yield `T | undefined`, so they have to be guarded.
+    "noUnusedLocals": true, // Not enabled by default in `strict` mode.
+    "noUnusedParameters": true, // Not enabled by default in `strict` mode.
+    // "exactOptionalPropertyTypes": true, // Enabled once supported in tanstack query https://github.com/TanStack/query/issues/7641
 
     // Emit — `rollup-plugin-typescript2` reads these to place declarations next to the bundles.
     "rootDir": "src",
@@ -15,6 +21,7 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "verbatimModuleSyntax": true, // Imports are emitted as written, so type-only imports have to be marked `type`.
 
     // Language and environment
     "module": "ESNext",

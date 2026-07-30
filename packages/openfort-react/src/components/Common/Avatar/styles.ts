@@ -49,6 +49,7 @@ export const EnsAvatar = styled(motion.div)<{
         );
       `
     }
+    return undefined
   }}
 `
 

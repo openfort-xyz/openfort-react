@@ -39,19 +39,21 @@
  * | Revoke session key permissions | `useRevokePermissions()` |
  */
 // ── SDK re-exports ──────────────────────────────────────────────────────────
-export {
-  AccountTypeEnum,
+export type {
   AuthInitPayload,
   AuthResponse,
-  ChainTypeEnum,
   EmbeddedAccount,
   OpenfortEventMap,
-  OpenfortEvents,
-  openfortEvents,
-  RecoveryMethod,
   RecoveryParams,
   SignedMessagePayload,
   User,
+} from '@openfort/openfort-js'
+export {
+  AccountTypeEnum,
+  ChainTypeEnum,
+  OpenfortEvents,
+  openfortEvents,
+  RecoveryMethod,
 } from '@openfort/openfort-js'
 export type { CountrySelectorProps } from 'react-international-phone'
 // ── Provider + UI components ─────────────────────────────────────────────────
@@ -139,12 +141,15 @@ export type {
   UseEmbeddedSolanaWalletOptions,
 } from './solana/types'
 export type { CustomTheme } from './styles/customTheme'
-export type { CustomAvatarProps, Languages, Mode, OpenfortHookOptions, Theme } from './types'
-export {
-  OAuthProvider,
+export type {
+  CustomAvatarProps,
+  Languages,
+  Mode,
+  OpenfortHookOptions,
   SDKOverrides,
-  ThirdPartyOAuthProvider,
+  Theme,
 } from './types'
+export { OAuthProvider, ThirdPartyOAuthProvider } from './types'
 export { formatAddress } from './utils/format'
 export { getDefaultSolanaRpcUrl } from './utils/rpc'
 export { OPENFORT_VERSION } from './version'

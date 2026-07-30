@@ -56,10 +56,8 @@ export const PageContent = ({
       setOnBack(null)
       // If null then clear history
       setRouteHistory((h) => {
-        if (h.length > 0) {
-          return [h[h.length - 1]]
-        }
-        return h
+        const last = h[h.length - 1]
+        return last ? [last] : h
       })
     } else setOnBack(null)
   }, [!!onBack, !!logoutOnBack])

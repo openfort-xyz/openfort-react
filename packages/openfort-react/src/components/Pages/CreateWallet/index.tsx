@@ -49,8 +49,8 @@ const OtherMethod = ({
 
   if (otherMethods.length === 0) return null
 
-  if (otherMethods.length === 1) {
-    const method = otherMethods[0]
+  const [method] = otherMethods
+  if (otherMethods.length === 1 && method) {
     let text: string
     switch (method) {
       case RecoveryMethod.PASSWORD:

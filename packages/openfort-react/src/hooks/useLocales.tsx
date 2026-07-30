@@ -23,8 +23,7 @@ export default function useLocales(replacements?: Record<string, string>): Local
   }
 
   const translated: Record<string, unknown> = {}
-  Object.keys(translations).forEach((key) => {
-    const string = translations[key]
+  Object.entries(translations).forEach(([key, string]) => {
     translated[key] = localize(string, replacements)
   })
 
@@ -34,9 +33,9 @@ export default function useLocales(replacements?: Record<string, string>): Local
 const localize = (text: string, replacements?: Record<string, string>) => {
   let parsedText: string = text
   if (replacements) {
-    Object.keys(replacements).forEach((key) => {
+    Object.entries(replacements).forEach(([key, replacement]) => {
       // use `replace` instead of `replaceAll` to support Node 14
-      parsedText = parsedText.replace(new RegExp(`({{ ${key} }})`, 'g'), replacements[key as keyof typeof replacements])
+      parsedText = parsedText.replace(new RegExp(`({{ ${key} }})`, 'g'), replacement)
     })
   }
   return replaceMarkdown(parsedText)
