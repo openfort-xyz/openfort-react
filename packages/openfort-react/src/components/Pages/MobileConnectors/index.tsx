@@ -1,17 +1,17 @@
 import type React from 'react'
-import useLocales from '../../../hooks/useLocales'
-import { useWalletConnectModal } from '../../../hooks/useWalletConnectModal'
-import { useExternalConnectors } from '../../../wallets/useExternalConnectors'
-import { walletConfigs } from '../../../wallets/walletConfigs'
-import { CopyButton } from '../../Common/CopyToClipboard/CopyButton'
-import { ModalContent } from '../../Common/Modal/styles'
-import { ScrollArea } from '../../Common/ScrollArea'
-import { Spinner } from '../../Common/Spinner'
-import WalletConnectNotConfigured, { useHasWalletConnect } from '../../Common/WalletConnectNotConfigured'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { Container, WalletIcon, WalletItem, WalletLabel, WalletList } from './styles'
+import useLocales from '../../../hooks/useLocales.js'
+import { useWalletConnectModal } from '../../../hooks/useWalletConnectModal.js'
+import { useExternalConnectors } from '../../../wallets/useExternalConnectors.js'
+import { walletConfigs } from '../../../wallets/walletConfigs.js'
+import { CopyButton } from '../../Common/CopyToClipboard/CopyButton.js'
+import { ModalContent } from '../../Common/Modal/styles.js'
+import { ScrollArea } from '../../Common/ScrollArea/index.js'
+import { Spinner } from '../../Common/Spinner/index.js'
+import WalletConnectNotConfigured, { useHasWalletConnect } from '../../Common/WalletConnectNotConfigured/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { Container, WalletIcon, WalletItem, WalletLabel, WalletList } from './styles.js'
 
 const MoreIcon = (
   <svg width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -29,13 +29,11 @@ const MobileConnectors: React.FC = () => {
   const hasWalletConnect = useHasWalletConnect()
 
   // filter out installed wallets
-  const walletsIdsToDisplay =
-    Object.keys(walletConfigs).filter((walletId) => {
-      const wallet = walletConfigs[walletId]
-      if (wallets.find((w) => w.connector.id === walletId)) return false
-      if (!wallet.getWalletConnectDeeplink) return false
-      return true
-    }) ?? []
+  const walletsToDisplay = Object.entries(walletConfigs).filter(([walletId, wallet]) => {
+    if (wallets.find((w) => w.connector.id === walletId)) return false
+    if (!wallet.getWalletConnectDeeplink) return false
+    return true
+  })
 
   const connectWallet = (walletId: string) => {
     context.setRoute(routes.CONNECT_WITH_MOBILE)
@@ -51,20 +49,17 @@ const MobileConnectors: React.FC = () => {
         <ModalContent style={{ paddingBottom: 0 }}>
           <ScrollArea height={340}>
             <WalletList>
-              {walletsIdsToDisplay
+              {walletsToDisplay
                 .sort(
                   // sort by name
-                  (a, b) => {
-                    const walletA = walletConfigs[a]
-                    const walletB = walletConfigs[b]
-                    const nameA = walletA.name ?? walletA.shortName ?? a
-                    const nameB = walletB.name ?? walletB.shortName ?? b
+                  ([idA, walletA], [idB, walletB]) => {
+                    const nameA = walletA.name ?? walletA.shortName ?? idA
+                    const nameB = walletB.name ?? walletB.shortName ?? idB
                     return nameA.localeCompare(nameB)
                   }
                 )
-                .filter((walletId) => !(walletId === 'coinbaseWallet' || walletId === 'com.coinbase.wallet'))
-                .map((walletId, i) => {
-                  const wallet = walletConfigs[walletId]
+                .filter(([walletId]) => !(walletId === 'coinbaseWallet' || walletId === 'com.coinbase.wallet'))
+                .map(([walletId, wallet], i) => {
                   const { name, shortName, iconConnector, icon } = wallet
                   return (
                     <WalletItem

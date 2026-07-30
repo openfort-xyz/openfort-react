@@ -1,7 +1,7 @@
 import { type EasingFunction, motion } from 'framer-motion'
 import { useId } from 'react'
 import { keyframes } from 'styled-components'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 export type Easing =
   | [number, number, number, number]

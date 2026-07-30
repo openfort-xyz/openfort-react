@@ -93,7 +93,7 @@ export function QRCode({
     const matrixMiddleEnd = matrix.length / 2 + clearArenaSize / 2 - 1
 
     matrix.forEach((row: QRCodeUtil.QRCode[], i: number) => {
-      row.forEach((_: any, j: number) => {
+      row.forEach((_, j: number) => {
         if (matrix[i][j]) {
           // Do not render dots under position squares
           if (!((i < 7 && j < 7) || (i > matrix.length - 8 && j < 7) || (i < 7 && j > matrix.length - 8))) {

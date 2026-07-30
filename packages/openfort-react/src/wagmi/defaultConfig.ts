@@ -3,7 +3,7 @@ import { http } from 'wagmi'
 import { arbitrum, mainnet, optimism, polygon } from 'wagmi/chains'
 import type { CoinbaseWalletParameters } from 'wagmi/connectors'
 
-import defaultConnectors from './defaultConnectors'
+import defaultConnectors from './defaultConnectors.js'
 
 type DefaultConfigProps = {
   appName: string

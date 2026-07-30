@@ -6,8 +6,8 @@
 import type { Chain, Hex } from 'viem'
 import { createWalletClient, custom } from 'viem'
 import { erc7715Actions } from 'viem/experimental'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import type { OpenfortEmbeddedEthereumWalletProvider } from '../types'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import type { OpenfortEmbeddedEthereumWalletProvider } from '../types.js'
 
 /**
  * Create viem wallet client from embedded provider.

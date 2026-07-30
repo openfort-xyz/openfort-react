@@ -2,23 +2,23 @@
 
 import { AccountTypeEnum, ChainTypeEnum, type EmbeddedAccount, EmbeddedState } from '@openfort/openfort-js'
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
-import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import type {
   CreateEmbeddedWalletOptions,
   ImportEmbeddedWalletOptions,
   SetRecoveryOptions,
   WalletStatus,
-} from '../../shared/types'
-import { buildEmbeddedWalletStatusResult } from '../../shared/utils/embeddedWalletStatusMapper'
-import { type BuildRecoveryParamsConfig, buildRecoveryParams } from '../../shared/utils/recovery'
-import { toConnectedStateProperties } from '../../shared/utils/walletStatusProps'
-import { formatAddress } from '../../utils/format'
-import { getDefaultSolanaRpcUrl } from '../../utils/rpc'
-import { getTransactionBytes } from '../operations'
-import { createSolanaProvider } from '../provider'
-import { SolanaContext } from '../SolanaContext'
+} from '../../shared/types.js'
+import { buildEmbeddedWalletStatusResult } from '../../shared/utils/embeddedWalletStatusMapper.js'
+import { type BuildRecoveryParamsConfig, buildRecoveryParams } from '../../shared/utils/recovery.js'
+import { toConnectedStateProperties } from '../../shared/utils/walletStatusProps.js'
+import { formatAddress } from '../../utils/format.js'
+import { getDefaultSolanaRpcUrl } from '../../utils/rpc.js'
+import { getTransactionBytes } from '../operations.js'
+import { createSolanaProvider } from '../provider.js'
+import { SolanaContext } from '../SolanaContext.js'
 import type {
   ConnectedEmbeddedSolanaWallet,
   OpenfortEmbeddedSolanaWalletProvider,
@@ -28,8 +28,8 @@ import type {
   SolanaTransaction,
   SolanaWalletState,
   UseEmbeddedSolanaWalletOptions,
-} from '../types'
-import { resolveRecoveryForSetActive } from './recoveryResolver'
+} from '../types.js'
+import { resolveRecoveryForSetActive } from './recoveryResolver.js'
 
 type InternalState = {
   status: WalletStatus
@@ -469,14 +469,15 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
     // Also runs from 'error' state: if setActive failed (e.g. recover() threw) but the
     // address still points to an EVM wallet, we need to re-point to the SVM wallet so
     // the sync effect above can self-heal via createProviderForAccount.
+    const firstSolanaAccount = solanaAccounts[0]
     if (
       chainType === ChainTypeEnum.SVM &&
       !accountByAddress &&
       activeEmbeddedAddress &&
-      solanaAccounts.length > 0 &&
+      firstSolanaAccount &&
       (state.status === 'disconnected' || state.status === 'error')
     ) {
-      setActiveEmbeddedAddress(solanaAccounts[0].address)
+      setActiveEmbeddedAddress(firstSolanaAccount.address)
     }
   }, [
     isLoadingAccounts,

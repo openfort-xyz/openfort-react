@@ -1,7 +1,7 @@
 'use client'
 
 import { type SyntheticEvent, useState } from 'react'
-import { symbolToColor } from '../../../constants/logos'
+import { symbolToColor } from '../../../constants/logos.js'
 
 const hide = (e: SyntheticEvent<HTMLImageElement>) => {
   e.currentTarget.style.display = 'none'

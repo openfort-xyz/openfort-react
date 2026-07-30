@@ -1,9 +1,12 @@
 import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import { hexToP3 } from '../utils/p3'
-import type { CustomTheme } from './customTheme'
-import styled from './styled'
-import predefinedThemes from './themes'
+import { hexToP3 } from '../utils/p3.js'
+import type { CustomTheme } from './customTheme.js'
+import styled from './styled/index.js'
+import predefinedThemes from './themes/index.js'
+
+/** A map of CSS custom property names to values. Falsy entries are skipped. */
+type ThemeScheme = Record<string, string | number | undefined>
 
 /**
  * Theme variables for the modal.
@@ -137,13 +140,9 @@ const themeColors = {
 /**
  * Generates CSS custom property declarations from the given theme map.
  */
-//  TODO: Don't use :any type
-const createCssVars = (scheme: any, _important?: boolean) => {
+const createCssVars = (scheme: ThemeScheme, _important?: boolean) => {
   return css`
-    ${Object.keys(scheme).map((key) => {
-      const value = scheme[key]
-      return value && `${key}:${value};`
-    })}
+    ${Object.entries(scheme).map(([key, value]) => value && `${key}:${value};`)}
   `
 }
 /**
@@ -152,18 +151,12 @@ const createCssVars = (scheme: any, _important?: boolean) => {
  * @param scheme - Map of CSS custom property names to hex colour values.
  * @param override - When `true`, appends `!important` to each declaration.
  */
-const createCssColors = (scheme: any, override?: boolean) => {
+const createCssColors = (scheme: ThemeScheme, override?: boolean) => {
   const important = override ? ' !important' : ''
   return css`
-    ${Object.keys(scheme).map((key) => {
-      const value = scheme[key]
-      return value && `${key}:${value}${important};`
-    })}
+    ${Object.entries(scheme).map(([key, value]) => value && `${key}:${value}${important};`)}
     @supports (color: color(display-p3 1 1 1)) {
-      ${Object.keys(scheme).map((key) => {
-        const value = scheme[key]
-        return `${key}:${hexToP3(value)}${important};`
-      })}
+      ${Object.entries(scheme).map(([key, value]) => value && `${key}:${hexToP3(String(value))}${important};`)}
     }
   `
 }
@@ -301,6 +294,7 @@ export const ResetContainer = styled(motion.div)<{
     if (props.$customTheme) {
       return createCssColors(props.$customTheme, true)
     }
+    return undefined
   }}
 
   all: initial;

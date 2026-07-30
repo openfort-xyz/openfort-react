@@ -1,16 +1,16 @@
-import { embeddedWalletId } from '../../../constants/openfort'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useFamilyAccountsConnector, useFamilyConnector } from '../../../hooks/useConnectors'
+import { embeddedWalletId } from '../../../constants/openfort.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useFamilyAccountsConnector, useFamilyConnector } from '../../../hooks/useConnectors.js'
 
-import useIsMobile from '../../../hooks/useIsMobile'
-import { useLastConnector } from '../../../hooks/useLastConnector'
-import { isFamily } from '../../../utils/wallets'
-import { type ExternalConnectorProps, useExternalConnectors } from '../../../wallets/useExternalConnectors'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import Alert from '../Alert'
-import { ScrollArea } from '../ScrollArea'
-import { ConnectorButton, ConnectorIcon, ConnectorLabel, ConnectorsContainer, RecentlyUsedTag } from './styles'
+import useIsMobile from '../../../hooks/useIsMobile.js'
+import { useLastConnector } from '../../../hooks/useLastConnector.js'
+import { isFamily } from '../../../utils/wallets.js'
+import { type ExternalConnectorProps, useExternalConnectors } from '../../../wallets/useExternalConnectors.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import Alert from '../Alert/index.js'
+import { ScrollArea } from '../ScrollArea/index.js'
+import { ConnectorButton, ConnectorIcon, ConnectorLabel, ConnectorsContainer, RecentlyUsedTag } from './styles.js'
 
 const ConnectorList = () => {
   const context = useOpenfort()

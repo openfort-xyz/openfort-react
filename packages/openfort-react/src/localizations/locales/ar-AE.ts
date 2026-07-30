@@ -1,5 +1,5 @@
-import type { LocaleProps } from './'
-import enUS from './en-US'
+import enUS from './en-US.js'
+import type { LocaleProps } from './index.js'
 
 const arAE: LocaleProps = {
   ...enUS, // fallback

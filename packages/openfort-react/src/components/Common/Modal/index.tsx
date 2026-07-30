@@ -5,21 +5,21 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTransition } from 'react-transition-state'
 import ResizeObserver from 'resize-observer-polyfill'
-import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import FocusTrap from '../../../hooks/useFocusTrap'
-import useLocales from '../../../hooks/useLocales'
-import useLockBodyScroll from '../../../hooks/useLockBodyScroll'
-import usePrevious from '../../../hooks/usePrevious'
-import { ResetContainer } from '../../../styles'
-import type { CustomTheme } from '../../../types'
-import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../utils'
-import { useExternalConnector } from '../../../wallets/useExternalConnectors'
-import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import FitText from '../FitText'
-import Portal from '../Portal'
+import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import FocusTrap from '../../../hooks/useFocusTrap.js'
+import useLocales from '../../../hooks/useLocales.js'
+import useLockBodyScroll from '../../../hooks/useLockBodyScroll.js'
+import usePrevious from '../../../hooks/usePrevious.js'
+import { ResetContainer } from '../../../styles/index.js'
+import type { CustomTheme } from '../../../types.js'
+import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../utils/index.js'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
+import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import FitText from '../FitText/index.js'
+import Portal from '../Portal/index.js'
 import {
   BackButton,
   BackgroundOverlay,
@@ -34,7 +34,7 @@ import {
   PageContainer,
   PageContents,
   TextWithHr,
-} from './styles'
+} from './styles.js'
 
 const InfoIcon = ({ ...props }) => (
   <svg
@@ -99,7 +99,8 @@ export const contentVariants: Variants = {
 
 type ModalProps = {
   open?: boolean
-  pages: any
+  /** Route id to page element. Keys are route ids; a missing route renders nothing. */
+  pages: Partial<Record<string, React.ReactNode>>
   pageId: string
   positionInside?: boolean
   inline?: boolean
@@ -160,20 +161,16 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const [inTransition, setInTransition] = useState<boolean | undefined>(undefined)
 
   // Calculate new content bounds
-  const updateBounds = (node: any) => {
-    const bounds = {
-      width: node?.offsetWidth,
-      height: node?.offsetHeight,
-    }
+  const updateBounds = (node: HTMLElement) => {
     setDimensions({
-      width: `${bounds?.width}px`,
-      height: `${bounds?.height}px`,
+      width: `${node.offsetWidth}px`,
+      height: `${node.offsetHeight}px`,
     })
   }
 
   let blockTimeout: ReturnType<typeof setTimeout>
   const contentRef = useCallback(
-    (node: any) => {
+    (node: HTMLElement | null) => {
       if (!node) return
       ref.current = node
 
@@ -204,7 +201,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const chainId = strategy?.getChainId() ?? bridge?.account?.chain?.id ?? bridge?.chainId
   const switchChain = bridge?.switchChain?.switchChain
 
-  const ref = useRef<any>(null)
+  const ref = useRef<HTMLElement | null>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
   useEffect(() => {
     if (ref.current) updateBounds(ref.current)
@@ -404,7 +401,9 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
 
             <InnerContainer>
               {Object.keys(pages).map((key) => {
-                const page = context.uiConfig.customPageComponents?.[key] ?? pages[key]
+                const customPages: Partial<Record<string, React.ReactElement>> =
+                  context.uiConfig.customPageComponents ?? {}
+                const page = customPages[key] ?? pages[key]
                 return (
                   // TODO: Render only the current and previous page instead of every page.
                   // Gating on `key === pageId` alone makes the content flash during transitions.

@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
-import styled from '../../../styles/styled'
-import { Spinner } from '../../Common/Spinner'
-import { useOpenfort } from '../../Openfort/useOpenfort'
+import styled from '../../../styles/styled/index.js'
+import { Spinner } from '../../Common/Spinner/index.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
 
 const Banner = styled.div`
   display: flex;
@@ -21,8 +21,8 @@ const Banner = styled.div`
 /**
  * "Waiting for your deposit…" banner shown under the deposit address for a
  * same-chain "transfer from address". Arrival detection lives in
- * {@link import('./useSameChainArrival').useSameChainArrival}; on arrival the
- * page swaps to {@link import('./SameChainDepositSuccess').SameChainDepositSuccess}.
+ * {@link import('./useSameChainArrival.js').useSameChainArrival}; on arrival the
+ * page swaps to {@link import('./SameChainDepositSuccess.js').SameChainDepositSuccess}.
  */
 export function SameChainDepositStatus() {
   const { triggerResize } = useOpenfort()

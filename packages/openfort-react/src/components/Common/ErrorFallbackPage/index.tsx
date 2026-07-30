@@ -1,11 +1,11 @@
 'use client'
 
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import Button from '../Button'
-import Loader from '../Loading'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import Button from '../Button/index.js'
+import Loader from '../Loading/index.js'
 
 type ErrorFallbackPageProps = {
   header: string

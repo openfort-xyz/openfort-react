@@ -1,6 +1,6 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { describe, expect, it } from 'vitest'
-import { resolveOnrampNetwork } from '../components/Pages/Buy/onrampApi'
+import { resolveOnrampNetwork } from '../components/Pages/Buy/onrampApi.js'
 
 describe('resolveOnrampNetwork', () => {
   it('resolves Solana wallets to the solana network (ignoring any chainId)', () => {

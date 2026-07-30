@@ -1,5 +1,5 @@
 import { EmbeddedState } from '@openfort/openfort-js'
-import type { OpenfortStore } from './store'
+import type { OpenfortStore } from './store.js'
 
 export const selectUser = (s: OpenfortStore) => s.user
 export const selectEmbeddedState = (s: OpenfortStore) => s.embeddedState

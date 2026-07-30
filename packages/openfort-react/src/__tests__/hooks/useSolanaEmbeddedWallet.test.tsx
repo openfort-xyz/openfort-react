@@ -2,10 +2,10 @@ import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { renderHook } from '@testing-library/react'
 import { createElement, type PropsWithChildren } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { StoreContext } from '../../openfort/context'
-import { createOpenfortStore } from '../../openfort/store'
-import { SolanaContext } from '../../solana/SolanaContext'
-import { buildContextValue } from '../mocks/TestWrapper'
+import { StoreContext } from '../../openfort/context.js'
+import { createOpenfortStore } from '../../openfort/store.js'
+import { SolanaContext } from '../../solana/SolanaContext.js'
+import { buildContextValue } from '../mocks/TestWrapper.js'
 
 // Mock dependencies that useSolanaEmbeddedWallet needs
 vi.mock('../../components/Openfort/useOpenfort', () => {
@@ -16,7 +16,7 @@ vi.mock('../../components/Openfort/useOpenfort', () => {
   return { useOpenfort: hook, useOpenfortUIContext: hook }
 })
 
-const { useSolanaEmbeddedWallet } = await import('../../solana/hooks/useSolanaEmbeddedWallet')
+const { useSolanaEmbeddedWallet } = await import('../../solana/hooks/useSolanaEmbeddedWallet.js')
 
 function createWrapper(
   coreOverrides: Partial<Parameters<typeof buildContextValue>[0]> = {},

@@ -2,7 +2,7 @@
 
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { TickIcon } from '../../../assets/icons'
+import { TickIcon } from '../../../assets/icons.js'
 import {
   CaretBar,
   FakeCaretWrapper,
@@ -12,7 +12,7 @@ import {
   OTPSlotWrapper,
   OtpContainer,
   SuccessTickWrapper,
-} from './styles'
+} from './styles.js'
 
 function FakeCaret() {
   return (

@@ -45,7 +45,7 @@ vi.mock('../components/Pages/Deposit/useFundingTarget', () => ({
   }),
 }))
 
-const { useDepositRoute } = await import('../components/Pages/Deposit/useDepositRoute')
+const { useDepositRoute } = await import('../components/Pages/Deposit/useDepositRoute.js')
 
 describe('useDepositRoute', () => {
   beforeEach(() => {

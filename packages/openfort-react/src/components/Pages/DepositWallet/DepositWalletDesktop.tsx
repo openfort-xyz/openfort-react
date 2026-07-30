@@ -3,20 +3,20 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { type Address, type EIP1193Provider, encodeFunctionData, erc20Abi, formatUnits, parseUnits } from 'viem'
-import { WalletIcon } from '../../../assets/icons'
-import logos from '../../../assets/logos'
+import { WalletIcon } from '../../../assets/icons.js'
+import logos from '../../../assets/logos.js'
 import {
   type OpenfortEthereumBridgeConnector,
   useEthereumBridge,
-} from '../../../ethereum/OpenfortEthereumBridgeContext'
-import type { FundingChain, FundingCurrency } from '../../../hooks/openfort/useFundingChains'
-import { ModalBody } from '../../Common/Modal/styles'
-import { ScrollArea } from '../../Common/ScrollArea'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { DepositStatus } from '../Deposit/DepositStatus'
-import { walletListBtn } from '../Deposit/formStyles'
-import { ButtonLogo } from '../Deposit/styles'
-import { caipToChainId } from './walletDeeplinks'
+} from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import type { FundingChain, FundingCurrency } from '../../../hooks/openfort/useFundingChains.js'
+import { ModalBody } from '../../Common/Modal/styles.js'
+import { ScrollArea } from '../../Common/ScrollArea/index.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { DepositStatus } from '../Deposit/DepositStatus.js'
+import { walletListBtn } from '../Deposit/formStyles.js'
+import { ButtonLogo } from '../Deposit/styles.js'
+import { caipToChainId } from './walletDeeplinks.js'
 
 /** Hardcoded brand logo for a connector, matched by id/name; falls back to its own icon, then a generic. */
 function brandLogo(connector: { id: string; name: string; icon?: string }): ReactNode {

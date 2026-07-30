@@ -1,4 +1,4 @@
-import { OPENFORT_VERSION } from '../version'
+import { OPENFORT_VERSION } from '../version.js'
 
 // SVG logo via background-image data URI is supported in Chrome/Firefox if desired later.
 let _shown = false

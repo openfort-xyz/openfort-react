@@ -1,7 +1,7 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { CopyText } from '../../Common/CopyToClipboard/CopyText'
+import { CopyText } from '../../Common/CopyToClipboard/CopyText.js'
 import {
   AddressValue,
   AmountValue,
@@ -14,7 +14,7 @@ import {
   SummaryItem,
   SummaryLabel,
   SummaryList,
-} from './styles'
+} from './styles.js'
 
 type ConfirmationAddress = { display: string; value: string }
 

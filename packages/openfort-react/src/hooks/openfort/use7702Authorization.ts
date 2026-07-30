@@ -3,8 +3,8 @@
 import { useCallback } from 'react'
 import { type AuthorizationRequest, type Hex, parseSignature, type SignedAuthorization } from 'viem'
 import { hashAuthorization } from 'viem/utils'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 
 export type SignAuthorizationParameters = AuthorizationRequest
 

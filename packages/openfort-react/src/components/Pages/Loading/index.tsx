@@ -2,16 +2,16 @@
 
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import React, { useEffect } from 'react'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useTimedOut } from '../../../hooks/useTimedOut'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import Loader from '../../Common/Loading'
-import NotFoundFallback from '../../Common/NotFoundFallback'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useTimedOut } from '../../../hooks/useTimedOut.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import Loader from '../../Common/Loading/index.js'
+import NotFoundFallback from '../../Common/NotFoundFallback/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 // Watchdog: if no state transition routes us away within this window, the modal
 // would otherwise spin forever (e.g. opened while signed out, or a misconfigured SDK).

@@ -8,9 +8,9 @@
  * Always set hashMessage: false when signing.
  */
 
-import { OpenfortError, OpenfortReactErrorType } from '../core/errors'
+import { OpenfortError, OpenfortReactErrorType } from '../core/errors.js'
 
-import type { SolanaTransaction } from './types'
+import type { SolanaTransaction } from './types.js'
 
 /**
  * Extract message bytes from various Solana transaction formats

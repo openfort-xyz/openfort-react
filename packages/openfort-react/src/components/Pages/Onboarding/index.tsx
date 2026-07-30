@@ -1,9 +1,9 @@
 import type React from 'react'
-import Logos from '../../../assets/logos'
-import wave from '../../../assets/wave'
-import useLocales from '../../../hooks/useLocales'
-import Button from '../../Common/Button'
-import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
+import Logos from '../../../assets/logos.js'
+import wave from '../../../assets/wave.js'
+import useLocales from '../../../hooks/useLocales.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
 import {
   FloatWrapper,
   Graphic,
@@ -14,9 +14,9 @@ import {
   LogoInner,
   LogoPosition,
   RotateWrapper,
-} from '../../FloatingGraphic/styles'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+} from '../../FloatingGraphic/styles.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 const Introduction: React.FC = () => {
   const context = useOpenfort()

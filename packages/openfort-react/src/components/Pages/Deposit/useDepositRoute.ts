@@ -2,20 +2,21 @@
 
 import { AccountTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
-import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types.js'
+import type { PaymentMethodInput } from '../../../hooks/openfort/fundingClient.js'
+import { useFunding } from '../../../hooks/openfort/useFunding.js'
 import {
   type FundingChain,
   type FundingCurrency,
   nominalUnits,
   useFundingChains,
-} from '../../../hooks/openfort/useFundingChains'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { logger } from '../../../utils/logger'
-import { isCexDeliverable } from './cexChains'
-import { isSolana } from './sources'
-import { useFundingTarget } from './useFundingTarget'
+} from '../../../hooks/openfort/useFundingChains.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { logger } from '../../../utils/logger.js'
+import { isCexDeliverable } from './cexChains.js'
+import { isSolana } from './sources.js'
+import { useFundingTarget } from './useFundingTarget.js'
 
 /** Which rail the route feeds: self-custody wallet send vs exchange withdrawal. */
 type DepositRouteKind = 'crypto' | 'cex'

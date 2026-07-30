@@ -2,7 +2,7 @@
  * Utility to handle and provide better error messages for OAuth configuration errors
  */
 
-import { logger } from './logger'
+import { logger } from './logger.js'
 
 export function handleOAuthConfigError(error: unknown): void {
   const message =
@@ -13,7 +13,7 @@ export function handleOAuthConfigError(error: unknown): void {
         : ''
   if (message.includes('OAuth Config with provider') && message.includes('not found')) {
     const providerMatch = message.match(/provider\s+(\w+)\s+not found/i)
-    const provider = providerMatch ? providerMatch[1] : 'unknown'
+    const provider = providerMatch?.[1] ?? 'unknown'
     const providerLower = provider.toLowerCase()
 
     // Provider-specific configuration hints

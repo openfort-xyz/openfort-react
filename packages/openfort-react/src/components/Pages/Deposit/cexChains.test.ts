@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { CEX_CHAIN_NAMES, isCexDeliverable } from './cexChains'
+import { CEX_CHAIN_NAMES, isCexDeliverable } from './cexChains.js'
 
 const SOLANA_MAINNET = 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp'
 

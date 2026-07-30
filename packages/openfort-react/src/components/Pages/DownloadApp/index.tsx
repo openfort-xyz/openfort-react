@@ -1,9 +1,9 @@
-import useLocales from '../../../hooks/useLocales'
-import { useExternalConnector } from '../../../wallets/useExternalConnectors'
-import CustomQRCode from '../../Common/CustomQRCode'
-import { ModalBody, ModalContent } from '../../Common/Modal/styles'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import useLocales from '../../../hooks/useLocales.js'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
+import CustomQRCode from '../../Common/CustomQRCode/index.js'
+import { ModalBody, ModalContent } from '../../Common/Modal/styles.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 const DownloadApp = () => {
   const context = useOpenfort()

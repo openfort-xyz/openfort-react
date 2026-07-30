@@ -1,6 +1,6 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
-import type { Asset } from '../../Openfort/types'
-import { getAssetSymbol } from '../Send/utils'
+import type { Asset } from '../../Openfort/types.js'
+import { getAssetSymbol } from '../Send/utils.js'
 
 const getBackendUrl = (): string => {
   const sdkConfig = SDKConfiguration.getInstance()
@@ -48,10 +48,15 @@ const COINBASE_SUPPORTED_CURRENCIES = [
   'xlm',
 ] as const
 
+type SupportedCurrency = (typeof COINBASE_SUPPORTED_CURRENCIES)[number]
+
+const isSupportedCurrency = (symbol: string): symbol is SupportedCurrency =>
+  (COINBASE_SUPPORTED_CURRENCIES as readonly string[]).includes(symbol)
+
 // Check if a token is supported by Coinbase
 export const isCoinbaseSupported = (token: Asset): boolean => {
   const symbol = getAssetSymbol(token)
-  return COINBASE_SUPPORTED_CURRENCIES.includes(symbol.toLowerCase() as any)
+  return isSupportedCurrency(symbol.toLowerCase())
 }
 
 // Map token symbol to Coinbase currency code
@@ -60,7 +65,7 @@ const getCurrencyCode = (token: Asset): string => {
   const lowercaseSymbol = symbol.toLowerCase()
 
   // Validate that the currency is supported by Coinbase
-  if (!COINBASE_SUPPORTED_CURRENCIES.includes(lowercaseSymbol as any)) {
+  if (!isSupportedCurrency(lowercaseSymbol)) {
     throw new Error(
       `Unsupported currency for Coinbase: ${symbol}. Supported currencies are: ${COINBASE_SUPPORTED_CURRENCIES.join(', ')}`
     )

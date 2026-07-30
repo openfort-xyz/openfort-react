@@ -73,7 +73,7 @@ vi.mock('viem', async (importOriginal) => {
   }
 })
 
-const { default: SendConfirmation } = await import('../../components/Pages/SendConfirmation')
+const { default: SendConfirmation } = await import('../../components/Pages/SendConfirmation/index.js')
 
 describe('SendConfirmation', () => {
   beforeEach(() => {

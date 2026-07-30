@@ -13,8 +13,8 @@ import {
   polygonAmoy,
   sepolia,
 } from 'viem/chains'
-import type { SolanaCluster } from '../../solana/types'
-import { logger } from '../../utils/logger'
+import type { SolanaCluster } from '../../solana/types.js'
+import { logger } from '../../utils/logger.js'
 
 /** Options for building a block explorer URL. */
 type ExplorerUrlOptions = {

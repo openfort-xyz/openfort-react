@@ -4,12 +4,12 @@ import { AnimatePresence, motion } from 'framer-motion'
 import type React from 'react'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import useMeasure from 'react-use-measure'
-import { ResetContainer } from '../../../styles'
-import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import Portal from '../Portal'
-import { TooltipContainer, TooltipTail, TooltipWindow } from './styles'
-import type { TooltipProps, TooltipSizeProps } from './types'
+import { ResetContainer } from '../../../styles/index.js'
+import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import Portal from '../Portal/index.js'
+import { TooltipContainer, TooltipTail, TooltipWindow } from './styles.js'
+import type { TooltipProps, TooltipSizeProps } from './types.js'
 
 const Tooltip: React.FC<TooltipProps> = ({ children, message, open, xOffset = 0, yOffset = 0, delay }) => {
   const context = useOpenfort()
@@ -23,7 +23,7 @@ const Tooltip: React.FC<TooltipProps> = ({ children, message, open, xOffset = 0,
 
   const [currentRoute] = useState(context.route)
 
-  const targetRef = useRef<any>(null)
+  const targetRef = useRef<HTMLDivElement | null>(null)
   const [ref, bounds] = useMeasure({
     debounce: !ready ? 220 : 0, // fix alignment initial state
     offsetSize: true,

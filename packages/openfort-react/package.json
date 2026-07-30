@@ -67,7 +67,7 @@
     "format": "biome format --write .",
     "size": "size-limit",
     "test": "vitest run",
-    "test:build": "publint --strict && attw --pack --profile esm-only --ignore-rules internal-resolution-error",
+    "test:build": "publint --strict && attw --pack --profile esm-only",
     "test:watch": "vitest"
   },
   "keywords": [

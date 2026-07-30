@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPublicClient, http } from 'viem'
-import { invalidateBalance } from '../../../hooks/useBalance'
-import { getDefaultEthereumRpcUrl } from '../../../utils/rpc'
-import { useOpenfort } from '../../Openfort/useOpenfort'
+import { invalidateBalance } from '../../../hooks/useBalance.js'
+import { getDefaultEthereumRpcUrl } from '../../../utils/rpc.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
 
 /**
  * Backoff schedule (ms) for the waiting poll: brisk at first, easing off so a

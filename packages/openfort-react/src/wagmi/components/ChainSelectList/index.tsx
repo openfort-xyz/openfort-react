@@ -3,13 +3,13 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useId, useState } from 'react'
 import { useAccount, useChainId } from 'wagmi'
-import ChainIcons from '../../../assets/chains'
-import Alert from '../../../components/Common/Alert'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
-import { chainConfigs } from '../../../constants/chainConfigs'
-import useLocales from '../../../hooks/useLocales'
-import { isCoinbaseWalletConnector, isMobile } from '../../../utils'
-import { useSwitchChainFiltered } from '../../useSwitchChainFiltered'
+import ChainIcons from '../../../assets/chains.js'
+import Alert from '../../../components/Common/Alert/index.js'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
+import { chainConfigs } from '../../../constants/chainConfigs.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { isCoinbaseWalletConnector, isMobile } from '../../../utils/index.js'
+import { useSwitchChainFiltered } from '../../useSwitchChainFiltered.js'
 import {
   ChainButton,
   ChainButtonBg,
@@ -20,7 +20,7 @@ import {
   ChainLogoContainer,
   ChainLogoSpinner,
   SwitchNetworksContainer,
-} from './styles'
+} from './styles.js'
 
 const Spinner = () => {
   const id = useId()
@@ -70,8 +70,9 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
     if (!bridgeIsPending) setPendingChainId(undefined)
   }, [bridgeIsPending])
 
-  // biome-ignore lint/complexity/useLiteralKeys: SwitchChainErrorType doesn't expose 'code' property but it exists at runtime
-  const isError = bridgeError?.['code'] === 4902 // Wallet cannot switch networks
+  // 4902 means the wallet cannot switch networks. Providers put that on `code`, which
+  // isn't part of SwitchChainErrorType, so the property is narrowed before it's read.
+  const isError = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4902
   const disabled = isError || !switchChainFn
 
   const handleSwitchNetwork = (chainId: number) => {

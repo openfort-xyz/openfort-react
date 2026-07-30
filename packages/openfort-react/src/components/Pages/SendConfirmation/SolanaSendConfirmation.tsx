@@ -13,27 +13,27 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
-import { currencyLogoUrl } from '../../../constants/logos'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData'
-import { getExplorerUrl } from '../../../shared/utils/explorer'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
+import { currencyLogoUrl } from '../../../constants/logos.js'
+import { useAsyncData } from '../../../shared/hooks/useAsyncData.js'
+import { getExplorerUrl } from '../../../shared/utils/explorer.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import {
   estimateSolanaTransferFeeLamports,
   sendSol,
   sendSolGasless,
   sendSplToken,
   sendSplTokenGasless,
-} from '../../../solana/transfer'
-import { truncateSolanaAddress } from '../../../utils'
-import Button from '../../Common/Button'
-import Loader from '../../Common/Loading'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { formatBalance, formatBalanceWithSymbol } from '../Send/utils'
-import { ConfirmationSummary } from './ConfirmationSummary'
-import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesValue, SponsoredText } from './styles'
+} from '../../../solana/transfer.js'
+import { truncateSolanaAddress } from '../../../utils/index.js'
+import Button from '../../Common/Button/index.js'
+import Loader from '../../Common/Loading/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { formatBalance, formatBalanceWithSymbol } from '../Send/utils.js'
+import { ConfirmationSummary } from './ConfirmationSummary.js'
+import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesValue, SponsoredText } from './styles.js'
 
 const SOL_DECIMALS = 9
 

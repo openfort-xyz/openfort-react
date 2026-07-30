@@ -11,8 +11,8 @@ import {
   useState,
 } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
-import { logger } from '../../utils/logger'
-import type { OpenfortStore } from '../store'
+import { logger } from '../../utils/logger.js'
+import type { OpenfortStore } from '../store.js'
 
 type Params = {
   openfort: Openfort

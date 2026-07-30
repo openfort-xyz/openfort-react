@@ -1,8 +1,8 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { routes, type SignTypedDataPayload } from '../../components/Openfort/types'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { routes, type SignTypedDataPayload } from '../../components/Openfort/types.js'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
 
 type SignArgs = { kind: 'message'; message: string } | { kind: 'typedData'; typedData: SignTypedDataPayload }
 

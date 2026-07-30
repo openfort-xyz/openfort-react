@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import styled from '../../../../styles/styled'
+import styled from '../../../../styles/styled/index.js'
 
 export const LogoContainer = styled(motion.div)`
   z-index: 4;

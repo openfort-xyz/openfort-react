@@ -1,11 +1,11 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useSignOut } from '../../hooks/openfort/auth/useSignOut'
-import { ModalHeading } from '../Common/Modal/styles'
-import type { SetRouteOptions } from '../Openfort/types'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import { PageContentStyle } from './styles'
+import { useSignOut } from '../../hooks/openfort/auth/useSignOut.js'
+import { ModalHeading } from '../Common/Modal/styles.js'
+import type { SetRouteOptions } from '../Openfort/types.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import { PageContentStyle } from './styles.js'
 
 export type SetOnBackFunction = (() => void) | null | 'inherit' | 'back' | SetRouteOptions
 
@@ -56,10 +56,8 @@ export const PageContent = ({
       setOnBack(null)
       // If null then clear history
       setRouteHistory((h) => {
-        if (h.length > 0) {
-          return [h[h.length - 1]]
-        }
-        return h
+        const last = h[h.length - 1]
+        return last ? [last] : h
       })
     } else setOnBack(null)
   }, [!!onBack, !!logoutOnBack])

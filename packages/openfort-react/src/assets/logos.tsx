@@ -1,4 +1,5 @@
-import { isArgent, isPhantom, isSafe } from '../utils/wallets'
+import type { ReactElement } from 'react'
+import { isArgent, isPhantom, isSafe } from '../utils/wallets.js'
 
 const Mock = ({ ...props }) => (
   <svg
@@ -1345,7 +1346,8 @@ export const OtherSocials = ({ ...props }) => {
   )
 }
 
-export const providersLogos = {
+/** OAuth provider logos, keyed by provider id. Unknown ids resolve to `undefined`. */
+export const providersLogos: Record<string, ReactElement | undefined> = {
   google: <Google />,
   twitter: <Twitter />,
   facebook: <Facebook />,

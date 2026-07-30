@@ -3,10 +3,10 @@
 import { EmbeddedState, type Openfort, RecoveryMethod } from '@openfort/openfort-js'
 import { useEffect, useRef } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
-import type { OpenfortWalletConfig } from '../../components/Openfort/types'
-import { buildRecoveryParams } from '../../shared/utils/recovery'
-import { logger } from '../../utils/logger'
-import type { OpenfortStore } from '../store'
+import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import { buildRecoveryParams } from '../../shared/utils/recovery.js'
+import { logger } from '../../utils/logger.js'
+import type { OpenfortStore } from '../store.js'
 
 type Params = {
   storeEmbeddedState: OpenfortStore['embeddedState']

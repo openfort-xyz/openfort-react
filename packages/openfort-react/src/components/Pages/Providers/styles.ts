@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
-import styled from '../../../styles/styled'
-import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles'
+import styled from '../../../styles/styled/index.js'
+import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles.js'
 
 export const ProviderInputInner = styled.div`
   // Styles from react-international-phone (imported here to avoid importing the whole CSS file for nextjs compatibility)

@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import type { Theme } from '../types'
+import type { Theme } from '../types.js'
 
 function useGoogleFont(font: string) {
   useEffect(() => {

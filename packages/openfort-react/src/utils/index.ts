@@ -1,7 +1,7 @@
 import { detect } from 'detect-browser'
 import React from 'react'
-import { formatWithDynamicDecimals } from '../components/Pages/Buy/utils'
-import { truncateEthAddress, truncateSolanaAddress } from './format'
+import { formatWithDynamicDecimals } from '../components/Pages/Buy/utils.js'
+import { truncateEthAddress, truncateSolanaAddress } from './format.js'
 
 const nFormatter = (num: number, digits: number = 2) => {
   // Handle zero case
@@ -54,8 +54,8 @@ type ReactChildArray = ReturnType<typeof React.Children.toArray>
 function flattenChildren(children: React.ReactNode): ReactChildArray {
   const childrenArray = React.Children.toArray(children)
   return childrenArray.reduce((flatChildren: ReactChildArray, child) => {
-    if ((child as React.ReactElement<any>).type === React.Fragment) {
-      return flatChildren.concat(flattenChildren((child as React.ReactElement<any>).props.children))
+    if (React.isValidElement<{ children?: React.ReactNode }>(child) && child.type === React.Fragment) {
+      return flatChildren.concat(flattenChildren(child.props.children))
     }
     flatChildren.push(child)
     return flatChildren

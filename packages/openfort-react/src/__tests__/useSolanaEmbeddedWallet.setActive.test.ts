@@ -7,8 +7,8 @@ import {
   createMockWalletConfig,
   MOCK_ENCRYPTION_SESSION,
   MOCK_SOLANA_ADDRESS,
-} from './mocks/openfort-client'
-import { createTestWrapper } from './mocks/wrapper'
+} from './mocks/openfort-client.js'
+import { createTestWrapper } from './mocks/wrapper.js'
 
 // --- Module-level mocks ---
 
@@ -85,7 +85,7 @@ vi.mock('../solana/operations', () => ({
 
 // --- Import hook under test (after mocks) ---
 
-const { useSolanaEmbeddedWallet } = await import('../solana/hooks/useSolanaEmbeddedWallet')
+const { useSolanaEmbeddedWallet } = await import('../solana/hooks/useSolanaEmbeddedWallet.js')
 
 // --- Helpers ---
 

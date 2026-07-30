@@ -1,4 +1,4 @@
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 export const FooterContainer = styled.span`
   padding: 12px 4px 0px 0px;

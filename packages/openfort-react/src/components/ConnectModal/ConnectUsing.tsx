@@ -2,15 +2,15 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { logger } from '../../utils/logger'
-import { useExternalConnector } from '../../wallets/useExternalConnectors'
-import Alert from '../Common/Alert'
-import { contentVariants } from '../Common/Modal'
-import { routes } from '../Openfort/types'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import ConnectWithInjector from './ConnectWithInjector'
-import ConnectWithOAuth from './ConnectWithOAuth'
-import ConnectWithQRCode from './ConnectWithQRCode'
+import { logger } from '../../utils/logger.js'
+import { useExternalConnector } from '../../wallets/useExternalConnectors.js'
+import Alert from '../Common/Alert/index.js'
+import { contentVariants } from '../Common/Modal/index.js'
+import { routes } from '../Openfort/types.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import ConnectWithInjector from './ConnectWithInjector/index.js'
+import ConnectWithOAuth from './ConnectWithOAuth.js'
+import ConnectWithQRCode from './ConnectWithQRCode.js'
 
 const states = {
   QRCODE: 'qrcode',

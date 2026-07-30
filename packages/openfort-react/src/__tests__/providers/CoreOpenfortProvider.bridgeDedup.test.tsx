@@ -2,8 +2,8 @@ import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { act, render, waitFor } from '@testing-library/react'
 import { createElement } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext'
-import { createMockOpenfortClient, type MockOpenfortClient } from '../mocks/openfortClient'
+import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { createMockOpenfortClient, type MockOpenfortClient } from '../mocks/openfortClient.js'
 
 let mockClient: MockOpenfortClient
 
@@ -52,8 +52,8 @@ vi.mock('../../core/strategies/EthereumBridgeStrategy', () => ({
   }),
 }))
 
-const { OpenfortEthereumBridgeContext } = await import('../../ethereum/OpenfortEthereumBridgeContext')
-const { CoreOpenfortProvider } = await import('../../openfort/CoreOpenfortProvider')
+const { OpenfortEthereumBridgeContext } = await import('../../ethereum/OpenfortEthereumBridgeContext.js')
+const { CoreOpenfortProvider } = await import('../../openfort/CoreOpenfortProvider.js')
 
 function makeBridgeValue(overrides: { chainId?: number; address?: `0x${string}` } = {}): OpenfortEthereumBridgeValue {
   return {
