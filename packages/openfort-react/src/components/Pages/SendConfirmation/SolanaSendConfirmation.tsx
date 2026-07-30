@@ -14,7 +14,7 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
 import { currencyLogoUrl } from '../../../constants/logos.js'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData.js'
+import { useQuery } from '../../../query/useQuery.js'
 import { getExplorerUrl } from '../../../shared/utils/explorer.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import {
@@ -56,7 +56,7 @@ export const SolanaSendConfirmation = () => {
   const isSponsored = Boolean(walletConfig?.solana?.sponsorFees)
 
   // Real network fee from the RPC (getFeeForMessage). Null while loading or on failure.
-  const feeQuery = useAsyncData({
+  const feeQuery = useQuery({
     queryKey: ['sol-fee', address, recipient, rpcUrl],
     queryFn: () =>
       address && recipient && rpcUrl

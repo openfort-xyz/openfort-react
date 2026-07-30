@@ -15,7 +15,6 @@ test('parameters', () => {
       onError: (error) => {
         expectTypeOf(error).toEqualTypeOf<OpenfortError>()
       },
-      throwOnError: true,
     })
   )
 })
@@ -30,6 +29,6 @@ test('return type', () => {
 
   // `signOut` accepts per-call overrides of the same shape as the hook options.
   expectTypeOf(signOut).parameters.toEqualTypeOf<[OpenfortHookOptions?]>()
-  // Failures are reported through the resolved value unless `throwOnError` is set.
+  // Failures are always reported through the resolved value — `signOut` never rejects.
   expectTypeOf(signOut).returns.resolves.toExtend<{ error?: OpenfortError }>()
 })

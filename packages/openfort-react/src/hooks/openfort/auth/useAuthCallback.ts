@@ -177,7 +177,6 @@ export const useAuthCallback = ({
               })
             },
             onError: callbacks.onError,
-            throwOnError: callbacks.throwOnError,
           }
 
           await runVerifyEmail({ email, state, ...options })
@@ -197,7 +196,6 @@ export const useAuthCallback = ({
           const err = new OpenfortError('No email found in URL', OpenfortReactErrorType.AUTHENTICATION_ERROR)
           logger.error('No email found in URL')
           callbacks.onError?.(err)
-          if (callbacks.throwOnError) throw err
           return
         }
       } else {
@@ -215,7 +213,6 @@ export const useAuthCallback = ({
             OpenfortReactErrorType.AUTHENTICATION_ERROR
           )
           callbacks.onError?.(err)
-          if (callbacks.throwOnError) throw err
 
           return
         }
@@ -238,7 +235,6 @@ export const useAuthCallback = ({
             })
           },
           onError: callbacks.onError,
-          throwOnError: callbacks.throwOnError,
         }
 
         await runStoreCredentials({

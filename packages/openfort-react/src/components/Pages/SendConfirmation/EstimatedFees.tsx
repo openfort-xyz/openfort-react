@@ -3,7 +3,7 @@
 import type { Address } from 'viem'
 import { createPublicClient, formatUnits, http } from 'viem'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData.js'
+import { useQuery } from '../../../query/useQuery.js'
 import { logger } from '../../../utils/logger.js'
 import { getDefaultEthereumRpcUrl } from '../../../utils/rpc.js'
 import Tooltip from '../../Common/Tooltip/index.js'
@@ -53,7 +53,7 @@ export const EstimatedFees = ({
   const { data: assets } = useEthereumWalletAssets()
   const pricePerToken = assets?.find((a) => a.type === 'native')?.metadata?.fiat?.value as number | undefined
 
-  const gas = useAsyncData({
+  const gas = useQuery({
     queryKey: ['gas-estimate', account, to, value, data, chainId],
     queryFn: async () => {
       if (!account || !to || !chainId) return null

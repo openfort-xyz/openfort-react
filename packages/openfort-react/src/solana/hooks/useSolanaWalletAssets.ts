@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect } from 'react'
-import { BALANCE_INVALIDATE_EVENT } from '../../hooks/useBalance.js'
-import { useAsyncData } from '../../shared/hooks/useAsyncData.js'
+import { ChainTypeEnum } from '@openfort/openfort-js'
+import { openfortKeys } from '../../query/queryKeys.js'
+import { type UseQueryReturnType, useQuery } from '../../query/useQuery.js'
 import { useSolanaContext } from '../SolanaContext.js'
 import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet.js'
 
@@ -77,34 +77,39 @@ async function fetchSolanaAssets(addressStr: string, rpcUrl: string): Promise<So
 }
 
 /**
+ * The TanStack query result, mirroring {@link useEthereumWalletAssets}: `data`
+ * is `null` rather than `undefined` before the first result, and `isIdle`
+ * reports that the query is gated off because no wallet or cluster is available.
+ */
+type UseSolanaWalletAssetsResult = Omit<UseQueryReturnType<SolanaAsset[], Error>, 'data'> & {
+  data: SolanaAsset[] | null
+  isIdle: boolean
+}
+
+/**
  * Returns the connected Solana wallet's balances: native SOL plus SPL token
  * holdings, read directly from the cluster RPC. The SVM counterpart of
- * {@link useEthereumWalletAssets}, feeding the Solana asset inventory. Refreshes
- * on BALANCE_INVALIDATE_EVENT (e.g. after a deposit/send).
+ * {@link useEthereumWalletAssets}, feeding the Solana asset inventory.
+ *
+ * The result refreshes when balances are invalidated — see `useInvalidateBalance`.
  */
-export function useSolanaWalletAssets(): {
-  data: SolanaAsset[] | null
-  isLoading: boolean
-  isError: boolean
-  refetch: () => Promise<unknown>
-} {
+export function useSolanaWalletAssets(): UseSolanaWalletAssetsResult {
   const wallet = useSolanaEmbeddedWallet()
   const { rpcUrl } = useSolanaContext()
   const address = wallet.status === 'connected' && wallet.address ? wallet.address : undefined
+  const enabled = Boolean(address && rpcUrl)
 
-  const { data, error, isLoading, refetch } = useAsyncData({
-    queryKey: ['solana-assets', address, rpcUrl],
+  const { data, ...query } = useQuery({
+    queryKey: openfortKeys.walletAssets({
+      address: address ?? '',
+      chainType: ChainTypeEnum.SVM,
+      multiChain: false,
+      rpcUrl,
+    }),
     queryFn: () => (address && rpcUrl ? fetchSolanaAssets(address, rpcUrl) : Promise.resolve([])),
-    enabled: Boolean(address && rpcUrl),
-    staleTime: 30000,
+    enabled,
+    staleTime: 30_000,
   })
 
-  useEffect(() => {
-    if (!address) return
-    const handler = () => refetch().catch(() => {})
-    window.addEventListener(BALANCE_INVALIDATE_EVENT, handler)
-    return () => window.removeEventListener(BALANCE_INVALIDATE_EVENT, handler)
-  }, [address, refetch])
-
-  return { data: data ?? null, isLoading, isError: Boolean(error), refetch }
+  return { ...query, data: data ?? null, isIdle: !enabled }
 }

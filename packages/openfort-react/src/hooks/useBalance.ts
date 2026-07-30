@@ -1,28 +1,35 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { createPublicClient, formatEther, http } from 'viem'
 import { useOpenfort } from '../components/Openfort/useOpenfort.js'
 import { DEFAULT_TESTNET_CHAIN_ID } from '../core/ConnectionStrategy.js'
-import { invalidateAsyncData, useAsyncData } from '../shared/hooks/useAsyncData.js'
+import { openfortKeys } from '../query/queryKeys.js'
+import { useQuery } from '../query/useQuery.js'
 import { formatSol } from '../solana/hooks/utils.js'
 import type { SolanaCluster } from '../solana/types.js'
 import { getDefaultEthereumRpcUrl, getDefaultSolanaRpcUrl, getNativeCurrency } from '../utils/rpc.js'
 
-/** Event name for balance invalidation. Call invalidateBalance() after balance-changing txs. */
-export const BALANCE_INVALIDATE_EVENT = 'openfort:balance-invalidate'
-
-/** Dispatches balance invalidation so all useBalance instances refetch. Call after mint/send. */
-export function invalidateBalance(): void {
-  // Token/asset balances come from useEthereumWalletAssets → useAsyncData, which
-  // doesn't listen to the event below. Drop their cache too so the next render
-  // (e.g. landing on the asset inventory after a deposit) refetches fresh.
-  invalidateAsyncData('walletAssets')
-  invalidateAsyncData('wallet-assets')
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(BALANCE_INVALIDATE_EVENT))
-  }
+/**
+ * Returns a callback that marks every native balance and wallet-asset query
+ * stale, so anything showing a balance refetches. Call it after a transaction
+ * that moves funds (mint, send, deposit).
+ *
+ * @example
+ * ```tsx
+ * const invalidateBalance = useInvalidateBalance()
+ * await sendTransaction()
+ * invalidateBalance()
+ * ```
+ */
+export function useInvalidateBalance(): () => void {
+  const queryClient = useQueryClient()
+  return useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: openfortKeys.balance() })
+    queryClient.invalidateQueries({ queryKey: openfortKeys.walletAssets() })
+  }, [queryClient])
 }
 
 type BalanceState =
@@ -93,8 +100,10 @@ export function useBalance(options: UseBalanceOptions): BalanceState {
 
   const isEnabled = enabled && !!address && address.length > 0
 
-  const { data, error, isLoading, refetch } = useAsyncData({
-    queryKey: ['balance', chainType, address, chainId, cluster],
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: openfortKeys.balance(
+      chainType === ChainTypeEnum.EVM ? { address, chainType, chainId } : { address, chainType, cluster }
+    ),
     queryFn: () =>
       chainType === ChainTypeEnum.EVM
         ? fetchEvmBalance(address, rpcUrl, chainId)
@@ -103,13 +112,6 @@ export function useBalance(options: UseBalanceOptions): BalanceState {
     refetchInterval,
     staleTime: 30_000,
   })
-
-  useEffect(() => {
-    if (!isEnabled) return
-    const handler = () => refetch().catch(() => {})
-    window.addEventListener(BALANCE_INVALIDATE_EVENT, handler)
-    return () => window.removeEventListener(BALANCE_INVALIDATE_EVENT, handler)
-  }, [isEnabled, refetch])
 
   if (!isEnabled) {
     return { status: 'idle', refetch }

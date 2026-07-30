@@ -1,5 +1,6 @@
 import type { OpenfortError, OpenfortHookOptions } from '../../types.js'
 
+/** Runs the hook-level then the per-call success callback and passes the data through. */
 export const onSuccess = <T>({
   hookOptions,
   options,
@@ -15,6 +16,11 @@ export const onSuccess = <T>({
   return data
 }
 
+/**
+ * Runs the hook-level then the per-call error callback and reports the failure
+ * through the resolved value. Actions never reject, so every call site sees the
+ * same `{ error }` shape whether or not callbacks were supplied.
+ */
 export const onError = <T>({
   hookOptions,
   options,
@@ -26,8 +32,6 @@ export const onError = <T>({
 }) => {
   hookOptions?.onError?.(error)
   options?.onError?.(error)
-
-  if (hookOptions?.throwOnError || options?.throwOnError) throw error
 
   return { error }
 }

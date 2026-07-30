@@ -17,7 +17,7 @@ import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEm
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
 import { useBalance } from '../../../hooks/useBalance.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData.js'
+import { useQuery } from '../../../query/useQuery.js'
 import { getExplorerUrl } from '../../../shared/utils/explorer.js'
 import { parseTransactionError } from '../../../utils/errorHandling.js'
 import { truncateEthAddress } from '../../../utils/index.js'
@@ -75,7 +75,7 @@ const SendConfirmation = () => {
   const refetchNativeBalance = nativeBalance.refetch
 
   // ERC20 balance using viem publicClient directly (skipped when native send; no placeholder address)
-  const erc20Balance = useAsyncData({
+  const erc20Balance = useQuery({
     queryKey: ['erc20-balance', address, token.type === 'erc20' ? token.address : null, chainId],
     queryFn: async () => {
       if (!isErc20 || !address || !chainId) return { value: BigInt(0), decimals: 18, symbol: 'ERC20' }
@@ -214,7 +214,7 @@ const SendConfirmation = () => {
       : undefined
 
   // Wait for transaction receipt using viem publicClient directly
-  const receiptState = useAsyncData({
+  const receiptState = useQuery({
     queryKey: ['tx-receipt', transactionHash, chainId],
     queryFn: async () => {
       if (!transactionHash || !chainId) return null
