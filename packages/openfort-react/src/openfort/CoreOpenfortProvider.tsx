@@ -1,6 +1,7 @@
 'use client'
 
 import { ChainTypeEnum, EmbeddedState, type Openfort, type User } from '@openfort/openfort-js'
+import { useQueryClient } from '@tanstack/react-query'
 import type React from 'react'
 import {
   createElement,
@@ -23,6 +24,9 @@ import { ConnectionStrategyProvider, useConnectionStrategy } from '../core/Conne
 import { resolveEthereumFeeSponsorship } from '../core/strategyUtils.js'
 import { OpenfortEthereumBridgeContext } from '../ethereum/OpenfortEthereumBridgeContext.js'
 import { useConnectLifecycle } from '../hooks/useConnectLifecycle.js'
+import { QueryClientBoundary } from '../query/QueryClientBoundary.js'
+import { openfortKeys } from '../query/queryKeys.js'
+import { fetchEmbeddedAccounts as fetchEmbeddedAccountsFromApi, fetchUser } from '../query/queryOptions.js'
 import { showInitBanner } from '../utils/banner.js'
 import { logger } from '../utils/logger.js'
 import { handleOAuthConfigError } from '../utils/oauthErrorHandler.js'
@@ -54,12 +58,22 @@ type CoreOpenfortProviderProps = PropsWithChildren<
   } & ConnectCallbackProps
 >
 
-export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
+/**
+ * Provides the Openfort store, client and connection strategy.
+ *
+ * Rendered under {@link QueryClientBoundary} so the SDK's queries always have a
+ * `QueryClient`, whether or not the app supplies one.
+ */
+export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = (props) =>
+  createElement(QueryClientBoundary, null, createElement(CoreOpenfortProviderInner, props))
+
+const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   children,
   onConnect,
   onDisconnect,
   openfortConfig,
 }) => {
+  const queryClient = useQueryClient()
   const bridge = useContext(OpenfortEthereumBridgeContext)
   const { walletConfig, chainType, setChainType, uiConfig, open, route, connector } = useOpenfort()
 
@@ -208,14 +222,18 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
 
       if (user) {
         store.getState().setUser(user)
+        // Keep the query cache in step with the store so a consumer reading
+        // `useQuery(getUserQueryOptions(client))` sees the same user.
+        queryClient.setQueryData(openfortKeys.user(), user)
         return user
       }
 
       try {
-        const user = await openfort.user.get()
+        const user = await fetchUser(openfort)
         logger.log('Getting user')
         store.getState().setLinkedAccounts(user.linkedAccounts)
         store.getState().setUser(user)
+        queryClient.setQueryData(openfortKeys.user(), user)
         return user
       } catch (err: unknown) {
         logger.log('Error getting user', err)
@@ -237,7 +255,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
         return null
       }
     },
-    [openfort, store]
+    [openfort, store, queryClient]
   )
 
   const [silentRefetchInProgress, setSilentRefetchInProgress] = useState(false)
@@ -251,11 +269,10 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
       if (options?.silent) setSilentRefetchInProgress(true)
       setAccountsPending(true)
       try {
-        const accounts = await openfort.embeddedWallet.list({
-          limit: 100,
-        })
+        const accounts = await fetchEmbeddedAccountsFromApi(openfort)
         if (seq === fetchSeqRef.current) {
           store.getState().setEmbeddedAccounts(accounts)
+          queryClient.setQueryData(openfortKeys.embeddedAccounts(), accounts)
         }
         return accounts
       } catch (error: unknown) {
@@ -268,7 +285,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
         }
       }
     },
-    [openfort, store]
+    [openfort, store, queryClient]
   )
 
   const isLoadingAccounts = isAccountsPending && !silentRefetchInProgress
@@ -468,13 +485,16 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     connectingRef.current = false
     setIsConnectedWithEmbeddedSigner(false)
     lastInitRef.current = null
+    // Drop every cached Openfort query so the next session never reads the
+    // previous user's data (user, accounts, balances, assets).
+    queryClient.removeQueries({ queryKey: openfortKeys.all })
     logger.log('Logging out...')
     await openfort.auth.logout()
     if (bridge) {
       await bridge.disconnect()
       bridge.reset()
     }
-  }, [openfort, bridge, store, connectingRef, setIsConnectedWithEmbeddedSigner])
+  }, [openfort, bridge, store, connectingRef, setIsConnectedWithEmbeddedSigner, queryClient])
 
   const signUpGuest = useCallback(async () => {
     if (!openfort) return

@@ -67,7 +67,7 @@ const Deposit = () => {
   const { chainType } = useOpenfortCore()
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
-  const { chains, railChains, loading: chainsLoading } = useFundingChains()
+  const { chains, railChains, isLoading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
 
   // The rail can only deliver to chains it lists. If the embedded wallet's target

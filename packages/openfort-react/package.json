@@ -113,6 +113,7 @@
     "@solana-program/token": "^0.9.0",
     "@solana/kit": "^2.0.0 || ^5.0.0",
     "@solana/kora": "^0.1.1",
+    "@tanstack/react-query": ">=5.0.0",
     "@walletconnect/ethereum-provider": "^2.21.1",
     "react": "17.x || 18.x || 19.x",
     "react-dom": "17.x || 18.x || 19.x",
@@ -171,9 +172,6 @@
       "optional": true
     },
     "@safe-global/safe-apps-sdk": {
-      "optional": true
-    },
-    "@tanstack/react-query": {
       "optional": true
     }
   }

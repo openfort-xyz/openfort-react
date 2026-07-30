@@ -1,4 +1,4 @@
-import { ChainTypeEnum, invalidateBalance } from '@openfort/react'
+import { ChainTypeEnum, useInvalidateBalance } from '@openfort/react'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import type { Address } from '@solana/kit'
 import { Check, Copy } from 'lucide-react'
@@ -17,6 +17,7 @@ import { fetchSolanaBalance, sendGaslessSolTransaction, sendSolTransaction } fro
 export const SendTransactionCardSolana = ({ hook }: { hook?: string }) => {
   const solana = useSolanaEmbeddedWallet()
   const { address, cluster, rpcUrl } = solana
+  const invalidateBalance = useInvalidateBalance()
   const [isPending, setIsPending] = useState(false)
   const [txSignature, setTxSignature] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)

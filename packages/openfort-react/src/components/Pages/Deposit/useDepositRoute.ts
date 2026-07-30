@@ -52,7 +52,7 @@ export function useDepositRoute(kind: DepositRouteKind) {
   const ethWallet = useEthereumEmbeddedWallet()
   const solWallet = useSolanaEmbeddedWallet()
   const { session, status, error, loading, isAvailable, fund, payLink, reset } = useFunding()
-  const { chains: allChains, railChains, loading: chainsLoading } = useFundingChains()
+  const { chains: allChains, railChains, isLoading: chainsLoading } = useFundingChains()
   const target = useFundingTarget()
   // The deposit recipient must live on the TARGET chain, so resolve the wallet by
   // the target's family — not the active chainType, which can disagree with the
