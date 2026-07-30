@@ -58,10 +58,16 @@ export class OpenfortError extends Error {
   }
 }
 
+/**
+ * Callbacks accepted by every Openfort action hook, at the hook level and again
+ * per call.
+ *
+ * Actions never reject: a failure runs `onError` and resolves to `{ error }`, so
+ * a call site can branch on the result without a try/catch.
+ */
 export type OpenfortHookOptions<T = { error?: OpenfortError }> = {
   onSuccess?: (data: T) => void
   onError?: (error: OpenfortError) => void
-  throwOnError?: boolean
 }
 
 // Re-export important types and enums from openfort-js
