@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion'
 import { keyframes } from 'styled-components'
-import defaultTheme from '../../../constants/defaultTheme'
-import styled from '../../../styles/styled'
-import Button from '../../Common/Button'
-import { InnerContainer } from '../../Common/Button/styles'
+import defaultTheme from '../../../constants/defaultTheme.js'
+import styled from '../../../styles/styled/index.js'
+import Button from '../../Common/Button/index.js'
+import { InnerContainer } from '../../Common/Button/styles.js'
 
 export const AvatarContainer = styled(motion.div)`
   padding: 18px 0 20px;

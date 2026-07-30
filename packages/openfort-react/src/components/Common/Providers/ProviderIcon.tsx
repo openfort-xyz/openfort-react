@@ -1,11 +1,11 @@
 'use client'
 
 import { useMemo } from 'react'
-import { EmailIcon, PhoneIcon, WalletIcon } from '../../../assets/icons'
-import Logos, { providersLogos } from '../../../assets/logos'
-import { useExternalConnectors } from '../../../wallets/useExternalConnectors'
-import FitText from '../../Common/FitText'
-import type { LinkedAccount } from '../../Openfort/types'
+import { EmailIcon, PhoneIcon, WalletIcon } from '../../../assets/icons.js'
+import Logos, { providersLogos } from '../../../assets/logos.js'
+import { useExternalConnectors } from '../../../wallets/useExternalConnectors.js'
+import FitText from '../../Common/FitText/index.js'
+import type { LinkedAccount } from '../../Openfort/types.js'
 
 const WalletIconWrapper: React.FC<{ account: LinkedAccount }> = ({ account }) => {
   const wallets = useExternalConnectors()

@@ -1,16 +1,16 @@
 'use client'
 
 import React, { useEffect } from 'react'
-import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import FitText from '../../Common/FitText'
-import Input from '../../Common/Input'
-import { ModalBody } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { logger } from '../../../utils/logger.js'
+import Button from '../../Common/Button/index.js'
+import FitText from '../../Common/FitText/index.js'
+import Input from '../../Common/Input/index.js'
+import { ModalBody } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 // TODO: Localize
 const RequestEmail: React.FC = () => {
@@ -34,6 +34,7 @@ const RequestEmail: React.FC = () => {
 
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [message])
 
   useEffect(() => {
@@ -44,6 +45,7 @@ const RequestEmail: React.FC = () => {
 
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [error])
 
   const handleSubmit = async () => {

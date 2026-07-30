@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo } from 'react'
 import { useChainId, useSwitchChain } from 'wagmi'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
-import { logger } from '../utils/logger'
-import { getPublishableKeyEnvironment } from '../utils/validation'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { logger } from '../utils/logger.js'
+import { getPublishableKeyEnvironment } from '../utils/validation.js'
 
 /**
  * Wraps wagmi's `useSwitchChain`, restricting the switchable chains to those

@@ -2,8 +2,8 @@
 
 import type React from 'react'
 import { useEffect, useRef } from 'react'
-import useIsMobile from '../../../hooks/useIsMobile'
-import { MoreIndicator, ScrollAreaContainer, ScrollContainer } from './styles'
+import useIsMobile from '../../../hooks/useIsMobile.js'
+import { MoreIndicator, ScrollAreaContainer, ScrollContainer } from './styles.js'
 
 const ArrowDown = () => (
   <svg width="11" height="12" viewBox="0 0 11 12" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -49,8 +49,9 @@ export const ScrollArea = ({
       }
     }
 
-    const handleScroll = (e: any) => {
-      const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = e.target
+    // `scroll` doesn't bubble, so the listener only ever fires for `el` itself.
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight, scrollLeft, scrollWidth, clientWidth } = el
 
       if (moreRef.current) {
         if (scrollTop > 0) {
@@ -72,7 +73,7 @@ export const ScrollArea = ({
     }
 
     el.addEventListener('scroll', handleScroll)
-    handleScroll({ target: el })
+    handleScroll()
 
     return () => {
       el.removeEventListener('scroll', handleScroll)

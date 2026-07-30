@@ -1,6 +1,6 @@
-import styled from '../../../styles/styled'
-import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles'
-import { ProviderInputInner } from '../Providers/styles'
+import styled from '../../../styles/styled/index.js'
+import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles.js'
+import { ProviderInputInner } from '../Providers/styles.js'
 
 export const ProviderIconWrapper = styled.div`
   width: 24px;

@@ -1,7 +1,7 @@
 'use client'
 
-import type { OpenfortCoreContextValue } from './CoreOpenfortProvider'
-import { useOpenfortStore } from './useOpenfortStore'
+import type { OpenfortCoreContextValue } from './CoreOpenfortProvider.js'
+import { useOpenfortStore } from './useOpenfortStore.js'
 
 /**
  * Access Openfort core context: user, embedded accounts, active chain, auth, and wallet operations.

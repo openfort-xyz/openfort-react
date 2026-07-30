@@ -1,8 +1,8 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createEthereumBridgeStrategy } from '../../core/strategies/EthereumBridgeStrategy'
-import { createEthereumEmbeddedStrategy } from '../../core/strategies/EthereumEmbeddedStrategy'
-import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext'
+import { createEthereumBridgeStrategy } from '../../core/strategies/EthereumBridgeStrategy.js'
+import { createEthereumEmbeddedStrategy } from '../../core/strategies/EthereumEmbeddedStrategy.js'
+import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext.js'
 
 function makeProvider() {
   const request = vi.fn(async (req: { method: string }) => {

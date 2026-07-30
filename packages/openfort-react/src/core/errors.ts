@@ -1,1 +1,1 @@
-export { OpenfortError, OpenfortReactErrorType } from '../types'
+export { OpenfortError, OpenfortReactErrorType } from '../types.js'

@@ -1,9 +1,9 @@
 'use client'
 
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { chevron, detailsToggle } from './formStyles'
-import { OrDivider } from './OrDivider'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { chevron, detailsToggle } from './formStyles.js'
+import { OrDivider } from './OrDivider.js'
 
 /**
  * Row that navigates to the standalone "Transfer from address" page (deposit

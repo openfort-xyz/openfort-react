@@ -1,7 +1,7 @@
 'use client'
 
 import { type SyntheticEvent, useEffect, useRef, useState } from 'react'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 type LogoOption = { value: string; label: string; logo: string | null }
 

@@ -1,14 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { UIAuthProvider } from '../../../components/Openfort/types'
-import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
-import type { OpenfortHookOptions } from '../../../types'
-import { logger } from '../../../utils/logger'
-import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity'
-import type { CreateWalletPostAuthOptions } from './useConnectToWalletPostAuth'
-import { type EmailVerificationResult, useEmailAuth } from './useEmailAuth'
-import { type StoreCredentialsResult, useOAuth } from './useOAuth'
+import { UIAuthProvider } from '../../../components/Openfort/types.js'
+import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors.js'
+import type { OpenfortHookOptions } from '../../../types.js'
+import { logger } from '../../../utils/logger.js'
+import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity.js'
+import type { CreateWalletPostAuthOptions } from './useConnectToWalletPostAuth.js'
+import { type EmailVerificationResult, useEmailAuth } from './useEmailAuth.js'
+import { type StoreCredentialsResult, useOAuth } from './useOAuth.js'
 
 type CallbackResult =
   | (StoreCredentialsResult & {

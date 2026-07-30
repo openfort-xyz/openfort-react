@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { FundingMethod } from '../components/Openfort/types'
-import { getPaymentOptions } from '../components/Pages/Deposit/paymentOptions'
+import { FundingMethod } from '../components/Openfort/types.js'
+import { getPaymentOptions } from '../components/Pages/Deposit/paymentOptions.js'
 
 const ids = (opts: ReturnType<typeof getPaymentOptions>) => opts.map((o) => o.id)
 

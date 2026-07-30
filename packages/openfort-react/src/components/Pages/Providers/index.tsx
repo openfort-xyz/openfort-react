@@ -6,29 +6,29 @@ import type React from 'react'
 import { useEffect, useMemo } from 'react'
 import { PhoneInput } from 'react-international-phone'
 
-import { EmailIcon, GuestIcon, PhoneIcon } from '../../../assets/icons'
-import Logos, { OtherSocials, providersLogos } from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useProviders } from '../../../hooks/openfort/useProviders'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { logger } from '../../../utils/logger'
-import { isValidEmail as isValidEmailFn } from '../../../utils/validation'
-import Button from '../../Common/Button'
-import Loader from '../../Common/Loading'
-import { ModalHeading } from '../../Common/Modal/styles'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { routes, socialProviders, UIAuthProvider } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import type { SetOnBackFunction } from '../../PageContent'
-import { PageContent } from '../../PageContent'
+import { EmailIcon, GuestIcon, PhoneIcon } from '../../../assets/icons.js'
+import Logos, { OtherSocials, providersLogos } from '../../../assets/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useProviders } from '../../../hooks/openfort/useProviders.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { logger } from '../../../utils/logger.js'
+import { isValidEmail as isValidEmailFn } from '../../../utils/validation.js'
+import Button from '../../Common/Button/index.js'
+import Loader from '../../Common/Loading/index.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { routes, socialProviders, UIAuthProvider } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import type { SetOnBackFunction } from '../../PageContent/index.js'
+import { PageContent } from '../../PageContent/index.js'
 import {
   EmailInnerButton,
   ProviderIcon,
   ProviderInputInner,
   ProviderLabel,
   ProvidersButton as ProvidersButtonStyle,
-} from './styles'
+} from './styles.js'
 
 const ProviderButtonBase: React.FC<{
   onClick: () => void

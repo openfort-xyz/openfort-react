@@ -3,9 +3,9 @@
 import { type ChainTypeEnum, EmbeddedState, type Openfort } from '@openfort/openfort-js'
 import { useEffect, useRef } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
-import type { OpenfortWalletConfig } from '../../components/Openfort/types'
-import { firstEmbeddedAddress } from '../../core/strategyUtils'
-import type { OpenfortStore } from '../store'
+import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import { firstEmbeddedAddress } from '../../core/strategyUtils.js'
+import type { OpenfortStore } from '../store.js'
 
 type Params = {
   openfort: Openfort

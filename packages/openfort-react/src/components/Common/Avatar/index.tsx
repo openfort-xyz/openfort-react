@@ -2,21 +2,12 @@
 
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import useIsMounted from '../../../hooks/useIsMounted'
-import { ResetContainer } from '../../../styles'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { EnsAvatar, ImageContainer } from './styles'
-
-/** Props for custom avatar rendering (e.g. custom image component). */
-export type CustomAvatarProps = {
-  address?: string | undefined
-  ensName?: string | undefined
-  ensImage?: string
-  size: number
-  radius: number
-}
+import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import useIsMounted from '../../../hooks/useIsMounted.js'
+import { ResetContainer } from '../../../styles/index.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { EnsAvatar, ImageContainer } from './styles.js'
 
 /**
  * Displays wallet avatar. Resolves ENS on Ethereum mainnet; falls back to identicon or initials.
@@ -39,7 +30,7 @@ const Avatar: React.FC<{
   // Only resolve ENS on mainnet (1); testnets throw "network does not support ENS"
   const useEns = strategy?.kind === 'bridge' && !!bridge && (bridge.chainId ?? 0) === 1
 
-  const imageRef = useRef<any>(null)
+  const imageRef = useRef<HTMLImageElement | null>(null)
   const [loaded, setLoaded] = useState(true)
   const [ens, setEns] = useState<{ address?: string; name?: string; avatar?: string }>({})
 

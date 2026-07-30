@@ -9,18 +9,18 @@ import {
 import { Buffer } from 'buffer'
 import type React from 'react'
 import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { DEFAULT_DEV_CHAIN_ID } from '../../core/ConnectionStrategy'
+import { DEFAULT_DEV_CHAIN_ID } from '../../core/ConnectionStrategy.js'
 
-import { OpenfortEthereumBridgeContext } from '../../ethereum/OpenfortEthereumBridgeContext'
-import { useThemeFont } from '../../hooks/useGoogleFont'
-import { CoreOpenfortProvider } from '../../openfort/CoreOpenfortProvider'
-import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes'
-import type { CustomTheme, Languages, Mode, Theme } from '../../types'
-import { logger, setDebugLogsEnabled } from '../../utils/logger'
-import { buildChainFromConfig } from '../../utils/rpc'
-import { isFamily } from '../../utils/wallets'
+import { OpenfortEthereumBridgeContext } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useThemeFont } from '../../hooks/useGoogleFont.js'
+import { CoreOpenfortProvider } from '../../openfort/CoreOpenfortProvider.js'
+import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes.js'
+import type { CustomTheme, Languages, Mode, Theme } from '../../types.js'
+import { logger, setDebugLogsEnabled } from '../../utils/logger.js'
+import { buildChainFromConfig } from '../../utils/rpc.js'
+import { isFamily } from '../../utils/wallets.js'
 
-import { type ContextValue, OpenfortContext, UIContext, type UIContextValue } from './context'
+import { type ContextValue, OpenfortContext, UIContext, type UIContextValue } from './context.js'
 import {
   type BuyFormState,
   type ConnectUIOptions,
@@ -36,7 +36,7 @@ import {
   type SetRouteOptions,
   type SignRequest,
   UIAuthProvider,
-} from './types'
+} from './types.js'
 
 // These chunks are lazy-loaded with static specifiers so every bundler (Vite, Rollup, webpack)
 // can resolve and code-split them. Do NOT add a vite-ignore hint to these imports: it makes
@@ -44,16 +44,16 @@ import {
 // node_modules/.vite/deps instead of the package and the provider fails to load in dev
 // ("Failed to resolve import ../../solana/SolanaContext.js"), blanking any Vite app.
 const SolanaContextProvider = lazy(() =>
-  import('../../solana/SolanaContext').then((m) => ({ default: m.SolanaContextProvider }))
+  import('../../solana/SolanaContext.js').then((m) => ({ default: m.SolanaContextProvider }))
 )
 
 const LazyEmbeddedWalletWagmiSync = lazy(() =>
-  import('../../wagmi/useEmbeddedWalletWagmiSync').then((m) => ({
+  import('../../wagmi/useEmbeddedWalletWagmiSync.js').then((m) => ({
     default: m.EmbeddedWalletWagmiSync,
   }))
 )
 
-const LazyConnectKitModal = lazy(() => import('../ConnectModal'))
+const LazyConnectKitModal = lazy(() => import('../ConnectModal/index.js'))
 
 /** {@link OpenfortProvider} props. */
 type OpenfortProviderProps = {
@@ -292,11 +292,8 @@ export const OpenfortProvider = ({
     setRouteHistory((prev) => {
       const newHistory = [...prev]
       newHistory.pop()
-      if (newHistory.length > 0) {
-        setRoute(newHistory[newHistory.length - 1])
-      } else {
-        setRoute({ route: routes.CONNECTED })
-      }
+      const previous = newHistory[newHistory.length - 1]
+      setRoute(previous ?? { route: routes.CONNECTED })
       return newHistory
     })
   }, [])
@@ -325,7 +322,7 @@ export const OpenfortProvider = ({
       setOnBack,
       headerLeftSlot,
       setHeaderLeftSlot,
-      previousRoute: routeHistory.length > 1 ? routeHistory[routeHistory.length - 2] : null,
+      previousRoute: routeHistory[routeHistory.length - 2] ?? null,
       setPreviousRoute,
       routeHistory,
       setRouteHistory,

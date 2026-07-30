@@ -3,19 +3,19 @@
 import type { OAuthProvider } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
 import type { Hex } from 'viem'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import styled from '../../../styles/styled'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import { CopyText } from '../../Common/CopyToClipboard/CopyText'
-import { ModalBody, ModalContent, ModalH1, ModalHeading } from '../../Common/Modal/styles'
-import { getProviderName } from '../../Common/Providers/getProviderName'
-import { WalletDisplay } from '../../Common/Providers/ProviderHeader'
-import { ProviderIcon } from '../../Common/Providers/ProviderIcon'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ProviderIconContainer, ProviderIconInner, ProviderIconWrapper } from '../LinkedProvider'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import styled from '../../../styles/styled/index.js'
+import { logger } from '../../../utils/logger.js'
+import Button from '../../Common/Button/index.js'
+import { CopyText } from '../../Common/CopyToClipboard/CopyText.js'
+import { ModalBody, ModalContent, ModalH1, ModalHeading } from '../../Common/Modal/styles.js'
+import { getProviderName } from '../../Common/Providers/getProviderName.js'
+import { WalletDisplay } from '../../Common/Providers/ProviderHeader.js'
+import { ProviderIcon } from '../../Common/Providers/ProviderIcon.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ProviderIconContainer, ProviderIconInner, ProviderIconWrapper } from '../LinkedProvider/index.js'
 
 const ButtonWrapper = styled.div`
   display: flex;
@@ -54,11 +54,8 @@ const RemoveLinkedProvider: React.FC = () => {
           const newHistory = [...prev]
           newHistory.pop()
           newHistory.pop()
-          if (newHistory.length > 0) {
-            setRoute(newHistory[newHistory.length - 1])
-          } else {
-            setRoute({ route: routes.CONNECTED })
-          }
+          const previous = newHistory[newHistory.length - 1]
+          setRoute(previous ?? { route: routes.CONNECTED })
           return newHistory
         })
       })

@@ -5,9 +5,9 @@
  * For embedded wallets, external wallet connections are not needed.
  * This component is only used for connecting external wallets via WalletConnect.
  */
-import { logger } from '../../../utils/logger'
-import ConnectorList from '../../Common/ConnectorList'
-import { PageContent } from '../../PageContent'
+import { logger } from '../../../utils/logger.js'
+import ConnectorList from '../../Common/ConnectorList/index.js'
+import { PageContent } from '../../PageContent/index.js'
 
 let hasWarnedConnectors = false
 

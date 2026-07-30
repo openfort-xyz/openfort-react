@@ -19,7 +19,7 @@ import type {
   SetActiveEmbeddedWalletOptionsBase,
   SetRecoveryOptions as SharedSetRecoveryOptions,
   WalletDerived,
-} from '../shared/types'
+} from '../shared/types.js'
 
 export type FeeSponsorshipConfig = string | Record<number, string>
 

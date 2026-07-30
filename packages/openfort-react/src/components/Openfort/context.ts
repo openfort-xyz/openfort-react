@@ -4,8 +4,8 @@ import type { ChainTypeEnum, OAuthProvider, SDKOverrides, ThirdPartyAuthConfigur
 import type React from 'react'
 import { createContext } from 'react'
 import type { Chain } from 'viem'
-import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes'
-import type { CustomTheme, Languages, Mode, Theme } from '../../types'
+import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes.js'
+import type { CustomTheme, Languages, Mode, Theme } from '../../types.js'
 import type {
   BuyFormState,
   DebugModeOptions,
@@ -15,7 +15,7 @@ import type {
   SendFormState,
   SetRouteOptions,
   SignRequest,
-} from './types'
+} from './types.js'
 
 type Connector =
   | {

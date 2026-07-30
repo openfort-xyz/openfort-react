@@ -3,12 +3,12 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect } from 'react'
 import { createPublicClient, formatEther, http } from 'viem'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
-import { DEFAULT_TESTNET_CHAIN_ID } from '../core/ConnectionStrategy'
-import { invalidateAsyncData, useAsyncData } from '../shared/hooks/useAsyncData'
-import { formatSol } from '../solana/hooks/utils'
-import type { SolanaCluster } from '../solana/types'
-import { getDefaultEthereumRpcUrl, getDefaultSolanaRpcUrl, getNativeCurrency } from '../utils/rpc'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { DEFAULT_TESTNET_CHAIN_ID } from '../core/ConnectionStrategy.js'
+import { invalidateAsyncData, useAsyncData } from '../shared/hooks/useAsyncData.js'
+import { formatSol } from '../solana/hooks/utils.js'
+import type { SolanaCluster } from '../solana/types.js'
+import { getDefaultEthereumRpcUrl, getDefaultSolanaRpcUrl, getNativeCurrency } from '../utils/rpc.js'
 
 /** Event name for balance invalidation. Call invalidateBalance() after balance-changing txs. */
 export const BALANCE_INVALIDATE_EVENT = 'openfort:balance-invalidate'

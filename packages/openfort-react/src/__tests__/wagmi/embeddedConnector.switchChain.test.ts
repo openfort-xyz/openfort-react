@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { embeddedWalletConnector, setEmbeddedWalletProvider } from '../../wagmi/embeddedConnector'
+import { embeddedWalletConnector, setEmbeddedWalletProvider } from '../../wagmi/embeddedConnector.js'
 
 type ConnectorConfig = Parameters<ReturnType<typeof embeddedWalletConnector>>[0]
 

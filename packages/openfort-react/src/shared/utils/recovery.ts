@@ -1,6 +1,6 @@
 import { RecoveryMethod, type RecoveryParams } from '@openfort/openfort-js'
-import type { OpenfortWalletConfig } from '../../components/Openfort/types'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
+import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
 
 type RecoveryOptions = {
   recoveryMethod?: RecoveryMethod

@@ -2,17 +2,17 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import useLocales from '../../../hooks/useLocales'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import Button from '../../Common/Button'
-import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
-import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import Button from '../../Common/Button/index.js'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils.js'
+import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies.js'
 import {
   AmountCard,
   AmountInput,
@@ -27,8 +27,8 @@ import {
   SelectorRight,
   SelectorSubtitle,
   SelectorTitle,
-} from './styles'
-import { createCurrencyFormatter, getCurrencySymbol } from './utils'
+} from './styles.js'
+import { createCurrencyFormatter, getCurrencySymbol } from './utils.js'
 
 const amountPresets = [10, 20, 50]
 

@@ -3,26 +3,33 @@
 import { AnimatePresence, type Variants } from 'framer-motion'
 import type React from 'react'
 import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, RetryIconCircle, TickIcon } from '../../../assets/icons'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useUser } from '../../../hooks/openfort/useUser'
-import useLocales from '../../../hooks/useLocales'
-import { useRouteProps } from '../../../hooks/useRouteProps'
-import { detectBrowser, isWalletConnectConnector } from '../../../utils'
-import { logger } from '../../../utils/logger'
-import { useConnectWithSiwe } from '../../../wagmi/useConnectWithSiwe'
-import { useExternalConnector } from '../../../wallets/useExternalConnectors'
-import Alert from '../../Common/Alert'
-import BrowserIcon from '../../Common/BrowserIcon'
-import Button from '../../Common/Button'
-import { ModalBody, ModalContent, ModalContentContainer, ModalH1, ModalHeading } from '../../Common/Modal/styles'
-import SquircleSpinner from '../../Common/SquircleSpinner'
-import Tooltip from '../../Common/Tooltip'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import CircleSpinner from './CircleSpinner'
-import { ConnectingAnimation, ConnectingContainer, Container, Content, RetryButton, RetryIconContainer } from './styles'
+import { AlertIcon, RetryIconCircle, TickIcon } from '../../../assets/icons.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { useRouteProps } from '../../../hooks/useRouteProps.js'
+import { detectBrowser, isWalletConnectConnector } from '../../../utils/index.js'
+import { logger } from '../../../utils/logger.js'
+import { useConnectWithSiwe } from '../../../wagmi/useConnectWithSiwe.js'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
+import Alert from '../../Common/Alert/index.js'
+import BrowserIcon from '../../Common/BrowserIcon/index.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalContent, ModalContentContainer, ModalH1, ModalHeading } from '../../Common/Modal/styles.js'
+import SquircleSpinner from '../../Common/SquircleSpinner/index.js'
+import Tooltip from '../../Common/Tooltip/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import CircleSpinner from './CircleSpinner/index.js'
+import {
+  ConnectingAnimation,
+  ConnectingContainer,
+  Container,
+  Content,
+  RetryButton,
+  RetryIconContainer,
+} from './styles.js'
 
 const states = {
   CONNECTED: 'connected',
@@ -188,15 +195,16 @@ const ConnectWithInjector: React.FC<{
 
   const browser = detectBrowser()
 
-  const extensionUrl = wallet?.downloadUrls?.[browser]
+  const downloadUrls: Partial<Record<string, string>> = wallet?.downloadUrls ?? {}
+  const extensionUrl = downloadUrls[browser]
 
-  const suggestedExtension = wallet?.downloadUrls
+  const [firstDownload] = Object.keys(downloadUrls)
+  const suggestedExtension = firstDownload
     ? {
-        name: Object.keys(wallet?.downloadUrls)[0],
-        label:
-          Object.keys(wallet?.downloadUrls)[0]?.charAt(0).toUpperCase() +
-          Object.keys(wallet?.downloadUrls)[0]?.slice(1), // Capitalise first letter, but this might be better suited as a lookup table
-        url: wallet?.downloadUrls[Object.keys(wallet?.downloadUrls)[0]],
+        name: firstDownload,
+        // Capitalise first letter, but this might be better suited as a lookup table
+        label: firstDownload.charAt(0).toUpperCase() + firstDownload.slice(1),
+        url: downloadUrls[firstDownload],
       }
     : undefined
 
@@ -254,7 +262,7 @@ const ConnectWithInjector: React.FC<{
     setTimeout(triggerResize, 100)
   }, [bridge, wallet, props.connectType, handleConnectSettled, handleConnectError, triggerResize])
 
-  let connectTimeout: any
+  let connectTimeout: ReturnType<typeof setTimeout>
   useEffect(() => {
     if (status === states.UNAVAILABLE) return
 

@@ -6,8 +6,8 @@ import {
   createMockEmbeddedAccount,
   createMockWalletConfig,
   MOCK_ENCRYPTION_SESSION,
-} from './mocks/openfort-client'
-import { createTestWrapper } from './mocks/wrapper'
+} from './mocks/openfort-client.js'
+import { createTestWrapper } from './mocks/wrapper.js'
 
 // --- Module-level mocks ---
 
@@ -54,7 +54,7 @@ vi.mock('../utils/format', () => ({
 
 // --- Import hook under test (after mocks) ---
 
-const { useEthereumEmbeddedWallet } = await import('../ethereum/hooks/useEthereumEmbeddedWallet')
+const { useEthereumEmbeddedWallet } = await import('../ethereum/hooks/useEthereumEmbeddedWallet.js')
 
 // --- Helpers ---
 
@@ -295,7 +295,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
 
   it('throws when walletConfig is missing', async () => {
     // Override walletConfig to null for this test
-    const mockOpenfortUI = await import('../components/Openfort/useOpenfort')
+    const mockOpenfortUI = await import('../components/Openfort/useOpenfort.js')
     const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortUIContext').mockReturnValue({
       walletConfig: null,
       chainType: ChainTypeEnum.EVM,
@@ -323,7 +323,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
   })
 
   it('throws when no encryption session config is available', async () => {
-    const mockOpenfortUI = await import('../components/Openfort/useOpenfort')
+    const mockOpenfortUI = await import('../components/Openfort/useOpenfort.js')
     const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortUIContext').mockReturnValue({
       walletConfig: { connectOnLogin: true },
       chainType: ChainTypeEnum.EVM,

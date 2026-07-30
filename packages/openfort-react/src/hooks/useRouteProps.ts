@@ -1,9 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { RouteOptions } from '../components/Openfort/types'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
-import { logger } from '../utils/logger'
+import type { RouteOptions } from '../components/Openfort/types.js'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { logger } from '../utils/logger.js'
 
 // Hook to get the props of a specific route
 // It ensures that the current route matches the expected route

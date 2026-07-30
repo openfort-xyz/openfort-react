@@ -1,4 +1,4 @@
-import Logos from '../assets/logos'
+import Logos from '../assets/logos.js'
 
 /**
  * Wallet configuration metadata keyed by reverse-DNS identifiers.

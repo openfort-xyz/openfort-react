@@ -15,26 +15,26 @@ import {
   useState,
 } from 'react'
 import { useStore } from 'zustand'
-import { routes } from '../components/Openfort/types'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
-import { embeddedWalletId } from '../constants/openfort'
-import type { ConnectionStrategy } from '../core/ConnectionStrategy'
-import { ConnectionStrategyProvider, useConnectionStrategy } from '../core/ConnectionStrategyContext'
-import { resolveEthereumFeeSponsorship } from '../core/strategyUtils'
-import { OpenfortEthereumBridgeContext } from '../ethereum/OpenfortEthereumBridgeContext'
-import { useConnectLifecycle } from '../hooks/useConnectLifecycle'
-import { showInitBanner } from '../utils/banner'
-import { logger } from '../utils/logger'
-import { handleOAuthConfigError } from '../utils/oauthErrorHandler'
-import { mapBridgeConnectorsToWalletProps } from '../wallets/useExternalConnectors'
-import type { ConnectCallbackProps } from './connectCallbackTypes'
-import { StoreContext } from './context'
-import { createOpenfortClient, setDefaultClient } from './core'
-import { useActiveAddressSync } from './hooks/useActiveAddressSync'
-import { useAutoRecovery } from './hooks/useAutoRecovery'
-import { useEmbeddedStateMachine } from './hooks/useEmbeddedStateMachine'
-import type { OpenfortStore } from './store'
-import { createOpenfortStore } from './store'
+import { routes } from '../components/Openfort/types.js'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { embeddedWalletId } from '../constants/openfort.js'
+import type { ConnectionStrategy } from '../core/ConnectionStrategy.js'
+import { ConnectionStrategyProvider, useConnectionStrategy } from '../core/ConnectionStrategyContext.js'
+import { resolveEthereumFeeSponsorship } from '../core/strategyUtils.js'
+import { OpenfortEthereumBridgeContext } from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { useConnectLifecycle } from '../hooks/useConnectLifecycle.js'
+import { showInitBanner } from '../utils/banner.js'
+import { logger } from '../utils/logger.js'
+import { handleOAuthConfigError } from '../utils/oauthErrorHandler.js'
+import { mapBridgeConnectorsToWalletProps } from '../wallets/useExternalConnectors.js'
+import type { ConnectCallbackProps } from './connectCallbackTypes.js'
+import { StoreContext } from './context.js'
+import { createOpenfortClient, setDefaultClient } from './core/index.js'
+import { useActiveAddressSync } from './hooks/useActiveAddressSync.js'
+import { useAutoRecovery } from './hooks/useAutoRecovery.js'
+import { useEmbeddedStateMachine } from './hooks/useEmbeddedStateMachine.js'
+import type { OpenfortStore } from './store.js'
+import { createOpenfortStore } from './store.js'
 
 /**
  * Public return type for useOpenfortCore(). Matches the store shape.
@@ -77,7 +77,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
       return
     }
     let cancelled = false
-    import('../core/strategies/SolanaEmbeddedStrategy').then((m) => {
+    import('../core/strategies/SolanaEmbeddedStrategy.js').then((m) => {
       if (!cancelled) setSolanaStrategy(m.createSolanaEmbeddedStrategy(walletConfig))
     })
     return () => {
@@ -93,11 +93,11 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     }
     let cancelled = false
     if (bridge) {
-      import('../core/strategies/EthereumBridgeStrategy').then((m) => {
+      import('../core/strategies/EthereumBridgeStrategy.js').then((m) => {
         if (!cancelled) setEvmStrategy(m.createEthereumBridgeStrategy(bridge, bridgeConnectors))
       })
     } else {
-      import('../core/strategies/EthereumEmbeddedStrategy').then((m) => {
+      import('../core/strategies/EthereumEmbeddedStrategy.js').then((m) => {
         if (!cancelled) setEvmStrategy(m.createEthereumEmbeddedStrategy(walletConfig))
       })
     }
@@ -337,7 +337,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
     strategy
       .initProvider(openfort, walletConfig, evmChainId)
       .then(() => {
-        if (cancelled) return
+        if (cancelled) return undefined
         lastInitRef.current = initKey
 
         // Only fetch accounts when authenticated — avoids SessionError on callback pages
@@ -348,6 +348,7 @@ export const CoreOpenfortProvider: React.FC<CoreOpenfortProviderProps> = ({
           '[CoreProvider] initProvider: not fetching accounts, state is',
           EmbeddedState[store.getState().embeddedState]
         )
+        return undefined
       })
       .catch((_err) => {})
       .finally(() => {

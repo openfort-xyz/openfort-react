@@ -2,10 +2,10 @@ import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
 import { createElement, type PropsWithChildren } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { StoreContext } from '../../openfort/context'
-import { createOpenfortStore } from '../../openfort/store'
-import { createMockOpenfortClient } from '../mocks/openfortClient'
-import { buildContextValue } from '../mocks/TestWrapper'
+import { StoreContext } from '../../openfort/context.js'
+import { createOpenfortStore } from '../../openfort/store.js'
+import { createMockOpenfortClient } from '../mocks/openfortClient.js'
+import { buildContextValue } from '../mocks/TestWrapper.js'
 
 // Mock dependencies that useEthereumEmbeddedWallet needs
 vi.mock('../../components/Openfort/useOpenfort', () => {
@@ -25,7 +25,7 @@ vi.mock('../../core/ConnectionStrategyContext', () => ({
   ConnectionStrategyProvider: ({ children }: PropsWithChildren) => children,
 }))
 
-const { useEthereumEmbeddedWallet } = await import('../../ethereum/hooks/useEthereumEmbeddedWallet')
+const { useEthereumEmbeddedWallet } = await import('../../ethereum/hooks/useEthereumEmbeddedWallet.js')
 
 function createWrapper(overrides: Partial<Parameters<typeof buildContextValue>[0]> = {}) {
   const defaults = buildContextValue(overrides)

@@ -3,29 +3,37 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import type { ChangeEvent, CSSProperties, ReactNode, SyntheticEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import logos from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useFunding } from '../../../hooks/openfort/useFunding'
-import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
-import { invalidateBalance } from '../../../hooks/useBalance'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { logger } from '../../../utils/logger'
-import { getPublishableKeyEnvironment } from '../../../utils/validation'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import Tooltip from '../../Common/Tooltip'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
-import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains'
-import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
-import { DepositStatus } from '../Deposit/DepositStatus'
-import { walletListBtn } from '../Deposit/formStyles'
-import { DEST_USDC, isSolana } from '../Deposit/sources'
-import { ButtonLogo, StepDivider } from '../Deposit/styles'
-import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { useFundingTarget } from '../Deposit/useFundingTarget'
-import { sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
+import logos from '../../../assets/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useFunding } from '../../../hooks/openfort/useFunding.js'
+import { useFundingChains } from '../../../hooks/openfort/useFundingChains.js'
+import { invalidateBalance } from '../../../hooks/useBalance.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { logger } from '../../../utils/logger.js'
+import { getPublishableKeyEnvironment } from '../../../utils/validation.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import Tooltip from '../../Common/Tooltip/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import {
+  AmountCard,
+  AmountInput,
+  CurrencySymbol,
+  PresetButton,
+  PresetList,
+  Section,
+  SectionLabel,
+} from '../Buy/styles.js'
+import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains.js'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress.js'
+import { DepositStatus } from '../Deposit/DepositStatus.js'
+import { walletListBtn } from '../Deposit/formStyles.js'
+import { DEST_USDC, isSolana } from '../Deposit/sources.js'
+import { ButtonLogo, StepDivider } from '../Deposit/styles.js'
+import { TestnetNotice } from '../Deposit/TestnetNotice.js'
+import { useFundingTarget } from '../Deposit/useFundingTarget.js'
+import { sanitizeAmountInput, sanitizeForParsing } from '../Send/utils.js'
 
 /** Exchange rails. Binance is gated until its rail lands. */
 const EXCHANGES = [

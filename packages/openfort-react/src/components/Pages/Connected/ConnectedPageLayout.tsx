@@ -4,9 +4,9 @@
  */
 
 import type React from 'react'
-import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { ActionButtonsContainer, AvatarContainer, AvatarInner, BalanceContainer, LoadingBalance } from './styles'
+import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { ActionButtonsContainer, AvatarContainer, AvatarInner, BalanceContainer, LoadingBalance } from './styles.js'
 
 type ConnectedPageLayoutProps = {
   address: string

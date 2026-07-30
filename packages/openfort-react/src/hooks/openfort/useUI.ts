@@ -2,14 +2,14 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import React from 'react'
-import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
-import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../solana/hooks/useSolanaEmbeddedWallet'
-import { logger } from '../../utils/logger'
+import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types.js'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { logger } from '../../utils/logger.js'
 
 type ModalRoutes = RoutesWithoutOptions['route'] | RouteOptions
 

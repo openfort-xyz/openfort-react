@@ -1,9 +1,9 @@
 import { ChainTypeEnum, EmbeddedState, type Openfort } from '@openfort/openfort-js'
-import type { OpenfortWalletConfig } from '../../components/Openfort/types'
-import { logger } from '../../utils/logger'
-import type { ConnectionStrategy, ConnectionStrategyState } from '../ConnectionStrategy'
-import { DEFAULT_DEV_CHAIN_ID } from '../ConnectionStrategy'
-import { firstEmbeddedAddress, resolveEthereumFeeSponsorship } from '../strategyUtils'
+import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import { logger } from '../../utils/logger.js'
+import type { ConnectionStrategy, ConnectionStrategyState } from '../ConnectionStrategy.js'
+import { DEFAULT_DEV_CHAIN_ID } from '../ConnectionStrategy.js'
+import { firstEmbeddedAddress, resolveEthereumFeeSponsorship } from '../strategyUtils.js'
 
 function hasEmbeddedEthereum(state: ConnectionStrategyState): boolean {
   if (!state.user || !state.activeEmbeddedAddress || state.embeddedState !== EmbeddedState.READY) return false

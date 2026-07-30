@@ -13,7 +13,7 @@
  */
 
 import type { Address, SignatureBytes, SignatureDictionary, TransactionSigner } from '@solana/kit'
-import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster } from './types'
+import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster } from './types.js'
 
 type Kit = typeof import('@solana/kit')
 

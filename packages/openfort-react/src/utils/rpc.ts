@@ -22,8 +22,8 @@ import {
   polygonAmoy,
   sepolia,
 } from 'viem/chains'
-import type { SolanaCluster } from '../solana/types'
-import { logger } from './logger'
+import type { SolanaCluster } from '../solana/types.js'
+import { logger } from './logger.js'
 
 /** Known chains sourced from viem/chains — authoritative metadata (name, nativeCurrency, rpcUrls, blockExplorers). */
 const KNOWN_CHAINS: Record<number, Chain> = {

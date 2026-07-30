@@ -1,13 +1,13 @@
 'use client'
 
 import React, { useMemo } from 'react'
-import Logos from '../assets/logos'
+import Logos from '../assets/logos.js'
 
-import { useOpenfort } from '../components/Openfort/useOpenfort'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
 
-import { getLocale } from './../localizations'
-import type { LocaleProps } from '../localizations/locales'
-import { logger } from '../utils/logger'
+import { getLocale } from './../localizations/index.js'
+import type { LocaleProps } from '../localizations/locales/index.js'
+import { logger } from '../utils/logger.js'
 
 export default function useLocales(replacements?: Record<string, string>): LocaleProps {
   const context = useOpenfort()
@@ -23,8 +23,7 @@ export default function useLocales(replacements?: Record<string, string>): Local
   }
 
   const translated: Record<string, unknown> = {}
-  Object.keys(translations).forEach((key) => {
-    const string = translations[key]
+  Object.entries(translations).forEach(([key, string]) => {
     translated[key] = localize(string, replacements)
   })
 
@@ -34,9 +33,9 @@ export default function useLocales(replacements?: Record<string, string>): Local
 const localize = (text: string, replacements?: Record<string, string>) => {
   let parsedText: string = text
   if (replacements) {
-    Object.keys(replacements).forEach((key) => {
+    Object.entries(replacements).forEach(([key, replacement]) => {
       // use `replace` instead of `replaceAll` to support Node 14
-      parsedText = parsedText.replace(new RegExp(`({{ ${key} }})`, 'g'), replacements[key as keyof typeof replacements])
+      parsedText = parsedText.replace(new RegExp(`({{ ${key} }})`, 'g'), replacement)
     })
   }
   return replaceMarkdown(parsedText)

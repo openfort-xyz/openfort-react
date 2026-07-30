@@ -17,7 +17,7 @@ import type {
   SolanaSignMessageRequest,
   SolanaSignTransactionRequest,
   SolanaTransaction,
-} from './types'
+} from './types.js'
 
 // Union type for all request arguments
 type SolanaRequestArguments = SolanaSignMessageRequest | SolanaSignTransactionRequest | SolanaSignAllTransactionsRequest

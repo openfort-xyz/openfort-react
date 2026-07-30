@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  * BigInt, which used to crash the whole confirm modal to a white screen. The
  * hook must serialize bigint keys instead of throwing.
  */
-import { invalidateAsyncData, useAsyncData } from '../../shared/hooks/useAsyncData'
+import { invalidateAsyncData, useAsyncData } from '../../shared/hooks/useAsyncData.js'
 
 describe('useAsyncData bigint queryKey', () => {
   beforeEach(() => {

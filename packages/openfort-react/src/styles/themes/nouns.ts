@@ -1,4 +1,4 @@
-import type { CustomTheme } from '../customTheme'
+import type { CustomTheme } from '../customTheme.js'
 
 const nounsTheme: CustomTheme = {
   '--ck-font-family':
