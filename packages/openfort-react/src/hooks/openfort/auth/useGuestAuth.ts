@@ -152,7 +152,7 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, updateEmbeddedAccounts, tryUseWallet, hookOptions]
+    [client, updateUser, updateEmbeddedAccounts, tryUseWallet, hookOptions]
   )
 
   return {

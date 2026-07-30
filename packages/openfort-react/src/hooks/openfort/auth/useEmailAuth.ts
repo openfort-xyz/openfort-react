@@ -254,7 +254,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, updateUser, hookOptions, isOpen, tryUseWallet]
   )
 
   const requestResetPassword = useCallback(
@@ -314,7 +314,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, hookOptions, isOpen]
   )
 
   const resetPassword = useCallback(
@@ -369,7 +369,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions]
+    [client, hookOptions]
   )
 
   const signUpEmail = useCallback(
@@ -468,7 +468,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions, isOpen]
+    [client, updateUser, hookOptions, isOpen, tryUseWallet]
   )
 
   const linkEmail = useCallback(
@@ -539,7 +539,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions, isOpen]
+    [client, hookOptions, isOpen]
   )
 
   const verifyEmail = useCallback(

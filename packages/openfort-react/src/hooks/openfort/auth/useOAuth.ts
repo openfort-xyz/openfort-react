@@ -166,7 +166,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = {}) => {
         })
       }
     },
-    [client, hookOptions]
+    [client, hookOptions, tryUseWallet, updateUser]
   )
 
   const initOAuth = useCallback(
@@ -211,7 +211,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions, isOpen]
+    [client, hookOptions, isOpen]
   )
 
   const linkOauth = useCallback(
@@ -262,7 +262,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = {}) => {
         })
       }
     },
-    [client, setStatus, updateUser, hookOptions, isOpen]
+    [client, hookOptions, isOpen]
   )
 
   return {
