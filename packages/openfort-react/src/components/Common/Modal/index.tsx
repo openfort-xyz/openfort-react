@@ -17,7 +17,7 @@ import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../ut
 import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
 import { routes } from '../../Openfort/types.js'
-import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { useOpenfortConfig, useOpenfortRouting } from '../../Openfort/useOpenfort.js'
 import FitText from '../FitText/index.js'
 import Portal from '../Portal/index.js'
 import {
@@ -155,11 +155,12 @@ type ModalProps = {
   }
 }
 const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inline, demo, onClose, onInfo }) => {
-  const context = useOpenfort()
+  const routing = useOpenfortRouting()
+  const { uiConfig } = useOpenfortConfig()
   const themeContext = useThemeContext()
   const mobile = isMobile()
 
-  const wallet = useExternalConnector(context.connector?.id)
+  const wallet = useExternalConnector(routing.connector?.id)
 
   const walletInfo = {
     name: wallet?.name,
@@ -182,7 +183,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const mounted = !(state === 'exited' || state === 'unmounted')
   const rendered = state === 'preEnter' || state !== 'exiting'
 
-  const route = context.route.route
+  const route = routing.route.route
   const currentDepth = route === routes.PROVIDERS ? 0 : route === routes.DOWNLOAD ? 2 : 1
   const prevDepth = usePrevious(currentDepth, currentDepth)
   const { active: activePageId, outgoing: outgoingPageId } = usePageTransition(pageId, mounted)
@@ -246,10 +247,10 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
 
   const ref = useRef<HTMLElement | null>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the modal re-reads its own content box after a chain switch, a viewport-class change, a ui config change, or an explicit triggerResize (context.resize)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the modal re-reads its own content box after a chain switch, a viewport-class change, a ui config change, or an explicit triggerResize (routing.resize)
   useEffect(() => {
     if (ref.current) updateBounds(ref.current)
-  }, [chainId, switchChain, mobile, context.uiConfig, context.resize, updateBounds])
+  }, [chainId, switchChain, mobile, uiConfig, routing.resize, updateBounds])
 
   useEffect(() => () => resizeObserverRef.current?.disconnect(), [])
 
@@ -319,7 +320,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
     }
   }
 
-  const customPages: Partial<Record<string, React.ReactElement>> = context.uiConfig.customPageComponents ?? {}
+  const customPages: Partial<Record<string, React.ReactElement>> = uiConfig.customPageComponents ?? {}
 
   function renderPage(key: string | null, active: boolean) {
     if (key === null) return null
@@ -361,7 +362,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
           position: positionInside ? 'absolute' : undefined,
         }}
       >
-        {!inline && <BackgroundOverlay $active={rendered} onClick={onClose} $blur={context.uiConfig.overlayBlur} />}
+        {!inline && <BackgroundOverlay $active={rendered} onClick={onClose} $blur={uiConfig.overlayBlur} />}
         <Container style={dimensionsCSS} initial={false}>
           <div
             style={{
@@ -395,12 +396,12 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                 }}
               >
                 <AnimatePresence>
-                  {context.onBack ? (
+                  {routing.onBack ? (
                     <BackButton
                       disabled={inTransition}
                       aria-label={flattenChildren(locales.back).toString()}
                       key="backButton"
-                      onClick={context.onBack}
+                      onClick={routing.onBack}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -411,7 +412,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                     >
                       <BackIcon />
                     </BackButton>
-                  ) : context.headerLeftSlot ? (
+                  ) : routing.headerLeftSlot ? (
                     <motion.div
                       key="headerLeftSlot"
                       initial={{ opacity: 0, y: -4 }}
@@ -420,11 +421,11 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                       transition={{ duration: 0.12 }}
                       style={{ display: 'inline-flex' }}
                     >
-                      {context.headerLeftSlot}
+                      {routing.headerLeftSlot}
                     </motion.div>
                   ) : (
                     onInfo &&
-                    !context.uiConfig.hideQuestionMarkCTA && (
+                    !uiConfig.hideQuestionMarkCTA && (
                       <InfoButton
                         disabled={inTransition}
                         aria-label={flattenChildren(locales.moreInformation).toString()}
