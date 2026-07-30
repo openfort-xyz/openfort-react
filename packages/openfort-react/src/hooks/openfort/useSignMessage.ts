@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { routes, type SignTypedDataPayload } from '../../components/Openfort/types.js'
-import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { useOpenfortForms, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 
 type SignArgs = { kind: 'message'; message: string } | { kind: 'typedData'; typedData: SignTypedDataPayload }
 
@@ -28,7 +28,8 @@ type SignArgs = { kind: 'message'; message: string } | { kind: 'typedData'; type
  * ```
  */
 export function useSignMessage() {
-  const { setSignRequest, setRoute, setOpen } = useOpenfort()
+  const { setSignRequest } = useOpenfortForms()
+  const { setRoute, setOpen } = useOpenfortRouting()
   const [isPending, setIsPending] = useState(false)
 
   const request = useCallback(

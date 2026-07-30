@@ -2,13 +2,13 @@
 
 import type { User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
+import { useOpenfortRouting } from '../../../components/Openfort/useOpenfort.js'
 import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { isValidEmail } from '../../../utils/validation.js'
 import { onError, onSuccess } from '../hookConsistency.js'
-import { useUI } from '../useUI.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { buildCallbackUrl } from './requestEmailVerification.js'
 import { type BaseFlowState, mapStatus } from './status.js'
@@ -139,8 +139,9 @@ type UseEmailHookOptions = {
  * ```
  */
 export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
-  const { client, updateUser } = useOpenfortCore()
-  const { isOpen } = useUI()
+  const client = useOpenfortCore((s) => s.client)
+  const updateUser = useOpenfortCore((s) => s.updateUser)
+  const { open: isOpen } = useOpenfortRouting()
   const [requiresEmailVerification, setRequiresEmailVerification] = useState(false)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',

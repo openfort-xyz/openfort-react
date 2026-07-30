@@ -2,11 +2,11 @@
 
 import type { OAuthProvider, User } from '@openfort/openfort-js'
 import { useCallback, useState } from 'react'
+import { useOpenfortRouting } from '../../../components/Openfort/useOpenfort.js'
 import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { onError, onSuccess } from '../hookConsistency.js'
-import { useUI } from '../useUI.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { buildCallbackUrl } from './requestEmailVerification.js'
 import { type BaseFlowState, mapStatus } from './status.js'
@@ -114,11 +114,12 @@ type AuthHookOptions = {
  * ```
  */
 export const useOAuth = (hookOptions: AuthHookOptions = {}) => {
-  const { client, updateUser } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const updateUser = useOpenfortCore((s) => s.updateUser)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
-  const { isOpen } = useUI()
+  const { open: isOpen } = useOpenfortRouting()
 
   const { tryUseWallet } = useConnectToWalletPostAuth()
 

@@ -22,9 +22,10 @@ const stableUseOpenfort = {
   route: null,
   connector: null,
 }
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => stableUseOpenfort,
-}))
+vi.mock('../../components/Openfort/useOpenfort', () => {
+  const hook = () => stableUseOpenfort
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
+})
 
 const stableEmptyConnectors: never[] = []
 vi.mock('../../wallets/useExternalConnectors', () => ({
