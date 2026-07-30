@@ -39,7 +39,7 @@ const SolanaConnected: React.FC = () => {
   const locales = useLocales()
 
   const wallet = useSolanaEmbeddedWallet()
-  const { embeddedAccounts } = useOpenfortCore()
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
   const { rpcUrl } = useSolanaContext()
   const hasSolanaWallets = (embeddedAccounts?.filter((a) => a.chainType === ChainTypeEnum.SVM) ?? []).length > 0
   const isAddressLoading = wallet.status === 'connected' && !wallet.address

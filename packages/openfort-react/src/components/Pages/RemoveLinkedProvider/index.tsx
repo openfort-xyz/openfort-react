@@ -30,7 +30,8 @@ const ErrorMessage = styled.div`
 
 const RemoveLinkedProvider: React.FC = () => {
   const { route, triggerResize, onBack, setOnBack, setRouteHistory, setRoute } = useOpenfort()
-  const { client, updateUser } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const updateUser = useOpenfortCore((s) => s.updateUser)
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
 

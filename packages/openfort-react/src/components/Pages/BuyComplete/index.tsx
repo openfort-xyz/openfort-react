@@ -17,7 +17,7 @@ import { ContinueButtonWrapper, Section } from '../Buy/styles.js'
 
 const BuyComplete = () => {
   const { setRoute, triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()

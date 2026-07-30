@@ -25,7 +25,7 @@ const Receive = () => {
   const { route, chains } = context
   const currentRoute = route?.route ?? ''
   const isSolanaRoute = currentRoute.startsWith('sol:')
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const bridge = useEthereumBridge()

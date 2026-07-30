@@ -8,7 +8,8 @@ import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
 
 export function useProviders() {
-  const { user, linkedAccounts } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const linkedAccounts = useOpenfortCore((s) => s.linkedAccounts)
   const { uiConfig: options, thirdPartyAuth, setOpen } = useOpenfort()
 
   const allProviders = options?.authProviders || []

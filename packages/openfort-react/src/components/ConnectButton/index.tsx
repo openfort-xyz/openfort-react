@@ -3,6 +3,8 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type React from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import type { ConnectionStrategyState } from '../../core/ConnectionStrategy.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
 import { useUI } from '../../hooks/openfort/useUI.js'
 import useIsMounted from '../../hooks/useIsMounted.js'
@@ -19,6 +21,23 @@ import ThemedButton, { ThemeContainer } from '../Common/ThemedButton/index.js'
 import { routes } from '../Openfort/types.js'
 import { useOpenfort } from '../Openfort/useOpenfort.js'
 import { IconContainer, TextContainer, UnsupportedNetworkContainer } from './styles.js'
+
+/**
+ * The store slice the connection strategy needs to answer "connected, and at what
+ * address". Shallow comparison keeps the object stable so unrelated store writes
+ * (wallet status, account fetches) leave the button alone.
+ */
+function useStrategyState(): ConnectionStrategyState {
+  return useOpenfortCore(
+    useShallow((s) => ({
+      user: s.user,
+      embeddedAccounts: s.embeddedAccounts,
+      activeEmbeddedAddress: s.activeEmbeddedAddress,
+      embeddedState: s.embeddedState,
+      chainType: s.chainType,
+    }))
+  )
+}
 
 const contentVariants: Variants = {
   initial: {
@@ -116,9 +135,9 @@ const ConnectButtonRenderer: React.FC<ConnectButtonRendererProps> = ({ children 
   const context = useOpenfort()
   const { open, close, isOpen } = useUI()
 
-  const { user, chainType, embeddedAccounts, activeEmbeddedAddress, embeddedState } = useOpenfortCore()
+  const strategyState = useStrategyState()
+  const { chainType } = strategyState
   const strategy = useConnectionStrategy()
-  const strategyState = { user, embeddedAccounts, activeEmbeddedAddress, embeddedState, chainType }
 
   const isConnected = strategy?.isConnected(strategyState) ?? false
   const address = isConnected ? (strategy?.getAddress(strategyState) as Hash | undefined) : undefined
@@ -166,10 +185,11 @@ const ConnectButtonRenderer: React.FC<ConnectButtonRendererProps> = ({ children 
 ConnectButtonRenderer.displayName = 'OpenfortButton.Custom'
 
 const ConnectedLabel = ({ separator }: { separator?: string }) => {
-  const { user, chainType, embeddedAccounts, activeEmbeddedAddress, embeddedState, isLoadingAccounts, walletStatus } =
-    useOpenfortCore()
+  const strategyState = useStrategyState()
+  const { user, chainType } = strategyState
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
+  const walletStatus = useOpenfortCore((s) => s.walletStatus)
   const strategy = useConnectionStrategy()
-  const strategyState = { user, embeddedAccounts, activeEmbeddedAddress, embeddedState, chainType }
 
   const isLoading = isLoadingAccounts || walletStatus.status === 'creating' || walletStatus.status === 'connecting'
   const isConnected = strategy?.isConnected(strategyState) ?? false
@@ -194,10 +214,10 @@ function OpenfortButtonInner({
   separator?: string
 }) {
   const locales = useLocales({})
-  const { user, chainType, embeddedAccounts, activeEmbeddedAddress, embeddedState } = useOpenfortCore()
+  const strategyState = useStrategyState()
+  const { user, chainType } = strategyState
   const context = useOpenfort()
   const strategy = useConnectionStrategy()
-  const strategyState = { user, embeddedAccounts, activeEmbeddedAddress, embeddedState, chainType }
 
   const isConnected = strategy?.isConnected(strategyState) ?? false
   const address = isConnected ? strategy?.getAddress(strategyState) : undefined
@@ -331,9 +351,9 @@ export function OpenfortButton({
   const isMounted = useIsMounted()
   const context = useOpenfort()
   const { open } = useUI()
-  const { user, chainType, embeddedAccounts, activeEmbeddedAddress, embeddedState } = useOpenfortCore()
+  const strategyState = useStrategyState()
+  const { chainType } = strategyState
   const strategy = useConnectionStrategy()
-  const strategyState = { user, embeddedAccounts, activeEmbeddedAddress, embeddedState, chainType }
 
   const isConnected = strategy?.isConnected(strategyState) ?? false
   const chainId = isConnected && chainType === ChainTypeEnum.EVM ? strategy?.getChainId() : undefined

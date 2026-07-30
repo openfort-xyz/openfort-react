@@ -14,9 +14,10 @@ const mockEthWallet: { status: string; address?: string; activeWallet?: MockActi
 }
 const mockSolWallet: { status: string; address?: string } = { status: 'disconnected' }
 
-vi.mock('../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({ chainType: mockChainType }),
-}))
+vi.mock('../openfort/useOpenfort', () => {
+  const getState = () => ({ chainType: mockChainType })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 vi.mock('../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => mockEthWallet,
 }))

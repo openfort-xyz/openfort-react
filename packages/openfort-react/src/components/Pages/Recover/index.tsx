@@ -42,7 +42,7 @@ const RecoverPasswordWallet = ({
   const [recoveryError, setRecoveryError] = useState<false | string>(false)
   const { triggerResize, setRoute } = useOpenfort()
   const [loading, setLoading] = useState(false)
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
@@ -154,7 +154,7 @@ const RecoverPasskeyWallet = ({
 }) => {
   const { triggerResize, setRoute } = useOpenfort()
   const [recoveryError, setRecoveryError] = useState<false | string>(false)
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
@@ -228,9 +228,9 @@ const RecoverAutomaticWallet = ({
   onBack: SetOnBackFunction
   logoutOnBack?: boolean
 }) => {
-  const { embeddedState } = useOpenfortCore()
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
   const { setRoute } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet

@@ -46,7 +46,9 @@ const AddLinkedProviderButton: React.FC = () => {
 }
 
 const LinkedProvidersGroup: React.FC = () => {
-  const { linkedAccounts, user, isLoading } = useOpenfortCore()
+  const linkedAccounts = useOpenfortCore((s) => s.linkedAccounts)
+  const user = useOpenfortCore((s) => s.user)
+  const isLoading = useOpenfortCore((s) => s.isLoading)
   const { triggerResize, emailInput: pendingEmail } = useOpenfort()
 
   useEffect(() => {

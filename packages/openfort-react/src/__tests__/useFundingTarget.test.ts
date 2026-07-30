@@ -16,12 +16,14 @@ const mockUiConfig: { funding?: { targetChain?: string; targetCurrency?: string 
 let mockChainType: ChainTypeEnum = ChainTypeEnum.EVM
 let mockEthWallet: { status: string; chainId?: number } = { status: 'connected', chainId: 8453 }
 
-vi.mock('../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({ uiConfig: mockUiConfig }),
-}))
-vi.mock('../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({ chainType: mockChainType }),
-}))
+vi.mock('../components/Openfort/useOpenfort', () => {
+  const hook = () => ({ uiConfig: mockUiConfig })
+  return { useOpenfort: hook, useOpenfortConfig: hook }
+})
+vi.mock('../openfort/useOpenfort', () => {
+  const getState = () => ({ chainType: mockChainType })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
 vi.mock('../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => mockEthWallet,
 }))

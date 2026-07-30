@@ -94,7 +94,8 @@ const CreateWalletAutomaticRecovery = ({
   onBack: SetOnBackFunction
   logoutOnBack: boolean
 }) => {
-  const { embeddedState, isLoadingAccounts } = useOpenfortCore()
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
   const { setRoute, triggerResize, walletConfig } = useOpenfort()
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
   const { create } = useEthereumEmbeddedWallet()
@@ -295,7 +296,7 @@ const CreateWalletPasskeyRecovery = ({
   const isCreatingRef = useRef(false)
   const hasAttemptedCreationRef = useRef(false)
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
-  const { embeddedState } = useOpenfortCore()
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
 
   useEffect(() => {
     if (!shouldCreateWallet) return
@@ -574,7 +575,8 @@ const CreateOrConnectWallet = () => {
 
 const EthereumCreateWallet: React.FC = () => {
   const { uiConfig, walletConfig, setRoute } = useOpenfort()
-  const { user, chainType } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const chainType = useOpenfortCore((s) => s.chainType)
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()
@@ -607,7 +609,7 @@ const createWalletByChain: Record<ChainTypeEnum.EVM | ChainTypeEnum.SVM, React.R
 }
 
 const CreateWallet: React.FC = () => {
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   return createWalletByChain[chainType] ?? createWalletByChain[ChainTypeEnum.EVM]
 }
 

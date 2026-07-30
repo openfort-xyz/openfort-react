@@ -56,7 +56,9 @@ const errorForChainRegistry: Record<
 const LOADING_TIMEOUT_MS = 10_000
 
 const LoadWallets: React.FC = () => {
-  const { chainType, user, isLoadingAccounts } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
+  const user = useOpenfortCore((s) => s.user)
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
   const { triggerResize, setRoute, walletConfig } = useOpenfort()
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()

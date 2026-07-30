@@ -19,7 +19,8 @@ const states = {
 
 const ConnectWithOAuth: React.FC = () => {
   const { connector, setRoute, triggerResize } = useOpenfort()
-  const { client, user } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const user = useOpenfortCore((s) => s.user)
 
   const [status, setStatus] = useState(states.INIT)
   const [description, setDescription] = useState<string | undefined>(undefined)

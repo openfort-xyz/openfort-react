@@ -17,7 +17,7 @@ import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL, NATIVE_TOKEN_ADDR
  */
 export function useFundingTarget(): { chain: string; currency: string } {
   const { uiConfig } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const isSolana = chainType === ChainTypeEnum.SVM
 

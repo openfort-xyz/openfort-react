@@ -23,7 +23,7 @@ import { isSameToken } from '../Send/utils.js'
 
 const BuyProcessing = () => {
   const { buyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()

@@ -35,7 +35,7 @@ const amountPresets = [10, 20, 50]
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
   const locales = useLocales()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const { data: ethAssets } = useEthereumWalletAssets()
   // Solana wallets buy Solana currencies (USDC default, then SOL); EVM reads its
   // own assets. Both hooks run unconditionally; the active chain picks the list.

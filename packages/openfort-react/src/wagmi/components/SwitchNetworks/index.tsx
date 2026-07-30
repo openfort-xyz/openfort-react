@@ -15,7 +15,7 @@ import ChainSelectList from '../ChainSelectList/index.js'
 const SwitchNetworks: React.FC = () => {
   const chainId = useChainId()
   const { chains } = useSwitchChainFiltered()
-  const { logout } = useOpenfortCore()
+  const logout = useOpenfortCore((s) => s.logout)
   const locales = useLocales({})
 
   const chainIsSupported = chainId != null && chains.some((c) => c.id === chainId)

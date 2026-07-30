@@ -14,14 +14,16 @@ const mockSetActiveEmbeddedAddress = vi.fn()
 const mockUseOpenfortCore = vi.fn()
 
 vi.mock('../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => mockUseOpenfortCore(),
+  useOpenfortCore: (selector: (s: ReturnType<typeof mockUseOpenfortCore>) => unknown) =>
+    selector(mockUseOpenfortCore()),
 }))
 
-vi.mock('../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     walletConfig: mockWalletConfig,
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook }
+})
 
 vi.mock('../hooks/openfort/auth/useSignOut', () => ({
   useSignOut: () => ({

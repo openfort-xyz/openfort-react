@@ -44,7 +44,7 @@ function DataNode({ value }: { value: unknown }) {
 
 const SignMessage = () => {
   const { signRequest, setSignRequest, setOpen, uiConfig, triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const wallet = useEthereumEmbeddedWallet()
   const solana = useSolanaEmbeddedWallet()
   const [signing, setSigning] = useState(false)

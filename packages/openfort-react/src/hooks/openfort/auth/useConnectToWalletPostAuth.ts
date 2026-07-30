@@ -52,8 +52,12 @@ export type CreateWalletPostAuthOptions = {
  * ```
  */
 export const useConnectToWalletPostAuth = () => {
-  const { chainType, setActiveEmbeddedAddress, embeddedState, client, activeEmbeddedAddress, updateEmbeddedAccounts } =
-    useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
+  const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const client = useOpenfortCore((s) => s.client)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
   const { walletConfig } = useOpenfort()
   const chainId = walletConfig?.ethereum?.chainId ?? 84532
   const { signOut } = useSignOut()

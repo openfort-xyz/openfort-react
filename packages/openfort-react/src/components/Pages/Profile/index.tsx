@@ -14,7 +14,7 @@ import { DisconnectButton } from '../Connected/styles.js'
 
 const Profile: React.FC = () => {
   const { setOpen, setRoute } = useOpenfort()
-  const { logout } = useOpenfortCore()
+  const logout = useOpenfortCore((s) => s.logout)
 
   const locales = useLocales()
 

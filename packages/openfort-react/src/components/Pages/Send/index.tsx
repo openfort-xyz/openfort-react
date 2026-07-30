@@ -17,7 +17,7 @@ const SEND_REGISTRY: Partial<Record<ChainTypeEnum, React.FC>> = {
 }
 
 const Send: React.FC = () => {
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const Component = SEND_REGISTRY[chainType]
   return Component ? <Component /> : <EthereumSend />
 }

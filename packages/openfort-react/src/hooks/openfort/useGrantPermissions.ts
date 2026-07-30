@@ -137,7 +137,7 @@ async function getEmbeddedWalletClientWithErc7715(provider: OpenfortEmbeddedEthe
 export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {}) => {
   const bridge = useEthereumBridge()
   const { chains } = useOpenfort()
-  const { client } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
   const ethereum = useEthereumEmbeddedWallet()
   const chainId =
     bridge?.chainId ?? (ethereum.status === 'connected' ? ethereum.chainId : undefined) ?? DEFAULT_TESTNET_CHAIN_ID
