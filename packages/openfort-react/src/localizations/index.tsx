@@ -28,7 +28,8 @@ import { default as trTR } from './locales/tr-TR'
 import { default as viVN } from './locales/vi-VN'
 import { default as zhCN } from './locales/zh-CN'
 
-// OLD_TODO: tree-shaking
+// TODO: Load locales on demand so bundlers can drop the unused ones. This
+// switch statically imports all thirteen.
 export const getLocale = (lang: Languages) => {
   switch (lang) {
     case 'ee-EE':

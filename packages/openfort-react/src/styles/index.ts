@@ -203,8 +203,9 @@ const globalsDark = css`
  *  Reset stylings to avoid conflicting with the parent websites styling
  * Automatically apply theme based on system theme
  */
-// OLD_TODO: Think more about how to reset our components as to not be affected by external stylings
-// OLD_TODO: Merge theme objects instead of overriding
+// TODO: Harden the reset so host-site styles cannot leak into our components.
+// TODO: Deep-merge theme objects so a partial custom theme keeps the base values
+// it does not specify, rather than replacing the whole object.
 
 let mode = 'auto'
 export const ResetContainer = styled(motion.div)<{

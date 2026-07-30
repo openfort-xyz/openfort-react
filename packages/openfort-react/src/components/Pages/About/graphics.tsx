@@ -425,7 +425,8 @@ export const SlideTwo = ({ layoutId }: Slide) => {
 }
 
 export const SlideThree = ({ layoutId }: Slide) => {
-  const id = Math.random() // OLD_TODO: Better unique ID handling
+  // TODO: Use React's useId so the gradient id is stable across renders.
+  const id = Math.random()
   return (
     <motion.div
       key={'SlideThree'}
