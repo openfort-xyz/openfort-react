@@ -9,15 +9,6 @@ import { ResetContainer } from '../../../styles'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { EnsAvatar, ImageContainer } from './styles'
 
-/** Props for custom avatar rendering (e.g. custom image component). */
-export type CustomAvatarProps = {
-  address?: string | undefined
-  ensName?: string | undefined
-  ensImage?: string
-  size: number
-  radius: number
-}
-
 /**
  * Displays wallet avatar. Resolves ENS on Ethereum mainnet; falls back to identicon or initials.
  *

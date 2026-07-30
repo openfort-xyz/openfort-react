@@ -1,7 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FundingClient } from '../hooks/openfort/fundingClient'
-import type { FundingSession, FundingTarget, PaymentMethodInput } from '../hooks/openfort/useFunding'
+import type { FundingClient, FundingSession, FundingTarget, PaymentMethodInput } from '../hooks/openfort/fundingClient'
 
 // useFunding reads only uiConfig.fundingBaseUrl from useOpenfort; stub it so the
 // hook resolves no default client and we inject a mock instead.

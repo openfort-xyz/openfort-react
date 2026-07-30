@@ -14,12 +14,14 @@ export type All = {
   lang?: Languages
 }
 
-export type { CustomAvatarProps } from './components/Common/Avatar'
-export type {
-  ConnectUIOptions as OpenfortOptions,
-  OpenfortWalletConfig,
-  PhoneConfig,
-} from './components/Openfort/types'
+/** Props for custom avatar rendering (e.g. custom image component). */
+export type CustomAvatarProps = {
+  address?: string | undefined
+  ensName?: string | undefined
+  ensImage?: string
+  size: number
+  radius: number
+}
 
 export enum OpenfortReactErrorType {
   AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',

@@ -1,6 +1,6 @@
 'use client'
 
-import type { PaymentMethod, SessionStatus } from '../../../hooks/openfort/useFunding'
+import type { PaymentMethod, SessionStatus } from '../../../hooks/openfort/fundingClient'
 import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton'
 import CustomQRCode from '../../Common/CustomQRCode'
 import { AssetChainLogo } from './AssetChainLogo'

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
-import type { PaymentMethod } from '../../../hooks/openfort/useFunding'
+import type { PaymentMethod } from '../../../hooks/openfort/fundingClient'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { chevron, detailsBox, detailsLabel, detailsRow, detailsToggle, detailsValue } from './formStyles'
 
