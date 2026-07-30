@@ -8,6 +8,20 @@ minimumReleaseAgeExclude:
   - "@openfort/better-auth"
   - "hono"
 
+# Fail the install if a dependency's npm trust level drops below what it had on
+# an earlier release — for example a package that published with provenance and
+# suddenly stops. Catches a compromised publish pipeline that version pinning
+# alone would let through.
+trustPolicy: no-downgrade
+
+# pnpm 10 blocks `preinstall`, `install` and `postinstall` scripts of
+# dependencies unless they are listed here. The empty list is the explicit,
+# greppable statement that no dependency in this workspace may run one.
+# Adding an entry grants that package arbitrary code execution at install time,
+# so add one only for a package that genuinely cannot ship prebuilt artifacts,
+# and pin it to the exact versions that were reviewed.
+onlyBuiltDependencies: []
+
 auditConfig:
   # Advisories whose fix is not reachable from this repo. `pnpm audit` runs as a
   # blocking CI gate, so this list is the known-debt baseline: anything NOT
