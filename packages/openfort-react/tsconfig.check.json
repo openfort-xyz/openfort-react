@@ -1,0 +1,11 @@
+{
+  // Type-checking view of the package: same compiler options as the build, but
+  // the `*.test-d.ts` type tests are checked too. `tsconfig.json` stays the
+  // build config because `rollup-plugin-typescript2` reads it to emit `build/`.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "build", "src/**/*.test.ts", "src/**/*.test.tsx", "src/__tests__"]
+}

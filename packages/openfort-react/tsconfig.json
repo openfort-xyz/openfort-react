@@ -38,7 +38,9 @@
     "skipLibCheck": true
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "build", "src/**/*.test.ts", "src/**/*.test.tsx", "src/__tests__"],
+  // Tests never ship. `tsconfig.check.json` widens this back out so the type
+  // tests are still checked.
+  "exclude": ["node_modules", "build", "src/**/*.test.ts", "src/**/*.test.tsx", "src/**/*.test-d.ts", "src/__tests__"],
   "watchOptions": {
     "watchFile": "useFsEvents",
     "watchDirectory": "useFsEvents",
