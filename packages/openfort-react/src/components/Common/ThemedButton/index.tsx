@@ -13,10 +13,6 @@ type ThemedButtonProps = {
   onClick?: () => void
 }
 
-const _PlaceholderButton = () => {
-  return <div style={{ height: 40 }} />
-}
-
 const ThemedButton: React.FC<ThemedButtonProps & All> = ({
   children,
   variant = 'primary',
