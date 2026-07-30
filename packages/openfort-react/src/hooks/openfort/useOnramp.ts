@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { logger } from '../../utils/logger'
 import {
   type FundingSession,
@@ -106,6 +107,11 @@ export function useOnramp(
   const client = useFundingClient(options)
   const mode = options?.mode ?? 'popup'
   const methodId = typeof method === 'string' ? method : method?.method
+  // The commit and quote must route with the same region as the methods
+  // preview — an explicit override wins, else `uiConfig.funding.country`, else
+  // the server falls back to the request IP.
+  const { uiConfig } = useOpenfort()
+  const country = options?.country ?? uiConfig.funding?.country
 
   const [current, setCurrent] = useState<FundingSession | null>(null)
   const [error, setError] = useState<Error | null>(null)
@@ -136,10 +142,10 @@ export function useOnramp(
         method: methodId,
         sourceAmount: params.sourceAmount,
         sourceCurrency: params.sourceCurrency,
-        country: options?.country,
+        country,
       })
     },
-    [client, session, methodId, options?.country]
+    [client, session, methodId, country]
   )
 
   const open = useCallback(
@@ -160,7 +166,7 @@ export function useOnramp(
             sourceAmount: params?.sourceAmount,
             sourceCurrency: params?.sourceCurrency,
             redirectUrl: params?.redirectUrl,
-            country: options?.country,
+            country,
             // Native wallet pay only; spreading `undefined` adds nothing for
             // card / bank transfer.
             ...params?.walletPay,
@@ -210,7 +216,7 @@ export function useOnramp(
         throw err
       }
     },
-    [client, session, methodId, mode, options?.country]
+    [client, session, methodId, mode, country]
   )
 
   const pm = current?.paymentMethod

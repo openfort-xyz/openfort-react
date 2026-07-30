@@ -136,12 +136,57 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
   },
 }
 
+/**
+ * Local-dev geography simulation for the funding rails. `country` feeds
+ * `uiConfig.funding.country` (localhost has no CDN geo header, so IP detection
+ * resolves to rest-of-world and hides every regional method); `mainnetTarget`
+ * pins the funding target to Base mainnet USDC — fiat onramp coverage is
+ * mainnet-only, so without it a test key (pinned to Base Sepolia) never shows
+ * a fiat row at all.
+ */
+export interface FundingSimulation {
+  country?: string
+  mainnetTarget: boolean
+  /** Polyfill ApplePaySession.canMakePayments so the Apple Pay row shows on non-Apple-Pay devices. */
+  fakeApplePay?: boolean
+}
+
+const FUNDING_SIM_KEY = 'openfort-playground-funding-sim'
+
+function readFundingSimulation(): FundingSimulation {
+  const fallback: FundingSimulation = { country: 'US', mainnetTarget: true }
+  if (typeof window === 'undefined') return fallback
+  try {
+    const raw = localStorage.getItem(FUNDING_SIM_KEY)
+    if (!raw) return fallback
+    const parsed = JSON.parse(raw) as Partial<FundingSimulation>
+    return {
+      country: typeof parsed.country === 'string' && parsed.country ? parsed.country : undefined,
+      mainnetTarget: parsed.mainnetTarget !== false,
+      fakeApplePay: parsed.fakeApplePay === true,
+    }
+  } catch {
+    return fallback
+  }
+}
+
 interface Store {
   providerOptions: Parameters<typeof OpenfortProvider>[0]
   setProviderOptions: (options: Parameters<typeof OpenfortProvider>[0]) => void
+  fundingSimulation: FundingSimulation
+  setFundingSimulation: (sim: FundingSimulation) => void
 }
 
 export const useAppStore = create<Store>((set) => ({
   providerOptions: defaultProviderOptions,
   setProviderOptions: (options) => set({ providerOptions: options }),
+  fundingSimulation: readFundingSimulation(),
+  setFundingSimulation: (sim) => {
+    try {
+      localStorage.setItem(FUNDING_SIM_KEY, JSON.stringify(sim))
+    } catch {
+      // Private-mode storage failures only lose persistence, not the setting.
+    }
+    set({ fundingSimulation: sim })
+  },
 }))

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { type OnrampMethodId, type OnrampQuote, useFundingClient } from './useFunding'
 import type { FundingSessionRef } from './useFundingMethods'
 
@@ -32,6 +33,10 @@ export function totalFee(quote: OnrampQuote): number {
 export function useOnrampQuote({ session, method, sourceCurrency, amount }: UseOnrampQuoteParams): UseOnrampQuote {
   // Onramp quotes are served by the Openfort API backend, like the sessions.
   const client = useFundingClient({ useBackendUrl: true })
+  // Same region the methods preview resolves with — quote and commit must
+  // price/route with the buyer's country, not the request IP.
+  const { uiConfig } = useOpenfort()
+  const country = uiConfig.funding?.country
   const [quote, setQuote] = useState<OnrampQuote | null>(null)
   const [loading, setLoading] = useState(false)
 
@@ -50,7 +55,7 @@ export function useOnrampQuote({ session, method, sourceCurrency, amount }: UseO
     setLoading(true)
     const timer = setTimeout(() => {
       client.sessions
-        .quote(sessionId, { clientSecret, method, sourceAmount, sourceCurrency })
+        .quote(sessionId, { clientSecret, method, sourceAmount, sourceCurrency, country })
         .then((result) => {
           if (!active) return
           setQuote(result)
@@ -66,7 +71,7 @@ export function useOnrampQuote({ session, method, sourceCurrency, amount }: UseO
       active = false
       clearTimeout(timer)
     }
-  }, [enabled, client, sessionId, clientSecret, method, sourceCurrency, sourceAmount])
+  }, [enabled, client, sessionId, clientSecret, method, sourceCurrency, sourceAmount, country])
 
   return { quote, loading }
 }

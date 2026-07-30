@@ -8,11 +8,69 @@ export const Route = createFileRoute('/_hooks/provider')({
   component: RouteComponent,
 })
 
+// Geographies worth simulating: the three routing outcomes (US → Coinbase,
+// EU → Stripe embedded, rest-of-world → Meld/hidden) plus an IP-detect option.
+const SIMULATED_COUNTRIES = ['US', 'DE', 'ES', 'FR', 'GB', 'BR']
+
+/**
+ * Local-dev funding controls. Country stands in for the CDN geo header that
+ * localhost never has; the mainnet-target pin makes fiat rows resolvable on a
+ * test key (onramp coverage is mainnet-only, and test keys pin the target to
+ * Base Sepolia otherwise).
+ */
+function FundingSimulationCard() {
+  const fundingSimulation = useAppStore((s) => s.fundingSimulation)
+  const setFundingSimulation = useAppStore((s) => s.setFundingSimulation)
+
+  return (
+    <div className="mb-6 rounded-lg border p-4">
+      <h2 className="text-sm font-semibold">Funding simulation</h2>
+      <p className="mt-1 text-xs text-muted-foreground">
+        Simulate the buyer's geography and a mainnet funding target to exercise the fiat onramp rows locally.
+      </p>
+      <div className="mt-3 flex flex-wrap items-center gap-6">
+        <label className="flex items-center gap-2 text-sm">
+          Buyer country
+          <select
+            className="rounded-md border bg-transparent px-2 py-1 text-sm"
+            value={fundingSimulation.country ?? ''}
+            onChange={(e) => setFundingSimulation({ ...fundingSimulation, country: e.target.value || undefined })}
+          >
+            <option value="">Detect by IP</option>
+            {SIMULATED_COUNTRIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={fundingSimulation.mainnetTarget}
+            onChange={(e) => setFundingSimulation({ ...fundingSimulation, mainnetTarget: e.target.checked })}
+          />
+          Pin target to Base mainnet USDC (fiat methods resolve on test keys)
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={fundingSimulation.fakeApplePay === true}
+            onChange={(e) => setFundingSimulation({ ...fundingSimulation, fakeApplePay: e.target.checked })}
+          />
+          Simulate an Apple Pay–capable device (shows the Apple Pay row anywhere)
+        </label>
+      </div>
+    </div>
+  )
+}
+
 function RouteComponent() {
   const { providerOptions, setProviderOptions } = useAppStore()
 
   return (
     <Layout>
+      <FundingSimulationCard />
       <Variable
         name="providerOptions"
         values={providerOptions}

@@ -25,6 +25,14 @@ import type {
  * swapped for `coreClient.funding` with no hook change.
  */
 export type FundingClient = {
+  /**
+   * Stripe Link auth for the v2 embedded-components onramp. Both 501/400 until
+   * the deployment configures the crypto_onramp_beta=v2 access.
+   */
+  stripeLink: {
+    createAuthIntent(params: { email: string }): Promise<{ id: string }>
+    exchangeToken(intentId: string): Promise<{ exchanged: boolean }>
+  }
   sessions: {
     create(params: { target: FundingTarget }): Promise<FundingSession>
     setPaymentMethod(
@@ -34,6 +42,12 @@ export type FundingClient = {
     get(id: string, params?: { clientSecret?: string }): Promise<FundingSession>
     /** Resolve the fiat methods for this session's destination + buyer region. */
     methods(id: string, params: { clientSecret: string; country?: string }): Promise<ResolvedFundingMethods>
+    /**
+     * Stripe Link (v2 headless) checkout: confirm the committed headless onramp
+     * with mandate acceptance and get the provider client secret for
+     * performCheckout. One-shot; only valid after a `stripeLink` commit.
+     */
+    onrampCheckout(id: string, params: { clientSecret: string }): Promise<{ clientSecret: string }>
     /** Price a fiat route with the exact provider a commit would resolve. */
     quote(
       id: string,
@@ -74,6 +88,23 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
   const authHeaders = (): Record<string, string> =>
     publishableKey ? { authorization: `Bearer ${publishableKey}` } : {}
   return {
+    stripeLink: {
+      async createAuthIntent({ email }) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/stripe/link_auth_intents`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ email }),
+        })
+        return readJson<{ id: string }>(res)
+      },
+      async exchangeToken(intentId) {
+        const res = await fetch(
+          `${baseUrl}/v2/funding/onramp/stripe/link_auth_intents/${encodeURIComponent(intentId)}/tokens`,
+          { method: 'POST', headers: authHeaders() }
+        )
+        return readJson<{ exchanged: boolean }>(res)
+      },
+    },
     sessions: {
       async create({ target }) {
         const res = await fetch(`${baseUrl}/v2/funding/sessions`, {
@@ -105,6 +136,14 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
             headers: authHeaders(),
           })
         )
+      },
+      async onrampCheckout(id, { clientSecret }) {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/onramp_checkout`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ clientSecret }),
+        })
+        return readJson<{ clientSecret: string }>(res)
       },
       async quote(id, params) {
         const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/quotes`, {

@@ -1,10 +1,10 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { type SyntheticEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { NATIVE_TOKEN_ADDRESS } from '../../../hooks/openfort/fundingSources'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingMethods } from '../../../hooks/openfort/useFundingMethods'
@@ -12,48 +12,57 @@ import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
 import { useUser } from '../../../hooks/openfort/useUser'
 import { isWalletPayMethod, needsWalletPayCapture } from '../../../hooks/openfort/walletPay'
-import useLocales from '../../../hooks/useLocales'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
 import Checkbox from '../../Common/Checkbox'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
+import { ModalBody } from '../../Common/Modal/styles'
+import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
-import { resolveOnrampNetwork } from './onrampApi'
+import { EVM_BUY_CURRENCIES } from './evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
 import {
-  AmountColumnCard,
-  AmountRow,
-  AmountRowInput,
-  ChainLogoImg,
+  BigAmountInput,
+  BigAmountRow,
+  BigAmountSymbol,
+  BuyHeadingButton,
+  BuyHeadingLogo,
+  CenteredRow,
   ContinueButtonWrapper,
-  ConversionLine,
+  CurrencyPill,
   CurrencySelect,
-  PresetButton,
-  PresetList,
-  SelectorRight,
-  SelectorTitle,
+  FlagBadge,
+  MethodRowButton,
   SummaryLabel,
   SummaryMuted,
   SummaryRow,
   SummarySection,
-  SummaryValue,
-  TokenPillButton,
-  TokenPillContent,
-  TokenPillLogo,
 } from './styles'
 import { createCurrencyFormatter, getCurrencySymbol } from './utils'
-
-const amountPresets = [10, 20, 50]
 
 // Fiat source currencies the onramp accepts. Kept small; USD is the safe default
 // (some providers reject non-USD and fall back to the buyer's local currency).
 const SOURCE_CURRENCIES = ['USD', 'EUR', 'GBP']
+
+// Flag shown in the currency pill (display only — the selector drives the value).
+const CURRENCY_FLAG: Record<string, string> = {
+  USD: '🇺🇸',
+  EUR: '🇪🇺',
+  GBP: '🇬🇧',
+}
+
+// The payment-method switch below the amount ("Pay with card") — plain grey
+// text back to the method picker, not a required step.
+const METHOD_LABEL: Partial<Record<FundingMethod, string>> = {
+  [FundingMethod.APPLE_PAY]: 'Apple Pay',
+  [FundingMethod.GOOGLE_PAY]: 'Google Pay',
+  [FundingMethod.CARD]: 'card',
+  [FundingMethod.BANK_TRANSFER]: 'bank transfer',
+}
 
 // Coinbase Guest-Checkout requires the buyer to accept these before a native
 // wallet-pay order. TODO: confirm the exact required wording/links against
@@ -61,46 +70,24 @@ const SOURCE_CURRENCIES = ['USD', 'EUR', 'GBP']
 const COINBASE_TERMS_URL = 'https://www.coinbase.com/legal/user_agreement'
 const COINBASE_PRIVACY_URL = 'https://www.coinbase.com/legal/privacy'
 
-// Friendly labels for the onramp destination networks resolveOnrampNetwork returns.
-const CHAIN_LABEL: Record<string, string> = {
-  base: 'Base',
-  ethereum: 'Ethereum',
-  polygon: 'Polygon',
-  arbitrum: 'Arbitrum',
-  optimism: 'Optimism',
-  solana: 'Solana',
-}
-
-const formatTokenAmount = (raw: string): string => {
-  const numeric = Number(raw)
-  if (!Number.isFinite(numeric)) return raw
-  return numeric.toLocaleString('en-US', { maximumFractionDigits: 6 })
-}
-
-const hideBrokenImg = (e: SyntheticEvent<HTMLImageElement>) => {
-  e.currentTarget.style.display = 'none'
-}
-
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
-  const locales = useLocales()
   const { chainType } = useOpenfortCore()
   const { user } = useUser()
 
   // Apple/Google Pay MAY commit a Coinbase NATIVE order (US buyer + project
   // CDP creds) — then the buyer must accept Coinbase's Guest-Checkout terms
   // here (we stamp agreementAcceptedAt) and verify email + phone before the
-  // commit. Everywhere else the server resolves them to the HOSTED checkout
-  // (iframe angle), which needs neither; the resolved angle decides.
+  // commit. Everywhere else the server resolves them to an embedded or hosted
+  // checkout, which needs neither; the resolved angle decides.
   const isWalletPay = isWalletPayMethod(buyForm.method)
   const [consented, setConsented] = useState(false)
-  const { data: ethAssets } = useEthereumWalletAssets()
-  // Solana wallets buy Solana currencies (USDC default, then SOL); EVM reads its
-  // own assets. Both hooks run unconditionally; the active chain picks the list.
-  const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
+  // The selectable BUY list per chain family — the same list the token selector
+  // shows, so a picked token always matches (the wallet's indexed assets are
+  // irrelevant when buying).
+  const buyList = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : EVM_BUY_CURRENCIES
 
-  // The destination chain is fixed by the wallet's active network — shown
-  // read-only on the preview; the labels come from the display map above.
+  // The wallet fixes the destination; only its logo is shown (in the heading).
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
@@ -109,14 +96,27 @@ const Buy = () => {
     wallet.status === 'connected' && chainType === ChainTypeEnum.EVM
       ? (wallet as typeof ethereumWallet).chainId
       : undefined
-  const network = resolveOnrampNetwork(chainType, chainId)
-  const chainLabel = network ? (CHAIN_LABEL[network] ?? network.charAt(0).toUpperCase() + network.slice(1)) : ''
   const chainLogo = chainLogoUrl(chainId)
 
   // The fiat rail commits into a funding session (same state machine as the
   // crypto rails). A session accepts a single payment method, so this screen
   // mints a fresh one per mount — returning here after an attempt re-mints.
-  const target = useFundingTarget()
+  // The DELIVERED currency is the selected token (on the wallet's active
+  // chain); chaining covers tokens the provider can't deliver directly.
+  const matchedToken = useMemo(
+    () => buyList.find((asset) => isSameToken(asset, buyForm.asset)),
+    [buyList, buyForm.asset]
+  )
+  const selectedToken = matchedToken ?? buyList[0]
+
+  const defaultTarget = useFundingTarget()
+  const target = useMemo(
+    () => ({
+      chain: defaultTarget.chain,
+      currency: selectedToken.type === 'native' ? NATIVE_TOKEN_ADDRESS : (selectedToken.address as string),
+    }),
+    [defaultTarget.chain, selectedToken]
+  )
   const { createSession, isAvailable } = useFunding({ useBackendUrl: true })
   const [session, setSession] = useState<{ id: string; clientSecret: string } | null>(null)
   const sessionKey = useRef('')
@@ -144,10 +144,10 @@ const Buy = () => {
     }
   }, [isAvailable, address, target.chain, target.currency])
 
-  // Whether THIS buyer's wallet-pay resolves to the native sheet or the hosted
-  // checkout — server-decided per region + project creds. Until the resolve
-  // lands (or when the row is missing) we assume native, the safe direction:
-  // identity capture is never skipped when the commit will require it.
+  // Whether THIS buyer's wallet-pay resolves to the native sheet or an
+  // embedded/hosted checkout — server-decided per region + project creds. Until
+  // the resolve lands (or when the row is missing) we assume native, the safe
+  // direction: identity capture is never skipped when the commit requires it.
   const fundingMethods = useFundingMethods(isWalletPay ? session : null, { useBackendUrl: true })
   const methodId = backendMethodId(buyForm.method)
   const resolvedRow = fundingMethods.methods.find((m) => m.method === methodId)
@@ -155,8 +155,6 @@ const Buy = () => {
   // row (resolve failed / older backend) keeps the native assumption.
   const walletPayAngleKnown = !isWalletPay || fundingMethods.loaded
   const isNativeWalletPay = isWalletPay && (resolvedRow ? resolvedRow.angle === 'native' : true)
-
-  const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
   const fiatAmount = useMemo(() => {
     const normalizedAmount = sanitizeForParsing(sanitizeAmountInput(buyForm.amount))
@@ -171,14 +169,6 @@ const Buy = () => {
     triggerResize()
   }, [triggerResize])
 
-  const matchedToken = useMemo(
-    () => assets?.find((asset) => isSameToken(asset, buyForm.asset)),
-    [assets, buyForm.asset]
-  )
-
-  const selectedTokenOption = matchedToken ?? assets?.[0]
-  const selectedToken = selectedTokenOption ?? buyForm.asset
-
   const tokenSymbol = getAssetSymbol(selectedToken)
   const tokenName = (selectedToken.metadata?.name as string) || tokenSymbol
   const tokenLogo = currencyLogoUrl(tokenSymbol)
@@ -187,8 +177,9 @@ const Buy = () => {
   const currencySymbol = useMemo(() => getCurrencySymbol(buyForm.currency), [buyForm.currency])
 
   // A real quote priced by the provider the commit would resolve — refreshes as
-  // the amount/currency settle. Re-measure the modal when it appears/disappears.
-  const { quote, loading: quoteLoading } = useOnrampQuote({
+  // the amount/currency settle; shown only as the fee line (the amount itself
+  // always stays in the buyer's chosen fiat currency).
+  const { quote } = useOnrampQuote({
     session,
     method: backendMethodId(buyForm.method),
     sourceCurrency: buyForm.currency,
@@ -196,12 +187,11 @@ const Buy = () => {
   })
   useEffect(() => {
     triggerResize()
-  }, [quote, quoteLoading, triggerResize])
+  }, [quote, triggerResize])
 
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
     if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
-      setPressedPreset(null)
       setBuyForm((prev) => ({
         ...prev,
         amount: raw,
@@ -220,14 +210,6 @@ const Buy = () => {
         }))
       }
     }
-  }
-
-  const handlePresetClick = (value: number) => {
-    setPressedPreset(value)
-    setBuyForm((prev) => ({
-      ...prev,
-      amount: value.toFixed(2),
-    }))
   }
 
   const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -270,9 +252,9 @@ const Buy = () => {
       }
       return
     }
-    // Card, bank transfer, and hosted-checkout wallet pay commit directly — the
-    // server resolves the provider (never shown to the user) and the hosted
-    // checkout collects its own consent, so no identity capture here.
+    // Card, bank transfer, and embedded/hosted wallet pay commit directly — the
+    // server resolves the provider (never shown to the user) and the checkout
+    // collects its own consent, so no identity capture here.
     setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'iframe' : null }))
     setRoute(routes.BUY_PROCESSING)
   }
@@ -282,73 +264,58 @@ const Buy = () => {
     setRoute(routes.DEPOSIT)
   }
 
-  const isPresetSelected = (value: number) => pressedPreset === value
+  // "Pay with card" — jump back to the method picker for a last-minute switch;
+  // the entered amount survives in buyForm.
+  const handleChangeMethod = () => {
+    setRoute(routes.DEPOSIT)
+  }
+  const methodLabel = METHOD_LABEL[buyForm.method]
+
   const step1Disabled =
     fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown || (isNativeWalletPay && !consented)
 
-  // The secondary line is the real conversion: how much of the token the entered
-  // fiat buys, from the live quote. Falls back to the fiat value when no quote.
-  const conversionText = quote
-    ? `≈ ${formatTokenAmount(quote.destinationAmount)} ${tokenSymbol}`
-    : quoteLoading && fiatAmount !== null
-      ? `≈ … ${tokenSymbol}`
-      : fiatAmount !== null
-        ? currencyFormatter.format(fiatAmount)
-        : `${currencySymbol}0.00`
   const feeText = quote ? currencyFormatter.format(totalFee(quote)) : null
+
+  // The amount input hugs its value so the symbol stays attached ($|50|).
+  const amountWidthCh = Math.min(Math.max(buyForm.amount.length, 1), 12)
 
   return (
     <PageContent onBack={handleBack}>
-      <ModalHeading>{locales.buyScreen_heading}</ModalHeading>
+      {/* Token first: the heading carries the decided destination token and
+          re-opens the token selector — everything below is amount + payment. */}
+      <CenteredRow style={{ marginTop: 0 }}>
+        <BuyHeadingButton type="button" onClick={handleOpenTokenSelector} title={tokenName}>
+          <BuyHeadingLogo>
+            <AssetChainLogo assetLogo={tokenLogo ?? ''} chainLogo={chainLogo ?? ''} symbol={tokenSymbol} />
+          </BuyHeadingLogo>
+          Buy {tokenSymbol || '—'}
+          <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ArrowChevron
+              stroke="currentColor"
+              d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </Arrow>
+        </BuyHeadingButton>
+      </CenteredRow>
 
-      <AmountColumnCard>
-        <AmountRow>
-          <AmountRowInput
-            value={buyForm.amount}
-            onChange={handleAmountChange}
-            onBlur={handleAmountBlur}
-            placeholder="0"
-            inputMode="decimal"
-            autoComplete="off"
-          />
-          <TokenPillButton type="button" onClick={handleOpenTokenSelector} title={tokenName}>
-            <TokenPillContent>
-              <TokenPillLogo>
-                <AssetChainLogo assetLogo={tokenLogo ?? ''} chainLogo={chainLogo ?? ''} symbol={tokenSymbol} />
-              </TokenPillLogo>
-              <SelectorTitle>{tokenSymbol || 'Select'}</SelectorTitle>
-            </TokenPillContent>
-            <SelectorRight>
-              <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <ArrowChevron
-                  stroke="currentColor"
-                  d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                />
-              </Arrow>
-            </SelectorRight>
-          </TokenPillButton>
-        </AmountRow>
-        <ConversionLine>{conversionText}</ConversionLine>
-      </AmountColumnCard>
+      <BigAmountRow>
+        <BigAmountSymbol>{currencySymbol}</BigAmountSymbol>
+        <BigAmountInput
+          value={buyForm.amount}
+          onChange={handleAmountChange}
+          onBlur={handleAmountBlur}
+          placeholder="0"
+          inputMode="decimal"
+          autoComplete="off"
+          style={{ width: `${amountWidthCh}ch` }}
+        />
+      </BigAmountRow>
 
-      <PresetList style={{ marginTop: 14 }}>
-        {amountPresets.map((preset) => (
-          <PresetButton
-            key={preset}
-            type="button"
-            onClick={() => handlePresetClick(preset)}
-            $active={isPresetSelected(preset)}
-          >
-            {currencyFormatter.format(preset)}
-          </PresetButton>
-        ))}
-      </PresetList>
-
-      <SummarySection>
-        <SummaryRow>
-          <SummaryLabel>Pay in</SummaryLabel>
+      <CenteredRow>
+        <CurrencyPill>
+          <FlagBadge aria-hidden>{CURRENCY_FLAG[buyForm.currency] ?? '💱'}</FlagBadge>
           <CurrencySelect value={buyForm.currency} onChange={handleCurrencyChange}>
             {SOURCE_CURRENCIES.map((c) => (
               <option key={c} value={c}>
@@ -356,21 +323,39 @@ const Buy = () => {
               </option>
             ))}
           </CurrencySelect>
-        </SummaryRow>
-        <SummaryRow>
-          <SummaryLabel>Destination</SummaryLabel>
-          <SummaryValue>
-            {chainLogo && <ChainLogoImg src={chainLogo} alt="" width={16} height={16} onError={hideBrokenImg} />}
-            {chainLabel || '—'}
-          </SummaryValue>
-        </SummaryRow>
-        {feeText && (
+          <Arrow width="11" height="10" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ArrowChevron
+              stroke="currentColor"
+              d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </Arrow>
+        </CurrencyPill>
+      </CenteredRow>
+
+      {methodLabel && (
+        <MethodRowButton type="button" onClick={handleChangeMethod}>
+          Pay with {methodLabel}
+          <Arrow width="11" height="10" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ArrowChevron
+              stroke="currentColor"
+              d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </Arrow>
+        </MethodRowButton>
+      )}
+
+      {feeText && (
+        <SummarySection>
           <SummaryRow>
             <SummaryLabel>Fee</SummaryLabel>
             <SummaryMuted>{feeText}</SummaryMuted>
           </SummaryRow>
-        )}
-      </SummarySection>
+        </SummarySection>
+      )}
 
       {isNativeWalletPay && walletPayAngleKnown && (
         <ModalBody style={{ marginTop: 14 }}>

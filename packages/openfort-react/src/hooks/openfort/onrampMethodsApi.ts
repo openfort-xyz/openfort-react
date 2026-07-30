@@ -12,7 +12,7 @@ const getBackendUrl = (): string => {
 export type ResolvedOnrampMethod = {
   method: string
   provider: string
-  angle: 'iframe' | 'native'
+  angle: 'iframe' | 'native' | 'embedded'
   label: string
   rail?: string
   requiresDeviceCheck?: boolean

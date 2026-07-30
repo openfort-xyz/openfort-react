@@ -9,15 +9,13 @@ import { isSolana } from '../../../hooks/openfort/fundingSources'
 import useIsMobile from '../../../hooks/useIsMobile'
 import styled from '../../../styles/styled'
 import { isIOS } from '../../../utils'
-import { TextLinkButton } from '../../Common/Button/styles'
+import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { ScrollArea } from '../../Common/ScrollArea'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
-import { createCurrencyFormatter } from '../Buy/utils'
-import { AddressPageLink } from '../Deposit/AddressPageLink'
+import { BigAmountInput, BigAmountRow, BigAmountSymbol, MethodRowButton } from '../Buy/styles'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
@@ -76,14 +74,6 @@ const WALLET_LOGO: Record<string, ReactNode> = {
   rabby: <logos.Rabby />,
 }
 
-// Dollar-denominated preset amounts (matching the onramp/buy flow). For $1
-// stablecoins (the usual funding tokens) the dollar value equals the token
-// amount 1:1; there's no price feed here for volatile tokens, so those fall
-// back to plain token-unit presets.
-const PRESETS = [10, 20, 50]
-const STABLE_USD = new Set(['USDC', 'USDT', 'DAI', 'USDB', 'USDS', 'PYUSD', 'EURC'])
-const usdFormatter = createCurrencyFormatter('USD')
-
 /**
  * Transfer from wallet. Pick a source chain/token and an amount, then choose the
  * wallet to send from. On mobile that's open-dApp deeplinks into the wallet app's
@@ -92,7 +82,7 @@ const usdFormatter = createCurrencyFormatter('USD')
  * available below.
  */
 const DepositWallet = () => {
-  const { triggerResize, uiConfig } = useOpenfort()
+  const { triggerResize, uiConfig, setRoute } = useOpenfort()
   const isMobile = useIsMobile()
   const route = useDepositRoute('crypto')
   // The desktop send path goes through the wagmi bridge (browser-extension wallets).
@@ -102,7 +92,6 @@ const DepositWallet = () => {
   // Prefill a sensible default so the wallet deeplinks are immediately actionable
   // (the funding deposit-address mint uses a fixed nominal amount regardless).
   const [amount, setAmount] = useState('1')
-  const [pressedPreset, setPressedPreset] = useState<number | null>(null)
   // Collapse the wallet list to keep the picker short on mobile; "Show more" reveals the rest.
   const [showAllWallets, setShowAllWallets] = useState(false)
 
@@ -113,23 +102,12 @@ const DepositWallet = () => {
   const isSolanaSrc = isSolana(route.activeChain?.id ?? '')
   const srcChainId = caipToChainId(route.activeChain?.id)
   const amountValid = Number.parseFloat(amount) > 0
-  // The amount is token-denominated. For $1 stablecoins the dollar value equals
-  // the token amount, so presets/labels show $; volatile tokens have no price
-  // feed here and keep plain token-unit presets.
-  const isStable = STABLE_USD.has((route.activeCurrency?.symbol ?? '').toUpperCase())
-  const usdValue = isStable ? Number.parseFloat(amount) : Number.NaN
 
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
     if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
-      setPressedPreset(null)
       setAmount(raw)
     }
-  }
-
-  const handlePreset = (value: number) => {
-    setPressedPreset(value)
-    setAmount(String(value))
   }
 
   // Open-dApp deeplinks: prefer backend-provided ones; otherwise build them from
@@ -196,36 +174,29 @@ const DepositWallet = () => {
 
             {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
-            <Section>
-              <SectionLabel>Amount</SectionLabel>
-              <AmountCard>
-                <CurrencySymbol>{route.activeCurrency?.symbol ?? ''}</CurrencySymbol>
-                <AmountInput
-                  value={amount}
-                  onChange={handleAmountChange}
-                  placeholder="0.00"
-                  inputMode="decimal"
-                  autoComplete="off"
+            <BigAmountRow>
+              <BigAmountInput
+                value={amount}
+                onChange={handleAmountChange}
+                placeholder="0"
+                inputMode="decimal"
+                autoComplete="off"
+                style={{ width: `${Math.min(Math.max(amount.length, 1), 12)}ch` }}
+              />
+              <BigAmountSymbol>{route.activeCurrency?.symbol ?? ''}</BigAmountSymbol>
+            </BigAmountRow>
+
+            <MethodRowButton type="button" onClick={() => setRoute(routes.DEPOSIT)}>
+              Other payment methods
+              <Arrow width="11" height="10" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ArrowChevron
+                  stroke="currentColor"
+                  d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                 />
-              </AmountCard>
-              {isStable && (
-                <div style={{ marginTop: 6, fontSize: 13, fontWeight: 500, color: 'var(--ck-body-color-muted)' }}>
-                  {Number.isFinite(usdValue) ? usdFormatter.format(usdValue) : '$0.00'}
-                </div>
-              )}
-              <PresetList style={{ marginTop: 12 }}>
-                {PRESETS.map((preset) => (
-                  <PresetButton
-                    key={preset}
-                    type="button"
-                    $active={pressedPreset === preset}
-                    onClick={() => handlePreset(preset)}
-                  >
-                    {isStable ? usdFormatter.format(preset) : preset}
-                  </PresetButton>
-                ))}
-              </PresetList>
-            </Section>
+              </Arrow>
+            </MethodRowButton>
 
             <StepDivider>Then select the wallet you want to use</StepDivider>
           </TopFixed>
@@ -294,8 +265,6 @@ const DepositWallet = () => {
           </ProvidersRegion>
 
           <FixedFooter>
-            <AddressPageLink label="Or send to a deposit address" />
-
             {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
           </FixedFooter>
         </Layout>

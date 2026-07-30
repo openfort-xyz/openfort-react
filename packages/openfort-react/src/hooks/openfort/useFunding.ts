@@ -7,11 +7,6 @@ import { useOpenfortCore } from '../../openfort/useOpenfort'
 import { logger } from '../../utils/logger'
 import { createFetchFundingClient, type FundingClient } from './fundingClient'
 
-/** Pay-links aren't exposed by the SDK funding namespace yet (CEX is API-deferred). */
-const sdkPayLinkUnavailable = async (): Promise<string> => {
-  throw new Error('Exchange pay-links are not available through the SDK yet')
-}
-
 /**
  * Funding session client — adapted from the openfort-funding prototype.
  *
@@ -65,8 +60,8 @@ export type FundingFee = {
 /** Fiat web2 funding methods — the rail the user sees, never the provider. */
 export type OnrampMethodId = 'apple_pay' | 'google_pay' | 'card' | 'bank_transfer'
 
-/** How a resolved onramp executes: open a hosted `url`, or an in-page provider SDK. */
-export type OnrampAngle = 'iframe' | 'native'
+/** How a resolved onramp executes: open a hosted `url`, an in-page provider SDK, or mount the provider's embedded component. */
+export type OnrampAngle = 'iframe' | 'native' | 'embedded'
 
 /**
  * Payment-method input. `evm` and `solana` are self-custody wallet sends (they
@@ -92,6 +87,17 @@ export type PaymentMethodInput =
       country?: string
       /** URL the provider redirects back to after checkout. */
       redirectUrl?: string
+      /**
+       * Stripe v2 embedded-components (Link-auth headless) flow: present after
+       * the client authenticated the buyer with Link and collected a payment
+       * method. The commit then creates a HEADLESS Stripe session; redeem its
+       * secret via `sessions.onrampCheckout` for performCheckout.
+       */
+      stripeLink?: {
+        linkAuthIntentId: string
+        cryptoCustomerId: string
+        cryptoPaymentToken: string
+      }
     }
 
 export type PaymentMethodType = PaymentMethodInput['type']
@@ -142,6 +148,11 @@ export type OnrampPaymentMethod = {
    * onramp element mounts with it), or null when the provider has none.
    */
   providerClientSecret: string | null
+  /**
+   * Provider publishable key the embedded component initializes with (public by
+   * design; pairs with providerClientSecret for the `embedded` angle), or null.
+   */
+  providerPublishableKey?: string | null
   fees: FundingFee[]
   minAmount: string | null
 }
@@ -318,8 +329,10 @@ export function useFundingClient(options?: UseFundingOptions): FundingClient | n
     const fetchClient = baseUrl ? createFetchFundingClient(baseUrl, publishableKey) : null
     // Only adopt the SDK namespace once it covers the full session surface
     // (an older SDK without methods/quote would break the fiat hooks).
-    if (sdkFunding && typeof sdkFunding.sessions?.methods === 'function') {
-      return { sessions: sdkFunding.sessions, payLink: fetchClient?.payLink ?? sdkPayLinkUnavailable }
+    if (sdkFunding && typeof sdkFunding.sessions?.methods === 'function' && fetchClient) {
+      // The SDK namespace covers sessions; Stripe Link auth + pay-links stay on
+      // the fetch adapter until the SDK exposes them.
+      return { sessions: sdkFunding.sessions, stripeLink: fetchClient.stripeLink, payLink: fetchClient.payLink }
     }
     return fetchClient
   }, [injected, coreClient, baseUrl, publishableKey])

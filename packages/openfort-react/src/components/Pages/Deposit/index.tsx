@@ -7,7 +7,6 @@ import logos from '../../../assets/logos'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
-import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { useResolvedFundingMethods } from '../../../hooks/openfort/useResolvedFundingMethods'
 import useIsMobile from '../../../hooks/useIsMobile'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
@@ -30,7 +29,6 @@ import {
   OptionSubtitle,
   OptionTitle,
 } from './styles'
-import { UnsupportedNetworkNotice } from './UnsupportedNetworkNotice'
 
 /** The action icon shown in each row's left badge (icons default to 20×20). */
 const METHOD_ICON: Record<FundingMethod, ReactNode> = {
@@ -72,20 +70,8 @@ const Deposit = () => {
   const { chainType } = useOpenfortCore()
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
-  const { chains, railChains, loading: chainsLoading } = useFundingChains()
-  const target = useFundingTarget()
+  const { chains } = useFundingChains()
   const { loaded, availableMethodIds } = useResolvedFundingMethods()
-
-  // The rail can only deliver to chains it lists. If the embedded wallet's target
-  // chain (e.g. Polygon Amoy or a Solana testnet) isn't one of them, there's no
-  // deposit route at all — show the explanation instead of any method options.
-  const targetUnsupported = !chainsLoading && railChains.length > 0 && !railChains.some((c) => c.id === target.chain)
-
-  // Content swaps between the option list and the notice once chains resolve; the
-  // modal only re-measures on an explicit resize, so nudge it when that flips.
-  useEffect(() => {
-    triggerResize()
-  }, [targetUnsupported, triggerResize])
 
   // Wallet pay is device/browser gated, independent of region. Apple Pay has a
   // real capability API (ApplePaySession — Safari on macOS/iOS, so desktop Safari
@@ -104,9 +90,17 @@ const Deposit = () => {
   // the resolve settles (and whenever it fails or returns nothing), the crypto
   // rails stand alone; there is deliberately NO static fiat fallback: showing a
   // method the region doesn't support is a compliance bug, not a UX nicety.
+  // Crypto rows are NOT chain-gated here — each rail page runs its own
+  // supported-network check when opened.
   const visibleOptions = options.filter(
     (o) => o.target.kind !== 'buy' || (loaded && availableMethodIds.has(backendMethodId(o.id) ?? ''))
   )
+
+  // Fiat rows appearing changes the modal height; it only re-measures on an
+  // explicit resize, so nudge it when the resolve settles.
+  useEffect(() => {
+    triggerResize()
+  }, [loaded, triggerResize])
 
   // Distinct source-currency logos (USDC, USDT, ETH, …) for the "from address" row.
   const currencyLogos: string[] = []
@@ -163,26 +157,22 @@ const Deposit = () => {
   return (
     <PageContent onBack={routes.CONNECTED}>
       <ModalHeading>Add funds</ModalHeading>
-      {targetUnsupported ? (
-        <UnsupportedNetworkNotice targetChain={target.chain} railChains={railChains} />
-      ) : (
-        <DepositContent>
-          <OptionList>
-            {visibleOptions.map((option) => (
-              <OptionButton key={option.id} type="button" disabled={option.disabled} onClick={() => go(option.target)}>
-                <OptionLeft>
-                  <OptionIconBadge>{METHOD_ICON[option.id]}</OptionIconBadge>
-                  <OptionInfo>
-                    <OptionTitle>{option.title}</OptionTitle>
-                    <OptionSubtitle>{option.disabledReason ?? option.subtitle}</OptionSubtitle>
-                  </OptionInfo>
-                </OptionLeft>
-                <LogoCluster>{clusterFor(option.id)}</LogoCluster>
-              </OptionButton>
-            ))}
-          </OptionList>
-        </DepositContent>
-      )}
+      <DepositContent>
+        <OptionList>
+          {visibleOptions.map((option) => (
+            <OptionButton key={option.id} type="button" disabled={option.disabled} onClick={() => go(option.target)}>
+              <OptionLeft>
+                <OptionIconBadge>{METHOD_ICON[option.id]}</OptionIconBadge>
+                <OptionInfo>
+                  <OptionTitle>{option.title}</OptionTitle>
+                  <OptionSubtitle>{option.disabledReason ?? option.subtitle}</OptionSubtitle>
+                </OptionInfo>
+              </OptionLeft>
+              <LogoCluster>{clusterFor(option.id)}</LogoCluster>
+            </OptionButton>
+          ))}
+        </OptionList>
+      </DepositContent>
       <PoweredByFooter />
     </PageContent>
   )
