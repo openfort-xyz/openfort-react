@@ -80,8 +80,9 @@ export class DashboardPage {
   async getCardByTitle(title: string | RegExp) {
     // Match the card TITLE slot, not any text in the card: body copy can
     // legitimately contain another card's title word (e.g. the Session keys
-    // card's "EOA wallets cannot use session keys" matches /wallets/i), and
-    // `hasText` + `.first()` would then grab the wrong card and strand the spec.
+    // card's "EOA wallets cannot use session keys" note matches /wallets/i once
+    // the shared test account has a wallet), and `hasText` + `.first()` would
+    // then grab the wrong card and strand the spec.
     const titleLocator = this.page
       .locator('[data-slot="card"]')
       .filter({ has: this.page.locator('[data-slot="card-title"]', { hasText: title }) })
