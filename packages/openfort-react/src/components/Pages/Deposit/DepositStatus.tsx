@@ -1,6 +1,6 @@
 'use client'
 
-import type { SessionStatus } from '../../../hooks/openfort/useFunding'
+import type { SessionStatus } from '../../../hooks/openfort/fundingClient'
 import styled from '../../../styles/styled'
 import { Spinner } from '../../Common/Spinner'
 

@@ -4,7 +4,8 @@ import { AccountTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
-import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
+import type { PaymentMethodInput } from '../../../hooks/openfort/fundingClient'
+import { useFunding } from '../../../hooks/openfort/useFunding'
 import {
   type FundingChain,
   type FundingCurrency,

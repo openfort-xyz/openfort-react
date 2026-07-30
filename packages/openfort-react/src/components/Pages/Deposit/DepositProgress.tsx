@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { SessionStatus } from '../../../hooks/openfort/useFunding'
+import type { SessionStatus } from '../../../hooks/openfort/fundingClient'
 import styled from '../../../styles/styled'
 import { logger } from '../../../utils/logger'
 import Button from '../../Common/Button'
