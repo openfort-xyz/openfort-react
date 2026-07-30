@@ -267,10 +267,14 @@ export const BoxContainer = styled(motion.div)`
     /* Match InnerContainer's viewport cap so a tall page's card background
        doesn't run off-screen while the content scrolls inside. */
     max-height: 88vh;
-    transform: translateX(-50%);
+    /* translateZ promotes the card background (and its blurred box-shadow) to
+       its own compositing layer: Safari then scales the cached shadow layer
+       during the resize instead of re-rasterizing the blur every frame.
+       box-shadow/border-radius are constants — transitioning them only forced
+       those per-frame repaints, so only the real movers (width/height) remain. */
+    transform: translateX(-50%) translateZ(0);
     backface-visibility: hidden;
-    transition: width 200ms ease, height 200ms ease, box-shadow 200ms ease,
-      border-radius 200ms ease;
+    transition: width 200ms ease, height 200ms ease;
     border-radius: var(--ck-border-radius, 20px);
     background: var(--ck-body-background);
     box-shadow: var(--ck-modal-box-shadow);
