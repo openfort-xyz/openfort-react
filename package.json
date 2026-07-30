@@ -9,7 +9,7 @@
     "postinstall": "git config --unset core.hooksPath 2>/dev/null || true && simple-git-hooks",
     "check": "biome check",
     "check:fix": "biome check --write --unsafe",
-    "check:types": "tsc --noEmit -p packages/openfort-react",
+    "check:types": "tsc --noEmit -p packages/openfort-react/tsconfig.check.json",
     "check:unused": "knip",
     "check:audit": "pnpm audit --ignore-registry-errors",
     "check:quickstarts": "pnpm --filter quickstart-headless check",
@@ -41,6 +41,9 @@
     "test": "pnpm --filter @openfort/react test && pnpm --filter playground test",
     "test:build": "pnpm --filter @openfort/react test:build && pnpm --filter create-openfort test:build",
     "test:unit": "pnpm --filter @openfort/react test",
+    "test:types": "pnpm --filter @openfort/react test:types",
+    "test:cov": "pnpm --filter @openfort/react test:cov",
+    "test:cli": "pnpm --filter create-openfort test",
     "test:e2e": "pnpm --filter playground test",
     "test:ui": "pnpm --filter playground test:ui",
     "test:debug": "pnpm --filter playground test:debug"
@@ -124,6 +127,13 @@
     }
   },
   "knip": {
+    "workspaces": {
+      "packages/openfort-react": {
+        "entry": [
+          "src/**/*.test-d.ts"
+        ]
+      }
+    },
     "ignore": [
       "packages/openfort-react/rollup.config.dev.js",
       "packages/openfort-react/rollup.config.prod.js",
