@@ -141,7 +141,7 @@ export function useSolanaEmbeddedWallet(options?: UseEmbeddedSolanaWalletOptions
     } else {
       setWalletStatus({ status: 'idle' })
     }
-  }, [state.status, state.activeWallet?.address, setWalletStatus])
+  }, [state.status, state.activeWallet, setWalletStatus])
 
   const create = useCallback(
     async (createOptions?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount> => {

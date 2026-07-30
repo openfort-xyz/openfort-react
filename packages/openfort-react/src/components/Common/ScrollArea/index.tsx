@@ -78,7 +78,7 @@ export const ScrollArea = ({
     return () => {
       el.removeEventListener('scroll', handleScroll)
     }
-  }, [ref.current])
+  }, [])
 
   return (
     <ScrollContainer $fill={fill}>
