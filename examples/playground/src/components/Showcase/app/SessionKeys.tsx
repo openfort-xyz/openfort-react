@@ -1,5 +1,5 @@
 import { embeddedWalletId, useGrantPermissions, useRevokePermissions } from '@openfort/react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts'
 import { getAddress } from 'viem/utils'
 import { useAccount, useSignMessage } from 'wagmi'
@@ -29,7 +29,7 @@ export const SessionKeysCard = ({ hook }: { hook?: string }) => {
   const grantDisabled = isLoading || !mintContractAddress || !address || !isSessionKeySupported || isExternalWallet
   const key = `${chainId}-${address ?? ''}`
 
-  const updateSessionKeys = () => {
+  const updateSessionKeys = useCallback(() => {
     const keys = getPrivateKeys(key)
     if (typeof keys[0] === 'string') {
       clearAll()
@@ -37,11 +37,11 @@ export const SessionKeysCard = ({ hook }: { hook?: string }) => {
       return
     }
     setSessionKeys(getPrivateKeys(key))
-  }
+  }, [key, getPrivateKeys, clearAll])
 
   useEffect(() => {
     updateSessionKeys()
-  }, [key])
+  }, [updateSessionKeys])
 
   return (
     <SessionKeysCardShell hook={hook}>
