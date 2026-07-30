@@ -1,3 +1,5 @@
+'use client'
+
 import type { OpenfortEthereumBridgeConnector } from '../ethereum/OpenfortEthereumBridgeContext.js'
 import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
 

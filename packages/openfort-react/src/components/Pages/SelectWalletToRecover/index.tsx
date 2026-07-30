@@ -1,3 +1,5 @@
+'use client'
+
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { embeddedWalletId } from '../../../constants/openfort.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'

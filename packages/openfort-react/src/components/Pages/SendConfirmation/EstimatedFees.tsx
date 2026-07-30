@@ -1,3 +1,5 @@
+'use client'
+
 import type { Address } from 'viem'
 import { createPublicClient, formatUnits, http } from 'viem'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'

@@ -7,6 +7,7 @@ test('exports', () => {
   expect(Object.keys(solana).sort()).toMatchInlineSnapshot(`
     [
       "useSolanaEmbeddedWallet",
+      "useSolanaWalletAssets",
     ]
   `)
 })

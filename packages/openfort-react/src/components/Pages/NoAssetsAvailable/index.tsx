@@ -1,3 +1,5 @@
+'use client'
+
 import { BuyIcon, DollarIcon } from '../../../assets/icons.js'
 import Button from '../../Common/Button/index.js'
 import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
