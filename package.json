@@ -9,7 +9,7 @@
     "postinstall": "git config --unset core.hooksPath 2>/dev/null || true && simple-git-hooks",
     "check": "biome check",
     "check:fix": "biome check --write --unsafe",
-    "check:types": "tsc --noEmit",
+    "check:types": "tsc --noEmit -p packages/openfort-react",
     "check:unused": "knip",
     "check:audit": "pnpm audit --ignore-registry-errors",
     "check:quickstarts": "pnpm --filter quickstart-headless check",
