@@ -2,22 +2,22 @@
 
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type React from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTransition } from 'react-transition-state'
-import ResizeObserver from 'resize-observer-polyfill'
 import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
 import FocusTrap from '../../../hooks/useFocusTrap.js'
 import useLocales from '../../../hooks/useLocales.js'
 import useLockBodyScroll from '../../../hooks/useLockBodyScroll.js'
 import usePrevious from '../../../hooks/usePrevious.js'
+import { getRouteHeading } from '../../../localizations/routeHeadings.js'
 import { ResetContainer } from '../../../styles/index.js'
 import type { CustomTheme } from '../../../types.js'
-import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../utils/index.js'
+import { flattenChildren, isMobile } from '../../../utils/index.js'
 import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
 import { routes } from '../../Openfort/types.js'
-import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { useOpenfortConfig, useOpenfortRouting } from '../../Openfort/useOpenfort.js'
 import FitText from '../FitText/index.js'
 import Portal from '../Portal/index.js'
 import {
@@ -35,6 +35,7 @@ import {
   PageContents,
   TextWithHr,
 } from './styles.js'
+import { useContentBounds } from './useContentBounds.js'
 
 const InfoIcon = ({ ...props }) => (
   <svg
@@ -68,6 +69,47 @@ const BackIcon = ({ ...props }) => (
 )
 
 const contentTransitionDuration = 0.22
+
+/**
+ * How long a page stays mounted after it stops being the active page: the 200ms
+ * exit keyframes in styles.ts plus the 16.6ms delay on `.exit`, rounded up.
+ */
+const pageExitDurationMs = 240
+
+/** Class names on {@link PageContainer} selecting the enter/exit keyframes. */
+type PageAnimation = 'active' | 'active-scale-up' | 'exit' | 'exit-scale-down'
+
+/**
+ * Keeps the page navigated away from mounted for the length of its exit
+ * animation, so only two pages ever exist in the DOM: the active one and, mid
+ * route change, the one fading out behind it.
+ *
+ * @param pageId Route id of the page that should be visible.
+ * @param mounted Whether the modal itself is on screen. Route changes made
+ *   while it is closed swap instantly, with no page left animating out.
+ * @returns The active page id and the page id currently animating out, if any.
+ */
+function usePageTransition(pageId: string, mounted: boolean) {
+  const [stack, setStack] = useState<{ active: string; outgoing: string | null }>({
+    active: pageId,
+    outgoing: null,
+  })
+
+  if (stack.active !== pageId) {
+    setStack({ active: pageId, outgoing: mounted ? stack.active : null })
+  }
+
+  const { outgoing } = stack
+  useEffect(() => {
+    if (outgoing === null) return
+    const timer = setTimeout(() => {
+      setStack((prev) => (prev.outgoing === outgoing ? { active: prev.active, outgoing: null } : prev))
+    }, pageExitDurationMs)
+    return () => clearTimeout(timer)
+  }, [outgoing])
+
+  return stack
+}
 
 export const contentVariants: Variants = {
   initial: {
@@ -114,11 +156,12 @@ type ModalProps = {
   }
 }
 const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inline, demo, onClose, onInfo }) => {
-  const context = useOpenfort()
+  const routing = useOpenfortRouting()
+  const { uiConfig } = useOpenfortConfig()
   const themeContext = useThemeContext()
   const mobile = isMobile()
 
-  const wallet = useExternalConnector(context.connector?.id)
+  const wallet = useExternalConnector(routing.connector?.id)
 
   const walletInfo = {
     name: wallet?.name,
@@ -141,82 +184,34 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const mounted = !(state === 'exited' || state === 'unmounted')
   const rendered = state === 'preEnter' || state !== 'exiting'
 
-  const route = context.route.route
+  const route = routing.route.route
   const currentDepth = route === routes.PROVIDERS ? 0 : route === routes.DOWNLOAD ? 2 : 1
   const prevDepth = usePrevious(currentDepth, currentDepth)
+  const { active: activePageId, outgoing: outgoingPageId } = usePageTransition(pageId, mounted)
   useLockBodyScroll(!positionInside ? mounted : false)
 
-  useEffect(() => {
-    setOpen(open)
-    if (open) setInTransition(undefined)
-  }, [open, setOpen])
-
-  const [dimensions, setDimensions] = useState<{
-    width: string | undefined
-    height: string | undefined
-  }>({
-    width: undefined,
-    height: undefined,
-  })
-  const [inTransition, setInTransition] = useState<boolean | undefined>(undefined)
-
-  // Calculate new content bounds
-  const updateBounds = useCallback((node: HTMLElement) => {
-    setDimensions({
-      width: `${node.offsetWidth}px`,
-      height: `${node.offsetHeight}px`,
-    })
-  }, [])
-
-  // Held in a ref so a page swap during the 360ms window cancels the pending timer.
-  const blockTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
-  const contentRef = useCallback(
-    (node: HTMLElement | null) => {
-      if (!node) return
-      ref.current = node
-
-      // Avoid transition mixups
-      setInTransition(inTransition !== undefined)
-      clearTimeout(blockTimeoutRef.current)
-      blockTimeoutRef.current = setTimeout(() => setInTransition(false), 360)
-
-      // Calculate new content bounds
-      updateBounds(node)
-
-      // Auto-fit: re-measure whenever the active page's content size changes, so
-      // every page — and any new one — sizes the modal correctly without having
-      // to call triggerResize() itself.
-      resizeObserverRef.current?.disconnect()
-      const observer = new ResizeObserver(() => {
-        if (ref.current === node) updateBounds(node)
-      })
-      observer.observe(node)
-      resizeObserverRef.current = observer
-    },
-    [inTransition, updateBounds]
-  )
-
-  // Update layout on chain/network switch to avoid clipping
+  // A chain switch, a viewport-class change or an explicit triggerResize can move
+  // the content box without remounting the page, so each re-triggers a measurement.
   const strategy = useConnectionStrategy()
   const bridge = useEthereumBridge()
   const chainId = strategy?.getChainId() ?? bridge?.account?.chain?.id ?? bridge?.chainId
   const switchChain = bridge?.switchChain?.switchChain
+  const { dimensions, contentRef, inTransition, clearBounds, clearTransition } = useContentBounds([
+    chainId,
+    switchChain,
+    mobile,
+    uiConfig,
+    routing.resize,
+  ])
 
-  const ref = useRef<HTMLElement | null>(null)
-  const resizeObserverRef = useRef<ResizeObserver | null>(null)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the modal re-reads its own content box after a chain switch, a viewport-class change, a ui config change, or an explicit triggerResize (context.resize)
   useEffect(() => {
-    if (ref.current) updateBounds(ref.current)
-  }, [chainId, switchChain, mobile, context.uiConfig, context.resize, updateBounds])
-
-  useEffect(() => () => resizeObserverRef.current?.disconnect(), [])
+    setOpen(open)
+    if (open) clearTransition()
+  }, [open, setOpen, clearTransition])
 
   useEffect(() => {
     if (!mounted) {
-      setDimensions({
-        width: undefined,
-        height: undefined,
-      })
+      clearBounds()
       return
     }
 
@@ -227,54 +222,49 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
     return () => {
       document.removeEventListener('keydown', listener)
     }
-  }, [mounted, onClose])
+  }, [mounted, onClose, clearBounds])
 
   const dimensionsCSS = {
     '--height': dimensions.height,
     '--width': dimensions.width,
   } as React.CSSProperties
 
-  function shouldUseQrcode() {
-    if (!wallet) return false // Fail states are shown in the injector flow
+  // A wallet without a deeplink, or one already installed, connects through the
+  // injector flow — which also owns the failure states. The rest pair by QR code.
+  const showsQrCode = !!wallet?.getWalletConnectDeeplink && !wallet.isInstalled
+  const heading = getRouteHeading(route, locales, {
+    name: walletInfo.name,
+    connectorId: wallet?.connector?.id,
+    showsQrCode,
+  })
 
-    const useInjector = !wallet.getWalletConnectDeeplink || wallet.isInstalled
-    return !useInjector
-  }
+  const customPages: Partial<Record<string, React.ReactElement>> = uiConfig.customPageComponents ?? {}
 
-  function getHeading() {
-    switch (route) {
-      case routes.ABOUT:
-        return locales.aboutScreen_heading
-      case routes.EMAIL_LOGIN:
-        return 'Continue with email' // TODO: Localize
-      case routes.FORGOT_PASSWORD:
-        return 'Reset your password' // TODO: Localize
-      case routes.EMAIL_VERIFICATION:
-        return 'Email Verification' // TODO: Localize
-      case routes.CONNECT:
-        if (shouldUseQrcode()) {
-          return isWalletConnectConnector(wallet?.connector?.id)
-            ? locales.scanScreen_heading
-            : locales.scanScreen_heading_withConnector
-        } else {
-          return walletInfo?.name
-        }
-      case routes.CONNECTORS:
-        return locales.connectorsScreen_heading
-      case routes.MOBILECONNECTORS:
-        return locales.mobileConnectorsScreen_heading
-      case routes.DOWNLOAD:
-        return locales.downloadAppScreen_heading
-      case routes.ONBOARDING:
-        return locales.onboardingScreen_heading
-      case routes.SWITCHNETWORKS:
-      case routes.ETH_SWITCH_NETWORK:
-        return locales.switchNetworkScreen_heading
-      case routes.SIGN_MESSAGE:
-        return 'Sign message'
-      default:
-        return ''
-    }
+  function renderPage(key: string | null, active: boolean) {
+    if (key === null) return null
+    const page = customPages[key] ?? pages[key]
+    if (page == null) return null
+
+    const animation: PageAnimation = active
+      ? currentDepth > prevDepth
+        ? 'active-scale-up'
+        : 'active'
+      : currentDepth < prevDepth
+        ? 'exit-scale-down'
+        : 'exit'
+
+    return (
+      <Page key={key} animation={animation} initial={!positionInside && state !== 'entered'}>
+        {/* Only the active page is measured: the outgoing one is absolutely positioned
+            while it fades out, so the modal sizes itself to the page arriving. */}
+        <PageContents
+          ref={active ? contentRef : undefined}
+          style={{ pointerEvents: active && rendered ? 'auto' : 'none' }}
+        >
+          {page}
+        </PageContents>
+      </Page>
+    )
   }
 
   const Content = (
@@ -290,7 +280,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
           position: positionInside ? 'absolute' : undefined,
         }}
       >
-        {!inline && <BackgroundOverlay $active={rendered} onClick={onClose} $blur={context.uiConfig.overlayBlur} />}
+        {!inline && <BackgroundOverlay $active={rendered} onClick={onClose} $blur={uiConfig.overlayBlur} />}
         <Container style={dimensionsCSS} initial={false}>
           <div
             style={{
@@ -324,12 +314,12 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                 }}
               >
                 <AnimatePresence>
-                  {context.onBack ? (
+                  {routing.onBack ? (
                     <BackButton
                       disabled={inTransition}
                       aria-label={flattenChildren(locales.back).toString()}
                       key="backButton"
-                      onClick={context.onBack}
+                      onClick={routing.onBack}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -340,7 +330,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                     >
                       <BackIcon />
                     </BackButton>
-                  ) : context.headerLeftSlot ? (
+                  ) : routing.headerLeftSlot ? (
                     <motion.div
                       key="headerLeftSlot"
                       initial={{ opacity: 0, y: -4 }}
@@ -349,11 +339,11 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                       transition={{ duration: 0.12 }}
                       style={{ display: 'inline-flex' }}
                     >
-                      {context.headerLeftSlot}
+                      {routing.headerLeftSlot}
                     </motion.div>
                   ) : (
                     onInfo &&
-                    !context.uiConfig.hideQuestionMarkCTA && (
+                    !uiConfig.hideQuestionMarkCTA && (
                       <InfoButton
                         disabled={inTransition}
                         aria-label={flattenChildren(locales.moreInformation).toString()}
@@ -396,38 +386,14 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                     delay: mobile ? 0.01 : 0,
                   }}
                 >
-                  <FitText>{getHeading()}</FitText>
+                  <FitText>{heading}</FitText>
                 </motion.div>
               </AnimatePresence>
             </ModalHeading>
 
             <InnerContainer>
-              {Object.keys(pages).map((key) => {
-                const customPages: Partial<Record<string, React.ReactElement>> =
-                  context.uiConfig.customPageComponents ?? {}
-                const page = customPages[key] ?? pages[key]
-                return (
-                  // TODO: Render only the current and previous page instead of every page.
-                  // Gating on `key === pageId` alone makes the content flash during transitions.
-                  <Page
-                    key={key}
-                    open={key === pageId}
-                    initial={!positionInside && state !== 'entered'}
-                    enterAnim={key === pageId ? (currentDepth > prevDepth ? 'active-scale-up' : 'active') : ''}
-                    exitAnim={key !== pageId ? (currentDepth < prevDepth ? 'exit-scale-down' : 'exit') : ''}
-                  >
-                    <PageContents
-                      key={`inner-${key}`}
-                      ref={contentRef}
-                      style={{
-                        pointerEvents: key === pageId && rendered ? 'auto' : 'none',
-                      }}
-                    >
-                      {page}
-                    </PageContents>
-                  </Page>
-                )
-              })}
+              {renderPage(outgoingPageId, false)}
+              {renderPage(activePageId, true)}
             </InnerContainer>
           </BoxContainer>
         </Container>
@@ -450,41 +416,22 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
 
 type PageProps = {
   children?: React.ReactNode
-  open?: boolean
+  animation: PageAnimation
+  /** Play no animation because the modal itself is still opening. */
   initial: boolean
-  enterAnim?: string
-  exitAnim?: string
 }
 
-const Page: React.FC<PageProps> = ({ children, open, initial, enterAnim, exitAnim }) => {
-  const [state, setOpen] = useTransition({
-    timeout: 400,
-    preEnter: true,
-    initialEntered: open,
-    mountOnEnter: true,
-    unmountOnExit: true,
-  })
-  const mounted = !(state === 'exited' || state === 'unmounted')
-  const rendered = state === 'preEnter' || state !== 'exiting'
-
-  useEffect(() => {
-    setOpen(open)
-  }, [open, setOpen])
-
-  if (!mounted) return null
-
-  return (
-    <PageContainer
-      className={`${rendered ? enterAnim : exitAnim}`}
-      style={{
-        animationDuration: initial ? '0ms' : undefined,
-        animationDelay: initial ? '0ms' : undefined,
-      }}
-    >
-      {children}
-    </PageContainer>
-  )
-}
+const Page: React.FC<PageProps> = ({ children, animation, initial }) => (
+  <PageContainer
+    className={animation}
+    style={{
+      animationDuration: initial ? '0ms' : undefined,
+      animationDelay: initial ? '0ms' : undefined,
+    }}
+  >
+    {children}
+  </PageContainer>
+)
 
 export const OrDivider = ({ children, hideHr }: { children?: React.ReactNode; hideHr?: boolean }) => {
   const locales = useLocales()
