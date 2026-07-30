@@ -11,13 +11,26 @@ interface PlaygroundEvmChain {
   usdc?: string
 }
 
+/**
+ * When set, Base Sepolia is served by this URL instead of its public endpoint.
+ * The e2e suite points it at a local anvil fork so on-chain reads resolve against
+ * pinned, test-seeded state rather than a live testnet. Unset in normal use.
+ */
+const FORK_RPC_URL = import.meta.env.VITE_EVM_FORK_RPC_URL
+
+/** Redirects the forked chain's RPC while leaving every other chain on its public endpoint. */
+function applyForkRpcUrl(chains: PlaygroundEvmChain[]): PlaygroundEvmChain[] {
+  if (!FORK_RPC_URL) return chains
+  return chains.map((c) => (c.id === baseSepolia.id ? { ...c, rpcUrl: FORK_RPC_URL } : c))
+}
+
 // Order matters: the first entry is wagmi's default chain (useChainId when not
 // connected), which is also the chain the embedded wallet is created on. Keep
 // Polygon Amoy first so guest-wallet creation works under the CI test API key
 // (a test key rejects mainnet chainIds) and the e2e can still switch *to* Base
 // Sepolia. Base mainnet stays available for the funding deposit demo
 // (funding.targetChain is independent of this order).
-export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
+export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = applyForkRpcUrl([
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
@@ -48,7 +61,7 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
     explorerUrl: 'https://sepolia.basescan.org',
     viemChain: baseSepolia,
   },
-]
+])
 
 /**
  * Restrict the EVM chains to those matching the publishable key environment:
