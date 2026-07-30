@@ -1,13 +1,8 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
-import { ApiRequestError, UnsupportedOperationError } from '../../../errors/operation.js'
 import { MissingParameterError } from '../../../errors/validation.js'
 import type { Asset } from '../../Openfort/types.js'
 import { getAssetSymbol } from '../Send/utils.js'
-
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
+import { ONRAMP_SESSIONS_PATH } from './onrampApi.js'
+import { createCurrencySupport, postOnramp } from './onrampRequest.js'
 
 type CoinbaseOnrampResponse = {
   provider: string
@@ -50,32 +45,10 @@ const COINBASE_SUPPORTED_CURRENCIES = [
   'xlm',
 ] as const
 
-type SupportedCurrency = (typeof COINBASE_SUPPORTED_CURRENCIES)[number]
-
-const isSupportedCurrency = (symbol: string): symbol is SupportedCurrency =>
-  (COINBASE_SUPPORTED_CURRENCIES as readonly string[]).includes(symbol)
+const coinbaseCurrencies = createCurrencySupport('Coinbase', COINBASE_SUPPORTED_CURRENCIES)
 
 // Check if a token is supported by Coinbase
-export const isCoinbaseSupported = (token: Asset): boolean => {
-  const symbol = getAssetSymbol(token)
-  return isSupportedCurrency(symbol.toLowerCase())
-}
-
-// Map token symbol to Coinbase currency code
-const getCurrencyCode = (token: Asset): string => {
-  const symbol = getAssetSymbol(token)
-  const lowercaseSymbol = symbol.toLowerCase()
-
-  // Validate that the currency is supported by Coinbase
-  if (!isSupportedCurrency(lowercaseSymbol)) {
-    throw new UnsupportedOperationError({
-      operation: `Currency "${symbol}" on Coinbase`,
-      details: `Supported currencies are: ${COINBASE_SUPPORTED_CURRENCIES.join(', ')}.`,
-    })
-  }
-
-  return symbol
-}
+export const isCoinbaseSupported = (token: Asset): boolean => coinbaseCurrencies.isSupported(getAssetSymbol(token))
 
 /**
  * Create a Coinbase onramp session
@@ -97,10 +70,13 @@ export const createCoinbaseSession = async (
     throw new MissingParameterError({ params: ['publishableKey'] })
   }
 
-  // Build request body with only provided parameters
+  const symbol = getAssetSymbol(token)
+  coinbaseCurrencies.assertSupported(symbol)
+
+  // Coinbase takes the currency code in the asset's own casing.
   const requestBody: CreateCoinbaseSessionParams & { provider: string } = {
     provider: 'coinbase',
-    destinationCurrency: getCurrencyCode(token),
+    destinationCurrency: symbol,
     destinationNetwork: network,
     destinationAddress: rest.destinationAddress,
   }
@@ -114,23 +90,10 @@ export const createCoinbaseSession = async (
   if (rest.redirectUrl) requestBody.redirectUrl = rest.redirectUrl
   if (rest.clientIp) requestBody.clientIp = rest.clientIp
 
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/sessions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
+  return postOnramp<CoinbaseOnrampResponse>({
+    path: ONRAMP_SESSIONS_PATH,
+    body: requestBody,
+    publishableKey,
+    operation: 'Coinbase session creation',
   })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new ApiRequestError({
-      operation: 'Coinbase session creation',
-      status: response.status,
-      body: errorData.error || errorData.errorMessage,
-    })
-  }
-
-  return response.json()
 }
