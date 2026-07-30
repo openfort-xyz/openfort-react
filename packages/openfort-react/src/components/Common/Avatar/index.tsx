@@ -77,6 +77,7 @@ const Avatar: React.FC<{
     resolve()
   }, [useEns, bridge, address, name])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `ens.avatar` is the trigger — a new avatar URL restarts loading unless the browser already has that image decoded
   useEffect(() => {
     if (!(imageRef.current?.complete && imageRef.current.naturalHeight !== 0)) {
       setLoaded(false)

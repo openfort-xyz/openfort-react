@@ -11,7 +11,7 @@ const WalletIconWrapper: React.FC<{ account: LinkedAccount }> = ({ account }) =>
   const wallets = useExternalConnectors()
   const wallet = useMemo(() => {
     return wallets.find((w) => w.id?.toLowerCase() === account.walletClientType)
-  }, [account])
+  }, [account, wallets])
 
   if (account.walletClientType === 'walletconnect') return <Logos.WalletConnect />
 

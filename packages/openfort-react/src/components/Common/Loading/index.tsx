@@ -98,9 +98,10 @@ const Loader = ({
   const { triggerResize } = useOpenfort()
   const locales = useLocales()
 
+  // Re-measure the modal once the loader unmounts and the real content takes its place.
   useEffect(() => {
     return () => triggerResize()
-  }, [])
+  }, [triggerResize])
 
   const renderLogo = () => {
     if (icon) {

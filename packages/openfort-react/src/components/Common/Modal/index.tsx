@@ -149,7 +149,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   useEffect(() => {
     setOpen(open)
     if (open) setInTransition(undefined)
-  }, [open])
+  }, [open, setOpen])
 
   const [dimensions, setDimensions] = useState<{
     width: string | undefined
@@ -161,14 +161,15 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const [inTransition, setInTransition] = useState<boolean | undefined>(undefined)
 
   // Calculate new content bounds
-  const updateBounds = (node: HTMLElement) => {
+  const updateBounds = useCallback((node: HTMLElement) => {
     setDimensions({
       width: `${node.offsetWidth}px`,
       height: `${node.offsetHeight}px`,
     })
-  }
+  }, [])
 
-  let blockTimeout: ReturnType<typeof setTimeout>
+  // Held in a ref so a page swap during the 360ms window cancels the pending timer.
+  const blockTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
   const contentRef = useCallback(
     (node: HTMLElement | null) => {
       if (!node) return
@@ -176,8 +177,8 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
 
       // Avoid transition mixups
       setInTransition(inTransition !== undefined)
-      clearTimeout(blockTimeout)
-      blockTimeout = setTimeout(() => setInTransition(false), 360)
+      clearTimeout(blockTimeoutRef.current)
+      blockTimeoutRef.current = setTimeout(() => setInTransition(false), 360)
 
       // Calculate new content bounds
       updateBounds(node)
@@ -192,7 +193,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
       observer.observe(node)
       resizeObserverRef.current = observer
     },
-    [open, inTransition]
+    [inTransition, updateBounds]
   )
 
   // Update layout on chain/network switch to avoid clipping
@@ -203,9 +204,10 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
 
   const ref = useRef<HTMLElement | null>(null)
   const resizeObserverRef = useRef<ResizeObserver | null>(null)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the modal re-reads its own content box after a chain switch, a viewport-class change, a ui config change, or an explicit triggerResize (context.resize)
   useEffect(() => {
     if (ref.current) updateBounds(ref.current)
-  }, [chainId, switchChain, mobile, context.uiConfig, context.resize])
+  }, [chainId, switchChain, mobile, context.uiConfig, context.resize, updateBounds])
 
   useEffect(() => () => resizeObserverRef.current?.disconnect(), [])
 
@@ -467,7 +469,7 @@ const Page: React.FC<PageProps> = ({ children, open, initial, enterAnim, exitAni
 
   useEffect(() => {
     setOpen(open)
-  }, [open])
+  }, [open, setOpen])
 
   if (!mounted) return null
 
