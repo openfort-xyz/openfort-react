@@ -9,8 +9,10 @@ const CONNECTED_REGISTRY: Partial<Record<ChainTypeEnum, React.FC>> = {
   [ChainTypeEnum.SVM]: SolanaConnected,
 }
 
-export const Connected: React.FC = () => {
+const Connected: React.FC = () => {
   const { chainType } = useOpenfortCore()
   const Component = CONNECTED_REGISTRY[chainType]
   return Component ? <Component /> : null
 }
+
+export default Connected

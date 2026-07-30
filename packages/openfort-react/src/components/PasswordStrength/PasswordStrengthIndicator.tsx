@@ -39,11 +39,6 @@ const LabelColor = styled.span<{ color: string }>`
   color: ${({ color }) => color};
 `
 
-const _transition = {
-  duration: 0.4,
-  ease: [0.175, 0.885, 0.32, 0.98],
-}
-
 export const PasswordStrengthIndicator = ({
   password,
   showPasswordIsTooWeakError,

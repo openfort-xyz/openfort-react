@@ -300,7 +300,8 @@ const ConnectWithInjector: React.FC<{
     )
   }
 
-  // OLD_TODO: Make this more generic
+  // TODO: Derive this from a connector capability flag rather than matching
+  // WalletConnect by id.
   if (isWalletConnectConnector(wallet?.connector.id)) {
     return (
       <PageContent>

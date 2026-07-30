@@ -25,7 +25,7 @@ export const ProviderIcon: React.FC<{ account: LinkedAccount }> = ({ account }) 
     case 'email':
     case 'credential':
       return <EmailIcon />
-    // OTP_TODO: Wallet icon
+    // TODO: Show the SIWE provider's own icon instead of the generic wallet icon.
     case 'wallet':
     case 'siwe':
       return <WalletIconWrapper account={account} />

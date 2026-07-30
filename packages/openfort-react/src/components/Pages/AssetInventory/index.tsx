@@ -206,7 +206,7 @@ function PillLogo({ symbol }: { symbol: string }) {
   )
 }
 
-export const AssetInventory = () => {
+const AssetInventory = () => {
   const { data, multiChain, isLoading: isBalancesLoading } = useEthereumWalletAssets({ multiChain: true })
   const { triggerResize, chains } = useOpenfort()
   const { chainId } = useEthereumEmbeddedWallet()
@@ -320,3 +320,5 @@ export const AssetInventory = () => {
     </SelectTokenContent>
   )
 }
+
+export default AssetInventory
