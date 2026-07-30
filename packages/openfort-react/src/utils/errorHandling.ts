@@ -49,7 +49,7 @@ import { ProviderNotFoundError } from '../errors/connection.js'
 import { WalletNotConnectedError } from '../errors/wallet.js'
 
 /** A failure translated into copy the transaction screens can render directly. */
-export type TransactionErrorDetails = {
+type TransactionErrorDetails = {
   title: string
   message: string
   action?: string
