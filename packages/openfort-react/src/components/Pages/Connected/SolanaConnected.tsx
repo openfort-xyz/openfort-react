@@ -11,10 +11,11 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
 import { useEffect } from 'react'
 import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons.js'
-import { BALANCE_INVALIDATE_EVENT, fetchSolanaBalance } from '../../../hooks/useBalance.js'
+import { fetchSolanaBalance } from '../../../hooks/useBalance.js'
 import useLocales from '../../../hooks/useLocales.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData.js'
+import { openfortKeys } from '../../../query/queryKeys.js'
+import { useQuery } from '../../../query/useQuery.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { formatSol } from '../../../solana/hooks/utils.js'
 import { useSolanaContext } from '../../../solana/SolanaContext.js'
@@ -51,8 +52,8 @@ const SolanaConnected: React.FC = () => {
     if (address) triggerResize()
   }, [address, triggerResize])
 
-  const balanceResult = useAsyncData({
-    queryKey: ['solana-balance', address, rpcUrl],
+  const balanceResult = useQuery({
+    queryKey: openfortKeys.balance({ address: address ?? '', chainType: ChainTypeEnum.SVM, cluster: rpcUrl }),
     queryFn: async () => {
       if (!address || !rpcUrl) return null
       try {
@@ -65,13 +66,6 @@ const SolanaConnected: React.FC = () => {
     },
     enabled: Boolean(address && rpcUrl),
   })
-
-  useEffect(() => {
-    if (!address || !rpcUrl) return
-    const handler = () => balanceResult.refetch().catch(() => {})
-    window.addEventListener(BALANCE_INVALIDATE_EVENT, handler)
-    return () => window.removeEventListener(BALANCE_INVALIDATE_EVENT, handler)
-  }, [address, rpcUrl, balanceResult.refetch])
 
   const lamports = balanceResult.data
   const isBalanceLoading = balanceResult.isLoading

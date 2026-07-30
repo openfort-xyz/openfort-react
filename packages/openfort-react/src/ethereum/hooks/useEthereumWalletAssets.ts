@@ -10,8 +10,8 @@ import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/u
 import { OpenfortError, OpenfortReactErrorType } from '../../core/errors.js'
 import type { EthereumConfig } from '../../ethereum/types.js'
 import { useUser } from '../../hooks/openfort/useUser.js'
-import { openfortKeys } from '../../query/queryKeys.js'
-import { useAsyncData } from '../../shared/hooks/useAsyncData.js'
+import { getWalletAssetsQueryScope } from '../../query/queryOptions.js'
+import { type UseQueryReturnType, useQuery } from '../../query/useQuery.js'
 import { getDefaultEthereumRpcUrl } from '../../utils/rpc.js'
 import { useEthereumEmbeddedWallet } from './useEthereumEmbeddedWallet.js'
 
@@ -22,13 +22,17 @@ type UseEthereumWalletAssetsOptions = {
   staleTime?: number
 }
 
-type WalletAssetsReturnBase = {
-  isLoading: boolean
-  isError: boolean
-  isSuccess: boolean
+type WalletAssetsQueryResult = UseQueryReturnType<readonly Asset[] | readonly MultiChainAsset[], Error>
+
+/**
+ * The TanStack query result, with three Openfort-specific overrides: `data` is
+ * `null` rather than `undefined` before the first result, `error` is normalised
+ * to an {@link OpenfortError}, and `isIdle` reports that the query is gated off
+ * because no wallet/chain is available yet.
+ */
+type WalletAssetsReturnBase = Omit<WalletAssetsQueryResult, 'data' | 'error'> & {
   isIdle: boolean
   error: OpenfortError | undefined
-  refetch: () => Promise<unknown>
 }
 
 type UseEthereumWalletAssetsResult =
@@ -239,10 +243,21 @@ export const useEthereumWalletAssets = ({
     return allAssets
   }, [walletConfig?.ethereum?.assets, hookCustomAssets, chainId])
 
-  const { data, error, isLoading, refetch } = useAsyncData({
-    queryKey: multiChain
-      ? ['wallet-assets', 'multi', address, customAssetsMultiChain]
-      : [...openfortKeys.walletAssets(chainId!, customAssetsToFetch, address)],
+  const multiChainAssetAddresses = useMemo(
+    () => (customAssetsMultiChain ? Object.values(customAssetsMultiChain).flatMap((a) => a.map((x) => x.address)) : []),
+    [customAssetsMultiChain]
+  )
+
+  const { queryKey, enabled } = getWalletAssetsQueryScope({
+    address,
+    chainId,
+    multiChain,
+    assets: multiChain ? multiChainAssetAddresses : customAssetsToFetch,
+    hasChain: !!chain,
+  })
+
+  const { data, error, ...query } = useQuery({
+    queryKey,
     queryFn: async (): Promise<readonly Asset[] | readonly MultiChainAsset[]> => {
       if (multiChain) {
         if (!address) {
@@ -514,7 +529,7 @@ export const useEthereumWalletAssets = ({
         })) as readonly Asset[]
       }
     },
-    enabled: multiChain ? isConnected && !!address : isConnected && !!chainId && !!chain && !!address,
+    enabled: isConnected && enabled,
     staleTime,
   })
 
@@ -529,13 +544,10 @@ export const useEthereumWalletAssets = ({
   }, [error])
 
   return {
+    ...query,
     data: data ?? null,
     multiChain,
-    isLoading,
-    isError: !!error,
-    isSuccess: !!data && !error,
-    isIdle: multiChain ? !address : !isConnected || !chainId || !chain,
+    isIdle: !isConnected || !enabled,
     error: mappedError,
-    refetch,
   } as UseEthereumWalletAssetsResult
 }

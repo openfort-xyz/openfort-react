@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -67,6 +68,10 @@ vi.mock('../../solana/transfer', () => ({
 }))
 
 const { SolanaSendConfirmation } = await import('../../components/Pages/SendConfirmation/SolanaSendConfirmation.js')
+const { createTestWrapper } = await import('../mocks/wrapper.js')
+
+/** The page reads its fee quote through a query, so it needs a QueryClient in scope. */
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: createTestWrapper() })
 
 describe('SolanaSendConfirmation', () => {
   beforeEach(() => {

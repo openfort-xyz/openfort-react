@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPublicClient, http } from 'viem'
-import { invalidateBalance } from '../../../hooks/useBalance.js'
+import { useInvalidateBalance } from '../../../hooks/useBalance.js'
 import { getDefaultEthereumRpcUrl } from '../../../utils/rpc.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 
@@ -35,6 +35,7 @@ export function useSameChainArrival({
 }): { arrived: boolean } {
   const { walletConfig } = useOpenfort()
   const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+  const invalidateBalance = useInvalidateBalance()
 
   const [arrived, setArrived] = useState(false)
   const baselineRef = useRef<bigint | null>(null)
@@ -88,7 +89,7 @@ export function useSameChainArrival({
       document.removeEventListener('visibilitychange', onReturn)
       window.removeEventListener('focus', onReturn)
     }
-  }, [enabled, address, chainId, rpcUrl])
+  }, [enabled, address, chainId, rpcUrl, invalidateBalance])
 
   return { arrived }
 }

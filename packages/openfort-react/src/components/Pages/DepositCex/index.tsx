@@ -7,7 +7,7 @@ import logos from '../../../assets/logos.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useFunding } from '../../../hooks/openfort/useFunding.js'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains.js'
-import { invalidateBalance } from '../../../hooks/useBalance.js'
+import { useInvalidateBalance } from '../../../hooks/useBalance.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { logger } from '../../../utils/logger.js'
 import { getPublishableKeyEnvironment } from '../../../utils/validation.js'
@@ -84,6 +84,7 @@ const DepositCex = () => {
   const wallet = useEthereumEmbeddedWallet()
   const { embeddedAccounts } = useOpenfortCore()
   const { chains } = useFundingChains()
+  const invalidateBalance = useInvalidateBalance()
 
   const [amount, setAmount] = useState(String(MIN_AMOUNT))
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
@@ -171,7 +172,7 @@ const DepositCex = () => {
   // without a manual reload.
   useEffect(() => {
     if (status === 'succeeded') invalidateBalance()
-  }, [status])
+  }, [status, invalidateBalance])
 
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
