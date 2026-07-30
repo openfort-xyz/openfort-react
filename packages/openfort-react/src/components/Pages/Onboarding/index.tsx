@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import Logos from '../../../assets/logos.js'
 import wave from '../../../assets/wave.js'

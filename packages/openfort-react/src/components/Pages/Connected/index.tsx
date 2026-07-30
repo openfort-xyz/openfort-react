@@ -1,3 +1,5 @@
+'use client'
+
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'

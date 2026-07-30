@@ -1,3 +1,5 @@
+'use client'
+
 import { createElement } from 'react'
 import { useConnectionStrategy } from '../core/ConnectionStrategyContext.js'
 import type {

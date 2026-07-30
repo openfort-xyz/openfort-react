@@ -1,3 +1,5 @@
+'use client'
+
 import type React from 'react'
 import useMeasure from 'react-use-measure'
 

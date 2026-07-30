@@ -1,3 +1,5 @@
+'use client'
+
 import { motion } from 'framer-motion'
 import Logos from '../../../assets/logos.js'
 import styled from '../../../styles/styled/index.js'
