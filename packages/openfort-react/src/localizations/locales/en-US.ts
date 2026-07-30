@@ -60,6 +60,11 @@ const enUS = {
 
   mobileConnectorsScreen_heading: `Choose Wallet`,
 
+  emailLoginScreen_heading: `Continue with email`,
+  forgotPasswordScreen_heading: `Reset your password`,
+  emailVerificationScreen_heading: `Email Verification`,
+  signMessageScreen_heading: `Sign message`,
+
   scanScreen_heading: `Scan with Phone`,
   scanScreen_heading_withConnector: `Scan with {{ CONNECTORNAME }}`,
   scanScreen_tooltip_walletConnect: `Open a [WALLETCONNECTLOGO] WalletConnect \nsupported wallet to scan`,

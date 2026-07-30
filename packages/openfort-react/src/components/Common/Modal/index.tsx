@@ -2,18 +2,18 @@
 
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type React from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useTransition } from 'react-transition-state'
-import ResizeObserver from 'resize-observer-polyfill'
 import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
 import FocusTrap from '../../../hooks/useFocusTrap.js'
 import useLocales from '../../../hooks/useLocales.js'
 import useLockBodyScroll from '../../../hooks/useLockBodyScroll.js'
 import usePrevious from '../../../hooks/usePrevious.js'
+import { getRouteHeading } from '../../../localizations/routeHeadings.js'
 import { ResetContainer } from '../../../styles/index.js'
 import type { CustomTheme } from '../../../types.js'
-import { flattenChildren, isMobile, isWalletConnectConnector } from '../../../utils/index.js'
+import { flattenChildren, isMobile } from '../../../utils/index.js'
 import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
 import { routes } from '../../Openfort/types.js'
@@ -35,6 +35,7 @@ import {
   PageContents,
   TextWithHr,
 } from './styles.js'
+import { useContentBounds } from './useContentBounds.js'
 
 const InfoIcon = ({ ...props }) => (
   <svg
@@ -189,77 +190,28 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const { active: activePageId, outgoing: outgoingPageId } = usePageTransition(pageId, mounted)
   useLockBodyScroll(!positionInside ? mounted : false)
 
-  useEffect(() => {
-    setOpen(open)
-    if (open) setInTransition(undefined)
-  }, [open, setOpen])
-
-  const [dimensions, setDimensions] = useState<{
-    width: string | undefined
-    height: string | undefined
-  }>({
-    width: undefined,
-    height: undefined,
-  })
-  const [inTransition, setInTransition] = useState<boolean | undefined>(undefined)
-
-  // Calculate new content bounds. Re-measuring is cheap and happens on every
-  // resize notification, so keep the previous state object when nothing moved.
-  const updateBounds = useCallback((node: HTMLElement) => {
-    const width = `${node.offsetWidth}px`
-    const height = `${node.offsetHeight}px`
-    setDimensions((prev) => (prev.width === width && prev.height === height ? prev : { width, height }))
-  }, [])
-
-  // Held in a ref so a page swap during the 360ms window cancels the pending timer.
-  const blockTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
-  const contentRef = useCallback(
-    (node: HTMLElement | null) => {
-      if (!node) return
-      ref.current = node
-
-      // Avoid transition mixups
-      setInTransition(inTransition !== undefined)
-      clearTimeout(blockTimeoutRef.current)
-      blockTimeoutRef.current = setTimeout(() => setInTransition(false), 360)
-
-      // Calculate new content bounds
-      updateBounds(node)
-
-      // Auto-fit: re-measure whenever the active page's content size changes, so
-      // every page — and any new one — sizes the modal correctly without having
-      // to call triggerResize() itself.
-      resizeObserverRef.current?.disconnect()
-      const observer = new ResizeObserver(() => {
-        if (ref.current === node) updateBounds(node)
-      })
-      observer.observe(node)
-      resizeObserverRef.current = observer
-    },
-    [inTransition, updateBounds]
-  )
-
-  // Update layout on chain/network switch to avoid clipping
+  // A chain switch, a viewport-class change or an explicit triggerResize can move
+  // the content box without remounting the page, so each re-triggers a measurement.
   const strategy = useConnectionStrategy()
   const bridge = useEthereumBridge()
   const chainId = strategy?.getChainId() ?? bridge?.account?.chain?.id ?? bridge?.chainId
   const switchChain = bridge?.switchChain?.switchChain
+  const { dimensions, contentRef, inTransition, clearBounds, clearTransition } = useContentBounds([
+    chainId,
+    switchChain,
+    mobile,
+    uiConfig,
+    routing.resize,
+  ])
 
-  const ref = useRef<HTMLElement | null>(null)
-  const resizeObserverRef = useRef<ResizeObserver | null>(null)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the modal re-reads its own content box after a chain switch, a viewport-class change, a ui config change, or an explicit triggerResize (routing.resize)
   useEffect(() => {
-    if (ref.current) updateBounds(ref.current)
-  }, [chainId, switchChain, mobile, uiConfig, routing.resize, updateBounds])
-
-  useEffect(() => () => resizeObserverRef.current?.disconnect(), [])
+    setOpen(open)
+    if (open) clearTransition()
+  }, [open, setOpen, clearTransition])
 
   useEffect(() => {
     if (!mounted) {
-      setDimensions({
-        width: undefined,
-        height: undefined,
-      })
+      clearBounds()
       return
     }
 
@@ -270,55 +222,21 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
     return () => {
       document.removeEventListener('keydown', listener)
     }
-  }, [mounted, onClose])
+  }, [mounted, onClose, clearBounds])
 
   const dimensionsCSS = {
     '--height': dimensions.height,
     '--width': dimensions.width,
   } as React.CSSProperties
 
-  function shouldUseQrcode() {
-    if (!wallet) return false // Fail states are shown in the injector flow
-
-    const useInjector = !wallet.getWalletConnectDeeplink || wallet.isInstalled
-    return !useInjector
-  }
-
-  function getHeading() {
-    switch (route) {
-      case routes.ABOUT:
-        return locales.aboutScreen_heading
-      case routes.EMAIL_LOGIN:
-        return 'Continue with email' // TODO: Localize
-      case routes.FORGOT_PASSWORD:
-        return 'Reset your password' // TODO: Localize
-      case routes.EMAIL_VERIFICATION:
-        return 'Email Verification' // TODO: Localize
-      case routes.CONNECT:
-        if (shouldUseQrcode()) {
-          return isWalletConnectConnector(wallet?.connector?.id)
-            ? locales.scanScreen_heading
-            : locales.scanScreen_heading_withConnector
-        } else {
-          return walletInfo?.name
-        }
-      case routes.CONNECTORS:
-        return locales.connectorsScreen_heading
-      case routes.MOBILECONNECTORS:
-        return locales.mobileConnectorsScreen_heading
-      case routes.DOWNLOAD:
-        return locales.downloadAppScreen_heading
-      case routes.ONBOARDING:
-        return locales.onboardingScreen_heading
-      case routes.SWITCHNETWORKS:
-      case routes.ETH_SWITCH_NETWORK:
-        return locales.switchNetworkScreen_heading
-      case routes.SIGN_MESSAGE:
-        return 'Sign message'
-      default:
-        return ''
-    }
-  }
+  // A wallet without a deeplink, or one already installed, connects through the
+  // injector flow; the rest are paired by scanning a QR code.
+  const showsQrCode = !!wallet && !(!wallet.getWalletConnectDeeplink || wallet.isInstalled)
+  const heading = getRouteHeading(route, locales, {
+    name: walletInfo.name,
+    connectorId: wallet?.connector?.id,
+    showsQrCode,
+  })
 
   const customPages: Partial<Record<string, React.ReactElement>> = uiConfig.customPageComponents ?? {}
 
@@ -468,7 +386,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
                     delay: mobile ? 0.01 : 0,
                   }}
                 >
-                  <FitText>{getHeading()}</FitText>
+                  <FitText>{heading}</FitText>
                 </motion.div>
               </AnimatePresence>
             </ModalHeading>
