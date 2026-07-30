@@ -44,6 +44,7 @@ export function DepositDetails({
   const [open, setOpen] = useState(true)
   const { triggerResize } = useOpenfort()
   // Grow/shrink the modal to fit the expanded rows.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `open` is the trigger, not an input
   useEffect(() => {
     triggerResize()
   }, [open, triggerResize])

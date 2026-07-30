@@ -102,6 +102,7 @@ const EthereumConnected: React.FC = () => {
   // the post-paint pass, returning to this screen (assets already cached) measures
   // before layout settles and the modal keeps the shorter height, clipping the
   // actions below the fold.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `isLoading` and `totalBalanceUsd` are re-measure triggers, not inputs — see above
   useEffect(() => {
     context.triggerResize()
     const id = requestAnimationFrame(() => context.triggerResize())

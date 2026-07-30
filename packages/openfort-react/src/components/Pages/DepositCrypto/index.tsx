@@ -28,6 +28,7 @@ const DepositCrypto = () => {
   const { triggerResize } = useOpenfort()
   const route = useDepositRoute('crypto')
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the route fields are re-measure triggers, not inputs — resolving an address and moving through the deposit states swaps in differently sized blocks
   useEffect(() => {
     triggerResize()
   }, [route.receiverAddress, route.loading, route.status, triggerResize])

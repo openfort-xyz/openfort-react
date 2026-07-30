@@ -37,6 +37,7 @@ const Loading: React.FC = () => {
   const [retryCount, setRetryCount] = React.useState(0)
   const timedOut = useTimedOut(LOADING_TIMEOUT_MS)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `retryCount` is the poll trigger from the interval below, not an input — it re-evaluates the routing decision while the SDK settles
   useEffect(() => {
     if (isFirstFrame) return
 
@@ -56,7 +57,19 @@ const Loading: React.FC = () => {
       if (!walletConfig) setRoute({ route: routes.CONNECTORS, connectType: 'connect' })
       else setRoute(routes.LOAD_WALLETS)
     } else setRoute(routes.CONNECTED)
-  }, [embeddedState, isLoadingAccounts, isLoading, user, address, needsRecovery, isFirstFrame, retryCount])
+  }, [
+    embeddedState,
+    isLoadingAccounts,
+    isLoading,
+    user,
+    address,
+    needsRecovery,
+    isFirstFrame,
+    retryCount,
+    bridgeConnected,
+    walletConfig,
+    setRoute,
+  ])
 
   // Retry every 250ms
   useEffect(() => {
@@ -68,7 +81,8 @@ const Loading: React.FC = () => {
 
   useEffect(() => {
     // UX: Wait a bit before showing the next page
-    setTimeout(() => setIsFirstFrame(false), 400)
+    const timer = setTimeout(() => setIsFirstFrame(false), 400)
+    return () => clearTimeout(timer)
   }, [])
 
   if (timedOut) return <NotFoundFallback />

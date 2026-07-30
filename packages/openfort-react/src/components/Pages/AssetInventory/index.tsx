@@ -214,11 +214,12 @@ const AssetInventory = () => {
 
   useEffect(() => {
     if (!isBalancesLoading) triggerResize()
-  }, [isBalancesLoading])
+  }, [isBalancesLoading, triggerResize])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `showDetails` is the trigger — expanding the details panel changes the page height
   useEffect(() => {
     triggerResize()
-  }, [showDetails])
+  }, [showDetails, triggerResize])
 
   const tokens = (multiChain ? data : null) ?? []
 

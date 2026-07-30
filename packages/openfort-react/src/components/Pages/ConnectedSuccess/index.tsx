@@ -10,10 +10,11 @@ const ConnectedSuccess: React.FC = () => {
 
   // hide on connect
   useEffect(() => {
-    setTimeout(() => {
+    const timer = setTimeout(() => {
       setOpen(false)
     }, 1000)
-  }, [])
+    return () => clearTimeout(timer)
+  }, [setOpen])
 
   return (
     <PageContent>
