@@ -102,6 +102,13 @@ export const scaffoldProject = async ({
 
   fs.copySync(templateSrcDir, targetDir);
 
+  const npmSafeGitignore = path.join(targetDir, "gitignore");
+  if (fs.existsSync(npmSafeGitignore)) {
+    fs.moveSync(npmSafeGitignore, path.join(targetDir, ".gitignore"), {
+      overwrite: true,
+    });
+  }
+
   const pkgPath = path.join(targetDir, "package.json");
   if (fs.existsSync(pkgPath)) {
     const pkg = fs.readJsonSync(pkgPath) as Record<string, unknown>;

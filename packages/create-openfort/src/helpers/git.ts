@@ -79,6 +79,10 @@ export const initializeGit = async (projectDir: string) => {
       initialValue: false,
     });
 
+    if (p.isCancel(overwriteGit)) {
+      p.cancel("Git initialization cancelled.");
+      return;
+    }
     if (!overwriteGit) {
       spinner.info("Skipping Git initialization.");
       return;
@@ -94,6 +98,10 @@ export const initializeGit = async (projectDir: string) => {
       )} "${dirName}" is already in a git worktree. Would you still like to initialize a new git repository in this directory?`,
       initialValue: false,
     });
+    if (p.isCancel(initializeChildGitRepo)) {
+      p.cancel("Git initialization cancelled.");
+      return;
+    }
     if (!initializeChildGitRepo) {
       spinner.info("Skipping Git initialization.");
       return;
@@ -119,18 +127,36 @@ export const initializeGit = async (projectDir: string) => {
         cwd: projectDir,
       });
     }
+    const secretFiles = [".env", "frontend/.env", "backend/.env"].filter(
+      (file) => fs.existsSync(path.join(projectDir, file)),
+    );
+    if (secretFiles.length > 0) {
+      try {
+        await Promise.all(
+          secretFiles.map((file) =>
+            execa("git", ["check-ignore", "--quiet", "--", file], {
+              cwd: projectDir,
+            }),
+          ),
+        );
+      } catch {
+        throw new Error(
+          `Refusing to stage generated credentials: ensure ${secretFiles.join(", ")} are covered by .gitignore.`,
+        );
+      }
+    }
     await execa("git", ["add", "."], { cwd: projectDir });
     spinner.succeed(
       `${chalk.green("Successfully initialized and staged")} ${chalk.green.bold(
         "git",
       )}\n`,
     );
-  } catch {
-    // Safeguard, should be unreachable
+  } catch (error) {
     spinner.fail(
       `${chalk.bold.red(
         "Failed:",
       )} could not initialize git. Update git to the latest version!\n`,
     );
+    throw error;
   }
 };

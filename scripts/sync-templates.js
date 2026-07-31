@@ -21,7 +21,7 @@ const BACKEND_TEMPLATE_DIR = join(
 );
 
 // Templates to sync (excluding betterauth and supabase as they might not be in create-openfort)
-const TEMPLATES_TO_SYNC = ['firebase', 'headless', 'openfort-ui'];
+const TEMPLATES_TO_SYNC = ['firebase', 'headless', 'openfort-ui', 'solana-headless'];
 const BACKEND_REPO_URL = 'https://github.com/openfort-xyz/openfort-backend-quickstart.git';
 
 console.log('🔄 Syncing quickstart templates to create-openfort...\n');
@@ -57,19 +57,29 @@ for (const template of TEMPLATES_TO_SYNC) {
       rmSync(resolvedTarget, { recursive: true, force: true });
     }
 
-    // Copy the quickstart to templates, excluding node_modules, dist, and .env files
+    // Preserve example configuration while excluding actual local environment files.
     execFileSync(
       'rsync',
       [
         '-av',
         '--exclude=node_modules',
         '--exclude=dist',
-        '--exclude=.env*',
+        '--exclude=.env',
+        '--exclude=.env.local',
         `${resolvedSource}/`,
         `${resolvedTarget}/`
       ],
       { stdio: 'pipe' }
     );
+
+    // npm strips files named .gitignore from package payloads. Ship it under
+    // an npm-safe name; the scaffolder restores the leading dot.
+    const dotGitignore = join(resolvedTarget, '.gitignore');
+    const npmSafeGitignore = join(resolvedTarget, 'gitignore');
+    if (existsSync(dotGitignore)) {
+      writeFileSync(npmSafeGitignore, readFileSync(dotGitignore));
+      rmSync(dotGitignore);
+    }
 
     // The quickstart and the template live in the same pnpm workspace, so the
     // template needs its own package name. The CLI overwrites it with the

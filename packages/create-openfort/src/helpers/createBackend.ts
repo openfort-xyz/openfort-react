@@ -30,6 +30,12 @@ export const createBackend = async ({
 
     // Copy backend template
     fs.copySync(backendTemplateDir, backendDir);
+    const npmSafeGitignore = path.join(backendDir, "gitignore");
+    if (fs.existsSync(npmSafeGitignore)) {
+      fs.moveSync(npmSafeGitignore, path.join(backendDir, ".gitignore"), {
+        overwrite: true,
+      });
+    }
 
     // Read .env.example
     const envExamplePath = path.join(backendDir, ".env.example");

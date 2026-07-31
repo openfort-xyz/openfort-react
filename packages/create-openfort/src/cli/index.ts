@@ -397,6 +397,10 @@ export const runCli = async (): Promise<CliResults> => {
         initialValue: true,
       });
 
+      if (p.isCancel(shouldContinue)) {
+        p.cancel("Scaffolding cancelled.");
+        process.exit(0);
+      }
       if (!shouldContinue) {
         logger.info("Exiting...");
         process.exit(0);
