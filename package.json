@@ -7,11 +7,13 @@
   "scripts": {
     "preinstall": "pnpx only-allow pnpm",
     "postinstall": "[ -n \"$CI\" ] || { git config --unset core.hooksPath 2>/dev/null || true; simple-git-hooks && ./.husky/install_gitleaks.sh; }",
+    "verify": "pnpm check:audit && pnpm check:repo && pnpm check && pnpm build && pnpm build:cli && pnpm check:types && pnpm test:types && pnpm test:cov && pnpm knip --production && pnpm test:build && pnpm test:env && pnpm size",
     "check": "biome check",
+    "check:repo": "sherif --fail-on-warnings --ignore-package playground --ignore-package 'quickstart-*' --ignore-package openfort-betterauth --ignore-package '@openfort-betterauth/*'",
     "scan:secrets": "./.husky/run_gitleaks.sh",
     "check:fix": "biome check --write --unsafe",
     "check:types": "tsc --noEmit -p packages/openfort-react/tsconfig.check.json",
-    "check:unused": "knip",
+    "check:unused": "knip --no-config-hints",
     "check:audit": "pnpm audit --ignore-registry-errors",
     "check:quickstarts": "pnpm --filter quickstart-headless check",
     "check:all": "pnpm check && pnpm check:types && pnpm check:unused && pnpm check:audit",
@@ -34,6 +36,7 @@
     "build:openfort-ui": "cd examples/quickstarts/openfort-ui && pnpm build",
     "build:supabase": "cd examples/quickstarts/supabase && pnpm build",
     "build:betterauth": "cd examples/quickstarts/betterauth && pnpm build",
+    "build:docs": "typedoc --json docs/spec.json",
     "build:playground": "pnpm build && pnpm --filter playground build",
     "build:examples": "pnpm build && pnpm build:headless && pnpm build:openfort-ui && pnpm build:firebase && pnpm build:supabase && pnpm build:betterauth && pnpm --filter playground build",
     "build:ci": "pnpm -r run build",
@@ -45,6 +48,9 @@
     "test:types": "pnpm --filter @openfort/react test:types",
     "test:cov": "pnpm --filter @openfort/react test:cov",
     "test:cli": "pnpm --filter create-openfort test",
+    "test:env": "pnpm test:env:tsc && pnpm test:env:node",
+    "test:env:tsc": "pnpm --filter test-tsc test",
+    "test:env:node": "pnpm --filter test-node test",
     "test:e2e": "pnpm --filter playground test",
     "test:ui": "pnpm --filter playground test:ui",
     "test:debug": "pnpm --filter playground test:debug"
@@ -52,7 +58,7 @@
   "devDependencies": {
     "@arethetypeswrong/cli": "0.18.5",
     "@babel/core": "^7.28.5",
-    "@biomejs/biome": "^2.2.4",
+    "@biomejs/biome": "^2.4.16",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.7",
     "@playwright/test": "^1.61.0",
@@ -60,9 +66,11 @@
     "knip": "^5.64.0",
     "publint": "0.3.22",
     "rollup": "^2.80.0",
+    "sherif": "1.13.0",
     "simple-git-hooks": "^2.13.1",
     "size-limit": "13.0.2",
-    "typescript": "^5.0.4",
+    "typedoc": "0.28.20",
+    "typescript": "^5.9.3",
     "typescript-plugin-styled-components": "^2.0.0",
     "wagmi": "^3.6.16"
   },
@@ -80,7 +88,7 @@
       "@tanstack/react-query": "^5.99.2",
       "@tanstack/query-core": "^5.99.2",
       "use-sync-external-store": "^1.6.0",
-      "typescript": "^5.0.4",
+      "typescript": "^5.9.3",
       "hono": ">=4.12.25",
       "protobufjs": ">=8.6.0",
       "follow-redirects": ">=1.16.0",
@@ -129,21 +137,57 @@
   },
   "knip": {
     "workspaces": {
+      ".": {
+        "entry": [
+          "scripts/*.{js,mjs}!",
+          "typedoc.json!"
+        ]
+      },
       "packages/openfort-react": {
         "entry": [
+          "src/index.ts!",
+          "src/ethereum/index.ts!",
+          "src/solana/index.ts!",
+          "src/wagmi/index.ts!",
+          "src/internal/index.ts!",
+          "scripts/*.mjs!",
           "src/**/*.test-d.ts"
+        ],
+        "ignoreBinaries": [
+          "rollup"
+        ],
+        "ignore": [
+          "src/__tests__/**"
+        ]
+      },
+      "environments/node": {
+        "entry": [
+          "esm.mjs!"
+        ],
+        "ignoreDependencies": [
+          "@openfort/react",
+          "@tanstack/react-query",
+          "react",
+          "react-dom",
+          "viem",
+          "wagmi"
+        ]
+      },
+      "environments/tsc": {
+        "entry": [
+          "index.tsx!"
         ]
       }
     },
+    "ignoreWorkspaces": [
+      "examples/**"
+    ],
+    "ignoreExportsUsedInFile": true,
     "ignore": [
       "packages/openfort-react/rollup.config.dev.js",
       "packages/openfort-react/rollup.config.prod.js",
       "packages/openfort-react/rollup.use-client.js",
-      "packages/create-openfort/template/**",
-      "examples/playground/src/components/ui/**",
-      "examples/playground/tests/auth/auth.setup.solana.ts",
-      "examples/playground/tests/auth/auth.setup.evm.ts",
-      "examples/playground/tests/anvil/**"
+      "packages/create-openfort/template/**"
     ],
     "ignoreDependencies": [
       "@solana/kit",
