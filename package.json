@@ -175,6 +175,7 @@
       },
       "environments/tsc": {
         "entry": [
+          "check.mjs!",
           "index.tsx!"
         ]
       }
