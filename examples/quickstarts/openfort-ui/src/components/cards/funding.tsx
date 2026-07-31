@@ -49,7 +49,12 @@ export const Funding = () => {
               </option>
             ))}
           </select>
-          <input className={inputClass} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input
+            className={inputClass}
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
           <button type="button" className="btn" onClick={run} disabled={!address || !isAvailable}>
             Get deposit address
           </button>

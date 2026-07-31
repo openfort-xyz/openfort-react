@@ -22,9 +22,7 @@ export const auth = betterAuth({
     level: 'debug',
     log: console.log,
   },
-  trustedOrigins: process.env.FRONTEND_URL
-    ? [process.env.FRONTEND_URL]
-    : ['http://localhost:3000'],
+  trustedOrigins: process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : ['http://localhost:3000'],
   plugins: [
     bearer(),
     openfort({
