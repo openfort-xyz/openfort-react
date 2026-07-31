@@ -21,6 +21,27 @@ minimumReleaseAgeExclude:
 # alone would let through.
 trustPolicy: no-downgrade
 
+# Versions that `trustPolicy: no-downgrade` rejects even though the lockfile
+# pins them deliberately. Each one published without trust evidence after an
+# earlier release carried some, which stops every install that runs the
+# resolution step — adding a dependency, bumping one, or any Dependabot PR.
+# The exclusion is scoped to the exact version, so a future release re-enters
+# the trust check and a genuinely tampered publish still fails the install.
+# Drop an entry as soon as the chain that pulls it moves to a signed release.
+trustPolicyExclude:
+  # wagmi > @wagmi/connectors > @walletconnect/ethereum-provider >
+  # @walletconnect/logger > pino. Earlier slow-redact releases used a trusted
+  # publisher; 0.3.2 has none.
+  - "slow-redact@0.3.2"
+  # wagmi > @wagmi/connectors > @walletconnect/ethereum-provider >
+  # @walletconnect/utils > @walletconnect/relay-auth, which pins this exact
+  # version. Earlier @noble/curves releases carried a provenance attestation;
+  # 1.8.0 has none.
+  - "@noble/curves@1.8.0"
+  # Pinned by the same @walletconnect/relay-auth, and missing the provenance
+  # attestation that earlier @noble/hashes releases carried.
+  - "@noble/hashes@1.7.0"
+
 # pnpm 10 blocks `preinstall`, `install` and `postinstall` scripts of
 # dependencies unless they are listed here. The empty list is the explicit,
 # greppable statement that no dependency in this workspace may run one.
