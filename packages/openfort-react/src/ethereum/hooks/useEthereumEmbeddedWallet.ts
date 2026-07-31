@@ -61,16 +61,18 @@ function buildConnectedWallet(
 
 async function buildEthereumProvider({
   client,
-  walletConfig,
+  ethereumRpcUrls,
 }: {
   client: Openfort
-  walletConfig: ReturnType<typeof useOpenfortConfig>['walletConfig']
+  ethereumRpcUrls:
+    | NonNullable<NonNullable<ReturnType<typeof useOpenfortConfig>['walletConfig']>['ethereum']>['rpcUrls']
+    | undefined
 }): Promise<OpenfortEmbeddedEthereumWalletProvider> {
   // Provider construction can race the strategy initialization during wallet
   // creation. Pass configured RPCs here because openfort-js memoizes the first
   // provider it creates for the session.
   const provider = await client.embeddedWallet.getEthereumProvider({
-    chains: walletConfig?.ethereum?.rpcUrls,
+    chains: ethereumRpcUrls,
   })
   // Ensure the current account is authorized on the provider.
   // Without this, signing after password recovery can fail with

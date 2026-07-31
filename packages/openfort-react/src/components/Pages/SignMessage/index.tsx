@@ -1,7 +1,7 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { UnsupportedOperationError } from '../../../errors/operation.js'
 import { WalletNotConnectedError } from '../../../errors/wallet.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
@@ -52,27 +52,6 @@ const SignMessage = () => {
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [signature, setSignature] = useState<string | null>(null)
-  const settledRef = useRef(false)
-  const mountedRef = useRef(false)
-
-  // Reject the pending request if the screen unmounts before signing (the user
-  // closed the modal or navigated away). React StrictMode invokes effect cleanup
-  // on a dev-only synchronous remount, so defer the reject to a microtask: the
-  // immediate remount flips mountedRef back to true and cancels the spurious
-  // "User rejected" that would otherwise fire while the wallet UI is still open.
-  useEffect(() => {
-    mountedRef.current = true
-    const request = signRequest
-    return () => {
-      mountedRef.current = false
-      queueMicrotask(() => {
-        if (!mountedRef.current && !settledRef.current) {
-          request?.reject(new Error('User rejected the signature request'))
-        }
-      })
-    }
-  }, [signRequest])
-
   // Content height changes between the views; re-measure.
   useEffect(() => {
     triggerResize()
@@ -120,7 +99,6 @@ const SignMessage = () => {
         ) as string
       }
 
-      settledRef.current = true
       signRequest.resolve(signed)
       setSignature(signed)
       setSigning(false)

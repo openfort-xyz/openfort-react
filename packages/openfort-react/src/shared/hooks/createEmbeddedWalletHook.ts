@@ -79,7 +79,7 @@ type EmbeddedWalletHookConfig<TWallet extends { address: string }, TProvider, TO
   buildProvider: (parameters: {
     client: Openfort
     account: EmbeddedAccount
-    walletConfig: OpenfortWalletConfig | undefined
+    ethereumRpcUrls: NonNullable<OpenfortWalletConfig['ethereum']>['rpcUrls'] | undefined
   }) => Promise<TProvider>
   /** Maps this chain's accounts to the `wallets` list the hook exposes. */
   buildWallets: (parameters: {
@@ -139,6 +139,7 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
     const setWalletStatus = useOpenfortCore((s) => s.setWalletStatus)
     const { walletConfig } = useOpenfortConfig()
+    const ethereumRpcUrls = walletConfig?.ethereum?.rpcUrls
     const { chainType: routedChainType } = useOpenfortRouting()
 
     const { buildAccountRequest, resultProps } = useChainBindings(options)
@@ -155,8 +156,8 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     accountsRef.current = accounts
 
     const getProvider = useCallback(
-      (account: EmbeddedAccount): Promise<TProvider> => buildProvider({ client, account, walletConfig }),
-      [client, walletConfig]
+      (account: EmbeddedAccount): Promise<TProvider> => buildProvider({ client, account, ethereumRpcUrls }),
+      [client, ethereumRpcUrls]
     )
 
     const wallets = useMemo(

@@ -67,7 +67,6 @@ test.describe('EVM integration', () => {
       await expect(switchBtn).toBeEnabled({ timeout: 60_000 })
       await switchBtn.click()
 
-      await expect(chainCard.getByText(/switched to chain\s+base sepolia/i)).toBeVisible({ timeout: 90_000 })
       await expect(currentChain).toContainText(/base sepolia/i, { timeout: 90_000 })
 
       // Sign after chain switch

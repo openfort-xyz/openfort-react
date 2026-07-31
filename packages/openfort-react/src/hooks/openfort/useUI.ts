@@ -3,7 +3,7 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import React from 'react'
 import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types.js'
-import { useOpenfortForms, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
+import { useOpenfort, useOpenfortForms, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
@@ -80,6 +80,7 @@ function isAccountId(id: string): boolean {
  */
 export function useUI() {
   const { open, setOpen, setRoute, setConnector, connector, chainType } = useOpenfortRouting()
+  const { signRequest, setSignRequest } = useOpenfort()
   const { setSendForm } = useOpenfortForms()
   const isLoading = useOpenfortCore((s) => s.isLoading)
   const user = useOpenfortCore((s) => s.user)
@@ -151,7 +152,11 @@ export function useUI() {
   return {
     isOpen: open,
     open: () => defaultOpen(),
-    close: () => setOpen(false),
+    close: () => {
+      signRequest?.reject(new Error('User rejected the signature request'))
+      setSignRequest(null)
+      setOpen(false)
+    },
     setIsOpen: setOpen,
 
     openProfile: () => gotoAndOpen(routes.CONNECTED),

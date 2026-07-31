@@ -9,7 +9,7 @@ import { logger } from '../../utils/logger.js'
 import Modal from '../Common/Modal/index.js'
 import { ConnectKitThemeProvider } from '../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
 import { routes, type SetRouteOptions } from '../Openfort/types.js'
-import { useOpenfortConfig, useOpenfortRouting, useOpenfortTheme } from '../Openfort/useOpenfort.js'
+import { useOpenfort, useOpenfortConfig, useOpenfortRouting, useOpenfortTheme } from '../Openfort/useOpenfort.js'
 import { chainPrefixedPages, defaultConnectedRoute, sharedPages } from './pageRegistry.js'
 
 type ValueOf<T> = T[keyof T]
@@ -23,6 +23,7 @@ const ConnectModal: React.FC<{
   lang?: Languages
 }> = ({ mode = 'auto', theme = 'auto', customTheme = customThemeDefault, lang = 'en-US' }) => {
   const routing = useOpenfortRouting()
+  const { signRequest, setSignRequest } = useOpenfort()
   const { chains, uiConfig } = useOpenfortConfig()
   const themeControls = useOpenfortTheme()
   const user = useOpenfortCore((s) => s.user)
@@ -61,10 +62,11 @@ const ConnectModal: React.FC<{
     }
     const wasConnected = prevIsConnectedRef.current
     prevIsConnectedRef.current = isConnected
-    if (!openedConnectedRef.current && !wasConnected && isConnected && routing.open) {
+    const hasPendingSignature = routing.route.route === routes.SIGN_MESSAGE && signRequest !== null
+    if (!hasPendingSignature && !openedConnectedRef.current && !wasConnected && isConnected && routing.open) {
       routing.setOpen(false)
     }
-  }, [isConnected, routing.open, routing.setOpen])
+  }, [isConnected, routing.open, routing.route.route, routing.setOpen, signRequest])
 
   //if chain is unsupported we enforce a "switch chain" prompt
   const closeable = !(uiConfig.enforceSupportedChains && isConnected && !chainIsSupported)
@@ -83,6 +85,8 @@ const ConnectModal: React.FC<{
   }, [effectivePageId, route, routing.setRoute])
 
   function hide() {
+    signRequest?.reject(new Error('User rejected the signature request'))
+    setSignRequest(null)
     routing.setOpen(false)
   }
 

@@ -90,7 +90,11 @@ export class DashboardPage {
 
     const confirmBtn = this.page.getByRole('button', { name: /sign and continue/i })
     await expect(confirmBtn).toBeVisible({ timeout: 30_000 })
-    await confirmBtn.click()
+    // This modal screen can be replaced during connection reconciliation. A
+    // trusted forced click targets the current button without waiting on that
+    // transient layout stability.
+    await confirmBtn.click({ force: true })
+    await expect(this.page.getByRole('button', { name: /^waiting/i })).toBeVisible({ timeout: 30_000 })
 
     try {
       await expect(this.page.getByText(/message signed/i)).toBeVisible({ timeout: 120_000 })

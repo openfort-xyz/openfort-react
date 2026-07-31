@@ -17,13 +17,14 @@ test.describe('Dashboard regression - refresh persistence', () => {
     // Switch to Polygon Amoy (different from default Base Sepolia)
     const target = 'Polygon Amoy'
     const btn = chainCard.getByRole('button', { name: new RegExp(`^switch to\\s+${escapeRegExp(target)}$`, 'i') })
-    if (!(await btn.isDisabled().catch(() => false))) {
+    const requiresSwitch = !(await btn.isDisabled().catch(() => false))
+    if (requiresSwitch) {
       await btn.click()
+      await expect(chainCard.getByText(new RegExp(`^switched to chain\\s+${escapeRegExp(target)}$`, 'i'))).toBeVisible({
+        timeout: 90_000,
+      })
     }
 
-    await expect(chainCard.getByText(new RegExp(`^switched to chain\\s+${escapeRegExp(target)}$`, 'i'))).toBeVisible({
-      timeout: 90_000,
-    })
     await expect(currentChain).toContainText(/polygon amoy/i, { timeout: 90_000 })
 
     // Reload
