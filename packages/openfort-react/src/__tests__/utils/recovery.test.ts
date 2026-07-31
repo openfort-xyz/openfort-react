@@ -1,6 +1,7 @@
 import { RecoveryMethod } from '@openfort/openfort-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { OpenfortReactErrorType } from '../../errors/index.js'
+import { handleOtpRecoveryError } from '../../shared/utils/otpError.js'
 import { buildRecoveryParams } from '../../shared/utils/recovery.js'
 
 const BASE_CONFIG = {
@@ -82,17 +83,20 @@ describe('buildRecoveryParams', () => {
       })
     })
 
-    it('throws AUTHENTICATION_ERROR when OTP_REQUIRED', async () => {
+    it('preserves OTP_REQUIRED as a typed, classifiable recovery error', async () => {
       mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 'OTP_REQUIRED' }), { status: 401 }))
 
-      await expect(
-        buildRecoveryParams(
-          { recoveryMethod: RecoveryMethod.AUTOMATIC },
-          { ...BASE_CONFIG, walletConfig: walletConfig as never }
-        )
-      ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.AUTHENTICATION_ERROR,
+      const operation = buildRecoveryParams(
+        { recoveryMethod: RecoveryMethod.AUTOMATIC },
+        { ...BASE_CONFIG, walletConfig: walletConfig as never }
+      )
+
+      await expect(operation).rejects.toMatchObject({
+        name: 'OtpRequiredError',
+        type: OpenfortReactErrorType.WALLET_ERROR,
       })
+      const error = await operation.catch((cause: unknown) => cause)
+      expect(handleOtpRecoveryError(error, true)).toMatchObject({ isOTPRequired: true })
     })
 
     it('throws WALLET_ERROR on other non-ok responses', async () => {

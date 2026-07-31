@@ -51,10 +51,6 @@ export function createEthereumEmbeddedStrategy(walletConfig: OpenfortWalletConfi
       return firstEmbeddedAddress(state.embeddedAccounts, ChainTypeEnum.EVM)
     },
 
-    getConnectRoutes() {
-      return ['embedded']
-    },
-
     getConnectors() {
       return []
     },

@@ -37,10 +37,6 @@ export function createEthereumBridgeStrategy(
       return bridge.account.address ?? undefined
     },
 
-    getConnectRoutes() {
-      return ['embedded', 'external-wallets']
-    },
-
     getConnectors() {
       return connectors
     },

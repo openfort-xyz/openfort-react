@@ -201,7 +201,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
             status: 'awaiting-input',
           })
 
-          client.auth.requestEmailVerification({
+          await client.auth.requestEmailVerification({
             email: options.email,
             redirectUrl: buildCallbackUrl({
               email: options.email,

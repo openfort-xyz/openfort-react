@@ -45,10 +45,6 @@ export function createSolanaEmbeddedStrategy(
       return firstEmbeddedAddress(state.embeddedAccounts, ChainTypeEnum.SVM)
     },
 
-    getConnectRoutes() {
-      return ['embedded']
-    },
-
     getConnectors() {
       return []
     },

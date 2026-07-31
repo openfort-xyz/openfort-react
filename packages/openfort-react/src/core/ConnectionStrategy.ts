@@ -19,8 +19,6 @@ export interface ConnectionStrategyState {
   embeddedState?: EmbeddedState
 }
 
-export type ConnectRoute = 'embedded' | 'external-wallets'
-
 export interface ConnectionStrategy {
   readonly kind: 'bridge' | 'embedded'
   readonly chainType: ChainTypeEnum
@@ -28,8 +26,6 @@ export interface ConnectionStrategy {
   isConnected(state: ConnectionStrategyState): boolean
   getChainId(): number | undefined
   getAddress(state: ConnectionStrategyState): string | undefined
-  /** When 'external-wallets', ConnectModal may show Connectors page; when 'embedded' only, skip to providers. */
-  getConnectRoutes(): ConnectRoute[]
   /** External wallet connectors; only when wagmi/bridge exists. Otherwise []. */
   getConnectors(): ExternalConnectorProps[]
 

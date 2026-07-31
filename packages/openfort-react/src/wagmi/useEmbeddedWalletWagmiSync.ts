@@ -86,7 +86,9 @@ function useEmbeddedWalletWagmiSync() {
 
     const embeddedConnector = connectors.find((c) => c.id === embeddedWalletId)
     if (embeddedConnector) {
-      disconnectAsync({ connector: embeddedConnector }).catch(() => {})
+      disconnectAsync({ connector: embeddedConnector }).catch((error) => {
+        logger.error('[EmbeddedWalletWagmiSync] Failed to disconnect embedded wallet from wagmi', error)
+      })
     }
   }, [status, activeConnector, connectors, disconnectAsync])
 }

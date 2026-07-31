@@ -2,7 +2,7 @@
 
 import { AnimatePresence } from 'framer-motion'
 import type React from 'react'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 
 import useMeasure from 'react-use-measure'
 import Portal from '../../../components/Common/Portal/index.js'
@@ -58,8 +58,6 @@ const ChainSelectDropdown: React.FC<{
   const themeContext = useThemeContext()
 
   const locales = useLocales()
-
-  const [offset, _setOffset] = useState({ x: 0, y: 0 })
 
   useLockBodyScroll(open)
 
@@ -146,17 +144,13 @@ const ChainSelectDropdown: React.FC<{
             <ResetContainer
               $useTheme={themeContext.theme ?? context.uiConfig.theme}
               $useMode={themeContext.mode ?? context.mode}
-              $customTheme={themeContext.customTheme ?? themeContext.customTheme}
+              $customTheme={themeContext.customTheme ?? context.uiConfig.customTheme}
             >
               <FocusTrap>
                 <DropdownWindow ref={contentRef}>
                   <DropdownOverlay onClick={onClose} />
                   <DropdownContainer
                     ref={innerRef}
-                    style={{
-                      left: offset.x,
-                      top: offset.y,
-                    }}
                     initial={'collapsed'}
                     animate={'open'}
                     exit={'collapsed'}

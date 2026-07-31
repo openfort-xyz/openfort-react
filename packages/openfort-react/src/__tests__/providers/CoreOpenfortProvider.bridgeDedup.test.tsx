@@ -46,7 +46,6 @@ vi.mock('../../core/strategies/EthereumBridgeStrategy', () => ({
     isConnected: () => true,
     getChainId: () => 1,
     getAddress: () => '0xabc',
-    getConnectRoutes: () => ['embedded', 'external-wallets'],
     getConnectors: () => [],
     initProvider: initProviderSpy,
     disconnect: disconnectSpy,

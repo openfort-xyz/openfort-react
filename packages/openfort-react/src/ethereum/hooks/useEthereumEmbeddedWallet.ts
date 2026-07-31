@@ -15,6 +15,7 @@ import type {
 } from '../../shared/hooks/createEmbeddedWalletHook.js'
 import { createEmbeddedWalletHook } from '../../shared/hooks/createEmbeddedWalletHook.js'
 import type { CreateEmbeddedWalletOptions, WalletStatus } from '../../shared/types.js'
+import { logger } from '../../utils/logger.js'
 import type {
   ConnectedEmbeddedEthereumWallet,
   EthereumWalletState,
@@ -210,7 +211,11 @@ function useSyncEthereumWallet(parameters: EthereumSyncParameters): void {
           // wallet. Reconcile to the provider's real account so the displayed wallet
           // and the actual signer always agree — otherwise personal_sign rejects with
           // "personal_sign requires the signer to be the from address".
-          const providerAccounts = (await provider.request({ method: 'eth_accounts' }).catch(() => [])) as string[]
+          const providerAccounts = (await provider.request({ method: 'eth_accounts' }).catch(() => {
+            // Some EIP-1193 providers do not expose eth_accounts until after a request.
+            // The account selected by the SDK remains a safe fallback in that case.
+            return []
+          })) as string[]
           const realAddr = providerAccounts?.[0]?.toLowerCase()
           const resolved =
             (realAddr && accounts.find((acc) => acc.address.toLowerCase() === realAddr)) || accountByAddress
@@ -228,7 +233,11 @@ function useSyncEthereumWallet(parameters: EthereumSyncParameters): void {
             setActiveEmbeddedAddress(resolved.address)
           }
         })
-        .catch(() => {})
+        .catch((error) => {
+          if (cancelled) return
+          const syncError = error instanceof Error ? error : new Error('Failed to synchronize the embedded wallet.')
+          logger.error('[EthereumEmbeddedWallet] Failed to synchronize the active wallet', syncError)
+        })
         .finally(() => {
           if (!cancelled) syncInProgressRef.current = null
         })

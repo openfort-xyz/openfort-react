@@ -114,7 +114,9 @@ type AuthHookOptions = {
  * );
  * ```
  */
-export const useOAuth = (hookOptions: AuthHookOptions = {}) => {
+const DEFAULT_AUTH_HOOK_OPTIONS: AuthHookOptions = {}
+
+export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const [status, setStatus] = useState<BaseFlowState>({

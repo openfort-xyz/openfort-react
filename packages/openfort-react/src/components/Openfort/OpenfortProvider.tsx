@@ -30,8 +30,6 @@ import {
   type RoutingContextValue,
   type ThemeContextValue,
   ThemeStateContext,
-  UIContext,
-  type UIContextValue,
 } from './context.js'
 import {
   type BuyFormState,
@@ -410,40 +408,6 @@ export const OpenfortProvider = ({
     ]
   )
 
-  const connectUIValue: UIContextValue = useMemo(
-    () => ({
-      isOpen: open,
-      openModal: () => setOpen(true),
-      closeModal: () => setOpen(false),
-      currentRoute: route,
-      navigate: typedSetRoute,
-      goBack: setPreviousRoute,
-      routeHistory,
-      theme: ckTheme,
-      mode: safeUiConfig.mode ?? ckMode,
-      setTheme,
-      setMode,
-      forms: { send: sendForm, buy: buyForm },
-      updateSendForm: (updates) => setSendForm((prev) => ({ ...prev, ...updates })),
-      updateBuyForm: (updates) => setBuyForm((prev) => ({ ...prev, ...updates })),
-      triggerResize,
-    }),
-    [
-      open,
-      setOpen,
-      route,
-      typedSetRoute,
-      setPreviousRoute,
-      routeHistory,
-      ckTheme,
-      safeUiConfig.mode,
-      ckMode,
-      sendForm,
-      buyForm,
-      triggerResize,
-    ]
-  )
-
   const innerChildren = (
     <>
       {hasWagmi && (
@@ -490,42 +454,40 @@ export const OpenfortProvider = ({
   )
 
   return (
-    <UIContext.Provider value={connectUIValue}>
-      <OpenfortContext.Provider value={configValue}>
-        <ThemeStateContext.Provider value={themeValue}>
-          <RoutingContext.Provider value={routingValue}>
-            <FormContext.Provider value={formValue}>
-              <CoreOpenfortProvider
-                openfortConfig={{
-                  baseConfiguration: { publishableKey },
-                  shieldConfiguration: walletConfig
-                    ? {
-                        shieldPublishableKey: walletConfig.shieldPublishableKey,
-                        debug: debugModeOptions.shieldDebugMode,
-                        ...(walletConfig.passkeyDisplayName && {
-                          passkeyRpName: walletConfig.passkeyDisplayName,
-                        }),
-                      }
-                    : undefined,
-                  debug: debugModeOptions.openfortCoreDebugMode,
-                  overrides,
-                  thirdPartyAuth,
-                }}
-                onConnect={onConnect}
-                onDisconnect={onDisconnect}
-              >
-                {hasSolana ? (
-                  <Suspense fallback={null}>
-                    <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
-                  </Suspense>
-                ) : (
-                  innerChildren
-                )}
-              </CoreOpenfortProvider>
-            </FormContext.Provider>
-          </RoutingContext.Provider>
-        </ThemeStateContext.Provider>
-      </OpenfortContext.Provider>
-    </UIContext.Provider>
+    <OpenfortContext.Provider value={configValue}>
+      <ThemeStateContext.Provider value={themeValue}>
+        <RoutingContext.Provider value={routingValue}>
+          <FormContext.Provider value={formValue}>
+            <CoreOpenfortProvider
+              openfortConfig={{
+                baseConfiguration: { publishableKey },
+                shieldConfiguration: walletConfig
+                  ? {
+                      shieldPublishableKey: walletConfig.shieldPublishableKey,
+                      debug: debugModeOptions.shieldDebugMode,
+                      ...(walletConfig.passkeyDisplayName && {
+                        passkeyRpName: walletConfig.passkeyDisplayName,
+                      }),
+                    }
+                  : undefined,
+                debug: debugModeOptions.openfortCoreDebugMode,
+                overrides,
+                thirdPartyAuth,
+              }}
+              onConnect={onConnect}
+              onDisconnect={onDisconnect}
+            >
+              {hasSolana ? (
+                <Suspense fallback={null}>
+                  <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
+                </Suspense>
+              ) : (
+                innerChildren
+              )}
+            </CoreOpenfortProvider>
+          </FormContext.Provider>
+        </RoutingContext.Provider>
+      </ThemeStateContext.Provider>
+    </OpenfortContext.Provider>
   )
 }

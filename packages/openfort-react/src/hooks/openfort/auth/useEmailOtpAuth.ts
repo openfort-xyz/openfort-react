@@ -32,7 +32,9 @@ type RequestEmailOtpOptions = {
 
 type UseEmailOtpHookOptions = OpenfortHookOptions<EmailOtpAuthResult> & CreateWalletPostAuthOptions
 
-export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = {}) => {
+const DEFAULT_EMAIL_OTP_HOOK_OPTIONS: UseEmailOtpHookOptions = {}
+
+export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EMAIL_OTP_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const [status, setStatus] = useState<BaseFlowState | { status: 'requesting' }>({

@@ -17,7 +17,6 @@ const FitText = ({
   const [ready, setReady] = React.useState(false)
   const handleReady = useCallback(() => setReady(true), [])
   const { fontSize, ref: textRef } = useFitText({
-    logLevel: 'none',
     maxFontSize,
     minFontSize,
     onStart: handleReady,

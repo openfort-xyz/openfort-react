@@ -20,14 +20,15 @@ export function createOpenfortClient(config: OpenfortSDKConfiguration): Openfort
 }
 
 /**
- * Sets the shared {@link OpenfortClient} instance.
- * Kept for backwards compatibility; the client is provided via React context.
+ * Compatibility no-op retained for callers that previously configured a shared client.
+ * `OpenfortProvider` creates and provides its own client through React context.
  *
- * @param client - Pre-configured Openfort client to store as the default.
+ * @param client - Ignored. Pass configuration to `OpenfortProvider` instead.
+ * @deprecated This function has no effect and will be removed in a future major release.
  *
  * @example
  * ```ts
- * const client = createOpenfortClient({ baseConfiguration: { publishableKey: 'pk' } });
+ * const client = createOpenfortClient({ baseConfiguration: { publishableKey: 'pk_test_123' } });
  * setDefaultClient(client);
  * ```
  */

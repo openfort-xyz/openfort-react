@@ -4,7 +4,7 @@ import { NotAuthenticatedError } from '../../errors/auth.js'
 import { OpenfortConfigError, WalletConfigNotFoundError } from '../../errors/config.js'
 import { UnsupportedOperationError } from '../../errors/operation.js'
 import { MissingParameterError } from '../../errors/validation.js'
-import { RecoveryError } from '../../errors/wallet.js'
+import { OtpRequiredError, RecoveryError } from '../../errors/wallet.js'
 
 type RecoveryOptions = {
   recoveryMethod?: RecoveryMethod
@@ -110,7 +110,10 @@ async function getEncryptionSession(params: {
     }
     if (!response.ok) {
       if (data.error === 'OTP_REQUIRED') {
-        throw new NotAuthenticatedError('OTP verification required.')
+        throw new OtpRequiredError({
+          canRequestOtp: !!(walletConfig.requestWalletRecoverOTP || walletConfig.requestWalletRecoverOTPEndpoint),
+          cause: new Error('OTP_REQUIRED'),
+        })
       }
       const errMsg =
         typeof (data.error ?? data.message) === 'string'

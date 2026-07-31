@@ -281,6 +281,13 @@ const RecoverAutomaticWallet = ({
   const ensName = identity.status === 'success' ? identity.name : undefined
   const walletDisplay = ensName ?? truncateEthAddress(wallet.address)
   const [canSendOtp, setCanSendOtp] = useState(true)
+  const mountedRef = useRef(true)
+
+  useEffect(() => {
+    return () => {
+      mountedRef.current = false
+    }
+  }, [])
 
   useEffect(() => {
     if (canSendOtp) return
@@ -308,15 +315,27 @@ const RecoverAutomaticWallet = ({
     [chainType, wallet, baseCtx, setRoute]
   )
 
-  const handleResendClick = useCallback(() => {
-    setOtpStatus('send-otp')
-    setCanSendOtp(false)
-  }, [])
+  const handleResendClick = useCallback(async () => {
+    if (!canSendOtp || otpStatus === 'sending-otp') return
+    setOtpStatus('sending-otp')
+    try {
+      const response = await requestOTP()
+      if (!mountedRef.current) return
+      setOtpResponse(response)
+      setCanSendOtp(false)
+      setOtpStatus('idle')
+    } catch (err) {
+      if (!mountedRef.current) return
+      logger.log('Error requesting OTP for wallet recovery', err)
+      setError(err instanceof OpenfortError ? err.message : 'Failed to send recovery code')
+      setOtpStatus('error')
+    }
+  }, [canSendOtp, otpStatus, requestOTP])
 
-  const isResendDisabled = !canSendOtp || otpStatus === 'sending-otp' || otpStatus === 'send-otp'
+  const isResendDisabled = !canSendOtp || otpStatus === 'sending-otp'
   const sendButtonText = useMemo(() => {
-    if (!canSendOtp) return 'Code Sent!'
     if (otpStatus === 'sending-otp') return 'Sending...'
+    if (!canSendOtp) return 'Code Sent!'
     return 'Resend Code'
   }, [canSendOtp, otpStatus])
 

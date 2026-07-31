@@ -95,6 +95,8 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       try {
         return (await getEnsAddressAction(config, { name: normalize(name), chainId: 1 })) ?? undefined
       } catch {
+        // ENS resolution is optional metadata; an unavailable resolver is equivalent
+        // to a name with no address and must not prevent wallet connection.
         return undefined
       }
     },
@@ -106,6 +108,8 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       try {
         return (await getEnsNameAction(config, { address: params.address, chainId: 1 })) ?? undefined
       } catch {
+        // Reverse ENS resolution is optional metadata and intentionally degrades to
+        // an absent name when mainnet RPC lookup is unavailable.
         return undefined
       }
     },
@@ -117,6 +121,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       try {
         return (await getEnsAvatarAction(config, { name: normalize(name), chainId: 1 })) ?? undefined
       } catch {
+        // Avatar lookup is optional metadata and intentionally degrades to no avatar.
         return undefined
       }
     },

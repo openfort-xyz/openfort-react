@@ -1,7 +1,7 @@
 'use client'
 
-import { OpenfortError } from '@openfort/openfort-js'
 import { useCallback, useRef } from 'react'
+import { OpenfortError } from '../errors/base.js'
 import { SiweMessageError } from '../errors/connection.js'
 import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
 import { useOpenfortCore } from '../openfort/useOpenfort.js'

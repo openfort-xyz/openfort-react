@@ -12,8 +12,10 @@
  * runtime.
  */
 
+import { SDKConfiguration } from '@openfort/openfort-js'
 import type { Address, SignatureBytes, SignatureDictionary, TransactionSigner } from '@solana/kit'
 import { ApiRequestError } from '../errors/operation.js'
+import { ValidationError } from '../errors/validation.js'
 import { WalletError } from '../errors/wallet.js'
 import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster } from './types.js'
 
@@ -24,10 +26,34 @@ const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
 const SEND_TIMEOUT_MS = 60_000
 
 /** Decimal SOL → lamports, without floating-point loss. */
-function solToLamports(amountSol: number): bigint {
-  const [whole, frac = ''] = amountSol.toString().split('.')
-  const padded = (frac + '0'.repeat(9)).slice(0, 9)
-  return BigInt(`${whole || '0'}${padded}`)
+/** @internal Exported for focused validation tests; not part of a package entry point. */
+export function solToLamports(amountSol: number): bigint {
+  if (!Number.isFinite(amountSol) || amountSol <= 0) {
+    throw new ValidationError('SOL amount must be a positive finite number.')
+  }
+
+  const match = amountSol.toString().match(/^(\d+)(?:\.(\d+))?(?:e([+-]?\d+))?$/i)
+  if (!match) throw new ValidationError('SOL amount is invalid.')
+
+  const digits = `${match[1]}${match[2] ?? ''}`.replace(/^0+/, '') || '0'
+  const decimalPlaces = (match[2]?.length ?? 0) - Number(match[3] ?? 0)
+  const lamportShift = 9 - decimalPlaces
+  let lamports: bigint
+  if (lamportShift >= 0) {
+    lamports = BigInt(digits) * 10n ** BigInt(lamportShift)
+  } else {
+    const divisor = 10n ** BigInt(-lamportShift)
+    const value = BigInt(digits)
+    if (value % divisor !== 0n) {
+      throw new ValidationError('SOL amount cannot be smaller than one lamport.')
+    }
+    lamports = value / divisor
+  }
+
+  if (lamports > 0xffffffffffffffffn) {
+    throw new ValidationError('SOL amount exceeds the maximum Solana token amount.')
+  }
+  return lamports
 }
 
 /** Ed25519 signatures are 64 bytes; trim a trailing recovery byte if one is present. */
@@ -229,9 +255,11 @@ export async function sendSplToken({
 }
 
 /** The Openfort Solana paymaster (Kora) endpoint for a cluster. */
-function koraRpcUrl(cluster: SolanaCluster): string {
+/** @internal Exported for focused configuration tests; not part of a package entry point. */
+export function koraRpcUrl(cluster: SolanaCluster, backendUrl?: string): string {
   const segment = cluster === 'mainnet-beta' ? 'mainnet' : cluster
-  return `https://api.openfort.io/rpc/solana/${segment}`
+  const baseUrl = backendUrl ?? SDKConfiguration.getInstance()?.backendUrl ?? 'https://api.openfort.io'
+  return `${baseUrl.replace(/\/$/, '')}/rpc/solana/${segment}`
 }
 
 type KoraTransferParams = {
@@ -244,6 +272,8 @@ type KoraTransferParams = {
   provider: OpenfortEmbeddedSolanaWalletProvider
   cluster: SolanaCluster
   publishableKey: string
+  /** Openfort API base URL. Defaults to the SDK configuration. */
+  backendUrl?: string
 }
 
 /**
@@ -260,6 +290,7 @@ async function sendViaKora({
   provider,
   cluster,
   publishableKey,
+  backendUrl,
 }: KoraTransferParams): Promise<string> {
   // Kora's request takes a JS number; fail loudly rather than silently corrupt
   // an amount that can't be represented exactly.
@@ -270,7 +301,7 @@ async function sendViaKora({
   const kit = await import('@solana/kit')
   const { KoraClient } = await import('@solana/kora')
 
-  const client = new KoraClient({ rpcUrl: koraRpcUrl(cluster), apiKey: `Bearer ${publishableKey}` })
+  const client = new KoraClient({ rpcUrl: koraRpcUrl(cluster, backendUrl), apiKey: `Bearer ${publishableKey}` })
 
   // 1. Kora's fee-payer signer.
   const { signer_address } = await client.getPayerSigner()
@@ -338,6 +369,8 @@ type SendSolGaslessParams = {
   cluster: SolanaCluster
   /** Project publishable key; sent to the Openfort Solana paymaster (Kora) as a Bearer token. */
   publishableKey: string
+  /** Openfort API base URL. Defaults to the SDK configuration. */
+  backendUrl?: string
 }
 
 /** Send a native SOL transfer with fees sponsored by the Openfort paymaster (Kora). */
@@ -348,6 +381,7 @@ export async function sendSolGasless({
   provider,
   cluster,
   publishableKey,
+  backendUrl,
 }: SendSolGaslessParams): Promise<string> {
   return sendViaKora({
     from,
@@ -357,6 +391,7 @@ export async function sendSolGasless({
     provider,
     cluster,
     publishableKey,
+    backendUrl,
   })
 }
 
@@ -371,6 +406,8 @@ type SendSplTokenGaslessParams = {
   cluster: SolanaCluster
   /** Project publishable key; sent to the Openfort Solana paymaster (Kora) as a Bearer token. */
   publishableKey: string
+  /** Openfort API base URL. Defaults to the SDK configuration. */
+  backendUrl?: string
 }
 
 /** Send an SPL token transfer with fees sponsored by the Openfort paymaster (Kora). */
@@ -382,6 +419,7 @@ export async function sendSplTokenGasless({
   provider,
   cluster,
   publishableKey,
+  backendUrl,
 }: SendSplTokenGaslessParams): Promise<string> {
   return sendViaKora({
     from,
@@ -391,6 +429,7 @@ export async function sendSplTokenGasless({
     provider,
     cluster,
     publishableKey,
+    backendUrl,
   })
 }
 

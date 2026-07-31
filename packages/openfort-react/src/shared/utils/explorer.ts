@@ -62,18 +62,14 @@ const explorerRegistry: Record<ChainTypeEnum, ExplorerUrlBuilder> = {
     const chain = EVM_CHAINS_BY_ID[options.chainId as keyof typeof EVM_CHAINS_BY_ID]
     const explorerUrl = chain?.blockExplorers?.default.url
     if (!explorerUrl) {
-      logger.warn(
-        `No explorer URL known for chain ${options.chainId}. Configure explorerUrls in OpenfortProvider to enable the link.`
-      )
+      logger.warn(`No explorer URL known for chain ${options.chainId}; the explorer link is unavailable.`)
       return ''
     }
     return appendPath(explorerUrl, options)
   },
   [ChainTypeEnum.SVM]: (options) => {
     if (!options.cluster) {
-      logger.warn(
-        'No cluster provided. Configure explorerUrls in OpenfortProvider for better reliability and rate limits.'
-      )
+      logger.warn('No cluster provided; defaulting to the Solana mainnet explorer.')
       return appendPath(SOLANA_EXPLORER_BASE, options)
     }
     const clusterParam =

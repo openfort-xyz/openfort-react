@@ -20,7 +20,8 @@ import { onError, onSuccess } from './hookConsistency.js'
 
 type GrantPermissionsRequest = {
   request: GrantPermissionsParameters
-  sessionKey: Hex
+  /** @deprecated The signer is fully described by `request`; this value is ignored. */
+  sessionKey?: Hex
 }
 
 type GrantPermissionsResult = {
@@ -46,8 +47,7 @@ type GrantPermissionsHookOptions = OpenfortHookOptions<GrantPermissionsHookResul
  *
  * @example
  * ```tsx
- * import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
- * import { useGrantPermissions } from '@openfort/openfort-react';
+ * import { useGrantPermissions } from '@openfort/react';
  *
  * const { grantPermissions, isLoading, isError, error } = useGrantPermissions({
  *   onSuccess: (result) => console.log('Permissions granted:', result),
@@ -57,17 +57,12 @@ type GrantPermissionsHookOptions = OpenfortHookOptions<GrantPermissionsHookResul
  * // Grant permissions to a session key
  * const handleGrantPermissions = async () => {
  *   try {
- *     // Generate a new session key
- *     const sessionKey = generatePrivateKey();
- *     const accountSession = privateKeyToAccount(sessionKey).address;
- *
  *     const result = await grantPermissions({
- *       sessionKey,
  *       request: {
  *         signer: {
  *           type: 'account',
  *           data: {
- *             id: accountSession,
+ *             id: '0x1234567890123456789012345678901234567890',
  *           },
  *         },
  *         expiry: 60 * 60 * 24, // 24 hours
@@ -83,8 +78,7 @@ type GrantPermissionsHookOptions = OpenfortHookOptions<GrantPermissionsHookResul
  *     });
  *
  *     if (result.address) {
- *       console.log('Session created with address:', result.address);
- *       console.log('Session private key:', result.privateKey);
+ *       console.log('Permissions granted by:', result.address);
  *     }
  *   } catch (error) {
  *     console.error('Failed to grant permissions:', error);

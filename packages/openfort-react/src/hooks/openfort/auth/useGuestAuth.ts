@@ -79,7 +79,9 @@ type GuestHookOptions = OpenfortHookOptions<GuestHookResult> & CreateWalletPostA
  * );
  * ```
  */
-export const useGuestAuth = (hookOptions: GuestHookOptions = {}) => {
+const DEFAULT_GUEST_HOOK_OPTIONS: GuestHookOptions = {}
+
+export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)

@@ -126,11 +126,6 @@ export type SolanaSignAllTransactionsRequest = {
  * }
  * ```
  *
- * @example With Kit Signer (from @openfort/react/solana)
- * ```tsx
- * const signer = createTransactionSigner(provider);
- * // Use with @solana/kit
- * ```
  */
 export interface OpenfortEmbeddedSolanaWalletProvider {
   /** Public key of the wallet (Base58 encoded) */

@@ -32,37 +32,24 @@ type RevokePermissionsHookOptions = OpenfortHookOptions<RevokePermissionsHookRes
 /**
  * Hook for revoking permissions to session keys (EIP-7715)
  *
- * This hook manages the creation and authorization of session keys, allowing users to
- * delegate permissions to specific accounts for a limited time. This enables use cases
- * like session-based authentication and gasless transactions within defined scopes.
- * The hook leverages EIP-7715 for permission revocation.
+ * Revokes a previously granted EIP-7715 permission using its permission context.
  *
  * @param hookOptions - Optional configuration with callback functions
  * @returns Current revoke permissions state and actions
  *
  * @example
  * ```tsx
- * import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
- * import { useRevokePermissions } from '@openfort/openfort-react';
+ * import { useRevokePermissions } from '@openfort/react';
  *
  * const { revokePermissions, isLoading, isError, error } = useRevokePermissions({
  *   onSuccess: (result) => console.log('Permissions revoked:', result),
  *   onError: (error) => console.error('Permission revoke failed:', error),
  * });
  *
- * // Revoke Permissions to a session key
+ * // Revoke the permission represented by a session-key permission context.
  * const handleRevokePermissions = async () => {
- *   try {
- *     const sessionKey = '0x...'; // The session key to revoke permissions for
- *
- *     const result = await revokePermissions({
- *       sessionKey,
- *     });
- *
- *     console.log('Revoke result:', result);
- *   } catch (error) {
- *     console.error('Error revoking permissions:', error);
- *   }
+ *   const result = await revokePermissions({ sessionKey: '0x...' });
+ *   if (result.error) console.error(result.error);
  * };
  * ```
  */

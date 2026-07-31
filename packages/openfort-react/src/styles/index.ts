@@ -200,7 +200,49 @@ const globalsDark = css`
 // TODO: Deep-merge theme objects so a partial custom theme keeps the base values
 // it does not specify, rather than replacing the whole object.
 
-let mode = 'auto'
+type ThemeMode = 'light' | 'dark' | 'auto'
+
+/** @internal Pure theme resolution used by ResetContainer and regression tests. */
+export const resolveTheme = ($useTheme?: string, $useMode?: string) => {
+  switch ($useTheme) {
+    case 'web95':
+    case 'retro':
+    case 'soft':
+    case 'minimal':
+    case 'rounded':
+    case 'nouns':
+      return { colors: themes[$useTheme], mode: 'light' as const }
+    case 'midnight':
+      return { colors: themes.midnight, mode: 'dark' as const }
+    default: {
+      const mode: ThemeMode = $useMode === 'light' || $useMode === 'dark' ? $useMode : 'auto'
+      if (mode !== 'auto') return { colors: themes[mode], mode }
+      return {
+        mode,
+        colors: css`
+          @media (prefers-color-scheme: light) {
+            ${themes.light}
+          }
+          @media (prefers-color-scheme: dark) {
+            ${themes.dark}
+          }
+        `,
+      }
+    }
+  }
+}
+
+const globalsForMode = (mode: ThemeMode) => {
+  if (mode === 'light') return globalsLight
+  if (mode === 'dark') return globalsDark
+  return css`
+    ${globalsLight}
+    @media (prefers-color-scheme: dark) {
+      ${globalsDark}
+    }
+  `
+}
+
 export const ResetContainer = styled(motion.div)<{
   $useTheme?: string
   $useMode?: string
@@ -209,62 +251,11 @@ export const ResetContainer = styled(motion.div)<{
   ${themes.default}
 
   ${(props) => {
-    switch (props.$useTheme) {
-      case 'web95':
-        mode = 'light'
-        return themes.web95
-      case 'retro':
-        mode = 'light'
-        return themes.retro
-      case 'soft':
-        mode = 'light'
-        return themes.soft
-      case 'midnight':
-        mode = 'dark'
-        return themes.midnight
-      case 'minimal':
-        mode = 'light'
-        return themes.minimal
-      case 'rounded':
-        mode = 'light'
-        return themes.rounded
-      case 'nouns':
-        mode = 'light'
-        return themes.nouns
-      default:
-        if (props.$useMode === 'light') {
-          mode = 'light'
-          return themes.light
-        } else if (props.$useMode === 'dark') {
-          mode = 'dark'
-          return themes.dark
-        } else {
-          return css`
-            @media (prefers-color-scheme: light) {
-              ${themes.light}
-            }
-            @media (prefers-color-scheme: dark) {
-              ${themes.dark}
-            }
-          `
-        }
-    }
-  }}
-
-  ${(_props) => {
-    switch (mode) {
-      case 'light':
-        return globalsLight
-      case 'dark':
-        return globalsDark
-      default:
-        return css`
-          ${globalsLight}
-          @media (prefers-color-scheme: dark) {
-            ${globalsDark}
-          }
-        `
-    }
+    const resolved = resolveTheme(props.$useTheme, props.$useMode)
+    return css`
+      ${resolved.colors}
+      ${globalsForMode(resolved.mode)}
+    `
   }}
 
   ${(props) => {

@@ -114,7 +114,9 @@ function runConnectWithSiwe(
   })()
 }
 
-export function useWalletAuth(hookOptions: OpenfortHookOptions = {}) {
+const DEFAULT_WALLET_AUTH_HOOK_OPTIONS: OpenfortHookOptions = {}
+
+export function useWalletAuth(hookOptions: OpenfortHookOptions = DEFAULT_WALLET_AUTH_HOOK_OPTIONS) {
   const bridge = useEthereumBridge()
   const client = useOpenfortCore((s) => s.client)
   const updateUser = useOpenfortCore((s) => s.updateUser)

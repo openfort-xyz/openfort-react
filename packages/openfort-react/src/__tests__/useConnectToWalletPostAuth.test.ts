@@ -36,7 +36,7 @@ vi.mock('../utils/logger', () => ({
 }))
 
 vi.mock('../shared/utils/recovery', () => ({
-  buildRecoveryParams: vi.fn().mockResolvedValue({ recoveryMethod: 'AUTOMATIC', encryptionKey: 'mock-key' }),
+  buildRecoveryParams: vi.fn().mockResolvedValue({ recoveryMethod: 'AUTOMATIC', encryptionSession: 'mock-session' }),
 }))
 
 const { useConnectToWalletPostAuth } = await import('../hooks/openfort/auth/useConnectToWalletPostAuth.js')

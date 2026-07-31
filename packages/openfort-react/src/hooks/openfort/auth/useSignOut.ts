@@ -76,7 +76,7 @@ export function useSignOut(hookOptions: OpenfortHookOptions = {}) {
         status: 'loading',
       })
       try {
-        logout()
+        await logout()
         setStatus({
           status: 'success',
         })

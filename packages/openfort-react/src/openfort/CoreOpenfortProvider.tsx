@@ -386,7 +386,9 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
         )
         return undefined
       })
-      .catch((_err) => {})
+      .catch((error) => {
+        logger.error('[CoreProvider] Failed to initialize the connection provider', error)
+      })
       .finally(() => {
         initInProgressRef.current = false
       })
@@ -406,7 +408,9 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   useEffect(() => {
     if (!storeUser || storeEmbeddedState !== EmbeddedState.READY) return
     if (store.getState().embeddedAccounts?.length) return
-    fetchEmbeddedAccounts({ silent: true }).catch(() => {})
+    fetchEmbeddedAccounts({ silent: true }).catch((error) => {
+      logger.error('[CoreProvider] Failed to refresh embedded accounts after authentication', error)
+    })
   }, [storeUser, storeEmbeddedState, store, fetchEmbeddedAccounts])
 
   const { isConnectedWithEmbeddedSigner, setIsConnectedWithEmbeddedSigner, connectingRef } = useEmbeddedStateMachine({

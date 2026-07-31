@@ -181,7 +181,8 @@ export const useConnectToWalletPostAuth = () => {
                 ? embeddedAccountToSolanaUserWallet(autoRecoverableWallet)
                 : embeddedAccountToUserWallet(autoRecoverableWallet),
           }
-        } catch (_err) {
+        } catch (error) {
+          logger.error('Error recovering wallet:', error)
           if (signOutOnError) await signOut()
           return {}
         }
