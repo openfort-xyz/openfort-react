@@ -232,7 +232,9 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
       try {
         const user = await fetchUser(openfort)
         logger.log('Getting user')
-        store.getState().setLinkedAccounts(user.linkedAccounts)
+        // A user with no linked accounts omits the field; the store holds a list
+        // that callers iterate unguarded, so it stays an array either way.
+        store.getState().setLinkedAccounts(user.linkedAccounts ?? [])
         store.getState().setUser(user)
         queryClient.setQueryData(openfortKeys.user(), user)
         return user
