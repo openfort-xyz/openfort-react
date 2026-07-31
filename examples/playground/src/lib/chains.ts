@@ -41,7 +41,10 @@ const BASE_EVM_CHAINS: PlaygroundEvmChain[] = [
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
-    rpcUrl: 'https://rpc-amoy.polygon.technology',
+    // polygon.technology's public Amoy endpoint went dark (empty replies) and the
+    // SDK's provider init retries detectNetwork against it forever, so the wallet
+    // never connects — publicnode matches the other chains' endpoints here.
+    rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com',
     explorerUrl: 'https://amoy.polygonscan.com',
     viemChain: polygonAmoy,
   },

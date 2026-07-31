@@ -104,11 +104,11 @@ export class DashboardPage {
   }
 
   async getCardByTitle(title: string | RegExp) {
-    // Match on the card's title element. Matching on whole-card text is ambiguous:
-    // several cards mention other cards' names in their descriptions.
+    // Match the card title slot, not any text in the card: body copy can
+    // legitimately contain another card's title word.
     const titleLocator = this.page
       .locator('[data-slot="card"]')
-      .filter({ has: this.page.locator('[data-slot="card-title"]').getByText(title) })
+      .filter({ has: this.page.locator('[data-slot="card-title"]', { hasText: title }) })
       .first()
 
     await expect(titleLocator).toBeVisible({ timeout: 10_000 })

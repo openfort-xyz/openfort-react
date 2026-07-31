@@ -9,6 +9,7 @@ import { findEmbeddedAccount } from '../../actions/findEmbeddedAccount.js'
 import { importEmbeddedWallet } from '../../actions/importEmbeddedWallet.js'
 import { setActiveWallet } from '../../actions/setActiveWallet.js'
 import { setRecoveryMethod } from '../../actions/setRecoveryMethod.js'
+import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
 import { useOpenfortConfig, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 import { asOpenfortError } from '../../errors/base.js'
 import { SetActiveWalletError, WalletCreationError, WalletImportError } from '../../errors/wallet.js'
@@ -75,7 +76,11 @@ type EmbeddedWalletHookConfig<TWallet extends { address: string }, TProvider, TO
    */
   normalizeAddress: (address: string) => string
   /** Builds this chain's provider, bound to `account` where the chain needs it. */
-  buildProvider: (parameters: { client: Openfort; account: EmbeddedAccount }) => Promise<TProvider>
+  buildProvider: (parameters: {
+    client: Openfort
+    account: EmbeddedAccount
+    walletConfig: OpenfortWalletConfig | undefined
+  }) => Promise<TProvider>
   /** Maps this chain's accounts to the `wallets` list the hook exposes. */
   buildWallets: (parameters: {
     accounts: EmbeddedAccount[]
@@ -150,8 +155,8 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     accountsRef.current = accounts
 
     const getProvider = useCallback(
-      (account: EmbeddedAccount): Promise<TProvider> => buildProvider({ client, account }),
-      [client]
+      (account: EmbeddedAccount): Promise<TProvider> => buildProvider({ client, account, walletConfig }),
+      [client, walletConfig]
     )
 
     const wallets = useMemo(
