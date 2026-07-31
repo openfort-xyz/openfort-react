@@ -173,4 +173,28 @@ describe('CoreOpenfortProvider — bridge churn dedup', () => {
     await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(2))
     expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 137)
   })
+
+  it('queues a chain change that arrives while initialization is in progress', async () => {
+    let finishFirstInit: (() => void) | undefined
+    initProviderSpy.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          finishFirstInit = resolve
+        })
+    )
+    const result = renderWithBridge(makeBridgeValue({ chainId: 1 }))
+
+    await act(async () => {
+      mockClient._test.setEmbeddedState(EmbeddedState.READY)
+    })
+    await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(1))
+
+    await act(async () => {
+      rerenderWithBridge(result, makeBridgeValue({ chainId: 137 }))
+      finishFirstInit?.()
+    })
+
+    await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(2))
+    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 137)
+  })
 })

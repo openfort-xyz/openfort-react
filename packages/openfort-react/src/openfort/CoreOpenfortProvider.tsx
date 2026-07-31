@@ -269,7 +269,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   const fetchEmbeddedAccounts = useCallback(
     async (options?: { silent?: boolean }) => {
       const seq = ++fetchSeqRef.current
-      if (options?.silent) setSilentRefetchInProgress(true)
+      setSilentRefetchInProgress(options?.silent === true)
       setAccountsPending(true)
       try {
         const accounts = await fetchEmbeddedAccountsFromApi(openfort)
@@ -331,7 +331,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     evmChainId: number | undefined
     feeSponsorshipPolicy: string | undefined
   } | null>(null)
-  const initInProgressRef = useRef(false)
+  const initQueueRef = useRef<Promise<void>>(Promise.resolve())
 
   // Init provider; only fetch accounts when READY (prevents list() before auth is stored)
   useEffect(() => {
@@ -363,40 +363,40 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
       return
     }
 
-    // Prevent concurrent initProvider calls
-    if (initInProgressRef.current) {
-      return
-    }
-
-    initInProgressRef.current = true
     let cancelled = false
-    strategy
-      .initProvider(openfort, walletConfig, evmChainId)
-      .then(() => {
-        if (cancelled) return undefined
+    initQueueRef.current = initQueueRef.current
+      .catch(() => undefined)
+      .then(async () => {
+        if (cancelled) return
+        const latest = lastInitRef.current
+        if (
+          latest &&
+          latest.kind === initKey.kind &&
+          latest.chainType === initKey.chainType &&
+          latest.evmChainId === initKey.evmChainId &&
+          latest.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy
+        ) {
+          return
+        }
+
+        await strategy.initProvider(openfort, walletConfig, evmChainId)
+        if (cancelled) return
         lastInitRef.current = initKey
 
         // Only fetch accounts when authenticated — avoids SessionError on callback pages
         if (store.getState().embeddedState === EmbeddedState.READY) {
-          return fetchEmbeddedAccounts({ silent: true })
+          await fetchEmbeddedAccounts({ silent: true })
+          return
         }
         logger.log(
           '[CoreProvider] initProvider: not fetching accounts, state is',
           EmbeddedState[store.getState().embeddedState]
         )
-        return undefined
       })
       .catch((error) => {
         logger.error('[CoreProvider] Failed to initialize the connection provider', error)
       })
-      .finally(() => {
-        initInProgressRef.current = false
-      })
     return () => {
-      // Don't reset lastInitRef/initInProgressRef here. Bridge churn during wagmi
-      // hydration (walletClient/ENS resolving) recreates the strategy and re-runs
-      // this effect with the same initKey; resetting would defeat the dedup and
-      // re-fire initProvider → repeated /v2/accounts/switch-chain 422s.
       cancelled = true
     }
   }, [openfort, walletConfig, strategy, evmChainId, storeEmbeddedState, store, fetchEmbeddedAccounts])
@@ -404,7 +404,6 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   // On refresh, embeddedState reaches READY before the user is loaded, so
   // fetchEmbeddedAccounts (called inside initProvider) returns empty. Re-fetch
   // once the user becomes available while still in READY state.
-  // returns empty. Re-fetch once user becomes available while already READY.
   useEffect(() => {
     if (!storeUser || storeEmbeddedState !== EmbeddedState.READY) return
     if (store.getState().embeddedAccounts?.length) return
