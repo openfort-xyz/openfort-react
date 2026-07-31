@@ -1,4 +1,3 @@
-import { motion } from 'framer-motion'
 import { css } from 'styled-components'
 import { hexToP3 } from '../utils/p3.js'
 import type { CustomTheme } from './customTheme.js'
@@ -243,7 +242,7 @@ const globalsForMode = (mode: ThemeMode) => {
   `
 }
 
-export const ResetContainer = styled(motion.div)<{
+export const ResetContainer = styled.div<{
   $useTheme?: string
   $useMode?: string
   $customTheme?: CustomTheme

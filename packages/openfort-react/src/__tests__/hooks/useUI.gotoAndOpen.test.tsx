@@ -29,6 +29,7 @@ const setOpen = vi.fn((value: boolean) => {
 const setConnector = vi.fn()
 
 vi.mock('../../components/Openfort/useOpenfort', () => ({
+  useOpenfort: () => ({ signRequest: null, setSignRequest: vi.fn() }),
   useOpenfortRouting: () => ({
     open: state.open,
     setOpen,
