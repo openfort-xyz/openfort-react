@@ -11,9 +11,9 @@ import {
   DEFAULT_EVM_CHAIN,
   getFundingConfigForKey,
   PLAYGROUND_EVM_CHAINS,
-  RPC_URLS,
   SOLANA_CLUSTER,
   SOLANA_DEFAULT_RPC,
+  WALLET_RPC_URLS,
 } from '@/lib/chains'
 
 const defaultWalletConfig: OpenfortWalletConfig = {
@@ -21,7 +21,7 @@ const defaultWalletConfig: OpenfortWalletConfig = {
   chainType: ChainTypeEnum.EVM,
   ethereum: {
     chainId: DEFAULT_EVM_CHAIN.id,
-    rpcUrls: RPC_URLS,
+    rpcUrls: WALLET_RPC_URLS,
     ethereumFeeSponsorshipId: Object.fromEntries(
       PLAYGROUND_EVM_CHAINS.map((c) => [c.id, import.meta.env.VITE_FEE_SPONSORSHIP_ID!])
     ),

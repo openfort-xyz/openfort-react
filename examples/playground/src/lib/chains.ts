@@ -18,10 +18,17 @@ interface PlaygroundEvmChain {
  */
 const FORK_RPC_URL = import.meta.env.VITE_EVM_FORK_RPC_URL
 
-/** Redirects the forked chain's RPC while leaving every other chain on its public endpoint. */
-function applyForkRpcUrl(chains: PlaygroundEvmChain[]): PlaygroundEvmChain[] {
+/**
+ * Fork overrides. Redirects the forked chain's RPC while leaving every other
+ * chain on its public endpoint, and moves the forked chain to the front of the
+ * list — the first entry is wagmi's default chain, so wallet creation and every
+ * default-chain probe land on the forked chain. That keeps a fork run
+ * deterministic and free of any dependency on the other chains' public RPCs.
+ */
+function applyForkOverrides(chains: PlaygroundEvmChain[]): PlaygroundEvmChain[] {
   if (!FORK_RPC_URL) return chains
-  return chains.map((c) => (c.id === baseSepolia.id ? { ...c, rpcUrl: FORK_RPC_URL } : c))
+  const withFork = chains.map((c) => (c.id === baseSepolia.id ? { ...c, rpcUrl: FORK_RPC_URL } : c))
+  return withFork.sort((a, b) => (a.id === baseSepolia.id ? -1 : b.id === baseSepolia.id ? 1 : 0))
 }
 
 // Order matters: the first entry is wagmi's default chain (useChainId when not
@@ -30,7 +37,7 @@ function applyForkRpcUrl(chains: PlaygroundEvmChain[]): PlaygroundEvmChain[] {
 // (a test key rejects mainnet chainIds) and the e2e can still switch *to* Base
 // Sepolia. Base mainnet stays available for the funding deposit demo
 // (funding.targetChain is independent of this order).
-export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = applyForkRpcUrl([
+const BASE_EVM_CHAINS: PlaygroundEvmChain[] = [
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
@@ -61,7 +68,17 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = applyForkRpcUrl([
     explorerUrl: 'https://sepolia.basescan.org',
     viemChain: baseSepolia,
   },
-])
+]
+
+export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = applyForkOverrides(BASE_EVM_CHAINS)
+
+/**
+ * Public RPC endpoints, untouched by the fork override. The embedded signer's
+ * iframe and Openfort's backend resolve these URLs from outside this machine, so
+ * they must always point at reachable public nodes; only in-browser reads follow
+ * `PLAYGROUND_EVM_CHAINS` onto a local fork.
+ */
+export const WALLET_RPC_URLS: Record<number, string> = Object.fromEntries(BASE_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
 
 /**
  * Restrict the EVM chains to those matching the publishable key environment:

@@ -100,6 +100,9 @@ const wagmiChains = PLAYGROUND_EVM_CHAINS.map((c) => c.viemChain) as [
   ...(typeof PLAYGROUND_EVM_CHAINS)[number]['viemChain'][],
 ]
 
+// In-browser transports follow the chain list, including a fork override. The
+// embedded signer does not: `walletConfig.ethereum.rpcUrls` (public endpoints)
+// takes precedence over these transports for the signer's chain map.
 const wagmiTransports = Object.fromEntries(PLAYGROUND_EVM_CHAINS.map((c) => [c.id, http(c.rpcUrl)])) as Record<
   number,
   ReturnType<typeof http>

@@ -64,11 +64,14 @@ export class DashboardPage {
     await expect(truncated).toBeVisible({ timeout: 60_000 })
     await truncated.hover()
 
+    // The tooltip renders the address in more than one node (visible text plus an
+    // assistive copy), so extract the first address from its combined text rather
+    // than expecting the text to be a single bare address.
     const tooltip = this.page.locator('[data-slot="tooltip-content"]').first()
-    await expect(tooltip).toContainText(/^0x[a-fA-F0-9]{40}$/, { timeout: 30_000 })
-    const address = (await tooltip.textContent())?.trim()
+    await expect(tooltip).toContainText(/0x[a-fA-F0-9]{40}/, { timeout: 30_000 })
+    const address = /0x[a-fA-F0-9]{40}/.exec((await tooltip.textContent()) ?? '')?.[0]
 
-    if (!address?.startsWith('0x')) throw new Error(`Expected a 0x address in the tooltip, got "${address}"`)
+    if (!address) throw new Error('Expected a 0x address in the tooltip')
     return address as `0x${string}`
   }
 
@@ -99,7 +102,12 @@ export class DashboardPage {
   }
 
   async getCardByTitle(title: string | RegExp) {
-    const titleLocator = this.page.locator('[data-slot="card"]').filter({ hasText: title }).first()
+    // Match on the card's title element. Matching on whole-card text is ambiguous:
+    // several cards mention other cards' names in their descriptions.
+    const titleLocator = this.page
+      .locator('[data-slot="card"]')
+      .filter({ has: this.page.locator('[data-slot="card-title"]').getByText(title) })
+      .first()
 
     await expect(titleLocator).toBeVisible({ timeout: 10_000 })
 

@@ -23,6 +23,26 @@ test.describe('on-chain balance (anvil fork)', () => {
 
     await dashboardPage.ensureReady('evm')
 
+    // The storage state carries the guest session (cookies + localStorage) but not
+    // IndexedDB, where the embedded signer's key shares live — so the wallet is
+    // created here, inside the spec.
+    await test.step('create wallet (automatic)', async () => {
+      const walletsCard = await dashboardPage.getCardByTitle(/^wallets$/i)
+
+      const walletRow = walletsCard.locator('button').filter({ hasText: /0x[a-f0-9]{4,}\.\.\.[a-f0-9]{4,}/i })
+      const rowsBefore = await walletRow.count()
+
+      await walletsCard.getByRole('button', { name: /create new wallet/i }).click()
+      await walletsCard.getByRole('button', { name: /smart account/i }).click()
+      await walletsCard.getByRole('button', { name: /^automatic$/i }).click()
+
+      await expect.poll(() => walletRow.count(), { timeout: 120_000 }).toBeGreaterThan(rowsBefore)
+      // The header pill reads "Not connected" until the embedded signer is ready;
+      // its disappearance is the connect signal (the "Connected with 0x…" welcome
+      // line renders the last-known address even while disconnected).
+      await expect(page.getByRole('button', { name: /not connected/i })).toBeHidden({ timeout: 60_000 })
+    })
+
     const chainCard = await dashboardPage.getCardByTitle(/switch chain/i)
     const currentChain = chainCard
       .locator('p')
@@ -45,6 +65,18 @@ test.describe('on-chain balance (anvil fork)', () => {
     // cold read of the seeded state.
     await page.reload({ waitUntil: 'domcontentloaded' })
     await dashboardPage.expectLoaded('evm')
+
+    // Active-account selection does not survive a reload (the store starts empty
+    // and recovery picks an account from the API list), so re-activate the minted
+    // wallet before reading its balance.
+    const reloadedWallets = await dashboardPage.getCardByTitle(/^wallets$/i)
+    const mintedRow = reloadedWallets
+      .locator('button')
+      .filter({ hasText: new RegExp(`${address.slice(0, 6)}.*${address.slice(-4)}`, 'i') })
+      .first()
+    await expect(mintedRow).toBeVisible({ timeout: 30_000 })
+    await mintedRow.click()
+    await expect.poll(() => dashboardPage.connectedAddress(), { timeout: 90_000 }).toBe(address)
 
     const reloadedCard = await dashboardPage.getCardByTitle(/write contract/i)
     await expect(reloadedCard.getByText(new RegExp(`^balance:\\s*${SEEDED_TOKENS}$`, 'i'))).toBeVisible({
