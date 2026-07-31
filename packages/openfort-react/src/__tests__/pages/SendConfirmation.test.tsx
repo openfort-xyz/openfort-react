@@ -77,10 +77,10 @@ vi.mock('viem', async (importOriginal) => {
 })
 
 const { default: SendConfirmation } = await import('../../components/Pages/SendConfirmation/index.js')
-const { createTestWrapper } = await import('../mocks/wrapper.js')
+const { createQueryWrapper } = await import('../mocks/TestWrapper.js')
 
 /** The page reads balances, fees and receipts through queries, so it needs a QueryClient in scope. */
-const render = (ui: ReactElement) => rtlRender(ui, { wrapper: createTestWrapper() })
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper() })
 
 describe('SendConfirmation', () => {
   beforeEach(() => {

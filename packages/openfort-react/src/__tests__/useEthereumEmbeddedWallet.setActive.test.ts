@@ -7,8 +7,8 @@ import {
   createMockWalletConfig,
   MOCK_ADDRESS,
   MOCK_ENCRYPTION_SESSION,
-} from './mocks/openfort-client.js'
-import { createTestWrapper } from './mocks/wrapper.js'
+} from './mocks/openfortClient.js'
+import { createQueryWrapper } from './mocks/TestWrapper.js'
 
 // --- Module-level mocks ---
 
@@ -98,7 +98,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
   // ---------- Happy paths ----------
 
   it('recovers with AUTOMATIC by address', async () => {
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: MOCK_ADDRESS })
@@ -117,7 +117,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
   })
 
   it('recovers with PASSWORD when password is provided', async () => {
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({
@@ -139,7 +139,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
   })
 
   it('recovers with PASSKEY by address (reads passkeyId from recoveryMethodDetails)', async () => {
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: passkeyAccount.address })
@@ -163,7 +163,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
     // Pre-set active address so the cleanup effect doesn't reset needs-recovery to disconnected
     mockActiveEmbeddedAddress = passwordAccount.address
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: passwordAccount.address })
@@ -174,7 +174,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
   })
 
   it('throws for unknown address', async () => {
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await expect(
       act(async () => {
@@ -191,7 +191,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
         })
     )
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     let setActivePromise: Promise<unknown>
     act(() => {
@@ -211,7 +211,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
     const mockProvider = { request: vi.fn() }
     mockClient.embeddedWallet.getEthereumProvider.mockResolvedValueOnce(mockProvider)
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: MOCK_ADDRESS })
@@ -229,7 +229,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
       encryptionSession: 'custom-session',
     }
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({
@@ -249,7 +249,7 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
   it('recover rejection → status error', async () => {
     mockClient.embeddedWallet.recover.mockRejectedValueOnce(new Error('Recover failed'))
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     let caughtError: unknown
     await act(async () => {

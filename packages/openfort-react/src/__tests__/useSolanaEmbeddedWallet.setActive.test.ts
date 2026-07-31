@@ -7,8 +7,8 @@ import {
   createMockWalletConfig,
   MOCK_ENCRYPTION_SESSION,
   MOCK_SOLANA_ADDRESS,
-} from './mocks/openfort-client.js'
-import { createTestWrapper } from './mocks/wrapper.js'
+} from './mocks/openfortClient.js'
+import { createQueryWrapper } from './mocks/TestWrapper.js'
 
 // --- Module-level mocks ---
 
@@ -109,7 +109,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   // ---------- Happy paths ----------
 
   it('recovers with AUTOMATIC by address', async () => {
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: MOCK_SOLANA_ADDRESS })
@@ -128,7 +128,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   })
 
   it('recovers with PASSWORD when password is provided', async () => {
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({
@@ -150,7 +150,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   })
 
   it('recovers with PASSKEY by address (reads passkeyId from recoveryMethodDetails)', async () => {
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: passkeyAccount.address })
@@ -174,7 +174,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
     // Pre-set active address so the cleanup effect doesn't reset needs-recovery to disconnected
     mockActiveEmbeddedAddress = passwordAccount.address
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: passwordAccount.address })
@@ -185,7 +185,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   })
 
   it('throws for unknown address', async () => {
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await expect(
       act(async () => {
@@ -202,7 +202,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
         })
     )
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     let setActivePromise: Promise<unknown>
     act(() => {
@@ -219,7 +219,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   })
 
   it('calls createSolanaProvider on success', async () => {
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.setActive({ address: MOCK_SOLANA_ADDRESS })
@@ -232,7 +232,7 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   it('recover rejection → status error and throws', async () => {
     mockClient.embeddedWallet.recover.mockRejectedValueOnce(new Error('Recover failed'))
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     let caughtError: unknown
     await act(async () => {

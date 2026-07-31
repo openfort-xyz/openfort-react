@@ -1,4 +1,5 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement, type PropsWithChildren } from 'react'
 import type { OpenfortCoreContextValue } from '../../openfort/CoreOpenfortProvider.js'
 import { StoreContext } from '../../openfort/context.js'
@@ -68,11 +69,29 @@ function createTestStore(overrides: Partial<OpenfortCoreContextValue> = {}) {
 
 /**
  * Test wrapper that provides StoreContext.
- * Usage: `renderHook(useUser, { wrapper: createTestWrapper({ user: mockUser }) })`
+ * Usage: `renderHook(useUser, { wrapper: createStoreWrapper({ user: mockUser }) })`
  */
-export function createTestWrapper(overrides: Partial<OpenfortCoreContextValue> = {}) {
+export function createStoreWrapper(overrides: Partial<OpenfortCoreContextValue> = {}) {
   const store = createTestStore(overrides)
   return function TestCoreWrapper({ children }: PropsWithChildren) {
     return createElement(StoreContext.Provider, { value: store }, children)
+  }
+}
+
+/**
+ * Test wrapper that provides a QueryClient which never retries and keeps no
+ * cache between renders, so each test starts from a cold query state.
+ */
+export function createQueryWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+        gcTime: 0,
+      },
+    },
+  })
+  return function TestQueryWrapper({ children }: PropsWithChildren) {
+    return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   }
 }

@@ -1,11 +1,11 @@
 import { renderHook, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { useQuery } from '../../query/useQuery.js'
-import { createTestWrapper } from '../mocks/wrapper.js'
+import { createQueryWrapper } from '../mocks/TestWrapper.js'
 
 describe('useQuery', () => {
   it('caches on a bigint key without throwing, and keeps distinct bigints apart', async () => {
-    const wrapper = createTestWrapper()
+    const wrapper = createQueryWrapper()
     const queryFn = vi.fn(async (amount: bigint) => `result-${amount}`)
 
     const first = renderHook(() => useQuery({ queryKey: ['amount', 1n], queryFn: () => queryFn(1n) }), { wrapper })
@@ -20,7 +20,7 @@ describe('useQuery', () => {
   it('returns the query key alongside the result', () => {
     const { result } = renderHook(
       () => useQuery({ queryKey: ['openfort', 'thing'], queryFn: async () => 1, enabled: false }),
-      { wrapper: createTestWrapper() }
+      { wrapper: createQueryWrapper() }
     )
 
     expect(result.current.queryKey).toEqual(['openfort', 'thing'])
@@ -29,7 +29,7 @@ describe('useQuery', () => {
   it('does not run the query function while disabled', () => {
     const queryFn = vi.fn(async () => 1)
     renderHook(() => useQuery({ queryKey: ['openfort', 'gated'], queryFn, enabled: false }), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     expect(queryFn).not.toHaveBeenCalled()
