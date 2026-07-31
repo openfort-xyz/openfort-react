@@ -209,6 +209,12 @@ export {
   /** @deprecated use `useOpenfort` instead */
   useOpenfortCore,
 } from './openfort/useOpenfort.js'
+export type {
+  EmbeddedAccountsQueryKey,
+  EmbeddedAccountsQueryOptions,
+  UserQueryKey,
+  UserQueryOptions,
+} from './query/index.js'
 export { getEmbeddedAccountsQueryOptions, getUserQueryOptions, openfortKeys } from './query/index.js'
 export type {
   CreateEmbeddedWalletOptions,

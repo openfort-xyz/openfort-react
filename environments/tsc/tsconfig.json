@@ -5,13 +5,12 @@
     "target": "es2022",
     "lib": ["ES2022", "DOM"],
     "jsx": "react-jsx",
-    // Consumers of a React SDK resolve a large peer graph — wagmi, viem,
-    // WalletConnect, the Solana packages — and several of those ship
-    // declarations that do not type-check on their own. Checking them here
-    // would gate this repository on other projects' releases, so what this
-    // environment proves is that the exports map resolves and that the public
-    // API is usable from a consumer file under both resolution modes.
-    "skipLibCheck": true
+    // Off, so tsc reads the shipped `build/**/*.d.ts` instead of trusting them.
+    // That is what proves each declaration stands on its own — every name it
+    // uses is one it imports or declares. Run this project through `check.mjs`
+    // rather than `tsc` directly; its header explains which of the resulting
+    // diagnostics are this repository's to fix and why the rest are not.
+    "skipLibCheck": false
   },
   "include": ["index.tsx"]
 }
