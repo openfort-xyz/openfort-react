@@ -37,9 +37,9 @@ export const History = () => {
       .finally(() => setIsLoading(false))
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchHistory is recreated every render; the effect keys on its actual inputs (address, rpc)
   useEffect(() => {
     fetchHistory()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, rpc])
 
   const visible = showAll ? transactions : transactions.slice(0, COLLAPSED_COUNT)

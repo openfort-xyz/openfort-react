@@ -85,9 +85,7 @@ export const Sign = () => {
   return (
     <div className="flex flex-col w-full">
       <h1>Signatures</h1>
-      <p className="mb-4 text-sm text-zinc-400">
-        Sign messages and typed data with your connected wallet.
-      </p>
+      <p className="mb-4 text-sm text-zinc-400">Sign messages and typed data with your connected wallet.</p>
       <div className="space-y-6">
         <SignMessage />
         <SignTypedData />
