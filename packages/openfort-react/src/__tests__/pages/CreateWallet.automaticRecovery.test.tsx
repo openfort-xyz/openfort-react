@@ -252,21 +252,31 @@ describe('Ethereum automatic recovery', () => {
     expect(h.setRoute).toHaveBeenCalledWith(routes.PROVIDERS)
   })
 
-  it('disables the resend button for the rest of the session once it is pressed', async () => {
+  it('asks for a new code when resend is pressed', async () => {
     h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
     render(<CreateWallet />)
     await otpScreen()
+    expect(h.requestOTP).toHaveBeenCalledTimes(1)
 
     const resend = screen.getByText('Resend Code') as HTMLButtonElement
     expect(resend.disabled).toBe(false)
 
     fireEvent.click(resend)
 
-    const sent = screen.getByText('Code Sent!') as HTMLButtonElement
-    expect(sent.disabled).toBe(true)
-    // BUG: pressing resend never asks for a new code — it only flips the label —
-    // and nothing ever re-enables the button, so the user cannot get a second code.
-    expect(h.requestOTP).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
+    expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
+  })
+
+  it('reports a code that could not be resent and reopens the input', async () => {
+    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    render(<CreateWallet />)
+    await otpScreen()
+
+    h.requestOTP.mockRejectedValueOnce(new Error('mailer down'))
+    fireEvent.click(screen.getByText('Resend Code'))
+
+    await waitFor(() => expect(screen.getByText('Failed to send recovery code')).toBeTruthy())
+    await waitFor(() => expect(screen.queryByText('Failed to send recovery code')).toBeNull(), { timeout: 3000 })
   })
 })
 
@@ -361,17 +371,15 @@ describe('Solana automatic recovery', () => {
     expect(h.setRoute).toHaveBeenCalledWith(routes.PROVIDERS)
   })
 
-  it('disables the resend button for the rest of the session once it is pressed', async () => {
+  it('asks for a new code when resend is pressed', async () => {
     h.createSolana.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
     render(<CreateWallet />)
     await otpScreen()
+    expect(h.requestOTP).toHaveBeenCalledTimes(1)
 
     fireEvent.click(screen.getByText('Resend Code'))
 
-    const sent = screen.getByText('Code Sent!') as HTMLButtonElement
-    expect(sent.disabled).toBe(true)
-    // BUG: pressing resend never asks for a new code — it only flips the label —
-    // and nothing ever re-enables the button, so the user cannot get a second code.
-    expect(h.requestOTP).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
+    expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
   })
 })
