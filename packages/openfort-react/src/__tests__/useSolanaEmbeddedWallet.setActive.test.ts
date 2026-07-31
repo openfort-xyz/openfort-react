@@ -184,14 +184,17 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
     expect(mockClient.embeddedWallet.recover).not.toHaveBeenCalled()
   })
 
-  it('throws for unknown address', async () => {
+  it('resolves with error state for an unknown address', async () => {
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
-    await expect(
-      act(async () => {
-        await result.current.setActive({ address: 'UnknownAddressXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' })
-      })
-    ).rejects.toThrow(/^Embedded wallet \w+ not found\./)
+    await act(async () => {
+      await expect(
+        result.current.setActive({ address: 'UnknownAddressXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX' })
+      ).resolves.toBeUndefined()
+    })
+
+    expect(result.current.status).toBe('error')
+    expect(result.current.error).toMatch(/^Embedded wallet \w+ not found\./)
   })
 
   it('transitions status: connecting → connected', async () => {
@@ -229,21 +232,16 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
     expect(result.current.status).toBe('connected')
   })
 
-  it('recover rejection → status error and throws', async () => {
+  it('recover rejection resolves with error state', async () => {
     mockClient.embeddedWallet.recover.mockRejectedValueOnce(new Error('Recover failed'))
 
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
-    let caughtError: unknown
     await act(async () => {
-      try {
-        await result.current.setActive({ address: MOCK_SOLANA_ADDRESS })
-      } catch (e) {
-        caughtError = e
-      }
+      await expect(result.current.setActive({ address: MOCK_SOLANA_ADDRESS })).resolves.toBeUndefined()
     })
 
-    expect(caughtError).toBeDefined()
     expect(result.current.status).toBe('error')
+    expect(result.current.error).toContain('Failed to set active Solana wallet.')
   })
 })

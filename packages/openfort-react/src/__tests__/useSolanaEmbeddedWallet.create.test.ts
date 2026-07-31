@@ -1,6 +1,6 @@
 import { AccountTypeEnum, ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createMockClient,
   createMockSolanaEmbeddedAccount,
@@ -85,6 +85,10 @@ describe('useSolanaEmbeddedWallet – create', () => {
     vi.clearAllMocks()
     mockActiveEmbeddedAddress = null
     stubFetchEncryptionSession()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
   })
 
   // ---------- Happy paths ----------
@@ -172,7 +176,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
     )
   })
 
-  it('throws when walletConfig is missing', async () => {
+  it('reports an error without rejecting when walletConfig is missing', async () => {
     const mockOpenfortUI = await import('../components/Openfort/useOpenfort.js')
     const spy = vi.spyOn(mockOpenfortUI, 'useOpenfortConfig').mockReturnValue({
       walletConfig: null,
@@ -181,23 +185,27 @@ describe('useSolanaEmbeddedWallet – create', () => {
 
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
-    await expect(
-      act(async () => {
-        await result.current.create()
-      })
-    ).rejects.toThrow('Wallet config not found')
+    const onError = vi.fn()
+    await act(async () => {
+      await expect(result.current.create({ onError })).resolves.toBeUndefined()
+    })
+
+    expect(result.current.status).toBe('error')
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ shortMessage: 'Wallet config not found.' }))
 
     spy.mockRestore()
   })
 
-  it('throws when PASSWORD recovery is used without a password', async () => {
+  it('reports an error without rejecting when PASSWORD has no password', async () => {
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
+    const onError = vi.fn()
 
-    await expect(
-      act(async () => {
-        await result.current.create({ recoveryMethod: RecoveryMethod.PASSWORD })
-      })
-    ).rejects.toThrow('`password` is required.')
+    await act(async () => {
+      await expect(result.current.create({ recoveryMethod: RecoveryMethod.PASSWORD, onError })).resolves.toBeUndefined()
+    })
+
+    expect(result.current.status).toBe('error')
+    expect(onError).toHaveBeenCalledWith(expect.objectContaining({ shortMessage: '`password` is required.' }))
   })
 
   it('calls updateEmbeddedAccounts after successful create', async () => {

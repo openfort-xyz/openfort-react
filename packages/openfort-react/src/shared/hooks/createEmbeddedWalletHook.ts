@@ -223,7 +223,9 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
           setState((s) => ({ ...s, status: 'error', error: error.message }))
 
           createOptions?.onError?.(error)
-          throw error
+          // Keep the established success return type while honoring the action-hook
+          // contract: failures are observable through state and onError, not rejection.
+          return undefined as unknown as EmbeddedAccount
         }
       },
       [client, walletConfig, buildAccountRequest, settleNewAccount, updateEmbeddedAccounts, setActiveEmbeddedAddress]
@@ -255,7 +257,7 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
           setState((s) => ({ ...s, status: 'error', error: error.message }))
 
           importOptions.onError?.(error)
-          throw error
+          return undefined as unknown as EmbeddedAccount
         }
       },
       [client, walletConfig, buildAccountRequest, settleNewAccount, updateEmbeddedAccounts, setActiveEmbeddedAddress]
@@ -264,22 +266,22 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     const setActive = useCallback(
       async (activeOptions: SetActiveEmbeddedWalletOptionsBase & { address: string }): Promise<void> => {
         const run = async (): Promise<void> => {
-          const currentAccounts = accountsRef.current
-          const account = findEmbeddedAccount({
-            accounts: currentAccounts,
-            address: activeOptions.address,
-            normalizeAddress,
-          })
-          const walletIndex = currentAccounts.indexOf(account)
-
-          setState((s) => ({
-            ...s,
-            status: 'connecting',
-            activeWallet: buildConnectingWallet({ account, walletIndex }),
-            error: null,
-          }))
-
           try {
+            const currentAccounts = accountsRef.current
+            const account = findEmbeddedAccount({
+              accounts: currentAccounts,
+              address: activeOptions.address,
+              normalizeAddress,
+            })
+            const walletIndex = currentAccounts.indexOf(account)
+
+            setState((s) => ({
+              ...s,
+              status: 'connecting',
+              activeWallet: buildConnectingWallet({ account, walletIndex }),
+              error: null,
+            }))
+
             const { needsRecovery } = await setActiveWallet({
               client,
               walletConfig,
@@ -300,20 +302,13 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
             const error = asOpenfortError(err, (cause) => new SetActiveWalletError({ chain: chainName, cause }))
 
             setState((s) => ({ ...s, status: 'error', error: error.message }))
-
-            throw error
           }
         }
 
-        const prev = setActiveInProgressRef.current
-        if (prev) {
-          try {
-            await prev
-          } catch {
-            /* ignore previous operation's error */
-          }
-        }
-        const promise = run()
+        // Append before awaiting so every caller observes the latest tail. Reading
+        // the tail and awaiting it first lets two queued callers start together.
+        const previous = setActiveInProgressRef.current
+        const promise = previous ? previous.then(run, run) : run()
         setActiveInProgressRef.current = promise
         try {
           await promise

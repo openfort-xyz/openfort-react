@@ -173,14 +173,17 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
     expect(mockClient.embeddedWallet.recover).not.toHaveBeenCalled()
   })
 
-  it('throws for unknown address', async () => {
+  it('resolves with error state for an unknown address', async () => {
     const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
-    await expect(
-      act(async () => {
-        await result.current.setActive({ address: '0x0000000000000000000000000000000000000000' })
-      })
-    ).rejects.toThrow(/^Embedded wallet 0x\w+ not found\./)
+    await act(async () => {
+      await expect(
+        result.current.setActive({ address: '0x0000000000000000000000000000000000000000' })
+      ).resolves.toBeUndefined()
+    })
+
+    expect(result.current.status).toBe('error')
+    expect(result.current.error).toMatch(/^Embedded wallet 0x\w+ not found\./)
   })
 
   it('transitions status: connecting → connected', async () => {
@@ -204,6 +207,32 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
       await setActivePromise!
     })
 
+    expect(result.current.status).toBe('connected')
+  })
+
+  it('serializes concurrent setActive calls', async () => {
+    let activeRecoveries = 0
+    let maxConcurrentRecoveries = 0
+    mockClient.embeddedWallet.recover.mockImplementation(async () => {
+      activeRecoveries += 1
+      maxConcurrentRecoveries = Math.max(maxConcurrentRecoveries, activeRecoveries)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      activeRecoveries -= 1
+      return automaticAccount
+    })
+
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
+
+    await act(async () => {
+      await Promise.all([
+        result.current.setActive({ address: MOCK_ADDRESS }),
+        result.current.setActive({ address: MOCK_ADDRESS }),
+        result.current.setActive({ address: MOCK_ADDRESS }),
+      ])
+    })
+
+    expect(mockClient.embeddedWallet.recover).toHaveBeenCalledTimes(3)
+    expect(maxConcurrentRecoveries).toBe(1)
     expect(result.current.status).toBe('connected')
   })
 
@@ -246,21 +275,16 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
     )
   })
 
-  it('recover rejection → status error', async () => {
+  it('recover rejection resolves with error state', async () => {
     mockClient.embeddedWallet.recover.mockRejectedValueOnce(new Error('Recover failed'))
 
     const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
-    let caughtError: unknown
     await act(async () => {
-      try {
-        await result.current.setActive({ address: MOCK_ADDRESS })
-      } catch (e) {
-        caughtError = e
-      }
+      await expect(result.current.setActive({ address: MOCK_ADDRESS })).resolves.toBeUndefined()
     })
 
-    expect(caughtError).toBeDefined()
     expect(result.current.status).toBe('error')
+    expect(result.current.error).toContain('Failed to set active Ethereum wallet.')
   })
 })
