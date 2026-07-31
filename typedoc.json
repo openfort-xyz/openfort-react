@@ -1,0 +1,48 @@
+{
+  "$schema": "https://typedoc.org/schema.json",
+  // The four entry points a consumer can import. `./internal` is deliberately
+  // absent: it exists for the playground and the examples, not for consumers,
+  // so documenting it would advertise it as API.
+  "entryPoints": [
+    "packages/openfort-react/src/index.ts",
+    "packages/openfort-react/src/ethereum/index.ts",
+    "packages/openfort-react/src/solana/index.ts",
+    "packages/openfort-react/src/wagmi/index.ts"
+  ],
+  "tsconfig": "packages/openfort-react/tsconfig.check.json",
+  "name": "@openfort/react",
+  "excludeReferences": true,
+  "excludePrivate": true,
+  "excludeProtected": true,
+  "includeVersion": false,
+  "cleanOutputDir": true,
+  "validation": {
+    "invalidLink": true,
+    "notDocumented": false,
+    // Many option and result types are referenced by a public signature without
+    // being exported themselves; TypeDoc documents their shape inline. Turning
+    // this on would report every one of them on every build, which drowns the
+    // link and tag warnings that do point at something to fix. Exporting those
+    // types is an API-surface decision, made per type rather than in bulk.
+    "notExported": false
+  },
+  "out": "./docs",
+  "readme": "none",
+  "sort": ["kind"],
+  "kindSortOrder": [
+    "Class",
+    "Interface",
+    "Enum",
+    "TypeAlias",
+    "Variable",
+    "Function",
+    "Property",
+    "Constructor",
+    "Method"
+  ],
+  "titleLink": "https://www.openfort.io/docs/",
+  "navigationLinks": {
+    "Openfort Docs": "https://www.openfort.io/docs",
+    "Openfort Dashboard": "https://dashboard.openfort.io"
+  }
+}

@@ -89,6 +89,9 @@ jobs:
         # outside that allowlist fails here.
         run: pnpm audit --ignore-registry-errors
 
+      - name: sherif
+        run: pnpm check:repo
+
       - name: Code check (Biome)
         run: pnpm biome check
 
@@ -115,6 +118,12 @@ jobs:
 
       - name: Check publishable packages (publint + attw)
         run: pnpm test:build
+
+      # publint and attw inspect packaging metadata and declarations; neither
+      # resolves the exports map or evaluates the output. These workspaces
+      # consume the built package the way a dependent project does.
+      - name: Consume the built package (tsc + node)
+        run: pnpm test:env
 
       - name: Check bundle-size budgets
         run: pnpm size
