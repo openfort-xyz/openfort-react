@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "es2022",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    // Consumers of a React SDK resolve a large peer graph — wagmi, viem,
+    // WalletConnect, the Solana packages — and several of those ship
+    // declarations that do not type-check on their own. Checking them here
+    // would gate this repository on other projects' releases, so what this
+    // environment proves is that the exports map resolves and that the public
+    // API is usable from a consumer file under both resolution modes.
+    "skipLibCheck": true
+  },
+  "include": ["index.tsx"]
+}

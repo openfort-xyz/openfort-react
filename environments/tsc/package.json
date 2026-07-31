@@ -1,0 +1,20 @@
+{
+  "name": "test-tsc",
+  "private": true,
+  "type": "module",
+  "description": "Type-checks the BUILT package the way a consumer would. Resolves through the package exports map, so the built build/*.d.ts is type-checked rather than source.",
+  "scripts": {
+    "test": "tsc --module esnext --moduleResolution bundler && tsc --module node16 --moduleResolution node16"
+  },
+  "dependencies": {
+    "@openfort/react": "workspace:*",
+    "@tanstack/react-query": "^5.101.0",
+    "react": "^18.2.0",
+    "typescript": "^5.9.3",
+    "viem": "^2.52.2",
+    "wagmi": "^3.6.16"
+  },
+  "devDependencies": {
+    "@types/react": "^18.0.6"
+  }
+}

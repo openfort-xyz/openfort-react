@@ -24,7 +24,7 @@ export type CustomAvatarProps = {
   radius: number
 }
 
-export { OpenfortError, OpenfortReactErrorType } from './errors/index.js'
+export { OpenfortError } from './errors/index.js'
 
 /**
  * Callbacks accepted by every Openfort action hook, at the hook level and again

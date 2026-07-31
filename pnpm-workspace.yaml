@@ -1,6 +1,13 @@
 packages:
   - "packages/**"
-  - "examples/**"
+  - "environments/*"
+  # Listed explicitly because `examples/**` also matches `examples/quickstarts`
+  # itself, which is a plain directory with no package.json.
+  - "examples/playground"
+  - "examples/quickstarts/*"
+  # The betterauth quickstart is a nested monorepo whose own scripts filter on
+  # these package names, so they have to be part of this workspace.
+  - "examples/quickstarts/betterauth/apps/*"
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - "@openfort/openfort-js"
