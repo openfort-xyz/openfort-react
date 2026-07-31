@@ -49,9 +49,15 @@ export function createEthereumBridgeStrategy(
       const chainId = chainIdOverride ?? bridge.chainId
       const feeSponsorshipObj = chainId != null ? resolveEthereumFeeSponsorship(walletConfig, chainId) : undefined
 
+      // Per-chain RPC endpoints handed to the embedded signer. An explicitly
+      // configured `walletConfig.ethereum.rpcUrls` entry wins over the wagmi
+      // transport URL: the signer resolves these endpoints from its own context
+      // (the Shield iframe), so an app can point wagmi's in-browser transports at
+      // one node while keeping the signer on endpoints reachable from anywhere.
+      const configuredRpcUrls = walletConfig.ethereum?.rpcUrls ?? {}
       const rpcUrls = bridge.config.chains.reduce(
         (acc, ch) => {
-          const url = bridge.config.getClient({ chainId: ch.id }).transport?.url
+          const url = configuredRpcUrls[ch.id] ?? bridge.config.getClient({ chainId: ch.id }).transport?.url
           if (url) acc[ch.id] = url
           return acc
         },
