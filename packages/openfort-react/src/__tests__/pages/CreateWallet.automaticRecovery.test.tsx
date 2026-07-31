@@ -326,14 +326,18 @@ describe('Solana automatic recovery', () => {
     await waitFor(() => expect(h.createSolana).toHaveBeenCalledTimes(1))
   })
 
-  it('surfaces a recovery failure', async () => {
+  it('surfaces a recovery failure and retries from the loader', async () => {
     h.createSolana.mockRejectedValueOnce(new Error('shield unreachable'))
     render(<CreateWallet />)
 
     await waitFor(() => expect(screen.getByText('Error creating wallet.')).toBeTruthy())
     expect(screen.getByText(/Wallet recovery failed\./)).toBeTruthy()
-    // BUG: the Solana loader offers no retry, so a failed creation is a dead end.
-    expect(screen.queryByLabelText('Retry')).toBeNull()
+    expect(h.setRoute).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByLabelText('Retry'))
+
+    await waitFor(() => expect(h.createSolana).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(h.setRoute).toHaveBeenCalledWith(routes.SOL_CONNECTED))
   })
 
   it('asks for a code when the recovery share is OTP-gated', async () => {

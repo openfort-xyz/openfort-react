@@ -89,6 +89,7 @@ const SolanaCreateAutomatic = ({ onBack, logoutOnBack }: { onBack: SetOnBackFunc
         isError={!!recovery.recoveryError}
         header={recovery.recoveryError ? 'Error creating wallet.' : 'Creating wallet...'}
         description={recovery.recoveryError ? recovery.recoveryError.message : undefined}
+        onRetry={recovery.recoveryError ? startCreation : undefined}
       />
     </PageContent>
   )
