@@ -18,10 +18,7 @@ function App() {
 
   const syncSession = useCallback(() => {
     void getAccessTokenRef.current().catch((error) => {
-      console.error(
-        'Better Auth - Failed to sync session with Openfort:',
-        error,
-      )
+      console.error('Better Auth - Failed to sync session with Openfort:', error)
     })
   }, [])
 

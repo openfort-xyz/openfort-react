@@ -9,7 +9,7 @@ const config = createConfig(
     appName: 'Openfort React demo',
     chains: [polygonAmoy, baseSepolia], // The chains you want to support
     walletConnectProjectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID, // The WalletConnect Project ID
-  }),
+  })
 )
 
 const queryClient = new QueryClient()

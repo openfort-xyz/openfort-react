@@ -1,8 +1,4 @@
-import {
-  FingerPrintIcon,
-  KeyIcon,
-  LockClosedIcon,
-} from '@heroicons/react/24/outline'
+import { FingerPrintIcon, KeyIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import { RecoveryMethod } from '@openfort/react'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { useState } from 'react'
@@ -65,9 +61,7 @@ export const CreateWallet = ({ onWalletCreated }: { onWalletCreated?: () => void
           <FingerPrintIcon />
           <div className="flex flex-col text-start">
             <h4>Passkey</h4>
-            <p className="text-sm hover-description">
-              Secure your wallet with biometric authentication.
-            </p>
+            <p className="text-sm hover-description">Secure your wallet with biometric authentication.</p>
           </div>
         </button>
         <button
@@ -78,22 +72,14 @@ export const CreateWallet = ({ onWalletCreated }: { onWalletCreated?: () => void
           <LockClosedIcon />
           <div className="flex flex-col text-start">
             <h4>Automatic recovery</h4>
-            <p className="text-sm hover-description">
-              Uses encryption session to recover your wallet.
-            </p>
+            <p className="text-sm hover-description">Uses encryption session to recover your wallet.</p>
           </div>
         </button>
-        <button
-          type="button"
-          className="wallet-option cursor-pointer"
-          onClick={() => setPasswordSheetOpen(true)}
-        >
+        <button type="button" className="wallet-option cursor-pointer" onClick={() => setPasswordSheetOpen(true)}>
           <KeyIcon />
           <div className="flex flex-col text-start">
             <h4>Password</h4>
-            <p className="text-sm hover-description">
-              Create a strong password to secure your wallet.
-            </p>
+            <p className="text-sm hover-description">Create a strong password to secure your wallet.</p>
           </div>
         </button>
       </div>
@@ -101,8 +87,8 @@ export const CreateWallet = ({ onWalletCreated }: { onWalletCreated?: () => void
       {error && <p className="text-red-500 text-sm mb-2">Error: {error}</p>}
 
       <p className="mb-4 text-xs text-zinc-400">
-        Disclaimer: This is a demo of Openfort recovery methods. In production,
-        it's best to choose one method for a smoother user experience.
+        Disclaimer: This is a demo of Openfort recovery methods. In production, it's best to choose one method for a
+        smoother user experience.
       </p>
 
       <CreateWalletPasswordSheet

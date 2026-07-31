@@ -8,13 +8,11 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   // Operation errors
   'auth/operation-not-allowed':
     'This sign-in method is not enabled. Please contact support or enable it in Firebase Console.',
-  'auth/operation-not-supported-in-this-environment':
-    'This operation is not supported in this environment.',
+  'auth/operation-not-supported-in-this-environment': 'This operation is not supported in this environment.',
 
   // Popup errors
   'auth/popup-closed-by-user': 'Sign-in popup was closed. Please try again.',
-  'auth/popup-blocked':
-    'Sign-in popup was blocked by your browser. Please allow popups and try again.',
+  'auth/popup-blocked': 'Sign-in popup was blocked by your browser. Please allow popups and try again.',
   'auth/cancelled-popup-request': 'Sign-in was cancelled. Please try again.',
 
   // Email/Password errors
@@ -23,31 +21,26 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   'auth/user-not-found': 'No account found with this email.',
   'auth/wrong-password': 'Incorrect password.',
   'auth/email-already-in-use': 'An account with this email already exists.',
-  'auth/weak-password':
-    'Password is too weak. Please use a stronger password (at least 6 characters).',
-  'auth/invalid-credential':
-    'Invalid credentials. Please check your email and password.',
+  'auth/weak-password': 'Password is too weak. Please use a stronger password (at least 6 characters).',
+  'auth/invalid-credential': 'Invalid credentials. Please check your email and password.',
   'auth/account-exists-with-different-credential':
     'An account already exists with the same email but different sign-in credentials.',
 
   // Network errors
-  'auth/network-request-failed':
-    'Network error. Please check your connection and try again.',
+  'auth/network-request-failed': 'Network error. Please check your connection and try again.',
   'auth/timeout': 'Request timed out. Please try again.',
 
   // Rate limiting
   'auth/too-many-requests': 'Too many failed attempts. Please try again later.',
 
   // Token errors
-  'auth/invalid-api-key':
-    'Invalid API key. Please check your Firebase configuration.',
+  'auth/invalid-api-key': 'Invalid API key. Please check your Firebase configuration.',
   'auth/app-deleted': 'Firebase app was deleted.',
   'auth/expired-action-code': 'This action code has expired.',
   'auth/invalid-action-code': 'Invalid action code.',
 
   // Other common errors
-  'auth/unauthorized-domain':
-    'This domain is not authorized for OAuth operations.',
+  'auth/unauthorized-domain': 'This domain is not authorized for OAuth operations.',
   'auth/missing-email': 'Email address is required.',
   'auth/internal-error': 'An internal error occurred. Please try again.',
 }
@@ -126,28 +119,17 @@ export function logFirebaseError(error: unknown, context?: string): void {
     return
   }
 
-  const errorPrefix = context
-    ? `🔥 Firebase Auth Error (${context})`
-    : '🔥 Firebase Auth Error'
+  const errorPrefix = context ? `🔥 Firebase Auth Error (${context})` : '🔥 Firebase Auth Error'
 
-  console.group(
-    `%c${errorPrefix}`,
-    'color: #ff6b6b; font-weight: bold; font-size: 14px;',
-  )
+  console.group(`%c${errorPrefix}`, 'color: #ff6b6b; font-weight: bold; font-size: 14px;')
 
   // Log the error code and message
-  console.error(
-    `%cError Code: ${error.code}`,
-    'color: #ff6b6b; font-weight: bold;',
-  )
+  console.error(`%cError Code: ${error.code}`, 'color: #ff6b6b; font-weight: bold;')
   console.error(`%cError Message: ${error.message}`, 'color: #ff6b6b;')
 
   // Log user-friendly message
   const userMessage = AUTH_ERROR_MESSAGES[error.code] || error.message
-  console.info(
-    `%cUser Message: ${userMessage}`,
-    'color: #ffd93d; font-style: italic;',
-  )
+  console.info(`%cUser Message: ${userMessage}`, 'color: #ffd93d; font-style: italic;')
 
   // Log developer solutions if available
   const solutions = DEVELOPER_SOLUTIONS[error.code]

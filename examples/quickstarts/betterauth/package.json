@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "concurrently \"pnpm --filter @openfort-betterauth/web dev\" \"pnpm --filter @openfort-betterauth/server dev\"",
     "build": "pnpm --filter @openfort-betterauth/web build && pnpm --filter @openfort-betterauth/server build",
-    "check": "biome check --write --unsafe",
+    "check": "biome check",
     "format": "biome format --write ."
   },
   "devDependencies": {
