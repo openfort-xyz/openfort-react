@@ -6,8 +6,8 @@ import {
   createMockEmbeddedAccount,
   createMockWalletConfig,
   MOCK_ENCRYPTION_SESSION,
-} from './mocks/openfort-client.js'
-import { createTestWrapper } from './mocks/wrapper.js'
+} from './mocks/openfortClient.js'
+import { createQueryWrapper } from './mocks/TestWrapper.js'
 
 // --- Module-level mocks ---
 
@@ -82,7 +82,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.EOA })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({ accountType: AccountTypeEnum.EOA })
@@ -105,7 +105,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({
@@ -132,7 +132,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({
@@ -156,7 +156,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.SMART_ACCOUNT })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({ accountType: AccountTypeEnum.SMART_ACCOUNT })
@@ -175,7 +175,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.SMART_ACCOUNT })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({
@@ -200,7 +200,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.SMART_ACCOUNT })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({
@@ -225,7 +225,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.DELEGATED_ACCOUNT })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({ accountType: AccountTypeEnum.DELEGATED_ACCOUNT })
@@ -244,7 +244,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.DELEGATED_ACCOUNT })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({
@@ -269,7 +269,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.DELEGATED_ACCOUNT })
       mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+      const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
       await act(async () => {
         await result.current.create({
@@ -299,7 +299,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       chainType: ChainTypeEnum.EVM,
     } as ReturnType<typeof mockOpenfortUI.useOpenfortConfig>)
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await expect(
       act(async () => {
@@ -311,7 +311,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
   })
 
   it('throws when PASSWORD recovery is used without a password', async () => {
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await expect(
       act(async () => {
@@ -327,7 +327,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
       chainType: ChainTypeEnum.EVM,
     } as ReturnType<typeof mockOpenfortUI.useOpenfortConfig>)
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await expect(
       act(async () => {
@@ -342,7 +342,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
     const account = createMockEmbeddedAccount()
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.create()
@@ -355,7 +355,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
     const account = createMockEmbeddedAccount({ accountType: AccountTypeEnum.SMART_ACCOUNT })
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     // No accountType in createOptions — should use walletConfig.ethereum.accountType
     await act(async () => {
@@ -378,7 +378,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
         })
     )
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     let createPromise: Promise<unknown>
     act(() => {
@@ -398,7 +398,7 @@ describe('useEthereumEmbeddedWallet – create', () => {
   it('transitions status: creating → error on failure', async () => {
     mockClient.embeddedWallet.create.mockRejectedValueOnce(new Error('Create failed'))
 
-    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useEthereumEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     let caughtError: unknown
     await act(async () => {

@@ -11,7 +11,7 @@ const wagmiConfig = createConfig(
     appName: 'Openfort React demo',
     chains: [beamTestnet, polygonAmoy, sepolia], // Supported chains
     walletConnectProjectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID, // WalletConnect Project ID
-  }),
+  })
 )
 
 const queryClient = new QueryClient()
@@ -53,7 +53,7 @@ const walletConfig = {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-      },
+      }
     )
     if (!response.ok) {
       throw new Error(`Better Auth - Failed to get encryption session: ${response.status}`)

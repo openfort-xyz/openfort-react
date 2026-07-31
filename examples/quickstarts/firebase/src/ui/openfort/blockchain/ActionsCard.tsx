@@ -93,12 +93,7 @@ function MintContract() {
           submit({ amount })
         }}
       >
-        <input
-          type="number"
-          placeholder="Enter amount to mint"
-          className="grow peer"
-          name="amount"
-        />
+        <input type="number" placeholder="Enter amount to mint" className="grow peer" name="amount" />
         <button className="btn" disabled={isPending || !address || !config}>
           {isPending ? 'Minting...' : 'Mint Tokens'}
         </button>
@@ -114,9 +109,7 @@ export function ActionsCard() {
   return (
     <div className="flex flex-col w-full">
       <h1>Actions</h1>
-      <span className="mb-4 text-zinc-400 text-sm">
-        Interact with smart contracts on the blockchain.
-      </span>
+      <span className="mb-4 text-zinc-400 text-sm">Interact with smart contracts on the blockchain.</span>
       <MintContract />
     </div>
   )

@@ -11,7 +11,7 @@ const wagmiConfig = createConfig(
     appName: 'Openfort React demo',
     chains: [beamTestnet, polygonAmoy, sepolia],
     walletConnectProjectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID,
-  }),
+  })
 )
 
 const queryClient = new QueryClient()
@@ -30,7 +30,9 @@ const thirdPartyAuth = {
   getAccessToken: async (): Promise<string | null> => {
     if (cachedToken) return cachedToken
     // Cold-start fallback: auth state change hasn't fired yet
-    const { data: { session } } = await supabase.auth.getSession()
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
     cachedToken = session?.access_token ?? null
     return cachedToken
   },
@@ -42,8 +44,7 @@ const walletConfig = {
     ethereumFeeSponsorshipId: import.meta.env.VITE_FEE_SPONSORSHIP_ID,
   },
   createEncryptedSessionEndpoint:
-    import.meta.env.VITE_CREATE_ENCRYPTED_SESSION_BASE_URL +
-    import.meta.env.VITE_CREATE_ENCRYPTED_SESSION_ENDPOINT,
+    import.meta.env.VITE_CREATE_ENCRYPTED_SESSION_BASE_URL + import.meta.env.VITE_CREATE_ENCRYPTED_SESSION_ENDPOINT,
   connectOnLogin: true,
 }
 

@@ -6,8 +6,8 @@ import {
   createMockSolanaEmbeddedAccount,
   createMockWalletConfig,
   MOCK_ENCRYPTION_SESSION,
-} from './mocks/openfort-client.js'
-import { createTestWrapper } from './mocks/wrapper.js'
+} from './mocks/openfortClient.js'
+import { createQueryWrapper } from './mocks/TestWrapper.js'
 
 // --- Module-level mocks ---
 
@@ -93,7 +93,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
     const account = createMockSolanaEmbeddedAccount()
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.create()
@@ -113,7 +113,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
     const account = createMockSolanaEmbeddedAccount({ recoveryMethod: RecoveryMethod.PASSWORD })
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.create({
@@ -136,7 +136,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
     const account = createMockSolanaEmbeddedAccount({ recoveryMethod: RecoveryMethod.PASSKEY })
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.create({ recoveryMethod: RecoveryMethod.PASSKEY })
@@ -157,7 +157,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
     const account = createMockSolanaEmbeddedAccount()
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     // Pass SMART_ACCOUNT — hook should ignore and use EOA
     await act(async () => {
@@ -179,7 +179,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
       chainType: ChainTypeEnum.SVM,
     } as ReturnType<typeof mockOpenfortUI.useOpenfortConfig>)
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await expect(
       act(async () => {
@@ -191,7 +191,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
   })
 
   it('throws when PASSWORD recovery is used without a password', async () => {
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await expect(
       act(async () => {
@@ -204,7 +204,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
     const account = createMockSolanaEmbeddedAccount()
     mockClient.embeddedWallet.create.mockResolvedValueOnce(account)
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     await act(async () => {
       await result.current.create()
@@ -222,7 +222,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
         })
     )
 
-    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createTestWrapper() })
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
 
     let createPromise: Promise<unknown>
     act(() => {
