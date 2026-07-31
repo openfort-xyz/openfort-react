@@ -47,11 +47,13 @@ function DataNode({ value }: { value: unknown }) {
 const SignMessage = () => {
   const { signRequest, setSignRequest, setOpen, uiConfig, triggerResize } = useOpenfort()
   const chainType = useOpenfortCore((s) => s.chainType)
+  const client = useOpenfortCore((s) => s.client)
   const wallet = useEthereumEmbeddedWallet()
   const solana = useSolanaEmbeddedWallet()
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [signature, setSignature] = useState<string | null>(null)
+  const walletReady = chainType === ChainTypeEnum.SVM ? solana.status === 'connected' : wallet.status === 'connected'
   // Content height changes between the views; re-measure.
   useEffect(() => {
     triggerResize()
@@ -77,26 +79,14 @@ const SignMessage = () => {
         if (solana.status !== 'connected') throw new WalletNotConnectedError('No connected wallet to sign with.')
         signed = await solana.provider.signMessage(signRequest.message)
       } else {
-        const provider = await wallet.activeWallet?.getProvider()
-        if (!provider) throw new WalletNotConnectedError('No connected wallet to sign with.')
-
-        // Use the address the provider will actually sign with as `from`. The core
-        // SDK resolves the signing account from storage, which can diverge from the
-        // hook's activeWallet.address when the user has multiple smart accounts.
-        // A stale `from` makes personal_sign reject with
-        // "personal_sign requires the signer to be the from address".
-        const accounts = (await provider.request({ method: 'eth_accounts' })) as string[]
-        const address = accounts?.[0] ?? wallet.address
-        if (!address) throw new WalletNotConnectedError('No connected wallet to sign with.')
-
-        signed = (
+        signed =
           signRequest.kind === 'message'
-            ? await provider.request({ method: 'personal_sign', params: [signRequest.message, address] })
-            : await provider.request({
-                method: 'eth_signTypedData_v4',
-                params: [address, JSON.stringify(signRequest.typedData)],
-              })
-        ) as string
+            ? await client.embeddedWallet.signMessage(signRequest.message)
+            : await client.embeddedWallet.signTypedData(
+                signRequest.typedData.domain ?? {},
+                signRequest.typedData.types,
+                signRequest.typedData.message
+              )
       }
 
       signRequest.resolve(signed)
@@ -160,7 +150,13 @@ const SignMessage = () => {
             </CopyRow>
           )}
           {error && <ErrorText>{error}</ErrorText>}
-          <Button variant="primary" onClick={handleSign} waiting={signing} disabled={signing} arrow>
+          <Button
+            variant="primary"
+            onClick={handleSign}
+            waiting={signing || !walletReady}
+            disabled={signing || !walletReady}
+            arrow
+          >
             Sign and continue
           </Button>
         </Footer>

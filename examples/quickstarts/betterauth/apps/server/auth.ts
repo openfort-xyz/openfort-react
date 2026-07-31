@@ -2,10 +2,8 @@ import { encryptionSession, openfort } from '@openfort/better-auth'
 import { betterAuth } from 'better-auth'
 import { bearer } from 'better-auth/plugins'
 import Database from 'better-sqlite3'
-import { config } from 'dotenv'
+import './env'
 import { openfortSDK } from './openfort'
-
-config()
 
 export const auth = betterAuth({
   database: new Database('./auth.db'),

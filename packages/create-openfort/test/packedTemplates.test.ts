@@ -61,6 +61,13 @@ describe("published templates", () => {
       ];
       const packedPaths = new Set(files.map((file) => file.path));
 
+      for (const packedPath of packedPaths) {
+        expect(packedPath).not.toMatch(
+          /^template\/.*\/(node_modules|dist|\.cache|\.turbo)(\/|$)/,
+        );
+        expect(packedPath).not.toMatch(/(^|\/)\.env$/);
+      }
+
       for (const template of templates) {
         const root = `template/openfort-templates/${template}`;
         expect(packedPaths.has(`${root}/gitignore`)).toBe(true);

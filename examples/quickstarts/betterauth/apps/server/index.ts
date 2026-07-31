@@ -1,11 +1,8 @@
 import { toNodeHandler } from 'better-auth/node'
 import cors from 'cors'
-import { config } from 'dotenv'
 import express from 'express'
+import './env'
 import { auth } from './auth'
-
-// Load .env from the server directory
-config()
 
 const app = express()
 const port = Number(process.env.PORT ?? 3000)

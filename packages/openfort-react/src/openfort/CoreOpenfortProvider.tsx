@@ -219,7 +219,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   const updateUser = useCallback(
     async (user?: User, logoutOnError: boolean = false) => {
       if (!openfort) return null
-      logger.log('Updating user', { user, logoutOnError })
+      logger.log('Updating user', { hasUser: !!user, logoutOnError })
 
       if (user) {
         store.getState().setUser(user)
@@ -507,8 +507,8 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
 
     try {
       logger.log('Signing up as guest...')
-      const res = await openfort.auth.signUpGuest()
-      logger.log('Signed up as guest:', res)
+      await openfort.auth.signUpGuest()
+      logger.log('Signed up as guest')
     } catch (error) {
       logger.error('Error logging in as guest:', error)
     }

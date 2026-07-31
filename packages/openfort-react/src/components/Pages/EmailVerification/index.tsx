@@ -52,7 +52,7 @@ const EmailVerification: React.FC = () => {
       })
       window.history.replaceState({}, document.title, url.toString())
     }
-    logger.log('Email verification', email)
+    logger.log('Starting email verification')
 
     if (!email) {
       setRoute(routes.EMAIL_LOGIN)

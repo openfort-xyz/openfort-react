@@ -103,7 +103,7 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_
           logger.log('Guest signup: calling auth.signUpGuest()')
           const result = await client.auth.signUpGuest()
           user = result.user
-          logger.log('Guest signup: auth OK, user id:', user?.id)
+          logger.log('Guest signup: authentication succeeded')
         } catch (authError: unknown) {
           const isAlreadyLoggedIn =
             (authError as Error)?.message?.includes('Already logged in') ||

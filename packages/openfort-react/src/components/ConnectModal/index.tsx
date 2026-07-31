@@ -98,7 +98,11 @@ const ConnectModal: React.FC<{
     const emailVerification = url.searchParams.get('openfortEmailVerificationUI')
     const forgotPassword = url.searchParams.get('openfortForgotPasswordUI')
 
-    logger.log('Checking for search parameters', { url, provider, emailVerification, forgotPassword })
+    logger.log('Checking for authentication search parameters', {
+      hasProvider: !!provider,
+      hasEmailVerification: !!emailVerification,
+      hasForgotPassword: !!forgotPassword,
+    })
 
     if (emailVerification) {
       routing.setOpen(true)

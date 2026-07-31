@@ -73,7 +73,7 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
           throw new ChainNotConfiguredError({ chainId })
         }
 
-        logger.log('Revoking permissions for session key:', sessionKey)
+        logger.log('Revoking permissions')
         setStatus({
           status: 'loading',
         })
@@ -101,7 +101,7 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
           params: revokeParams,
         })
 
-        logger.log('Revoke permissions result:', revokePermissionsResult)
+        logger.log('Permissions revoked')
 
         const data: RevokePermissionsResult = revokePermissionsResult
 

@@ -28,7 +28,7 @@ export function useRecoveryOTP(): { isEnabled: boolean; requestOTP: () => Promis
 
   const requestOTP = useCallback(async (): Promise<OTPResponse> => {
     try {
-      logger.log('Requesting wallet recover OTP for user', { userId: user?.id })
+      logger.log('Requesting wallet recovery OTP')
       if (!walletConfig) {
         throw new WalletConfigNotFoundError()
       }
@@ -48,7 +48,6 @@ export function useRecoveryOTP(): { isEnabled: boolean; requestOTP: () => Promis
         throw new NotAuthenticatedError('No email or phone number found for user.')
       }
 
-      logger.log('Requesting wallet recover OTP for user', { userId, email, phone })
       if (walletConfig.requestWalletRecoverOTP) {
         await walletConfig.requestWalletRecoverOTP({ userId, accessToken, email, phone })
         return { sentTo: email ? 'email' : 'phone', email, phone }

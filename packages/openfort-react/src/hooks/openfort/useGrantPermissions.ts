@@ -147,7 +147,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
       options: GrantPermissionsHookOptions = {}
     ): Promise<GrantPermissionsHookResult> => {
       try {
-        logger.log('Granting permissions with request:', request)
+        logger.log('Granting permissions')
 
         const chain = chains.find((c) => c.id === chainId)
         if (!chain) {
@@ -198,7 +198,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
           ...grantPermissionsResult,
         }
 
-        logger.log('Grant permissions result:', data)
+        logger.log('Permissions granted')
 
         setData(data)
         setStatus({

@@ -126,14 +126,12 @@ const ConnectWithOAuth: React.FC = () => {
                 provider,
                 redirectTo,
               })
-              logger.log(linkResponse)
               win.location.href = linkResponse
             } else {
               const r = await client.auth.initOAuth({
                 provider,
                 redirectTo,
               })
-              logger.log(r)
               win.location.href = r
             }
           } catch (e) {

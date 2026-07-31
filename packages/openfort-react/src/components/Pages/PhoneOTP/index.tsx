@@ -61,7 +61,6 @@ const PhoneOTP: React.FC = () => {
   // Handle OTP completion
   const handleComplete = useCallback(
     async (otp: string) => {
-      logger.log('OTP entered:', otp)
       setStatus('loading')
 
       let error: OpenfortError | undefined | null = null

@@ -27,6 +27,10 @@
   "files": [
     "dist",
     "template",
+    "!template/**/node_modules",
+    "!template/**/dist",
+    "!template/**/.cache",
+    "!template/**/.turbo",
     "README.md",
     "LICENSE",
     "CHANGELOG.md",

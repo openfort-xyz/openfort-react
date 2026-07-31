@@ -222,7 +222,7 @@ export const useAuthCallback = ({
           restoreReferrer()
         }
 
-        logger.log('callback', { userId })
+        logger.log('Processing authentication callback')
 
         const options: OpenfortHookOptions<Omit<CallbackResult, 'type'>> = {
           onSuccess: (data) => {

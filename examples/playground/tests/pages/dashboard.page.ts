@@ -90,17 +90,22 @@ export class DashboardPage {
 
     const confirmBtn = this.page.getByRole('button', { name: /sign and continue/i })
     await expect(confirmBtn).toBeVisible({ timeout: 30_000 })
-    // This modal screen can be replaced during connection reconciliation. A
-    // trusted forced click targets the current button without waiting on that
-    // transient layout stability.
-    await confirmBtn.click({ force: true })
+    await expect(confirmBtn).toBeEnabled({ timeout: 90_000 })
+    await confirmBtn.click()
     await expect(this.page.getByRole('button', { name: /^waiting/i })).toBeVisible({ timeout: 30_000 })
 
+    const success = this.page.getByText(/message signed/i)
+    const error = this.page
+      .locator('[role="alert"]')
+      .or(this.page.getByText(/failed to sign|no connected wallet|signer is not configured/i))
     try {
-      await expect(this.page.getByText(/message signed/i)).toBeVisible({ timeout: 120_000 })
-    } catch (e) {
+      await expect(success.or(error).first()).toBeVisible({ timeout: 120_000 })
+      if (await error.first().isVisible()) {
+        throw new Error(`Sign message failed: ${(await error.first().textContent())?.trim() || 'unknown error'}`)
+      }
+    } catch (cause) {
       await this.page.screenshot({ path: 'test-results/sign-message-failed.png', fullPage: true }).catch(() => {})
-      throw e
+      throw cause
     }
 
     // Close the success screen so the dashboard is interactive again.

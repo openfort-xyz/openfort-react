@@ -43,6 +43,10 @@ const defaultConfig = ({
     })
 
   return {
+    // Wagmi otherwise hydrates its external store during render. SDK bridge
+    // subscribers can then be updated while Hydrate is rendering, which React
+    // correctly reports as a render-phase update.
+    ssr: true,
     ...rest,
     chains,
     connectors,

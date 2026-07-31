@@ -29,6 +29,10 @@ trustPolicy: no-downgrade
 # the trust check and a genuinely tampered publish still fails the install.
 # Drop an entry as soon as the chain that pulls it moves to a signed release.
 trustPolicyExclude:
+  # The SDK's Rollup 2 build remains pinned to its final release. That release
+  # predates npm provenance used by later Rollup versions, so resolution-only
+  # lockfile updates otherwise fail the no-downgrade policy.
+  - "rollup@2.80.0"
   # wagmi > @wagmi/connectors > @walletconnect/ethereum-provider >
   # @walletconnect/logger > pino. Earlier slow-redact releases used a trusted
   # publisher; 0.3.2 has none.
@@ -43,12 +47,15 @@ trustPolicyExclude:
   - "@noble/hashes@1.7.0"
 
 # pnpm 10 blocks `preinstall`, `install` and `postinstall` scripts of
-# dependencies unless they are listed here. The empty list is the explicit,
-# greppable statement that no dependency in this workspace may run one.
+# dependencies unless they are listed here. Keep this allowlist minimal and
+# greppable so every dependency with install-time code is explicit.
 # Adding an entry grants that package arbitrary code execution at install time,
 # so add one only for a package that genuinely cannot ship prebuilt artifacts,
 # and pin it to the exact versions that were reviewed.
-onlyBuiltDependencies: []
+onlyBuiltDependencies:
+  # Better Auth's SQLite driver is used by the full-stack quickstart and ships
+  # a native binding that must be installed before the sample can start.
+  - better-sqlite3
 
 auditConfig:
   # Advisories whose fix is not reachable from this repo. `pnpm audit` runs as a

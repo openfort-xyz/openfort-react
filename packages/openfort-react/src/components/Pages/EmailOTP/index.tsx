@@ -62,7 +62,6 @@ const EmailOTP: React.FC = () => {
   // Handle OTP completion
   const handleComplete = useCallback(
     async (otp: string) => {
-      logger.log('OTP entered:', otp)
       setStatus('loading')
 
       const { error } = await signInEmailOtp({ email, otp })
