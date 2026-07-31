@@ -12,5 +12,5 @@ createRoot(rootElement).render(
     <OpenfortProviders>
       <App />
     </OpenfortProviders>
-  </StrictMode>,
+  </StrictMode>
 )

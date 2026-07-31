@@ -63,9 +63,7 @@ function App() {
         console.log('onAuthStateChange - User is signed in:', session.user)
         getAccessToken()
       } else if (event === 'SIGNED_OUT') {
-        console.log(
-          'onAuthStateChange - User signed out, cleaning up Openfort session',
-        )
+        console.log('onAuthStateChange - User signed out, cleaning up Openfort session')
         signOut()
       } else {
         console.log('onAuthStateChange - No active session')
@@ -82,9 +80,7 @@ function App() {
       {verificationMessage && (
         <div
           className={`fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-6 py-4 rounded-lg shadow-lg ${
-            verificationMessage.type === 'success'
-              ? 'bg-green-500/90 text-white'
-              : 'bg-red-500/90 text-white'
+            verificationMessage.type === 'success' ? 'bg-green-500/90 text-white' : 'bg-red-500/90 text-white'
           }`}
         >
           <p className="font-medium">{verificationMessage.message}</p>

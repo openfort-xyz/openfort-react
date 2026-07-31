@@ -1,10 +1,4 @@
-import {
-  OAuthProvider,
-  useAuthCallback,
-  useEmailAuth,
-  useGuestAuth,
-  useOAuth,
-} from '@openfort/react'
+import { OAuthProvider, useAuthCallback, useEmailAuth, useGuestAuth, useOAuth } from '@openfort/react'
 import type React from 'react'
 import { useState } from 'react'
 
@@ -51,9 +45,7 @@ const EmailForm = ({ isLogin }: { isLogin: boolean }) => {
       })
 
       if (requiresEmailVerification) {
-        alert(
-          'User is not verified. Please check your email to verify your account.',
-        )
+        alert('User is not verified. Please check your email to verify your account.')
       }
     } else {
       const { requiresEmailVerification } = await signUpEmail({
@@ -62,40 +54,22 @@ const EmailForm = ({ isLogin }: { isLogin: boolean }) => {
       })
 
       if (requiresEmailVerification) {
-        alert(
-          'Registration successful! Please check your email to verify your account.',
-        )
+        alert('Registration successful! Please check your email to verify your account.')
       }
     }
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 mb-4">
-      <label
-        className="block text-left text-sm font-medium mb-1"
-        htmlFor="email"
-      >
+      <label className="block text-left text-sm font-medium mb-1" htmlFor="email">
         Email
       </label>
-      <input
-        id="email"
-        type="email"
-        placeholder="Enter your email address"
-        required
-      />
+      <input id="email" type="email" placeholder="Enter your email address" required />
       <div>
-        <label
-          className="block text-left text-sm font-medium mb-1"
-          htmlFor="password"
-        >
+        <label className="block text-left text-sm font-medium mb-1" htmlFor="password">
           Password
         </label>
-        <input
-          id="password"
-          type="password"
-          placeholder="Enter your password"
-          required
-        />
+        <input id="password" type="password" placeholder="Enter your password" required />
       </div>
       {error && <p className="text-red-500 text-sm">{error.message}</p>}
 
