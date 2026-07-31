@@ -14,6 +14,11 @@ import { useOpenfort } from '../../Openfort/useOpenfort.js'
 
 type OtpStatus = 'idle' | 'loading' | 'error' | 'success' | 'sending-otp' | 'send-otp'
 
+/** How long the resend button stays locked after a code has been requested. */
+const RESEND_COOLDOWN_MS = 10000
+/** How long a failure message stays up before the code input reopens. */
+const ERROR_DISPLAY_DURATION_MS = 1000
+
 type AutomaticRecoveryOptions = {
   /** Chain family this flow creates a wallet on, used to label the debug logs. */
   chain: WalletChain
@@ -82,10 +87,6 @@ export function useAutomaticRecovery({
         setOtpStatus('error')
         setOtpError(err instanceof OpenfortError ? err.message : otpVerificationError)
         logger.log('Error verifying OTP for wallet recovery', err)
-        setTimeout(() => {
-          setOtpStatus('idle')
-          setOtpError(false)
-        }, 1000)
       }
     },
     [create, setRoute, successRoute, otpVerificationError]
@@ -136,6 +137,40 @@ export function useAutomaticRecovery({
     triggerResize,
     setRoute,
   ])
+
+  // The resend button parks its request in the status as `send-otp`; this effect
+  // performs the request and reports the outcome back through the same status.
+  useEffect(() => {
+    if (otpStatus !== 'send-otp') return
+    setOtpStatus('sending-otp')
+    ;(async () => {
+      try {
+        setOtpResponse(await requestOTP())
+        setOtpStatus('idle')
+      } catch (err) {
+        logger.log('Error requesting OTP for wallet recovery', err)
+        setOtpError('Failed to send recovery code')
+        setOtpStatus('error')
+      }
+    })()
+  }, [otpStatus, requestOTP])
+
+  // A failure message stays up long enough to be read, then the input reopens.
+  useEffect(() => {
+    if (otpStatus !== 'error') return
+    const timerId = setTimeout(() => {
+      setOtpStatus('idle')
+      setOtpError(false)
+    }, ERROR_DISPLAY_DURATION_MS)
+    return () => clearTimeout(timerId)
+  }, [otpStatus])
+
+  // Requesting a code locks the resend button until the cooldown elapses.
+  useEffect(() => {
+    if (canSendOtp) return
+    const timerId = setTimeout(() => setCanSendOtp(true), RESEND_COOLDOWN_MS)
+    return () => clearTimeout(timerId)
+  }, [canSendOtp])
 
   const startCreation = useCallback(() => {
     setRecoveryError(null)
