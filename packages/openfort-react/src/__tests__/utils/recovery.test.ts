@@ -1,7 +1,7 @@
 import { RecoveryMethod } from '@openfort/openfort-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { OpenfortReactErrorType } from '../../errors/index.js'
 import { buildRecoveryParams } from '../../shared/utils/recovery.js'
-import { OpenfortReactErrorType } from '../../types.js'
 
 const BASE_CONFIG = {
   walletConfig: undefined as unknown as never,
