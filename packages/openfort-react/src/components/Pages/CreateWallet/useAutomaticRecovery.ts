@@ -14,6 +14,8 @@ import { useOpenfort } from '../../Openfort/useOpenfort.js'
 
 type OtpStatus = 'idle' | 'loading' | 'error' | 'success' | 'sending-otp' | 'send-otp'
 
+/** How long the resend button stays locked after a code has been requested. */
+const RESEND_COOLDOWN_MS = 10000
 /** How long a failure message stays up before the code input reopens. */
 const ERROR_DISPLAY_DURATION_MS = 1000
 
@@ -162,6 +164,13 @@ export function useAutomaticRecovery({
     }, ERROR_DISPLAY_DURATION_MS)
     return () => clearTimeout(timerId)
   }, [otpStatus])
+
+  // Requesting a code locks the resend button until the cooldown elapses.
+  useEffect(() => {
+    if (canSendOtp) return
+    const timerId = setTimeout(() => setCanSendOtp(true), RESEND_COOLDOWN_MS)
+    return () => clearTimeout(timerId)
+  }, [canSendOtp])
 
   const startCreation = useCallback(() => {
     setRecoveryError(null)

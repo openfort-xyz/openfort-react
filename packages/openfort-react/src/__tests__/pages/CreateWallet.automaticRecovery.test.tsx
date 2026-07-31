@@ -267,6 +267,32 @@ describe('Ethereum automatic recovery', () => {
     expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
   })
 
+  it('re-enables the resend button once the cooldown elapses', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+      render(<CreateWallet />)
+      await otpScreen()
+
+      fireEvent.click(screen.getByText('Resend Code'))
+      await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
+      expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
+
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+
+      const resend = screen.getByText('Resend Code') as HTMLButtonElement
+      expect(resend.disabled).toBe(false)
+
+      fireEvent.click(resend)
+
+      await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(3))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('reports a code that could not be resent and reopens the input', async () => {
     h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
     render(<CreateWallet />)
