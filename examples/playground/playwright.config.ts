@@ -1,3 +1,4 @@
+import { readdirSync } from 'node:fs'
 import path from 'node:path'
 import { defineConfig, devices, type Project } from '@playwright/test'
 import { ANVIL_RPC_URL, FORK_MINT_CONTRACT, IS_FORK_RUN } from './tests/anvil/fork'
@@ -10,6 +11,27 @@ const REPORT_DIR = path.join(ROOT_OUT, 'playwright-report')
 
 /** Suites whose chain reads resolve against the anvil fork; excluded from live runs. */
 const FORK_SPECS = /\.fork\.spec\.ts/
+const EVM_LIVE_SPECS = ['evm-integration.spec.ts', 'refresh-persistence.spec.ts']
+const SOLANA_LIVE_SPECS = ['wallets-create-new.spec.ts']
+const UNAUTHENTICATED_SPECS = ['auth.spec.ts']
+
+/** Fail configuration loading when a suite can silently fall outside every project. */
+function assertEverySpecHasAnOwner() {
+  const specFiles = readdirSync(path.join(import.meta.dirname, 'tests/specs')).filter((file) =>
+    file.endsWith('.spec.ts')
+  )
+  const explicitlyOwned = new Set([...EVM_LIVE_SPECS, ...SOLANA_LIVE_SPECS, ...UNAUTHENTICATED_SPECS])
+  const unowned = specFiles.filter((file) => !explicitlyOwned.has(file) && !FORK_SPECS.test(file))
+  const missing = [...explicitlyOwned].filter((file) => !specFiles.includes(file))
+
+  if (unowned.length > 0 || missing.length > 0) {
+    throw new Error(
+      `Playwright spec ownership is invalid (unowned: ${unowned.join(', ') || 'none'}; missing: ${missing.join(', ') || 'none'})`
+    )
+  }
+}
+
+assertEverySpecHasAnOwner()
 
 /**
  * Guest sign-in runs against live Openfort in both modes, so a fork run still needs
@@ -36,18 +58,7 @@ const liveProjects: Project[] = [
   {
     name: 'chromium-evm',
     dependencies: ['setup'],
-    testIgnore: [
-      FORK_SPECS,
-      /auth\.spec\.ts/,
-      /wallet-entry\.spec\.ts/,
-      /refresh-persistence\.spec\.ts/,
-      // Individual EVM tests replaced by evm-integration.spec.ts (storageState loses IndexedDB)
-      /switch-chain-and-sign\.spec\.ts/,
-      /write-contract\.spec\.ts/,
-      /wallets-create-new\.spec\.ts/,
-      /session-keys-multi-delete\.spec\.ts/,
-    ],
-    testMatch: /.*\.spec\.ts/,
+    testMatch: EVM_LIVE_SPECS.map((file) => `**/${file}`),
     timeout: 180_000,
     use: {
       ...devices['Desktop Chrome'],
@@ -57,17 +68,7 @@ const liveProjects: Project[] = [
   {
     name: 'chromium-solana',
     dependencies: ['setup'],
-    testIgnore: [
-      FORK_SPECS,
-      /auth\.spec\.ts/,
-      /wallet-entry\.spec\.ts/,
-      /switch-chain-and-sign\.spec\.ts/,
-      /write-contract\.spec\.ts/,
-      /session-keys-multi-delete\.spec\.ts/,
-      /refresh-persistence\.spec\.ts/,
-      /evm-integration\.spec\.ts/,
-    ],
-    testMatch: /.*\.spec\.ts/,
+    testMatch: SOLANA_LIVE_SPECS.map((file) => `**/${file}`),
     use: {
       ...devices['Desktop Chrome'],
       storageState: AUTH_STATE_SOLANA,
@@ -75,7 +76,7 @@ const liveProjects: Project[] = [
   },
   {
     name: 'unauthenticated',
-    testMatch: /(wallet-entry|auth)\.spec\.ts/,
+    testMatch: UNAUTHENTICATED_SPECS.map((file) => `**/${file}`),
     use: { ...devices['Desktop Chrome'] },
   },
 ]

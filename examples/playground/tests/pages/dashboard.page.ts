@@ -24,7 +24,6 @@ export class DashboardPage {
     // Avoid matching the placeholder "Connected with ..." which appears before the wallet connects.
     const connectedRegex = mode === 'svm' ? /Connected with [1-9A-HJ-NP-Za-km-z]/i : /Connected with 0x/i
     await expect(this.page.getByText(connectedRegex)).toBeVisible({ timeout: 60_000 })
-    await new Promise((r) => setTimeout(r, 1000))
   }
 
   /**
@@ -42,7 +41,10 @@ export class DashboardPage {
     const signOut = this.signOutButton()
     const isOnDashboard = await signOut.isVisible().catch(() => false)
     if (!isOnDashboard) {
-      await this.page.waitForTimeout(5_000)
+      await Promise.race([
+        signOut.waitFor({ state: 'visible', timeout: 5_000 }),
+        this.page.waitForURL(/\/auth(?:[/?#]|$)/, { timeout: 5_000 }),
+      ]).catch(() => undefined)
       if (this.page.url().includes('/auth')) {
         await this.page.goto('/', { waitUntil: 'domcontentloaded' })
       }
