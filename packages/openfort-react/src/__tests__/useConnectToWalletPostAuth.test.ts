@@ -1,8 +1,8 @@
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { createMockClient, createMockEmbeddedAccount, createMockWalletConfig } from './mocks/openfort-client.js'
-import { createTestWrapper } from './mocks/wrapper.js'
+import { createMockClient, createMockEmbeddedAccount, createMockWalletConfig } from './mocks/openfortClient.js'
+import { createQueryWrapper } from './mocks/TestWrapper.js'
 
 // --- Module-level mocks ---
 
@@ -70,7 +70,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockClient.embeddedWallet.create.mockResolvedValue(account)
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -92,7 +92,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockClient.embeddedWallet.recover.mockResolvedValue(undefined)
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -113,7 +113,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockClient.embeddedWallet.recover.mockResolvedValue(undefined)
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -133,7 +133,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockUpdateEmbeddedAccounts.mockResolvedValue([pwAccount])
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -152,7 +152,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockWalletConfig.getEncryptionSession = undefined
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -168,7 +168,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockWalletConfig.connectOnLogin = false
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -182,7 +182,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
 
   it('returns empty when recoverWalletAutomatically option is false', async () => {
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -201,7 +201,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockClient.embeddedWallet.create.mockRejectedValue(new Error('Creation failed'))
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     await act(async () => {
@@ -216,7 +216,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockClient.embeddedWallet.create.mockRejectedValue(new Error('Creation failed'))
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     await act(async () => {
@@ -235,7 +235,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockClient.embeddedWallet.recover.mockRejectedValue(new Error('Recovery failed'))
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     await act(async () => {
@@ -249,7 +249,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     mockUpdateEmbeddedAccounts.mockResolvedValueOnce(undefined)
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -278,7 +278,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     })
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>
@@ -307,7 +307,7 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     })
 
     const { result } = renderHook(() => useConnectToWalletPostAuth(), {
-      wrapper: createTestWrapper(),
+      wrapper: createQueryWrapper(),
     })
 
     let tryResult: Awaited<ReturnType<typeof result.current.tryUseWallet>>

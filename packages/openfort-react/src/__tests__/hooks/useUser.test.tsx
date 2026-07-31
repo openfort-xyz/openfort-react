@@ -2,7 +2,7 @@ import { EmbeddedState } from '@openfort/openfort-js'
 import { renderHook } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { createMockOpenfortClient } from '../mocks/openfortClient.js'
-import { createTestWrapper } from '../mocks/TestWrapper.js'
+import { createStoreWrapper } from '../mocks/TestWrapper.js'
 
 // Mock the wallet hooks that useUser depends on
 vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
@@ -17,7 +17,7 @@ const { useUser } = await import('../../hooks/openfort/useUser.js')
 
 describe('useUser', () => {
   it('returns isAuthenticated=false when state is NONE', () => {
-    const wrapper = createTestWrapper({ embeddedState: EmbeddedState.NONE })
+    const wrapper = createStoreWrapper({ embeddedState: EmbeddedState.NONE })
     const { result } = renderHook(() => useUser(), { wrapper })
 
     expect(result.current.isAuthenticated).toBe(false)
@@ -25,14 +25,14 @@ describe('useUser', () => {
   })
 
   it('returns isAuthenticated=false when state is UNAUTHENTICATED', () => {
-    const wrapper = createTestWrapper({ embeddedState: EmbeddedState.UNAUTHENTICATED })
+    const wrapper = createStoreWrapper({ embeddedState: EmbeddedState.UNAUTHENTICATED })
     const { result } = renderHook(() => useUser(), { wrapper })
 
     expect(result.current.isAuthenticated).toBe(false)
   })
 
   it('returns isAuthenticated=true when state is EMBEDDED_SIGNER_NOT_CONFIGURED', () => {
-    const wrapper = createTestWrapper({
+    const wrapper = createStoreWrapper({
       embeddedState: EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED,
     })
     const { result } = renderHook(() => useUser(), { wrapper })
@@ -41,7 +41,7 @@ describe('useUser', () => {
   })
 
   it('returns isAuthenticated=true when state is READY', () => {
-    const wrapper = createTestWrapper({ embeddedState: EmbeddedState.READY })
+    const wrapper = createStoreWrapper({ embeddedState: EmbeddedState.READY })
     const { result } = renderHook(() => useUser(), { wrapper })
 
     expect(result.current.isAuthenticated).toBe(true)
@@ -50,7 +50,7 @@ describe('useUser', () => {
   it('returns user and linkedAccounts from context', () => {
     const mockUser = { id: 'usr_123', linkedAccounts: [] } as any
     const mockAccounts = [{ provider: 'email', email: 'test@test.com' }] as any
-    const wrapper = createTestWrapper({
+    const wrapper = createStoreWrapper({
       embeddedState: EmbeddedState.READY,
       user: mockUser,
       linkedAccounts: mockAccounts,
@@ -62,7 +62,7 @@ describe('useUser', () => {
   })
 
   it('isConnected is false when wallet is not connected even if authenticated', () => {
-    const wrapper = createTestWrapper({
+    const wrapper = createStoreWrapper({
       embeddedState: EmbeddedState.READY,
       user: { id: 'usr_123', linkedAccounts: [] } as any,
     })
@@ -77,7 +77,7 @@ describe('useUser', () => {
     const mockClient = createMockOpenfortClient()
     mockClient.getAccessToken.mockResolvedValue('test-token-123')
 
-    const wrapper = createTestWrapper({
+    const wrapper = createStoreWrapper({
       embeddedState: EmbeddedState.READY,
       client: mockClient as any,
     })

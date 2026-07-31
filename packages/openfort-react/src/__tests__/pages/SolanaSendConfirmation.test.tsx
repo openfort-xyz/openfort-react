@@ -69,10 +69,10 @@ vi.mock('../../solana/transfer', () => ({
 }))
 
 const { SolanaSendConfirmation } = await import('../../components/Pages/SendConfirmation/SolanaSendConfirmation.js')
-const { createTestWrapper } = await import('../mocks/wrapper.js')
+const { createQueryWrapper } = await import('../mocks/TestWrapper.js')
 
 /** The page reads its fee quote through a query, so it needs a QueryClient in scope. */
-const render = (ui: ReactElement) => rtlRender(ui, { wrapper: createTestWrapper() })
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper() })
 
 describe('SolanaSendConfirmation', () => {
   beforeEach(() => {
