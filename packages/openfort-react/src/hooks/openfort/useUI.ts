@@ -149,15 +149,17 @@ export function useUI() {
     setRoute(match ?? fallback)
   }
 
+  const close = () => {
+    signRequest?.reject(new Error('User rejected the signature request'))
+    setSignRequest(null)
+    setOpen(false)
+  }
+
   return {
     isOpen: open,
     open: () => defaultOpen(),
-    close: () => {
-      signRequest?.reject(new Error('User rejected the signature request'))
-      setSignRequest(null)
-      setOpen(false)
-    },
-    setIsOpen: setOpen,
+    close,
+    setIsOpen: (value: boolean) => (value ? setOpen(true) : close()),
 
     openProfile: () => gotoAndOpen(routes.CONNECTED),
     openSwitchNetworks: () => gotoAndOpen(routes.ETH_SWITCH_NETWORK),

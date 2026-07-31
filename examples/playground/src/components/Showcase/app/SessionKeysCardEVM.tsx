@@ -53,7 +53,6 @@ export const SessionKeysCardEVM = ({ hook }: { hook?: string }) => {
             const privateKey = generatePrivateKey()
             const accountSessionAddress = privateKeyToAccount(privateKey).address
             const { error: grantError, permissionsContext } = await grantPermissions({
-              sessionKey: privateKey,
               request: {
                 signer: {
                   type: 'account',

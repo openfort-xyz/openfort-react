@@ -1,7 +1,7 @@
 'use client'
 
 import { QueryClient, QueryClientContext, QueryClientProvider } from '@tanstack/react-query'
-import type { PropsWithChildren } from 'react'
+import type { Context, PropsWithChildren } from 'react'
 import { useContext, useState } from 'react'
 
 /**
@@ -15,7 +15,10 @@ import { useContext, useState } from 'react'
  * nesting a second provider.
  */
 export function QueryClientBoundary({ children }: PropsWithChildren) {
-  const appQueryClient = useContext(QueryClientContext)
+  // Compatibility test matrices can install TanStack Query with a different
+  // React type copy. Context identity is runtime-safe; normalize its type at
+  // this package boundary so React 18 and 19 consumers both compile.
+  const appQueryClient = useContext(QueryClientContext as unknown as Context<QueryClient | undefined>)
   const [ownQueryClient] = useState(() => (appQueryClient ? null : new QueryClient()))
 
   if (!ownQueryClient) return <>{children}</>

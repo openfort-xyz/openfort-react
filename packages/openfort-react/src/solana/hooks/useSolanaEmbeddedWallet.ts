@@ -9,13 +9,12 @@ import {
 } from '@openfort/openfort-js'
 import { useCallback, useContext, useEffect } from 'react'
 import type { EmbeddedAccountRequest } from '../../actions/createEmbeddedWallet.js'
-import { ProviderNotReadyError } from '../../errors/wallet.js'
 import type { WalletFlowStatus } from '../../hooks/openfort/walletTypes.js'
 import type {
   EmbeddedWalletChainBindings,
   EmbeddedWalletSyncParameters,
 } from '../../shared/hooks/createEmbeddedWalletHook.js'
-import { createEmbeddedWalletHook } from '../../shared/hooks/createEmbeddedWalletHook.js'
+import { createEmbeddedWalletHook, rejectUnreadyProvider } from '../../shared/hooks/createEmbeddedWalletHook.js'
 import { getDefaultSolanaRpcUrl } from '../../utils/rpc.js'
 import { getTransactionBytes } from '../operations.js'
 import { createSolanaProvider } from '../provider.js'
@@ -73,11 +72,6 @@ function buildSolanaWallet(
     recoveryMethod: account.recoveryMethod,
     getProvider,
   }
-}
-
-/** The wallet exposed while `setActive` recovers has no usable provider yet. */
-async function rejectUnreadyProvider(): Promise<never> {
-  throw new ProviderNotReadyError()
 }
 
 function buildSolanaConnectingStatus(): WalletFlowStatus {

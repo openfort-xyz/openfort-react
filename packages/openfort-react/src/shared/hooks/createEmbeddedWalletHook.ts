@@ -12,7 +12,12 @@ import { setRecoveryMethod } from '../../actions/setRecoveryMethod.js'
 import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
 import { useOpenfortConfig, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 import { asOpenfortError } from '../../errors/base.js'
-import { SetActiveWalletError, WalletCreationError, WalletImportError } from '../../errors/wallet.js'
+import {
+  ProviderNotReadyError,
+  SetActiveWalletError,
+  WalletCreationError,
+  WalletImportError,
+} from '../../errors/wallet.js'
 import type { WalletFlowStatus } from '../../hooks/openfort/walletTypes.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { formatAddress } from '../../utils/format.js'
@@ -62,6 +67,11 @@ export type EmbeddedWalletChainBindings = {
   buildAccountRequest: (options: CreateEmbeddedWalletOptions | undefined) => EmbeddedAccountRequest
   /** Extra chain-specific fields merged into the hook result. */
   resultProps: Record<string, unknown>
+}
+
+/** Provider placeholder used while an embedded wallet is still recovering. */
+export async function rejectUnreadyProvider(): Promise<never> {
+  throw new ProviderNotReadyError()
 }
 
 type EmbeddedWalletHookConfig<TWallet extends { address: string }, TProvider, TOptions> = {

@@ -7,13 +7,12 @@ import type { EmbeddedAccountRequest } from '../../actions/createEmbeddedWallet.
 import { useOpenfortConfig } from '../../components/Openfort/useOpenfort.js'
 import { DEFAULT_ACCOUNT_TYPE } from '../../constants/openfort.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
-import { ProviderNotReadyError } from '../../errors/wallet.js'
 import type { WalletFlowStatus } from '../../hooks/openfort/walletTypes.js'
 import type {
   EmbeddedWalletChainBindings,
   EmbeddedWalletSyncParameters,
 } from '../../shared/hooks/createEmbeddedWalletHook.js'
-import { createEmbeddedWalletHook } from '../../shared/hooks/createEmbeddedWalletHook.js'
+import { createEmbeddedWalletHook, rejectUnreadyProvider } from '../../shared/hooks/createEmbeddedWalletHook.js'
 import type { CreateEmbeddedWalletOptions, WalletStatus } from '../../shared/types.js'
 import { logger } from '../../utils/logger.js'
 import type {
@@ -114,11 +113,6 @@ function buildEthereumWallets({
 
 function buildEthereumConnectingStatus(wallet: ConnectedEmbeddedEthereumWallet): WalletFlowStatus {
   return { status: 'connecting', address: wallet.address }
-}
-
-/** The wallet exposed while `setActive` recovers has no usable provider yet. */
-async function rejectUnreadyProvider(): Promise<never> {
-  throw new ProviderNotReadyError()
 }
 
 function useEthereumChainBindings(options?: UseEmbeddedEthereumWalletOptions): EmbeddedWalletChainBindings {

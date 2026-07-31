@@ -1,4 +1,4 @@
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -9,8 +9,27 @@ const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
+const repositoryRoot = path.resolve(packageRoot, "../..");
 
 describe("published templates", () => {
+  test("never documents a Shield secret prefix as publishable", () => {
+    const result = spawnSync(
+      "git",
+      [
+        "grep",
+        "-n",
+        `VITE_SHIELD_PUBLISHABLE_KEY=${"sk_"}`,
+        "--",
+        "examples",
+        "packages/create-openfort",
+      ],
+      { cwd: repositoryRoot, encoding: "utf8" },
+    );
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe("");
+  });
+
   test("ship configuration and npm-safe ignore files for every template", () => {
     const npmCache = mkdtempSync(
       path.join(os.tmpdir(), "create-openfort-npm-cache-"),

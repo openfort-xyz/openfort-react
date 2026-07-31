@@ -127,9 +127,22 @@ export const initializeGit = async (projectDir: string) => {
         cwd: projectDir,
       });
     }
-    const secretFiles = [".env", "frontend/.env", "backend/.env"].filter(
-      (file) => fs.existsSync(path.join(projectDir, file)),
-    );
+    const secretFiles: string[] = [];
+    const collectSecretFiles = (directory: string) => {
+      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+        if (entry.name === ".git" || entry.name === "node_modules") continue;
+        const absolutePath = path.join(directory, entry.name);
+        if (entry.isDirectory()) {
+          collectSecretFiles(absolutePath);
+        } else if (
+          entry.name.startsWith(".env") &&
+          entry.name !== ".env.example"
+        ) {
+          secretFiles.push(path.relative(projectDir, absolutePath));
+        }
+      }
+    };
+    collectSecretFiles(projectDir);
     if (secretFiles.length > 0) {
       try {
         await Promise.all(

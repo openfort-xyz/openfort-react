@@ -39,4 +39,14 @@ describe("initializeGit", () => {
 
     expect(fs.readFileSync(sentinel, "utf8")).toBe("preserve me");
   });
+
+  test("refuses to stage an unignored environment variant", async () => {
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
+    temporaryDirectories.push(projectDir);
+    fs.writeFileSync(path.join(projectDir, ".env.production"), "SECRET=fake");
+
+    await expect(initializeGit(projectDir)).rejects.toThrow(
+      "Refusing to stage generated credentials",
+    );
+  });
 });

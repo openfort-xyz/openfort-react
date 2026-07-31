@@ -36,6 +36,7 @@ export function useCopyToClipboard(resetDelay = 1000) {
 
   // Cleanup timeout on unmount
   useEffect(() => {
+    mountedRef.current = true
     return () => {
       mountedRef.current = false
       if (timeoutRef.current) {

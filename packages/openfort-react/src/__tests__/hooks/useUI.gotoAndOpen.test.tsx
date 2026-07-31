@@ -27,9 +27,11 @@ const setOpen = vi.fn((value: boolean) => {
   state.open = value
 })
 const setConnector = vi.fn()
+const rejectSignRequest = vi.fn()
+const setSignRequest = vi.fn()
 
 vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({ signRequest: null, setSignRequest: vi.fn() }),
+  useOpenfort: () => ({ signRequest: { reject: rejectSignRequest }, setSignRequest }),
   useOpenfortRouting: () => ({
     open: state.open,
     setOpen,
@@ -122,5 +124,17 @@ describe('useUI gotoAndOpen', () => {
       expect(state.open).toBe(true)
       expect(state.route).toMatchObject({ route })
     }
+  })
+
+  it('settles a pending signature when setIsOpen closes the modal', () => {
+    const { result } = renderHook(() => useUI())
+
+    act(() => result.current.setIsOpen(false))
+
+    expect(rejectSignRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ message: 'User rejected the signature request' })
+    )
+    expect(setSignRequest).toHaveBeenCalledWith(null)
+    expect(setOpen).toHaveBeenCalledWith(false)
   })
 })

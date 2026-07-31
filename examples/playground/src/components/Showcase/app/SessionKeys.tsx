@@ -53,7 +53,6 @@ export const SessionKeysCard = ({ hook }: { hook?: string }) => {
           const privateKey = generatePrivateKey()
           const accountSessionAddress = privateKeyToAccount(privateKey).address
           const { error, permissionsContext } = await grantPermissions({
-            sessionKey: privateKey,
             request: {
               signer: {
                 type: 'account',

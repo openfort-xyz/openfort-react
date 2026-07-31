@@ -64,8 +64,8 @@ for (const template of TEMPLATES_TO_SYNC) {
         '-av',
         '--exclude=node_modules',
         '--exclude=dist',
-        '--exclude=.env',
-        '--exclude=.env.local',
+        '--include=.env.example',
+        '--exclude=.env*',
         `${resolvedSource}/`,
         `${resolvedTarget}/`
       ],
