@@ -26,15 +26,10 @@ import {
 
 interface CliFlags {
   noGit: boolean;
-  noInstall: boolean;
   default: boolean;
 
   /** @internal Used in CI. */
   CI: boolean;
-  /** @internal Used in CI. */
-  template?: OpenfortTemplate;
-  /** @internal Used in CI. */
-  theme?: OpenfortTheme;
 }
 
 interface CliResults {
@@ -71,11 +66,6 @@ export const runCli = async (): Promise<CliResults> => {
     .option(
       "--noGit",
       "Explicitly tell the CLI to not initialize a new git repo in the project",
-      false,
-    )
-    .option(
-      "--noInstall",
-      "Explicitly tell the CLI to not run the package manager's install command",
       false,
     )
     .option(
@@ -118,11 +108,8 @@ export const runCli = async (): Promise<CliResults> => {
     appName: cliProvidedName || DEFAULT_APP_NAME,
     flags: {
       noGit: opts.noGit || false,
-      noInstall: opts.noInstall || false,
       default: opts.default || false,
       CI: opts.CI || false,
-      template: opts.template,
-      theme: opts.theme,
     },
   };
 

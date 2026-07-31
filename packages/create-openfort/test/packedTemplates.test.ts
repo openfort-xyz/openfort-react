@@ -1,15 +1,24 @@
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
+
+import { scaffoldProject } from "~/helpers/scaffoldProject.js";
+import type { OpenfortTemplate } from "~/installers/index.js";
 
 const packageRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
 );
 const repositoryRoot = path.resolve(packageRoot, "../..");
+const templates: OpenfortTemplate[] = [
+  "firebase",
+  "headless",
+  "openfort-ui",
+  "solana-headless",
+];
 
 describe("published templates", () => {
   test("never documents a Shield secret prefix as publishable", () => {
@@ -52,12 +61,7 @@ describe("published templates", () => {
       ];
       const packedPaths = new Set(files.map((file) => file.path));
 
-      for (const template of [
-        "firebase",
-        "headless",
-        "openfort-ui",
-        "solana-headless",
-      ]) {
+      for (const template of templates) {
         const root = `template/openfort-templates/${template}`;
         expect(packedPaths.has(`${root}/gitignore`)).toBe(true);
         expect(packedPaths.has(`${root}/.env.example`)).toBe(true);
@@ -66,6 +70,41 @@ describe("published templates", () => {
       expect(packedPaths.has("template/backend/.env.example")).toBe(true);
     } finally {
       rmSync(npmCache, { recursive: true, force: true });
+    }
+  });
+
+  test("scaffolds every shipped frontend without repository-only references", async () => {
+    const sandbox = mkdtempSync(
+      path.join(os.tmpdir(), "create-openfort-smoke-"),
+    );
+
+    try {
+      for (const template of templates) {
+        const projectDir = path.join(sandbox, template);
+        await scaffoldProject({
+          projectName: template,
+          projectDir,
+          template,
+          createBackend: false,
+        });
+
+        expect(existsSync(path.join(projectDir, ".gitignore"))).toBe(true);
+        expect(existsSync(path.join(projectDir, "gitignore"))).toBe(false);
+        expect(
+          readFileSync(path.join(projectDir, ".env.example"), "utf8"),
+        ).toContain("VITE_OPENFORT_PUBLISHABLE_KEY=");
+
+        const packageJson = JSON.parse(
+          readFileSync(path.join(projectDir, "package.json"), "utf8"),
+        ) as {
+          scripts?: Record<string, string>;
+          dependencies?: Record<string, string>;
+        };
+        expect(packageJson.scripts?.build).toBeTruthy();
+        expect(packageJson.dependencies?.["@openfort/react"]).toBe("latest");
+      }
+    } finally {
+      rmSync(sandbox, { recursive: true, force: true });
     }
   });
 });

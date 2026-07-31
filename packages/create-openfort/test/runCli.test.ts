@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test } from "vitest";
+import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import { runCli } from "~/cli/index.js";
 import { DEFAULT_APP_NAME } from "~/consts.js";
@@ -20,6 +20,7 @@ describe("runCli", () => {
 
   afterEach(() => {
     process.argv = originalArgv;
+    vi.restoreAllMocks();
   });
 
   test("takes the app name from the positional argument", async () => {
@@ -56,6 +57,8 @@ describe("runCli", () => {
 
     expect(themed.template).toBe("openfort-ui");
     expect(themed.theme).toBe("retro");
+    expect(themed.flags).not.toHaveProperty("template");
+    expect(themed.flags).not.toHaveProperty("theme");
   });
 
   test("defaults to the openfort-ui template with no backend", async () => {
@@ -65,10 +68,19 @@ describe("runCli", () => {
     expect(results.createBackend).toBe(false);
   });
 
-  test("passes through the git and install opt-outs", async () => {
-    const results = await run("my-app", "--noGit", "--noInstall");
+  test("passes through the git opt-out", async () => {
+    const results = await run("my-app", "--noGit");
 
     expect(results.flags.noGit).toBe(true);
-    expect(results.flags.noInstall).toBe(true);
+  });
+
+  test("rejects the removed install opt-out", async () => {
+    vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit(${code})`);
+    });
+
+    await expect(run("my-app", "--noInstall")).rejects.toThrow(
+      "process.exit(1)",
+    );
   });
 });

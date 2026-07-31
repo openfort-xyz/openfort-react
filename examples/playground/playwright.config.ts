@@ -17,9 +17,20 @@ const UNAUTHENTICATED_SPECS = ['auth.spec.ts']
 
 /** Fail configuration loading when a suite can silently fall outside every project. */
 function assertEverySpecHasAnOwner() {
-  const specFiles = readdirSync(path.join(import.meta.dirname, 'tests/specs')).filter((file) =>
-    file.endsWith('.spec.ts')
-  )
+  const specsRoot = path.join(import.meta.dirname, 'tests/specs')
+  const specFiles: string[] = []
+  const collectSpecs = (directory: string) => {
+    for (const entry of readdirSync(directory, { withFileTypes: true })) {
+      const absolutePath = path.join(directory, entry.name)
+      if (entry.isDirectory()) {
+        collectSpecs(absolutePath)
+      } else if (entry.name.endsWith('.spec.ts')) {
+        specFiles.push(path.relative(specsRoot, absolutePath).split(path.sep).join('/'))
+      }
+    }
+  }
+  collectSpecs(specsRoot)
+
   const explicitlyOwned = new Set([...EVM_LIVE_SPECS, ...SOLANA_LIVE_SPECS, ...UNAUTHENTICATED_SPECS])
   const unowned = specFiles.filter((file) => !explicitlyOwned.has(file) && !FORK_SPECS.test(file))
   const missing = [...explicitlyOwned].filter((file) => !specFiles.includes(file))
