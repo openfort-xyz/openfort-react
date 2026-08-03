@@ -119,13 +119,18 @@ export function useOnramp(
   const [current, setCurrent] = useState<FundingSession | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [loading, setLoading] = useState(false)
-  // Generation guard: only the latest open()/reset() updates state, and unmount
-  // stops the poll loop (otherwise it runs until the session's 24h TTL).
+  // Generation guard: only the latest open()/reset() updates state. Unmount is
+  // tracked separately with a ref the mount effect re-arms — StrictMode's dev
+  // double-mount must NOT kill an in-flight open() (the cleanup runs between
+  // the paired mounts), only a real unmount stops the poll loop (otherwise it
+  // runs until the session's 24h TTL).
   const generation = useRef(0)
+  const mounted = useRef(true)
 
   useEffect(() => {
+    mounted.current = true
     return () => {
-      generation.current += 1
+      mounted.current = false
     }
   }, [])
 
@@ -157,7 +162,7 @@ export function useOnramp(
       if (!session || !methodId) throw new Error('useOnramp needs a session and a method to open')
       generation.current += 1
       const gen = generation.current
-      const isCurrent = () => generation.current === gen
+      const isCurrent = () => generation.current === gen && mounted.current
       setError(null)
       setLoading(true)
       try {

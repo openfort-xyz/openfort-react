@@ -74,13 +74,13 @@ const BuyProcessing = () => {
       .then((session) => {
         if (session.status === 'succeeded') {
           setRoute(routes.BUY_COMPLETE)
-        } else {
-          setFailed(
-            session.status === 'bounced'
-              ? 'The purchase was reversed and refunded by the provider.'
-              : 'The purchase was not completed in time.'
-          )
+        } else if (session.status === 'bounced') {
+          setFailed('The purchase was reversed and refunded by the provider.')
+        } else if (session.status === 'expired') {
+          setFailed('The purchase was not completed in time.')
         }
+        // Non-terminal resolution = the poll was interrupted (e.g. a remount),
+        // NOT an outcome — the mounted state machine keeps tracking the session.
       })
       .catch((e) => {
         setFailed(e instanceof Error ? e.message : 'Failed to start the purchase.')
