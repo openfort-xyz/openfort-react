@@ -18,10 +18,13 @@ import StripeOnrampEmbed from './StripeOnrampEmbed'
 
 // In-page mount for the Coinbase native Pay button (Apple/Google Pay). The
 // server returns Coinbase's hosted Pay-button URL; `allow="payment"` lets the
-// wallet-pay sheet run inside the frame.
+// wallet-pay sheet run inside the frame. The page renders a single ~44px Pay
+// button centered in the frame's viewport (no resize events), so the frame
+// hugs the button — the wallet-pay sheet itself is a native overlay, not
+// constrained by the frame.
 const WalletPayFrame = styled.iframe`
   width: 100%;
-  height: 380px;
+  height: 60px;
   margin-top: 8px;
   border: 0;
   border-radius: 12px;
@@ -42,6 +45,10 @@ const BuyProcessing = () => {
   openRef.current = onramp.open
   const [failed, setFailed] = useState<string | null>(null)
   const [showContinueButton, setShowContinueButton] = useState(false)
+  // Set once the Pay-button frame reports the payment was committed — the
+  // button is done at that point, so the frame gives way to the spinner while
+  // the session poll waits for settlement.
+  const [framePaid, setFramePaid] = useState(false)
 
   // Commit once per mount. A session takes a single payment method, so a retry
   // goes back to the amount screen, which mints a fresh session.
@@ -90,7 +97,33 @@ const BuyProcessing = () => {
   // Re-measure the modal as the state machine advances.
   useEffect(() => {
     triggerResize()
-  }, [triggerResize, onramp.status, failed, showContinueButton])
+  }, [triggerResize, onramp.status, failed, showContinueButton, framePaid])
+
+  // The Pay-button page reports its lifecycle via postMessage
+  // (onramp_api.load_* / commit_* / polling_*, per the headless onramp docs) —
+  // the only signal a cross-origin frame gives us. Session polling stays the
+  // source of truth for settlement; these just drive what's on screen.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== 'https://pay.coinbase.com') return
+      let payload: unknown = event.data
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload)
+        } catch {
+          return
+        }
+      }
+      const { eventName, data } = (payload ?? {}) as { eventName?: string; data?: { errorMessage?: string } }
+      if (eventName === 'onramp_api.commit_success' || eventName === 'onramp_api.polling_start') {
+        setFramePaid(true)
+      } else if (eventName === 'onramp_api.load_error' || eventName === 'onramp_api.commit_error') {
+        setFailed(data?.errorMessage ?? 'The payment could not be started. Please try again.')
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
 
   // The `embedded` angle mounts the provider's own component in-page (Stripe's
   // embedded onramp) from the payment method's publishable key + session secret.
@@ -120,12 +153,12 @@ const BuyProcessing = () => {
   // paying; advancing would skip it); it appears once payment is received.
   useEffect(() => {
     const inPageAwaitingPayment =
-      (onramp.angle === 'native' || (onramp.angle === 'embedded' && !embeddedNeedsFallback)) &&
+      ((onramp.angle === 'native' && !framePaid) || (onramp.angle === 'embedded' && !embeddedNeedsFallback)) &&
       onramp.status === 'waiting_payment'
     if ((onramp.status !== 'waiting_payment' && onramp.status !== 'processing') || inPageAwaitingPayment) return
     const timer = setTimeout(() => setShowContinueButton(true), 5_000)
     return () => clearTimeout(timer)
-  }, [onramp.status, onramp.angle, embeddedNeedsFallback])
+  }, [onramp.status, onramp.angle, embeddedNeedsFallback, framePaid])
 
   const handleBack = () => {
     onramp.reset()
@@ -152,7 +185,8 @@ const BuyProcessing = () => {
   // Native wallet pay mounts Coinbase's in-page Pay button once the commit
   // returns its URL and while we await payment; every other angle (and the
   // post-payment 'processing' delivery) shows the spinner.
-  const showWalletPayFrame = onramp.angle === 'native' && !!onramp.url && onramp.status === 'waiting_payment'
+  const showWalletPayFrame =
+    onramp.angle === 'native' && !!onramp.url && onramp.status === 'waiting_payment' && !framePaid
 
   return (
     <PageContent onBack={handleBack}>
@@ -171,7 +205,7 @@ const BuyProcessing = () => {
               ? 'Pay securely with Apple Pay or Google Pay below.'
               : showEmbedded
                 ? 'Pay securely below.'
-                : onramp.status === 'processing'
+                : onramp.status === 'processing' || framePaid
                   ? 'Payment received — delivering your funds…'
                   : 'Complete the purchase in the checkout window.'}
         </ModalBody>
