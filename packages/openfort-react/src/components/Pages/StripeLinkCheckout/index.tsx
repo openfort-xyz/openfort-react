@@ -17,13 +17,14 @@ import { useUser } from '../../../hooks/openfort/useUser'
 import { logger } from '../../../utils/logger'
 import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
+import EmailField from '../../Common/EmailField'
 import { ErrorText } from '../../Common/ErrorText'
 import LabeledField from '../../Common/LabeledField'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import PhoneField from '../../Common/PhoneField'
 import { Skeleton, SkeletonStack } from '../../Common/Skeleton'
 import SquircleSpinner from '../../Common/SquircleSpinner'
-import { routes } from '../../Openfort/types'
+import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer } from '../Buy/styles'
@@ -90,6 +91,9 @@ const StripeLinkCheckout: React.FC = () => {
   // country matches how the method row was resolved.
   const buyerCountry = uiConfig.funding?.country ?? 'US'
   const isEU = EU_COUNTRIES.has(buyerCountry.toUpperCase())
+  // The same Link flow serves both rails — only the collected payment method
+  // differs: card, or a US bank account for the ACH bank-transfer row.
+  const isBankTransfer = buyForm.method === FundingMethod.BANK_TRANSFER
 
   const [step, setStep] = useState<Step>('init')
   const [error, setError] = useState<string | null>(null)
@@ -332,7 +336,10 @@ const StripeLinkCheckout: React.FC = () => {
     setElementReady(false)
     coordinator
       .collectPaymentMethod(
-        { payment_method_types: ['card'], wallets: { applePay: 'never', googlePay: 'never' } },
+        {
+          payment_method_types: [isBankTransfer ? 'us_bank_account' : 'card'],
+          wallets: { applePay: 'never', googlePay: 'never' },
+        },
         (result) => {
           paymentTokenRef.current = result.cryptoPaymentToken
           setStep('checkout')
@@ -428,7 +435,7 @@ const StripeLinkCheckout: React.FC = () => {
 
   return (
     <PageContent onBack={handleBack}>
-      <ModalHeading>Pay with card</ModalHeading>
+      <ModalHeading>{isBankTransfer ? 'Pay by bank transfer' : 'Pay with card'}</ModalHeading>
 
       {step === 'init' && (
         <>
@@ -443,13 +450,12 @@ const StripeLinkCheckout: React.FC = () => {
 
       {step === 'email' && (
         <>
-          <LabeledField
-            label="Email"
+          <EmailField
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            placeholder="you@example.com"
-            autoComplete="email"
+            onChange={setEmail}
+            onSubmit={() => {
+              if (isValidEmail(email)) void handleEmailContinue()
+            }}
           />
           <ContinueButtonWrapper>
             <Button variant="primary" onClick={handleEmailContinue} disabled={!isValidEmail(email)} waiting={loading}>
@@ -462,13 +468,7 @@ const StripeLinkCheckout: React.FC = () => {
 
       {step === 'register' && (
         <>
-          <PhoneField
-            label="Mobile number"
-            value={phone}
-            onChange={setPhone}
-            defaultCountry={buyerCountry.toLowerCase() as CountryIso2}
-            placeholder="415 555 0123"
-          />
+          <PhoneField value={phone} onChange={setPhone} defaultCountry={buyerCountry.toLowerCase() as CountryIso2} />
           <LabeledField
             label="Full name"
             value={fullName}

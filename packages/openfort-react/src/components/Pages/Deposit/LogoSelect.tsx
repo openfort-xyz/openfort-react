@@ -1,9 +1,15 @@
 'use client'
 
-import { type SyntheticEvent, useEffect, useRef, useState } from 'react'
+import { type ReactNode, type SyntheticEvent, useEffect, useRef, useState } from 'react'
 import styled from '../../../styles/styled'
 
-type LogoOption = { value: string; label: string; logo: string | null }
+type LogoOption = {
+  value: string
+  label: string
+  logo: string | null
+  /** Rendered instead of `logo` — for options without an image URL (e.g. fiat flags). */
+  icon?: ReactNode
+}
 
 const Wrap = styled.div`
   position: relative;
@@ -105,7 +111,11 @@ export function LogoSelect({
   return (
     <Wrap ref={ref}>
       <Trigger type="button" onClick={() => setOpen((o) => !o)}>
-        {active?.logo && <img src={active.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
+        {active?.logo ? (
+          <img src={active.logo} alt="" style={logoImg} onError={hideBrokenLogo} />
+        ) : (
+          (active?.icon ?? null)
+        )}
         <TriggerLabel>{active?.label ?? ''}</TriggerLabel>
         <Chevron>{open ? '▴' : '▾'}</Chevron>
       </Trigger>
@@ -120,7 +130,7 @@ export function LogoSelect({
                 setOpen(false)
               }}
             >
-              {o.logo && <img src={o.logo} alt="" style={logoImg} onError={hideBrokenLogo} />}
+              {o.logo ? <img src={o.logo} alt="" style={logoImg} onError={hideBrokenLogo} /> : (o.icon ?? null)}
               <span>{o.label}</span>
             </Item>
           ))}

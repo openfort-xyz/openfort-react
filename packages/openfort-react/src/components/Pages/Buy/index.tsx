@@ -20,6 +20,7 @@ import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
+import { LogoSelect } from '../Deposit/LogoSelect'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
 import { EVM_BUY_CURRENCIES } from './evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
@@ -31,8 +32,6 @@ import {
   BuyHeadingLogo,
   CenteredRow,
   ContinueButtonWrapper,
-  CurrencyPill,
-  CurrencySelect,
   FlagBadge,
   MethodRowButton,
   SummaryLabel,
@@ -209,11 +208,6 @@ const Buy = () => {
     }
   }
 
-  const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const currency = event.target.value
-    setBuyForm((prev) => ({ ...prev, currency }))
-  }
-
   const handleOpenTokenSelector = () => {
     setRoute(routes.BUY_TOKEN_SELECT)
   }
@@ -306,24 +300,18 @@ const Buy = () => {
       </BigAmountRow>
 
       <CenteredRow>
-        <CurrencyPill>
-          <FlagBadge aria-hidden>{CURRENCY_FLAG[buyForm.currency] ?? '💱'}</FlagBadge>
-          <CurrencySelect value={buyForm.currency} onChange={handleCurrencyChange}>
-            {SOURCE_CURRENCIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </CurrencySelect>
-          <Arrow width="11" height="10" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ArrowChevron
-              stroke="currentColor"
-              d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
-              strokeWidth="2"
-              strokeLinecap="round"
-            />
-          </Arrow>
-        </CurrencyPill>
+        <div style={{ width: 120 }}>
+          <LogoSelect
+            value={buyForm.currency}
+            onChange={(currency) => setBuyForm((prev) => ({ ...prev, currency }))}
+            options={SOURCE_CURRENCIES.map((c) => ({
+              value: c,
+              label: c,
+              logo: null,
+              icon: <FlagBadge aria-hidden>{CURRENCY_FLAG[c] ?? '💱'}</FlagBadge>,
+            }))}
+          />
+        </div>
       </CenteredRow>
 
       {methodLabel && (

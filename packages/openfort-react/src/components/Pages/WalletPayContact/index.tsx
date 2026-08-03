@@ -13,8 +13,8 @@ import styled from '../../../styles/styled'
 import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
 import Checkbox from '../../Common/Checkbox'
+import EmailField from '../../Common/EmailField'
 import { ErrorText } from '../../Common/ErrorText'
-import LabeledField from '../../Common/LabeledField'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { OtpInputStandalone } from '../../Common/OTPInput'
 import PhoneField from '../../Common/PhoneField'
@@ -242,13 +242,13 @@ const WalletPayContact: React.FC = () => {
 
       {step === 'email' && (
         <>
-          <LabeledField
-            label="Email"
+          <EmailField
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            type="email"
-            placeholder={isTestMode ? 'you@example.com (sandbox: tester@sandbox.test)' : 'you@example.com'}
-            autoComplete="email"
+            onChange={setEmail}
+            placeholder={isTestMode ? 'Enter your email (sandbox: tester@sandbox.test)' : 'Enter your email'}
+            onSubmit={() => {
+              if (emailValid) void handleSendEmailCode()
+            }}
           />
           <ContinueButtonWrapper>
             <Button variant="primary" onClick={handleSendEmailCode} disabled={!emailValid} waiting={loading}>
@@ -285,12 +285,11 @@ const WalletPayContact: React.FC = () => {
       {step === 'phone' && (
         <>
           <PhoneField
-            label="Mobile number"
             value={phone}
             onChange={setPhone}
             countries={['us']}
             defaultCountry="us"
-            placeholder={isTestMode ? '415 555 0123 (sandbox: 000 555 0100)' : '415 555 0123'}
+            placeholder={isTestMode ? 'Enter your phone (sandbox: 000 555 0100)' : 'Enter your phone'}
           />
           <ModalBody style={{ marginTop: 14 }}>
             <Checkbox checked={consented} onChange={setConsented}>
