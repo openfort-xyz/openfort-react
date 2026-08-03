@@ -9,12 +9,15 @@ import {
   submitOnrampVerification,
 } from '../../../hooks/openfort/onrampVerificationsApi'
 import { useUser } from '../../../hooks/openfort/useUser'
+import styled from '../../../styles/styled'
 import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
 import Checkbox from '../../Common/Checkbox'
+import { ErrorText } from '../../Common/ErrorText'
 import LabeledField from '../../Common/LabeledField'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { OtpInputStandalone } from '../../Common/OTPInput'
+import PhoneField from '../../Common/PhoneField'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -35,6 +38,12 @@ const COINBASE_TERMS_URL = 'https://www.coinbase.com/legal/user_agreement'
 const COINBASE_PRIVACY_URL = 'https://www.coinbase.com/legal/privacy'
 
 type Step = 'email' | 'emailCode' | 'phone' | 'phoneCode'
+
+// Breathing room above and below the code boxes, so the OTP entry reads as
+// its own step rather than crowding the copy and footer links.
+const OtpSpacing = styled.div`
+  margin: 24px 0 16px;
+`
 
 /**
  * Gather + OTP-verify the buyer identity Coinbase's native wallet-pay order
@@ -233,7 +242,6 @@ const WalletPayContact: React.FC = () => {
 
       {step === 'email' && (
         <>
-          <ModalBody>Apple Pay and Google Pay purchases need a verified email and phone.</ModalBody>
           <LabeledField
             label="Email"
             value={email}
@@ -242,12 +250,12 @@ const WalletPayContact: React.FC = () => {
             placeholder={isTestMode ? 'you@example.com (sandbox: tester@sandbox.test)' : 'you@example.com'}
             autoComplete="email"
           />
-          {error && <ModalBody $error>{error}</ModalBody>}
           <ContinueButtonWrapper>
             <Button variant="primary" onClick={handleSendEmailCode} disabled={!emailValid} waiting={loading}>
               Send code
             </Button>
           </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
         </>
       )}
 
@@ -256,13 +264,15 @@ const WalletPayContact: React.FC = () => {
           <ModalBody>
             Enter the code we sent to <b>{email.trim()}</b>.
           </ModalBody>
-          <OtpInputStandalone
-            onComplete={handleVerifyEmail}
-            isLoading={verifying}
-            isError={!!error}
-            isSuccess={false}
-          />
-          {error && <ModalBody $error>{error}</ModalBody>}
+          <OtpSpacing>
+            <OtpInputStandalone
+              onComplete={handleVerifyEmail}
+              isLoading={verifying}
+              isError={!!error}
+              isSuccess={false}
+            />
+          </OtpSpacing>
+          {error && <ErrorText>{error}</ErrorText>}
           {resendFooter}
           <FooterTextButton>
             <FooterButtonText type="button" onClick={handleEditDestination}>
@@ -274,14 +284,13 @@ const WalletPayContact: React.FC = () => {
 
       {step === 'phone' && (
         <>
-          <LabeledField
+          <PhoneField
             label="Mobile number"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            type="tel"
-            inputMode="tel"
-            placeholder={isTestMode ? '+1 415 555 0123 (sandbox: +10005550100)' : '+1 415 555 0123'}
-            autoComplete="tel"
+            onChange={setPhone}
+            countries={['us']}
+            defaultCountry="us"
+            placeholder={isTestMode ? '415 555 0123 (sandbox: 000 555 0100)' : '415 555 0123'}
           />
           <ModalBody style={{ marginTop: 14 }}>
             <Checkbox checked={consented} onChange={setConsented}>
@@ -296,7 +305,6 @@ const WalletPayContact: React.FC = () => {
               , and authorize this purchase.
             </Checkbox>
           </ModalBody>
-          {error && <ModalBody $error>{error}</ModalBody>}
           <ContinueButtonWrapper>
             <Button
               variant="primary"
@@ -307,6 +315,7 @@ const WalletPayContact: React.FC = () => {
               {storedSmsId ? 'Continue' : 'Send code'}
             </Button>
           </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
         </>
       )}
 
@@ -315,13 +324,15 @@ const WalletPayContact: React.FC = () => {
           <ModalBody>
             Enter the code we sent to <b>{phone.trim()}</b>.
           </ModalBody>
-          <OtpInputStandalone
-            onComplete={handleVerifyPhone}
-            isLoading={verifying}
-            isError={!!error}
-            isSuccess={verified}
-          />
-          {error && <ModalBody $error>{error}</ModalBody>}
+          <OtpSpacing>
+            <OtpInputStandalone
+              onComplete={handleVerifyPhone}
+              isLoading={verifying}
+              isError={!!error}
+              isSuccess={verified}
+            />
+          </OtpSpacing>
+          {error && <ErrorText>{error}</ErrorText>}
           {resendFooter}
           <FooterTextButton>
             <FooterButtonText type="button" onClick={handleEditDestination}>

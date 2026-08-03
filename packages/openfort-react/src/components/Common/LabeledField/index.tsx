@@ -4,12 +4,12 @@ import type React from 'react'
 import styled from '../../../styles/styled'
 import type { InputProps } from '../Input/types'
 
-const FieldWrap = styled.div`
+export const FieldWrap = styled.div`
   margin-top: 10px;
   text-align: left;
 `
 
-const FieldLabel = styled.label`
+export const FieldLabel = styled.label`
   display: block;
   margin: 0 0 4px 2px;
   font-size: 13px;

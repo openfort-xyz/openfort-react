@@ -2,6 +2,7 @@
 
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { CountryIso2 } from 'react-international-phone'
 import Logos from '../../../assets/logos'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import {
@@ -16,8 +17,10 @@ import { useUser } from '../../../hooks/openfort/useUser'
 import { logger } from '../../../utils/logger'
 import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
+import { ErrorText } from '../../Common/ErrorText'
 import LabeledField from '../../Common/LabeledField'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import PhoneField from '../../Common/PhoneField'
 import { Skeleton, SkeletonStack } from '../../Common/Skeleton'
 import SquircleSpinner from '../../Common/SquircleSpinner'
 import { routes } from '../../Openfort/types'
@@ -35,6 +38,41 @@ type Step =
   | 'payment' // Stripe's collectPaymentMethod element
   | 'checkout' // commit + performCheckout + settlement polling
 
+// EU/EEA countries whose addresses make Stripe require birth details and a
+// national identifier instead of the US state + SSN pair.
+const EU_COUNTRIES = new Set([
+  'AT',
+  'BE',
+  'BG',
+  'HR',
+  'CY',
+  'CZ',
+  'DK',
+  'EE',
+  'FI',
+  'FR',
+  'DE',
+  'GR',
+  'HU',
+  'IE',
+  'IS',
+  'IT',
+  'LI',
+  'LT',
+  'LU',
+  'LV',
+  'MT',
+  'NL',
+  'NO',
+  'PL',
+  'PT',
+  'RO',
+  'SE',
+  'SI',
+  'SK',
+  'ES',
+])
+
 /**
  * Stripe v2 (Link-auth headless) checkout — the `embedded` angle's element
  * flow. The buyer authenticates with Link (register first if new), Stripe's
@@ -51,6 +89,7 @@ const StripeLinkCheckout: React.FC = () => {
   // Link registration wants the buyer's country; the widget's configured
   // country matches how the method row was resolved.
   const buyerCountry = uiConfig.funding?.country ?? 'US'
+  const isEU = EU_COUNTRIES.has(buyerCountry.toUpperCase())
 
   const [step, setStep] = useState<Step>('init')
   const [error, setError] = useState<string | null>(null)
@@ -233,6 +272,7 @@ const StripeLinkCheckout: React.FC = () => {
     state: '',
     postalCode: '',
     ssn: '',
+    birthCity: '',
   })
   const setKycField = (field: keyof typeof kyc) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setKyc((prev) => ({ ...prev, [field]: e.target.value }))
@@ -245,6 +285,8 @@ const StripeLinkCheckout: React.FC = () => {
       setError('Enter your date of birth as YYYY-MM-DD.')
       return
     }
+    // The identity Stripe expects differs by region: US addresses take a state
+    // + SSN; EU addresses take birth details instead.
     const info: StripeKycInfo = {
       given_name: kyc.firstName.trim(),
       surname: kyc.lastName.trim(),
@@ -253,16 +295,27 @@ const StripeLinkCheckout: React.FC = () => {
         country: buyerCountry,
         line1: kyc.line1.trim(),
         city: kyc.city.trim(),
-        state: kyc.state.trim(),
         postal_code: kyc.postalCode.trim(),
+        ...(isEU ? {} : { state: kyc.state.trim() }),
       },
-      ...(kyc.ssn.trim() ? { id_number: { type: 'us_ssn' as const, value: kyc.ssn.replace(/\D/g, '') } } : {}),
+      ...(isEU
+        ? { birth_city: kyc.birthCity.trim(), birth_country: buyerCountry }
+        : kyc.ssn.trim()
+          ? { id_number: { type: 'us_ssn' as const, value: kyc.ssn.replace(/\D/g, '') } }
+          : {}),
     }
     setError(null)
     setLoading(true)
     try {
       await coordinator.submitKycInfo(info)
-      setStep('payment')
+      // Reached from the commit's identity-verification rejection (payment
+      // already collected)? Retry the checkout; otherwise collect payment next.
+      if (paymentTokenRef.current) {
+        commitStarted.current = false
+        setStep('checkout')
+      } else {
+        setStep('payment')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Identity verification failed.')
     } finally {
@@ -315,7 +368,16 @@ const StripeLinkCheckout: React.FC = () => {
         else if (session.status === 'expired') setFailed('The purchase was not completed in time.')
       })
       .catch((e) => {
-        setFailed(e instanceof Error ? e.message : 'Failed to start the purchase.')
+        const message = e instanceof Error ? e.message : 'Failed to start the purchase.'
+        // Stripe rejects the session until the buyer's identity is verified —
+        // collect it and retry rather than dead-ending the purchase.
+        if (/identity verification/i.test(message)) {
+          commitStarted.current = false
+          setError(null)
+          setStep('kyc')
+          return
+        }
+        setFailed(message)
       })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
@@ -389,26 +451,23 @@ const StripeLinkCheckout: React.FC = () => {
             placeholder="you@example.com"
             autoComplete="email"
           />
-          {error && <ModalBody $error>{error}</ModalBody>}
           <ContinueButtonWrapper>
             <Button variant="primary" onClick={handleEmailContinue} disabled={!isValidEmail(email)} waiting={loading}>
               Continue
             </Button>
           </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
         </>
       )}
 
       {step === 'register' && (
         <>
-          <ModalBody>Create your Link account to pay by card.</ModalBody>
-          <LabeledField
+          <PhoneField
             label="Mobile number"
             value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            type="tel"
-            inputMode="tel"
-            placeholder={isTestMode ? '+1 415 555 0123 (sandbox: any +1 number)' : '+1 415 555 0123'}
-            autoComplete="tel"
+            onChange={setPhone}
+            defaultCountry={buyerCountry.toLowerCase() as CountryIso2}
+            placeholder="415 555 0123"
           />
           <LabeledField
             label="Full name"
@@ -418,12 +477,12 @@ const StripeLinkCheckout: React.FC = () => {
             placeholder={isTestMode ? 'John Verified' : 'Jane Doe'}
             autoComplete="name"
           />
-          {error && <ModalBody $error>{error}</ModalBody>}
           <ContinueButtonWrapper>
             <Button variant="primary" onClick={handleRegister} disabled={!phone.trim()} waiting={loading}>
               Continue
             </Button>
           </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
         </>
       )}
 
@@ -471,32 +530,43 @@ const StripeLinkCheckout: React.FC = () => {
             placeholder="San Francisco"
             autoComplete="address-level2"
           />
+          {!isEU && (
+            <LabeledField
+              label="State"
+              value={kyc.state}
+              onChange={setKycField('state')}
+              type="text"
+              placeholder="CA"
+              autoComplete="address-level1"
+            />
+          )}
           <LabeledField
-            label="State"
-            value={kyc.state}
-            onChange={setKycField('state')}
-            type="text"
-            placeholder="CA"
-            autoComplete="address-level1"
-          />
-          <LabeledField
-            label="ZIP code"
+            label={isEU ? 'Postal code' : 'ZIP code'}
             value={kyc.postalCode}
             onChange={setKycField('postalCode')}
             type="text"
             inputMode="numeric"
-            placeholder="94103"
+            placeholder={isEU ? '28001' : '94103'}
             autoComplete="postal-code"
           />
-          <LabeledField
-            label="Social Security number"
-            value={kyc.ssn}
-            onChange={setKycField('ssn')}
-            type="text"
-            inputMode="numeric"
-            placeholder={isTestMode ? '000000000' : '•••-••-••••'}
-          />
-          {error && <ModalBody $error>{error}</ModalBody>}
+          {isEU ? (
+            <LabeledField
+              label="City of birth"
+              value={kyc.birthCity}
+              onChange={setKycField('birthCity')}
+              type="text"
+              placeholder="Madrid"
+            />
+          ) : (
+            <LabeledField
+              label="Social Security number"
+              value={kyc.ssn}
+              onChange={setKycField('ssn')}
+              type="text"
+              inputMode="numeric"
+              placeholder={isTestMode ? '000000000' : '•••-••-••••'}
+            />
+          )}
           <ContinueButtonWrapper>
             <Button
               variant="primary"
@@ -507,6 +577,7 @@ const StripeLinkCheckout: React.FC = () => {
               Continue
             </Button>
           </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
         </>
       )}
 
@@ -514,7 +585,7 @@ const StripeLinkCheckout: React.FC = () => {
           repeated above them. A skeleton stands in while the element loads. */}
       {(step === 'auth' || step === 'payment') && (
         <>
-          {error && <ModalBody $error>{error}</ModalBody>}
+          {error && <ErrorText>{error}</ErrorText>}
           {!elementReady && (
             <SkeletonStack>
               <Skeleton $height={18} $width="50%" />

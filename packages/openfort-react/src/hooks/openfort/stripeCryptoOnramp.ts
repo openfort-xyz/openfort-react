@@ -29,6 +29,9 @@ export type StripeKycInfo = {
   }
   id_number?: { type: 'us_ssn'; value: string }
   date_of_birth?: { day: number; month: number; year: number }
+  /** Required by Stripe for buyers with an EU address. */
+  birth_city?: string
+  birth_country?: string
 }
 
 /**
