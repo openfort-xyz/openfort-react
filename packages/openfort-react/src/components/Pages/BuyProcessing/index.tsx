@@ -198,17 +198,17 @@ const BuyProcessing = () => {
               ? 'Complete your purchase'
               : 'Processing purchase'}
         </ModalHeading>
-        <ModalBody>
-          {starting
-            ? 'Please wait…'
-            : showWalletPayFrame
-              ? 'Pay securely with Apple Pay or Google Pay below.'
-              : showEmbedded
-                ? 'Pay securely below.'
-                : onramp.status === 'processing' || framePaid
-                  ? 'Payment received — delivering your funds…'
-                  : 'Complete the purchase in the checkout window.'}
-        </ModalBody>
+        {/* The provider's own UI (Pay button / embedded component) carries its
+            copy — no description is repeated above it. */}
+        {!showWalletPayFrame && !showEmbedded && (
+          <ModalBody>
+            {starting
+              ? 'Please wait…'
+              : onramp.status === 'processing' || framePaid
+                ? 'Payment received — delivering your funds…'
+                : 'Complete the purchase in the checkout window.'}
+          </ModalBody>
+        )}
 
         {showEmbedded && embeddedSecrets ? (
           <StripeOnrampEmbed

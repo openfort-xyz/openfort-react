@@ -2,7 +2,7 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { type ReactNode, type SyntheticEvent, useEffect } from 'react'
-import { BankIcon, BuyIcon, DollarIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
+import { BankIcon, BuyIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
 import logos from '../../../assets/logos'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
@@ -30,10 +30,13 @@ import {
   OptionTitle,
 } from './styles'
 
-/** The action icon shown in each row's left badge (icons default to 20×20). */
+/**
+ * The icon in each row's left badge (icons default to 20×20). Fiat rows carry
+ * their brand mark HERE — no logo previews on the right for the cash rails.
+ */
 const METHOD_ICON: Record<FundingMethod, ReactNode> = {
-  [FundingMethod.APPLE_PAY]: <DollarIcon />,
-  [FundingMethod.GOOGLE_PAY]: <DollarIcon />,
+  [FundingMethod.APPLE_PAY]: <logos.Apple />,
+  [FundingMethod.GOOGLE_PAY]: <logos.Google />,
   [FundingMethod.CARD]: <BuyIcon />,
   [FundingMethod.BANK_TRANSFER]: <BankIcon />,
   [FundingMethod.WALLET]: <WalletIcon />,
@@ -41,7 +44,7 @@ const METHOD_ICON: Record<FundingMethod, ReactNode> = {
   [FundingMethod.EXCHANGE]: <ExternalLinkIcon />,
 }
 
-/** Brand logos previewed on the right of each row (vendored SVGs, no external URLs). */
+/** Brand logos previewed on the right of the CRYPTO rows (vendored SVGs, no external URLs). */
 const BRAND_LOGOS: Partial<Record<FundingMethod, ReactNode[]>> = {
   [FundingMethod.WALLET]: [
     <logos.MetaMask key="mm" background />,
@@ -51,9 +54,6 @@ const BRAND_LOGOS: Partial<Record<FundingMethod, ReactNode[]>> = {
     <logos.Rainbow key="rb" round />,
   ],
   [FundingMethod.EXCHANGE]: [<logos.Coinbase key="cb" background />, <logos.Binance key="bn" />],
-  [FundingMethod.CARD]: [<logos.Visa key="visa" />, <logos.Mastercard key="mc" />],
-  [FundingMethod.APPLE_PAY]: [<logos.Apple key="apple" />],
-  [FundingMethod.GOOGLE_PAY]: [<logos.Google key="google" />],
 }
 
 const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
@@ -168,7 +168,7 @@ const Deposit = () => {
                   <OptionSubtitle>{option.disabledReason ?? option.subtitle}</OptionSubtitle>
                 </OptionInfo>
               </OptionLeft>
-              <LogoCluster>{clusterFor(option.id)}</LogoCluster>
+              {option.target.kind !== 'buy' && <LogoCluster>{clusterFor(option.id)}</LogoCluster>}
             </OptionButton>
           ))}
         </OptionList>

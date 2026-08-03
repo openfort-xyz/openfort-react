@@ -16,13 +16,15 @@ import { useUser } from '../../../hooks/openfort/useUser'
 import { logger } from '../../../utils/logger'
 import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
-import Input from '../../Common/Input'
+import LabeledField from '../../Common/LabeledField'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
+import { Skeleton, SkeletonStack } from '../../Common/Skeleton'
 import SquircleSpinner from '../../Common/SquircleSpinner'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer } from '../Buy/styles'
+import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
 
 type Step =
   | 'init' // loading Stripe's script + coordinator
@@ -53,6 +55,9 @@ const StripeLinkCheckout: React.FC = () => {
   const [step, setStep] = useState<Step>('init')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  // False while a Stripe element is being fetched — the host shows a skeleton
+  // placeholder instead of empty space until the element lands.
+  const [elementReady, setElementReady] = useState(false)
 
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState('')
@@ -105,6 +110,7 @@ const StripeLinkCheckout: React.FC = () => {
     const host = elementHostRef.current
     if (!host || !element) return
     host.replaceChildren(element)
+    setElementReady(true)
     triggerResize()
   }
 
@@ -118,6 +124,7 @@ const StripeLinkCheckout: React.FC = () => {
       try {
         const intent = await client.stripeLink.createAuthIntent({ email: forEmail })
         intentIdRef.current = intent.id
+        setElementReady(false)
         setStep('auth')
         const element = await coordinator.authenticate(intent.id, (result) => {
           if (result.result !== 'success' || !result.crypto_customer_id) {
@@ -185,6 +192,15 @@ const StripeLinkCheckout: React.FC = () => {
       return
     }
     await startAuthentication(email.trim())
+  }
+
+  /** Back out of the mounted auth element to re-enter the email. */
+  const handleChangeEmail = () => {
+    intentIdRef.current = null
+    elementHostRef.current?.replaceChildren()
+    setElementReady(false)
+    setError(null)
+    setStep('email')
   }
 
   const handleRegister = async () => {
@@ -260,6 +276,7 @@ const StripeLinkCheckout: React.FC = () => {
     const coordinator = coordinatorRef.current
     if (step !== 'payment' || !coordinator || paymentMounted.current) return
     paymentMounted.current = true
+    setElementReady(false)
     coordinator
       .collectPaymentMethod(
         { payment_method_types: ['card'], wallets: { applePay: 'never', googlePay: 'never' } },
@@ -353,15 +370,19 @@ const StripeLinkCheckout: React.FC = () => {
 
       {step === 'init' && (
         <>
-          <ModalBody>Loading secure checkout…</ModalBody>
+          <SkeletonStack>
+            <Skeleton $height={16} $width="60%" />
+            <Skeleton $height={40} />
+            <Skeleton $height={44} $radius={12} />
+          </SkeletonStack>
           {error && <ModalBody $error>{error}</ModalBody>}
         </>
       )}
 
       {step === 'email' && (
         <>
-          <ModalBody>Checkout is powered by Link. Enter your email to continue.</ModalBody>
-          <Input
+          <LabeledField
+            label="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             type="email"
@@ -379,22 +400,22 @@ const StripeLinkCheckout: React.FC = () => {
 
       {step === 'register' && (
         <>
-          <ModalBody>
-            Create your Link account — enter your mobile number{isTestMode ? ' (sandbox: any +1 number)' : ''} and name.
-          </ModalBody>
-          <Input
+          <ModalBody>Create your Link account to pay by card.</ModalBody>
+          <LabeledField
+            label="Mobile number"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             type="tel"
             inputMode="tel"
-            placeholder="+1 415 555 0123"
+            placeholder={isTestMode ? '+1 415 555 0123 (sandbox: any +1 number)' : '+1 415 555 0123'}
             autoComplete="tel"
           />
-          <Input
+          <LabeledField
+            label="Full name"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
             type="text"
-            placeholder={isTestMode ? 'Full name (sandbox: John Verified)' : 'Full name'}
+            placeholder={isTestMode ? 'John Verified' : 'Jane Doe'}
             autoComplete="name"
           />
           {error && <ModalBody $error>{error}</ModalBody>}
@@ -409,50 +430,71 @@ const StripeLinkCheckout: React.FC = () => {
       {step === 'kyc' && (
         <>
           <ModalBody>Verify your identity to finish setting up purchases.</ModalBody>
-          <Input value={kyc.firstName} onChange={setKycField('firstName')} type="text" placeholder="First name" />
-          <Input value={kyc.lastName} onChange={setKycField('lastName')} type="text" placeholder="Last name" />
-          <Input
+          <LabeledField
+            label="First name"
+            value={kyc.firstName}
+            onChange={setKycField('firstName')}
+            type="text"
+            placeholder={isTestMode ? 'John' : 'Jane'}
+            autoComplete="given-name"
+          />
+          <LabeledField
+            label="Last name"
+            value={kyc.lastName}
+            onChange={setKycField('lastName')}
+            type="text"
+            placeholder={isTestMode ? 'Verified' : 'Doe'}
+            autoComplete="family-name"
+          />
+          <LabeledField
+            label="Date of birth"
             value={kyc.dob}
             onChange={setKycField('dob')}
             type="text"
             inputMode="numeric"
-            placeholder="Date of birth (YYYY-MM-DD)"
+            placeholder="YYYY-MM-DD"
+            autoComplete="bday"
           />
-          <Input
+          <LabeledField
+            label="Street address"
             value={kyc.line1}
             onChange={setKycField('line1')}
             type="text"
-            placeholder={isTestMode ? 'Street address (sandbox: address_full_match)' : 'Street address'}
+            placeholder={isTestMode ? 'address_full_match' : '123 Main St'}
             autoComplete="address-line1"
           />
-          <Input
+          <LabeledField
+            label="City"
             value={kyc.city}
             onChange={setKycField('city')}
             type="text"
-            placeholder="City"
+            placeholder="San Francisco"
             autoComplete="address-level2"
           />
-          <Input
+          <LabeledField
+            label="State"
             value={kyc.state}
             onChange={setKycField('state')}
             type="text"
-            placeholder="State (e.g. CA)"
+            placeholder="CA"
             autoComplete="address-level1"
           />
-          <Input
+          <LabeledField
+            label="ZIP code"
             value={kyc.postalCode}
             onChange={setKycField('postalCode')}
             type="text"
             inputMode="numeric"
-            placeholder="ZIP code"
+            placeholder="94103"
             autoComplete="postal-code"
           />
-          <Input
+          <LabeledField
+            label="Social Security number"
             value={kyc.ssn}
             onChange={setKycField('ssn')}
             type="text"
             inputMode="numeric"
-            placeholder={isTestMode ? 'SSN (sandbox: 000000000)' : 'SSN'}
+            placeholder={isTestMode ? '000000000' : '•••-••-••••'}
           />
           {error && <ModalBody $error>{error}</ModalBody>}
           <ContinueButtonWrapper>
@@ -468,17 +510,30 @@ const StripeLinkCheckout: React.FC = () => {
         </>
       )}
 
+      {/* Stripe's elements carry their own headings and copy — nothing is
+          repeated above them. A skeleton stands in while the element loads. */}
       {(step === 'auth' || step === 'payment') && (
         <>
-          <ModalBody>
-            {step === 'auth' ? 'Confirm the code Link sent you.' : 'Enter your card details to complete the purchase.'}
-          </ModalBody>
           {error && <ModalBody $error>{error}</ModalBody>}
+          {!elementReady && (
+            <SkeletonStack>
+              <Skeleton $height={18} $width="50%" />
+              <Skeleton $height={40} />
+              <Skeleton $height={40} $width="70%" />
+            </SkeletonStack>
+          )}
         </>
       )}
       {/* Stripe's elements mount here (auth OTP + card form). Kept in the tree
           across steps so an element never unmounts mid-callback. */}
       <div ref={elementHostRef} style={{ display: step === 'auth' || step === 'payment' ? 'block' : 'none' }} />
+      {step === 'auth' && elementReady && (
+        <FooterTextButton>
+          <FooterButtonText type="button" onClick={handleChangeEmail}>
+            Use a different email
+          </FooterButtonText>
+        </FooterTextButton>
+      )}
 
       {step === 'checkout' && (
         <>

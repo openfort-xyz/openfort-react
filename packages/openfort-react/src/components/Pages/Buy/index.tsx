@@ -6,19 +6,16 @@ import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { NATIVE_TOKEN_ADDRESS } from '../../../hooks/openfort/fundingSources'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
-import { storedOnrampVerification } from '../../../hooks/openfort/onrampVerificationsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingMethods } from '../../../hooks/openfort/useFundingMethods'
 import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
 import { useUser } from '../../../hooks/openfort/useUser'
-import { isWalletPayMethod, needsWalletPayCapture } from '../../../hooks/openfort/walletPay'
+import { isWalletPayMethod } from '../../../hooks/openfort/walletPay'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import Button from '../../Common/Button'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import Checkbox from '../../Common/Checkbox'
-import { ModalBody } from '../../Common/Modal/styles'
 import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -65,24 +62,17 @@ const METHOD_LABEL: Partial<Record<FundingMethod, string>> = {
   [FundingMethod.BANK_TRANSFER]: 'bank transfer',
 }
 
-// Coinbase Guest-Checkout requires the buyer to accept these before a native
-// wallet-pay order. TODO: confirm the exact required wording/links against
-// Coinbase's Guest Checkout integration terms before go-live.
-const COINBASE_TERMS_URL = 'https://www.coinbase.com/legal/user_agreement'
-const COINBASE_PRIVACY_URL = 'https://www.coinbase.com/legal/privacy'
-
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
   const { chainType } = useOpenfortCore()
   const { user } = useUser()
 
   // Apple/Google Pay MAY commit a Coinbase NATIVE order (US buyer + project
-  // CDP creds) — then the buyer must accept Coinbase's Guest-Checkout terms
-  // here (we stamp agreementAcceptedAt) and verify email + phone before the
-  // commit. Everywhere else the server resolves them to an embedded or hosted
-  // checkout, which needs neither; the resolved angle decides.
+  // CDP creds) — the contact screen then collects Coinbase's Guest-Checkout
+  // consent and the OTP-verified identity before the commit. Everywhere else
+  // the server resolves them to an embedded or hosted checkout, which needs
+  // neither; the resolved angle decides.
   const isWalletPay = isWalletPayMethod(buyForm.method)
-  const [consented, setConsented] = useState(false)
   // The selectable BUY list per chain family — the same list the token selector
   // shows, so a picked token always matches (the wallet's indexed assets are
   // irrelevant when buying).
@@ -231,37 +221,16 @@ const Buy = () => {
   const handleContinue = () => {
     if (fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown) return
     if (isNativeWalletPay) {
-      if (!consented) return
-      // Stamp the Guest-Checkout consent now; verify contact next. The commit
-      // needs Coinbase-issued verification records, so capture is skipped only
-      // when BOTH stored (60-day) verifications cover the user's identity.
-      const agreementAcceptedAt = new Date().toISOString()
-      const emailVerificationId = user?.email ? storedOnrampVerification('email', user.email) : null
-      const smsVerificationId = user?.phoneNumber ? storedOnrampVerification('sms', user.phoneNumber) : null
-      if (needsWalletPayCapture(user) || !emailVerificationId || !smsVerificationId) {
-        setBuyForm((prev) => ({
-          ...prev,
-          session,
-          walletPayAngle: 'native',
-          walletPay: { email: user?.email, phoneNumber: user?.phoneNumber, agreementAcceptedAt },
-        }))
-        setRoute(routes.BUY_WALLET_PAY_CONTACT)
-      } else {
-        setBuyForm((prev) => ({
-          ...prev,
-          session,
-          walletPayAngle: 'native',
-          walletPay: {
-            email: user?.email,
-            phoneNumber: user?.phoneNumber,
-            phoneNumberVerifiedAt: agreementAcceptedAt,
-            agreementAcceptedAt,
-            emailVerificationId,
-            smsVerificationId,
-          },
-        }))
-        setRoute(routes.BUY_PROCESSING)
-      }
+      // The contact screen owns the identity: Coinbase's Guest-Checkout consent
+      // plus OTP-verified email + phone. Pieces already verified (60-day
+      // records) are skipped there, so the fast path is one consent tap.
+      setBuyForm((prev) => ({
+        ...prev,
+        session,
+        walletPayAngle: 'native',
+        walletPay: { email: user?.email, phoneNumber: user?.phoneNumber },
+      }))
+      setRoute(routes.BUY_WALLET_PAY_CONTACT)
       return
     }
     // Stripe's v2 element flow authenticates + collects the payment method in
@@ -295,8 +264,7 @@ const Buy = () => {
   }
   const methodLabel = METHOD_LABEL[buyForm.method]
 
-  const step1Disabled =
-    fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown || (isNativeWalletPay && !consented)
+  const step1Disabled = fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown
 
   const feeText = quote ? currencyFormatter.format(totalFee(quote)) : null
 
@@ -379,22 +347,6 @@ const Buy = () => {
             <SummaryMuted>{feeText}</SummaryMuted>
           </SummaryRow>
         </SummarySection>
-      )}
-
-      {isNativeWalletPay && walletPayAngleKnown && (
-        <ModalBody style={{ marginTop: 14 }}>
-          <Checkbox checked={consented} onChange={setConsented}>
-            I agree to Coinbase's{' '}
-            <a href={COINBASE_TERMS_URL} target="_blank" rel="noopener noreferrer">
-              User Agreement
-            </a>{' '}
-            and{' '}
-            <a href={COINBASE_PRIVACY_URL} target="_blank" rel="noopener noreferrer">
-              Privacy Policy
-            </a>
-            , and authorize this purchase.
-          </Checkbox>
-        </ModalBody>
       )}
 
       <ContinueButtonWrapper>
