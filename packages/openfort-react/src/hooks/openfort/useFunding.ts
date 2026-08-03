@@ -153,6 +153,11 @@ export type OnrampPaymentMethod = {
    * design; pairs with providerClientSecret for the `embedded` angle), or null.
    */
   providerPublishableKey?: string | null
+  /**
+   * The provider's own session id for this commit — the Stripe Link (v2) flow
+   * passes it to the coordinator's `performCheckout`.
+   */
+  providerSessionId?: string | null
   fees: FundingFee[]
   minAmount: string | null
 }
@@ -178,6 +183,11 @@ export type ResolvedFundingMethod = {
   rail?: 'ach' | 'sepa' | 'interac'
   /** Gate the row on device capability client-side (e.g. Apple Pay on Safari). */
   requiresDeviceCheck?: boolean
+  /**
+   * Provider PUBLISHABLE key for `embedded` rows — the pre-commit elements
+   * (Stripe's Link auth) initialize with it. Public by design.
+   */
+  providerPublishableKey?: string
 }
 
 /** The fiat methods resolved for a session + region. */

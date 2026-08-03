@@ -145,17 +145,23 @@ const Buy = () => {
     }
   }, [isAvailable, address, target.chain, target.currency])
 
-  // Whether THIS buyer's wallet-pay resolves to the native sheet or an
-  // embedded/hosted checkout — server-decided per region + project creds. Until
-  // the resolve lands (or when the row is missing) we assume native, the safe
-  // direction: identity capture is never skipped when the commit requires it.
-  const fundingMethods = useFundingMethods(isWalletPay ? session : null, { useBackendUrl: true })
+  // How THIS buyer's method executes — server-decided per region + project
+  // creds. Wallet pay branches on native vs hosted (identity capture); every
+  // method branches on Stripe's v2 element flow (`embedded` + publishable key).
+  // Until the resolve lands (or when the row is missing) wallet pay assumes
+  // native, the safe direction: identity capture is never skipped when the
+  // commit requires it.
+  const fundingMethods = useFundingMethods(session, { useBackendUrl: true })
   const methodId = backendMethodId(buyForm.method)
   const resolvedRow = fundingMethods.methods.find((m) => m.method === methodId)
   // Hold Continue only while the resolve is in flight; once settled, a missing
   // row (resolve failed / older backend) keeps the native assumption.
   const walletPayAngleKnown = !isWalletPay || fundingMethods.loaded
   const isNativeWalletPay = isWalletPay && (resolvedRow ? resolvedRow.angle === 'native' : true)
+  // Stripe's v2 Link-auth flow: the elements collect auth + payment in the
+  // widget BEFORE the commit, so it needs its own screen (and the row's key).
+  const stripeLinkKey =
+    resolvedRow?.angle === 'embedded' && resolvedRow.providerPublishableKey ? resolvedRow.providerPublishableKey : null
 
   const fiatAmount = useMemo(() => {
     const normalizedAmount = sanitizeForParsing(sanitizeAmountInput(buyForm.amount))
@@ -258,10 +264,22 @@ const Buy = () => {
       }
       return
     }
+    // Stripe's v2 element flow authenticates + collects the payment method in
+    // the widget before committing — its screen owns the whole checkout.
+    if (stripeLinkKey) {
+      setBuyForm((prev) => ({
+        ...prev,
+        session,
+        walletPayAngle: isWalletPay ? 'iframe' : null,
+        stripeLink: { publishableKey: stripeLinkKey },
+      }))
+      setRoute(routes.BUY_STRIPE_LINK)
+      return
+    }
     // Card, bank transfer, and embedded/hosted wallet pay commit directly — the
     // server resolves the provider (never shown to the user) and the checkout
     // collects its own consent, so no identity capture here.
-    setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'iframe' : null }))
+    setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'iframe' : null, stripeLink: null }))
     setRoute(routes.BUY_PROCESSING)
   }
 

@@ -61,6 +61,7 @@ export const routes = {
   BUY: 'buy',
   BUY_TOKEN_SELECT: 'buyTokenSelect',
   BUY_WALLET_PAY_CONTACT: 'buyWalletPayContact',
+  BUY_STRIPE_LINK: 'buyStripeLink',
   BUY_PROCESSING: 'buyProcessing',
   BUY_COMPLETE: 'buyComplete',
 
@@ -631,6 +632,12 @@ export type BuyFormState = {
    * screen treats unknown as native, the safe direction.
    */
   walletPayAngle?: 'native' | 'iframe' | null
+  /**
+   * Set when the amount step resolved the method to Stripe's v2 Link-auth flow
+   * (`embedded` angle with a publishable key) — the Stripe checkout screen
+   * initializes its elements with it. Null/absent for every other route.
+   */
+  stripeLink?: { publishableKey: string } | null
 }
 
 export const defaultBuyFormState: BuyFormState = {

@@ -60,6 +60,7 @@ import SendConfirmation from '../Pages/SendConfirmation'
 import { SolanaSendConfirmation } from '../Pages/SendConfirmation/SolanaSendConfirmation'
 import SignMessage from '../Pages/SignMessage'
 import SocialProviders from '../Pages/SocialProviders'
+import StripeLinkCheckout from '../Pages/StripeLinkCheckout'
 import WalletPayContact from '../Pages/WalletPayContact'
 import ConnectUsing from './ConnectUsing'
 import ConnectWithMobile from './ConnectWithMobile'
@@ -102,6 +103,7 @@ function buildSharedPages(): RoutePages {
     sendTokenSelect: <SelectToken isBuyFlow={false} />,
     buyTokenSelect: <SelectToken isBuyFlow={true} />,
     buyWalletPayContact: <WalletPayContact />,
+    buyStripeLink: <StripeLinkCheckout />,
     buyProcessing: <BuyProcessing />,
     buyComplete: <BuyComplete />,
     receive: <Receive />,

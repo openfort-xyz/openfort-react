@@ -57,6 +57,17 @@ export type OnrampOpenParams = {
     smsVerificationId?: string
     emailVerificationId?: string
   }
+  /**
+   * Stripe v2 Link-auth flow — present when the buyer authenticated with Link
+   * and a payment method was collected (the `embedded` angle's element flow).
+   * The commit creates a HEADLESS Stripe session; redeem its secret afterwards
+   * via `sessions.onrampCheckout` inside the coordinator's performCheckout.
+   */
+  stripeLink?: {
+    linkAuthIntentId: string
+    cryptoCustomerId: string
+    cryptoPaymentToken: string
+  }
 }
 
 export type UseOnramp = {
@@ -175,6 +186,7 @@ export function useOnramp(
             sourceCurrency: params?.sourceCurrency,
             redirectUrl: params?.redirectUrl,
             country,
+            stripeLink: params?.stripeLink,
             // Native wallet pay only; spreading `undefined` adds nothing for
             // card / bank transfer.
             ...params?.walletPay,
