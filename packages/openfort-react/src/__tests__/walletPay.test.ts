@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FundingMethod } from '../components/Openfort/types'
-import { isCompleteWalletPay, isWalletPayMethod, needsWalletPayCapture } from '../hooks/openfort/walletPay'
+import { isCompleteWalletPay, isWalletPayMethod } from '../hooks/openfort/walletPay'
 
 describe('isWalletPayMethod', () => {
   it('is true only for Apple/Google Pay (the native-angle methods)', () => {
@@ -29,23 +29,5 @@ describe('isCompleteWalletPay', () => {
     expect(isCompleteWalletPay({ ...full, phoneNumberVerifiedAt: undefined })).toBe(false)
     expect(isCompleteWalletPay({ ...full, email: '' })).toBe(false)
     expect(isCompleteWalletPay({ email: full.email })).toBe(false)
-  })
-})
-
-describe('needsWalletPayCapture', () => {
-  it('skips capture only when the user has an email and an already-verified phone', () => {
-    expect(needsWalletPayCapture({ email: 'a@b.com', phoneNumber: '+14155550123', phoneNumberVerified: true })).toBe(
-      false
-    )
-  })
-
-  it('requires capture when the phone is missing or unverified, or the email is absent', () => {
-    expect(needsWalletPayCapture(null)).toBe(true)
-    expect(needsWalletPayCapture(undefined)).toBe(true)
-    expect(needsWalletPayCapture({ email: 'a@b.com', phoneNumber: '+14155550123', phoneNumberVerified: false })).toBe(
-      true
-    )
-    expect(needsWalletPayCapture({ email: 'a@b.com' })).toBe(true)
-    expect(needsWalletPayCapture({ phoneNumber: '+14155550123', phoneNumberVerified: true })).toBe(true)
   })
 })

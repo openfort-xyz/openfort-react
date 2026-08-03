@@ -60,7 +60,7 @@ export type FundingFee = {
 /** Fiat web2 funding methods — the rail the user sees, never the provider. */
 export type OnrampMethodId = 'apple_pay' | 'google_pay' | 'card' | 'bank_transfer'
 
-/** How a resolved onramp executes: open a hosted `url`, an in-page provider SDK, or mount the provider's embedded component. */
+/** How a resolved onramp executes: open a hosted `url`, an in-page provider SDK, or Stripe's Link element flow. */
 export type OnrampAngle = 'iframe' | 'native' | 'embedded'
 
 /**
@@ -68,8 +68,8 @@ export type OnrampAngle = 'iframe' | 'native' | 'embedded'
  * get wallet deeplinks); `cex` is an exchange withdrawal (no deeplink —
  * exchanges can't be deeplinked into); `onramp` is a fiat purchase — the server
  * resolves the provider (buyer region + destination + project config) and the
- * session advances through the same lifecycle via the provider's settlement
- * webhook.
+ * session advances through the same lifecycle, driven by provider settlement
+ * webhooks and server-side polls.
  */
 export type PaymentMethodInput =
   | { type: 'evm'; source: FundingSource }
@@ -134,8 +134,8 @@ export type CryptoPaymentMethod = {
 
 /**
  * A committed fiat onramp. The executing provider was resolved server-side and
- * is never part of the response — open `url` (iframe angle) and watch the
- * session status; settlement is webhook-driven.
+ * is never part of the response — render per `angle` and watch the session
+ * status; the server advances it from settlement webhooks and provider polls.
  */
 export type OnrampPaymentMethod = {
   type: 'onramp'
@@ -143,16 +143,6 @@ export type OnrampPaymentMethod = {
   angle: OnrampAngle
   /** Hosted checkout URL to open, or null. */
   url: string | null
-  /**
-   * Provider session secret for embeddable checkouts (e.g. Stripe's embedded
-   * onramp element mounts with it), or null when the provider has none.
-   */
-  providerClientSecret: string | null
-  /**
-   * Provider publishable key the embedded component initializes with (public by
-   * design; pairs with providerClientSecret for the `embedded` angle), or null.
-   */
-  providerPublishableKey?: string | null
   /**
    * The provider's own session id for this commit — the Stripe Link (v2) flow
    * passes it to the coordinator's `performCheckout`.

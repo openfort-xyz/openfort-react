@@ -14,7 +14,6 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer, StackedButtonWrapper } from '../Buy/styles'
-import StripeOnrampEmbed from './StripeOnrampEmbed'
 
 // In-page mount for the Coinbase native Pay button (Apple/Google Pay). The
 // server returns Coinbase's hosted Pay-button URL; `allow="payment"` lets the
@@ -32,10 +31,12 @@ const WalletPayFrame = styled.iframe`
 `
 
 /**
- * Commit-and-track screen for a fiat buy. The amount screen minted the funding
- * session; this one sets the onramp payment method (the server resolves the
- * provider), opens the hosted checkout, and follows the SESSION status — the
- * popup is never the source of truth, settlement webhooks are.
+ * Commit-and-track screen for a fiat buy on the `iframe` and `native` angles
+ * (the `embedded` angle runs in StripeLinkCheckout). The amount screen minted
+ * the funding session; this one sets the onramp payment method (the server
+ * resolves the provider), presents the checkout — a hosted popup or the
+ * in-page Pay button — and follows the SESSION status, which the server
+ * advances from settlement webhooks and provider polls.
  */
 const BuyProcessing = () => {
   const { buyForm, setRoute, triggerResize } = useOpenfort()
@@ -125,40 +126,16 @@ const BuyProcessing = () => {
     return () => window.removeEventListener('message', onMessage)
   }, [])
 
-  // The `embedded` angle mounts the provider's own component in-page (Stripe's
-  // embedded onramp) from the payment method's publishable key + session secret.
-  // A mount failure (or missing secrets — older backend / env not set) falls
-  // back to the hosted checkout URL, the same popup the iframe angle opens.
-  const [embedFailed, setEmbedFailed] = useState(false)
-  const committedPm = onramp.session?.paymentMethod
-  const embeddedSecrets =
-    committedPm?.type === 'onramp' && committedPm.providerClientSecret && committedPm.providerPublishableKey
-      ? { clientSecret: committedPm.providerClientSecret, publishableKey: committedPm.providerPublishableKey }
-      : null
-  const showEmbedded =
-    onramp.angle === 'embedded' && !!embeddedSecrets && !embedFailed && onramp.status === 'waiting_payment'
-  const embeddedNeedsFallback =
-    onramp.angle === 'embedded' && onramp.status === 'waiting_payment' && (embedFailed || !embeddedSecrets)
-
-  const fallbackOpened = useRef(false)
-  useEffect(() => {
-    if (!embeddedNeedsFallback || !onramp.url || fallbackOpened.current) return
-    fallbackOpened.current = true
-    window.open(onramp.url, 'openfort-onramp', 'popup,width=470,height=750')
-  }, [embeddedNeedsFallback, onramp.url])
-
   // Offer a manual advance after a while — settlement webhooks can lag the
-  // provider's own success screen. Suppressed while an in-page payment UI is
-  // mounted (native Pay button or the embedded component — the buyer is still
-  // paying; advancing would skip it); it appears once payment is received.
+  // provider's own success screen. Suppressed while the native Pay button is
+  // mounted (the buyer is still paying; advancing would skip it); it appears
+  // once payment is received.
   useEffect(() => {
-    const inPageAwaitingPayment =
-      ((onramp.angle === 'native' && !framePaid) || (onramp.angle === 'embedded' && !embeddedNeedsFallback)) &&
-      onramp.status === 'waiting_payment'
+    const inPageAwaitingPayment = onramp.angle === 'native' && !framePaid && onramp.status === 'waiting_payment'
     if ((onramp.status !== 'waiting_payment' && onramp.status !== 'processing') || inPageAwaitingPayment) return
     const timer = setTimeout(() => setShowContinueButton(true), 5_000)
     return () => clearTimeout(timer)
-  }, [onramp.status, onramp.angle, embeddedNeedsFallback, framePaid])
+  }, [onramp.status, onramp.angle, framePaid])
 
   const handleBack = () => {
     onramp.reset()
@@ -192,15 +169,11 @@ const BuyProcessing = () => {
     <PageContent onBack={handleBack}>
       <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
         <ModalHeading>
-          {starting
-            ? 'Preparing checkout'
-            : showWalletPayFrame || showEmbedded
-              ? 'Complete your purchase'
-              : 'Processing purchase'}
+          {starting ? 'Preparing checkout' : showWalletPayFrame ? 'Complete your purchase' : 'Processing purchase'}
         </ModalHeading>
-        {/* The provider's own UI (Pay button / embedded component) carries its
-            copy — no description is repeated above it. */}
-        {!showWalletPayFrame && !showEmbedded && (
+        {/* The provider's own Pay button carries its copy — no description is
+            repeated above it. */}
+        {!showWalletPayFrame && (
           <ModalBody>
             {starting
               ? 'Please wait…'
@@ -210,13 +183,7 @@ const BuyProcessing = () => {
           </ModalBody>
         )}
 
-        {showEmbedded && embeddedSecrets ? (
-          <StripeOnrampEmbed
-            publishableKey={embeddedSecrets.publishableKey}
-            clientSecret={embeddedSecrets.clientSecret}
-            onError={() => setEmbedFailed(true)}
-          />
-        ) : showWalletPayFrame ? (
+        {showWalletPayFrame ? (
           // Coinbase requires these exact iframe attributes for the in-page
           // Apple/Google Pay sheet to run (headless onramp docs).
           <WalletPayFrame

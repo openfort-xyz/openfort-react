@@ -206,17 +206,6 @@ export const CenteredRow = styled.div`
   margin-top: 12px;
 `
 
-export const CurrencyPill = styled.div`
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 5px 12px 5px 6px;
-  border-radius: 999px;
-  border: 1px solid var(--ck-body-divider);
-  background: var(--ck-secondary-button-background);
-  color: var(--ck-body-color-muted);
-`
-
 /** Round-cropped flag for the currency pill (emoji flags are rectangular; the circle clips them). */
 export const FlagBadge = styled.span`
   display: inline-flex;
@@ -278,16 +267,4 @@ export const SummaryLabel = styled.span`
 
 export const SummaryMuted = styled.span`
   color: var(--ck-body-color-muted);
-`
-
-export const CurrencySelect = styled.select`
-  appearance: none;
-  background: transparent;
-  border: none;
-  color: var(--ck-body-color);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-align: right;
-  font-family: inherit;
 `

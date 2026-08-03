@@ -1,8 +1,5 @@
 import { FundingMethod, type WalletPayDraft, type WalletPayIdentity } from '../../components/Openfort/types'
 
-/** The buyer-identity fields the wallet-pay flow reads off the logged-in user. */
-type WalletPayUser = { email?: string; phoneNumber?: string; phoneNumberVerified?: boolean }
-
 /**
  * Helpers for the Coinbase native wallet-pay (Apple/Google Pay) identity the
  * widget assembles before committing. The method alone only says wallet pay
@@ -19,14 +16,4 @@ export function isWalletPayMethod(method: FundingMethod): boolean {
 /** True once every field the native commit needs is present and non-empty. */
 export function isCompleteWalletPay(draft: WalletPayDraft | null | undefined): draft is WalletPayIdentity {
   return !!draft && !!draft.email && !!draft.phoneNumber && !!draft.phoneNumberVerifiedAt && !!draft.agreementAcceptedAt
-}
-
-/**
- * Whether the OTP-capture screen is needed, or the buyer's existing Openfort
- * identity already satisfies the native commit. We can skip capture only when
- * the user has an email and an already-verified phone; otherwise the widget must
- * gather and OTP-verify the missing piece.
- */
-export function needsWalletPayCapture(user: WalletPayUser | undefined | null): boolean {
-  return !(user?.email && user?.phoneNumber && user?.phoneNumberVerified)
 }
