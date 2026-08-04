@@ -38,6 +38,7 @@ const ruRU: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `Ваш кошелек не поддерживает переключение сетей из этого приложения.`,
   warnings_walletSwitchingUnsupportedResolve: `Попробуйте переключиться на другую сеть прямо в вашем кошельке.`,
+  warnings_walletSwitchingFailed: `Не удалось сменить сеть. Попробуйте ещё раз.`,
   warnings_chainUnsupported: `Это приложение не поддерживает текущую подключенную сеть.`,
   warnings_chainUnsupportedResolve: `Для продолжения переключите сеть или отключите кошелек.`,
 

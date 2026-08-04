@@ -38,6 +38,7 @@ const viVN: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `Ví của bạn không hỗ trợ đổi mạng từ ứng dụng.`,
   warnings_walletSwitchingUnsupportedResolve: `Hãy thử đổi mạng từ phía ví của bạn.`,
+  warnings_walletSwitchingFailed: `Không thể chuyển mạng. Vui lòng thử lại.`,
   warnings_chainUnsupported: `Ứng dụng này không hỗ trợ mạng hiện tại.`,
   warnings_chainUnsupportedResolve: `Đổi hoặc ngắt kết nối để tiếp tục.`,
 

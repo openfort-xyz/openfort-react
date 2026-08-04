@@ -38,6 +38,7 @@ const zhCN: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `您的钱包不支持从此应用切换网络。`,
   warnings_walletSwitchingUnsupportedResolve: `请尝试从钱包中切换网络。`,
+  warnings_walletSwitchingFailed: `无法切换网络，请重试。`,
   warnings_chainUnsupported: `此应用不支持当前连接的网络。`,
   warnings_chainUnsupportedResolve: `请切换网络或断开连接以继续。`,
 

@@ -38,6 +38,7 @@ const esES: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `Tu cartera no permite cambiar de red desde esta aplicación.`,
   warnings_walletSwitchingUnsupportedResolve: `Prueba a cambiar de red desde tu cartera.`,
+  warnings_walletSwitchingFailed: `No se pudo cambiar de red. Inténtalo de nuevo.`,
   warnings_chainUnsupported: `Esta aplicación no es compatible con la red conectada actualmente.`,
   warnings_chainUnsupportedResolve: `Cambia o desconecta para continuar.`,
 

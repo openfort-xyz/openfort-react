@@ -38,6 +38,7 @@ const arAE: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `عذرًا، لا تدعم محفظتك تغيير الشبكات من هذا التطبيق.`,
   warnings_walletSwitchingUnsupportedResolve: `حاول تغيير الشبكات من داخل محفظتك بدلاً من ذلك.`,
+  warnings_walletSwitchingFailed: `تعذّر تبديل الشبكة. يُرجى المحاولة مرة أخرى.`,
   warnings_chainUnsupported: `هذا التطبيق غير متوافق مع الشبكة المتصلة حاليًا.`,
   warnings_chainUnsupportedResolve: `للمتابعة، قم بتغيير الشبكة أو قطع الاتصال.`,
 

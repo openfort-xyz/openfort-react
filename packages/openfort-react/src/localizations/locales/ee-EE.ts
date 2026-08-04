@@ -38,6 +38,7 @@ const eeEE: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `Teie rahakott ei toeta võrgu vahetamist sellest rakendusest.`,
   warnings_walletSwitchingUnsupportedResolve: `Proovige võrgu vahetamist teha oma rahakoti seest.`,
+  warnings_walletSwitchingFailed: `Võrgu vahetamine ebaõnnestus. Palun proovi uuesti.`,
   warnings_chainUnsupported: `See rakendus ei toeta praegu ühendatud võrku.`,
   warnings_chainUnsupportedResolve: `Jätkamiseks vahetage või ühendage lahti.`,
 

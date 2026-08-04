@@ -34,6 +34,7 @@ const enUS = {
 
   warnings_walletSwitchingUnsupported: `Your wallet does not support switching networks from this app.`,
   warnings_walletSwitchingUnsupportedResolve: `Try switching networks from within your wallet instead.`,
+  warnings_walletSwitchingFailed: `Could not switch networks. Please try again.`,
   warnings_chainUnsupported: `This app does not support the current connected network.`,
   warnings_chainUnsupportedResolve: `Switch or disconnect to continue.`,
 

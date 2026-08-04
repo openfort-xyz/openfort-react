@@ -38,6 +38,7 @@ const trTR: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `Bu uygulamada ağ değiştirmeyi cüzdanın desteklemiyor.`,
   warnings_walletSwitchingUnsupportedResolve: `Bunun yerine cüzdanınızdan ağları değiştirmeyi deneyin.`,
+  warnings_walletSwitchingFailed: `Ağ değiştirilemedi. Lütfen tekrar deneyin.`,
   warnings_chainUnsupported: `Bu uygulama kullanmış olduğunuz ağı desteklemiyor.`,
   warnings_chainUnsupportedResolve: `Devam etmek için ağ değiştir veya bağlantıyı kes.`,
 

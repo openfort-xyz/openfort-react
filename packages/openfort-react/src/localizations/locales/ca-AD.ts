@@ -38,6 +38,7 @@ const caAD: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `La teva cartera no permet canviar de xarxa des d'aquesta aplicació.`,
   warnings_walletSwitchingUnsupportedResolve: `Prova a canviar de xarxa des de la teva cartera.`,
+  warnings_walletSwitchingFailed: `No s'ha pogut canviar de xarxa. Torna-ho a provar.`,
   warnings_chainUnsupported: `Aquesta aplicació no és compatible amb la xarxa connectada actualment.`,
   warnings_chainUnsupportedResolve: `Canvia o desconnecta per continuar.`,
 

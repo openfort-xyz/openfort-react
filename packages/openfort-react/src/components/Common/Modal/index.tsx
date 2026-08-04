@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type React from 'react'
-import { useEffect, useState } from 'react'
+import { type PropsWithChildren, useCallback, useEffect, useState } from 'react'
 import { useTransition } from 'react-transition-state'
 import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
@@ -41,12 +41,26 @@ import { useContentBounds } from './useContentBounds.js'
 /**
  * Marks a subtree inert while it finishes exiting.
  *
- * React 18 types `inert` as a string and React 19 types it as a boolean, so a
- * literal fails to type-check against one of them. An index-signature record
- * spreads cleanly under both, and the empty string sets the attribute in either
- * runtime.
+ * React 18 types `inert` as a string and React 19 as a boolean, and React 19
+ * additionally treats the empty string as `false` and removes the attribute
+ * (logging a warning as it does). Setting it through a ref sidesteps both the
+ * typing split and that coercion, so the exiting page is genuinely inert — and
+ * out of the tab order — in either runtime.
  */
-const INERT_PROPS: Record<string, unknown> = { inert: '' }
+const InertWhenInactive: React.FC<PropsWithChildren<{ active: boolean }>> = ({ active, children }) => {
+  const setInert = useCallback(
+    (node: HTMLDivElement | null) => {
+      node?.toggleAttribute('inert', !active)
+    },
+    [active]
+  )
+
+  return (
+    <div ref={setInert} aria-hidden={active ? undefined : true} style={{ display: 'contents' }}>
+      {children}
+    </div>
+  )
+}
 
 const InfoIcon = ({ ...props }) => (
   <svg
@@ -275,13 +289,9 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
           aria-hidden={pageActive ? undefined : true}
           style={{ pointerEvents: pageActive ? 'auto' : 'none' }}
         >
-          <div
-            aria-hidden={pageActive ? undefined : true}
-            {...(pageActive ? {} : INERT_PROPS)}
-            style={{ display: 'contents' }}
-          >
+          <InertWhenInactive active={pageActive}>
             <PageActivityProvider active={pageActive}>{page}</PageActivityProvider>
-          </div>
+          </InertWhenInactive>
         </PageContents>
       </Page>
     )

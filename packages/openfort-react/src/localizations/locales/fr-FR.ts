@@ -38,6 +38,7 @@ const frFR: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `Votre portefeuille ne prend pas en charge le changement de réseau à partir de cette application.`,
   warnings_walletSwitchingUnsupportedResolve: `Essayez plutôt de changer de réseau à partir de votre portefeuille.`,
+  warnings_walletSwitchingFailed: `Impossible de changer de réseau. Veuillez réessayer.`,
   warnings_chainUnsupported: `Cette application ne prend pas en charge le réseau connecté actuel.`,
   warnings_chainUnsupportedResolve: `Changez ou déconnectez-vous pour continuer.`,
 

@@ -38,6 +38,7 @@ const faIR: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `متاسفانه، کیف پول شما از تغییر شبکه در این برنامه پشتیبانی نمی‌کند.`,
   warnings_walletSwitchingUnsupportedResolve: `بهتر است از داخل کیف پول خود تغییر شبکه دهید.`,
+  warnings_walletSwitchingFailed: `تغییر شبکه ممکن نشد. لطفاً دوباره تلاش کنید.`,
   warnings_chainUnsupported: `این برنامه با شبکه‌ای که در حال حاضر متصل است، سازگاری ندارد.`,
   warnings_chainUnsupportedResolve: `برای ادامه، شبکه را تغییر دهید یا اتصال را قطع کنید.`,
 

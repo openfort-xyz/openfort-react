@@ -32,7 +32,7 @@ const setSignRequest = vi.fn()
 const pendingSignRequest = { settle: settleSignRequest }
 
 vi.mock('../../components/Openfort/useOpenfort.js', () => ({
-  useOpenfort: () => ({ signRequest: pendingSignRequest, setSignRequest }),
+  useOpenfortSignRequest: () => ({ signRequest: pendingSignRequest, setSignRequest }),
   useOpenfortRouting: () => ({
     open: state.open,
     setOpen,

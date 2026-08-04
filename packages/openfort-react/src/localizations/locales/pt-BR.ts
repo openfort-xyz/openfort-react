@@ -38,6 +38,7 @@ const ptBR: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `A sua carteira não permite a troca de rede a partir deste aplicativo.`,
   warnings_walletSwitchingUnsupportedResolve: `Tente trocar de rede de dentro da sua carteira.`,
+  warnings_walletSwitchingFailed: `Não foi possível trocar de rede. Tente novamente.`,
 
   warnings_chainUnsupported: `Este aplicativo não é compatível com a rede conectada.`,
   warnings_chainUnsupportedResolve: `Altere a rede ou desconecte para continuar.`,

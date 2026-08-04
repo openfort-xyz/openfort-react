@@ -72,10 +72,15 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
     if (!bridgeIsPending) setPendingChainId(undefined)
   }, [bridgeIsPending])
 
-  // 4902 means the wallet cannot switch networks. Providers put that on `code`, which
-  // isn't part of SwitchChainErrorType, so the property is narrowed before it's read.
-  const isError = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4902
-  const disabled = isError || !switchChainFn
+  // 4902 means the wallet cannot switch networks at all. Providers put that on
+  // `code`, which isn't part of SwitchChainErrorType, so the property is
+  // narrowed before it's read.
+  const isUnsupported = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4902
+  // Any other rejection is a failure of this one switch — a user rejection, an
+  // unreachable RPC, a backend refusal. Reporting only 4902 left every one of
+  // those silent: the spinner cleared and the chain simply never changed.
+  const switchFailed = !!bridgeError && !isUnsupported
+  const disabled = isUnsupported || !switchChainFn
 
   const handleSwitchNetwork = (chainId: number) => {
     if (switchChainFn) {
@@ -236,7 +241,7 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
         </ChainButtons>
       </ChainButtonContainer>
       <AnimatePresence>
-        {isError && (
+        {(isUnsupported || switchFailed) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -250,7 +255,9 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
           >
             <div style={{ paddingTop: 10, paddingBottom: 8 }}>
               <Alert>
-                {locales.warnings_walletSwitchingUnsupported} {locales.warnings_walletSwitchingUnsupportedResolve}
+                {isUnsupported
+                  ? `${locales.warnings_walletSwitchingUnsupported} ${locales.warnings_walletSwitchingUnsupportedResolve}`
+                  : locales.warnings_walletSwitchingFailed}
               </Alert>
             </div>
           </motion.div>

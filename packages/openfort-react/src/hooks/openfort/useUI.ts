@@ -3,7 +3,7 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import React from 'react'
 import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types.js'
-import { useOpenfort, useOpenfortForms, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
+import { useOpenfortForms, useOpenfortRouting, useOpenfortSignRequest } from '../../components/Openfort/useOpenfort.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
 import { WalletError } from '../../errors/wallet.js'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
@@ -81,7 +81,7 @@ function isAccountId(id: string): boolean {
  */
 export function useUI() {
   const { open, setOpen, setRoute, setConnector, connector, chainType } = useOpenfortRouting()
-  const { signRequest, setSignRequest } = useOpenfort()
+  const { signRequest, setSignRequest } = useOpenfortSignRequest()
   const { setSendForm } = useOpenfortForms()
   const isLoading = useOpenfortCore((s) => s.isLoading)
   const user = useOpenfortCore((s) => s.user)

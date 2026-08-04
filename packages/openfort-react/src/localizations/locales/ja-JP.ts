@@ -38,6 +38,7 @@ const jaJP: LocaleProps = {
 
   warnings_walletSwitchingUnsupported: `お使いのウォレットは、このアプリからのネットワークの切り替えをサポートしていません。`,
   warnings_walletSwitchingUnsupportedResolve: `代わりにウォレット内からネットワークを切り替えてみてください。`,
+  warnings_walletSwitchingFailed: `ネットワークを切り替えられませんでした。もう一度お試しください。`,
   warnings_chainUnsupported: `このアプリは、現在接続されているネットワークをサポートしていません。`,
   warnings_chainUnsupportedResolve: `切り替えるか切断して続行します。`,
 
