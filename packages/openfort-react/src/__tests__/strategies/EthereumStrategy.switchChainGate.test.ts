@@ -188,7 +188,7 @@ describe('Ethereum strategies — wallet_switchEthereumChain gating', () => {
       const operation = invalidatableOperation()
       const initialization = makeStrategy().initProvider(
         openfort,
-        { ethereum: { chainId: 84532, ethereumFeeSponsorshipId: 'policy-stale' } },
+        { ethereum: { chainId: 84532, ethereumFeeSponsorshipId: 'pol_stale' } },
         84532,
         operation.context
       )
@@ -222,12 +222,12 @@ describe('Ethereum strategies — wallet_switchEthereumChain gating', () => {
 
       await makeStrategy().initProvider(
         openfort,
-        { ethereum: { chainId: 84532, ethereumFeeSponsorshipId: 'policy-current' } },
+        { ethereum: { chainId: 84532, ethereumFeeSponsorshipId: 'pol_current' } },
         84532,
         operation.context
       )
 
-      expect(updateFeeSponsorship).toHaveBeenCalledWith('policy-current')
+      expect(updateFeeSponsorship).toHaveBeenCalledWith('pol_current')
       expect(announcements).toHaveLength(1)
       expect(announcements[0]).toMatchObject({ detail: { provider } })
       operation.invalidate()

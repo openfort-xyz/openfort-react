@@ -80,7 +80,7 @@ type ProviderInitKey = {
   kind: string
   chainType: ChainTypeEnum
   evmChainId: number | undefined
-  feeSponsorshipPolicy: string | undefined
+  feeSponsorshipId: string | undefined
 }
 
 function isSameInitKey(left: ProviderInitKey | null, right: ProviderInitKey): boolean {
@@ -89,7 +89,7 @@ function isSameInitKey(left: ProviderInitKey | null, right: ProviderInitKey): bo
     left.kind === right.kind &&
     left.chainType === right.chainType &&
     left.evmChainId === right.evmChainId &&
-    left.feeSponsorshipPolicy === right.feeSponsorshipPolicy
+    left.feeSponsorshipId === right.feeSponsorshipId
   )
 }
 
@@ -519,9 +519,8 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     }
 
     // Skip if we already initialized with the same parameters
-    const feeSponsorshipPolicy =
-      evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId)?.policy : undefined
-    const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId, feeSponsorshipPolicy }
+    const feeSponsorshipId = evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId) : undefined
+    const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId, feeSponsorshipId }
     if (isSameInitKey(lastInitRef.current, initKey)) return
 
     let cancelled = false

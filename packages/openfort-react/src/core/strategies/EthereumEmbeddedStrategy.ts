@@ -66,7 +66,7 @@ export function createEthereumEmbeddedStrategy(walletConfig: OpenfortWalletConfi
       const ethereum = config?.ethereum
       const chainId = chainIdOverride ?? ethereum?.chainId ?? DEFAULT_DEV_CHAIN_ID
       const rpcUrls = ethereum?.rpcUrls ?? {}
-      const feeSponsorship = resolveEthereumFeeSponsorship(config, chainId)?.policy
+      const feeSponsorship = resolveEthereumFeeSponsorship(config, chainId)
 
       const provider = await openfort.embeddedWallet.getEthereumProvider({
         chains: rpcUrls,

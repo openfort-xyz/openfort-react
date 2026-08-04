@@ -50,7 +50,7 @@ export function createEthereumBridgeStrategy(
       { assertCurrent }: EmbeddedSignerOperationContext
     ) {
       const chainId = chainIdOverride ?? bridge.chainId
-      const feeSponsorship = chainId != null ? resolveEthereumFeeSponsorship(walletConfig, chainId)?.policy : undefined
+      const feeSponsorship = chainId != null ? resolveEthereumFeeSponsorship(walletConfig, chainId) : undefined
 
       // Per-chain RPC endpoints handed to the embedded signer. An explicitly
       // configured `walletConfig.ethereum.rpcUrls` entry wins over the wagmi

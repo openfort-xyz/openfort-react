@@ -23,13 +23,12 @@ export function firstEmbeddedAddress(
 export function resolveEthereumFeeSponsorship(
   config: OpenfortWalletConfig | undefined,
   chainId: number
-): { policy: string } | undefined {
+): string | undefined {
   const feeSponsorship = config?.ethereum?.ethereumFeeSponsorshipId
   if (!feeSponsorship) return undefined
-  if (typeof feeSponsorship === 'string') return { policy: feeSponsorship }
+  if (typeof feeSponsorship === 'string') return feeSponsorship
   if (typeof feeSponsorship === 'object') {
-    const policy = (feeSponsorship as Record<number, string | undefined>)[chainId]
-    if (policy) return { policy }
+    return (feeSponsorship as Record<number, string | undefined>)[chainId] || undefined
   }
   return undefined
 }
