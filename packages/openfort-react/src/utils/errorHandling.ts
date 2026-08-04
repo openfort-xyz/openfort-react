@@ -298,6 +298,14 @@ const PROVIDER_ERROR_CODES = new Map<number, TransactionErrorDetails>([
       action: 'Please check the recipient address and amount, then try again.',
     },
   ],
+  [
+    -32003,
+    {
+      title: 'Transaction failed',
+      message: 'The transaction was rejected by the contract.',
+      action: 'Check the transaction details and try again.',
+    },
+  ],
   [-32603, { title: 'Network error', message: 'The network encountered an internal error.' }],
   [4001, { title: 'Transaction cancelled', message: 'You cancelled the transaction.' }],
   [
@@ -335,6 +343,16 @@ const PROVIDER_ERROR_CODES = new Map<number, TransactionErrorDetails>([
 ])
 
 /**
+ * Codes that carry no classification of their own.
+ *
+ * openfort-js wraps every unrecognised provider failure as `-32603`, putting the
+ * real reason in the message instead. Consulting these before the text rules
+ * would report "Network error" for an out-of-gas wallet, so they are only used
+ * once nothing more specific has matched.
+ */
+const AMBIGUOUS_PROVIDER_CODES: ReadonlySet<number> = new Set([-32603])
+
+/**
  * Phrases matched on text because no class or code reaches this function for them.
  *
  * - Rejections: some wallets throw a bare `Error` for a declined prompt without
@@ -353,6 +371,22 @@ const TEXT_RULES: readonly { pattern: RegExp; details: TransactionErrorDetails }
       title: 'Network error',
       message: 'Unable to connect to the network.',
       action: 'Check your internet connection and try again.',
+    },
+  },
+  {
+    pattern: /insufficient funds|doesn't have enough native token|exceeds the balance/i,
+    details: {
+      title: 'Insufficient funds',
+      message: "You don't have enough native token to pay the gas fee.",
+      action: 'Add funds to your wallet to cover the transaction fee.',
+    },
+  },
+  {
+    pattern: /execution reverted|reverted with reason|transfer amount exceeds/i,
+    details: {
+      title: 'Transaction failed',
+      message: 'The transaction was rejected by the contract.',
+      action: 'Check the transaction details and try again.',
     },
   },
 ]
@@ -394,13 +428,19 @@ export function parseTransactionError(error: unknown): TransactionErrorDetails {
   }
 
   const code = providerErrorCode(error)
-  if (code !== undefined) {
+  if (code !== undefined && !AMBIGUOUS_PROVIDER_CODES.has(code)) {
     const details = PROVIDER_ERROR_CODES.get(code)
     if (details) return details
   }
 
   for (const rule of TEXT_RULES) {
     if (messageMatches(error, rule.pattern)) return rule.details
+  }
+
+  // Nothing more specific matched, so fall back to what the catch-all says.
+  if (code !== undefined) {
+    const details = PROVIDER_ERROR_CODES.get(code)
+    if (details) return details
   }
 
   return {

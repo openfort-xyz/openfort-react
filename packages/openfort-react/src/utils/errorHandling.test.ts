@@ -98,9 +98,23 @@ describe('raw EIP-1193 provider errors', () => {
     [4900, 'Connection lost'],
     [4901, 'Wrong network'],
     [-32603, 'Network error'],
+    [-32003, 'Transaction failed'],
     [-32000, 'Transaction would fail'],
   ])('classifies code %i', (code, title) => {
     expect(parseTransactionError(providerError(code)).title).toBe(title)
+  })
+
+  // openfort-js wraps every unrecognised failure as -32603 and puts the real
+  // reason in the message, so the code alone must not win.
+  test('reads the reason out of a -32603 catch-all rather than reporting a network fault', () => {
+    const outOfGas = providerError(
+      -32603,
+      "Insufficient funds: the wallet doesn't have enough native token to cover gas (plus any value). Top up the wallet and try again."
+    )
+    expect(parseTransactionError(outOfGas).title).toBe('Insufficient funds')
+
+    const reverted = providerError(-32603, 'execution reverted: ERC20: transfer amount exceeds balance')
+    expect(parseTransactionError(reverted).title).toBe('Transaction failed')
   })
 
   test('reads the code off a nested cause', () => {

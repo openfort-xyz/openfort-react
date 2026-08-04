@@ -78,9 +78,15 @@ export class OpenfortError extends Error {
   }
 }
 
-function walk(err: unknown, fn?: (err: unknown) => boolean): unknown {
+function walk(err: unknown, fn?: (err: unknown) => boolean, seen = new Set<unknown>()): unknown {
   if (fn?.(err)) return err
-  if (err != null && typeof err === 'object' && 'cause' in err && err.cause != null) return walk(err.cause, fn)
+  // Cause chains can be cyclic: wrapping code sometimes re-attaches an outer
+  // error as a deeper cause, and this runs on the render path.
+  if (err != null && typeof err === 'object') {
+    if (seen.has(err)) return err
+    seen.add(err)
+    if ('cause' in err && err.cause != null) return walk(err.cause, fn, seen)
+  }
   return err
 }
 

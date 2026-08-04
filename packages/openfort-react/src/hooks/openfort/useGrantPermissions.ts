@@ -26,6 +26,19 @@ type GrantPermissionsRequest = {
   request: GrantPermissionsParameters
 }
 
+/** EIP-1193 `UNSUPPORTED_METHOD`. */
+const UNSUPPORTED_METHOD_CODE = 4200
+
+/** True when `error` or any of its causes carries the given EIP-1193 code. */
+function hasProviderErrorCode(error: unknown, code: number): boolean {
+  let current: unknown = error
+  for (let depth = 0; current != null && depth < 10; depth++) {
+    if ((current as { code?: unknown }).code === code) return true
+    current = (current as { cause?: unknown }).cause
+  }
+  return false
+}
+
 type GrantPermissionsResult = {
   address: `0x${string}`
 } & GrantPermissionsReturnType
@@ -79,13 +92,18 @@ function getEmbeddedWalletClientWithErc7715(
  * }
  * ```
  */
-export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {}) => {
+const DEFAULT_GRANT_HOOK_OPTIONS: GrantPermissionsHookOptions = {}
+
+export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = DEFAULT_GRANT_HOOK_OPTIONS) => {
   const bridge = useEthereumBridge()
   const { chains } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)
   const ethereum = useEthereumEmbeddedWallet()
   const chainId =
     bridge?.chainId ?? (ethereum.status === 'connected' ? ethereum.chainId : undefined) ?? DEFAULT_TESTNET_CHAIN_ID
+  // The embedded-wallet hook returns a fresh object every render, so depend on
+  // the one value read from it rather than on the whole result.
+  const connectedEmbeddedAddress = ethereum.status === 'connected' ? ethereum.address : undefined
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
@@ -97,11 +115,8 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
     ): Promise<GrantPermissionsHookResult> => {
       try {
         const intendedEmbeddedAddress =
-          ethereum.status === 'connected'
-            ? ethereum.address
-            : bridge?.account.connector?.id === embeddedWalletId
-              ? bridge.account.address
-              : undefined
+          connectedEmbeddedAddress ??
+          (bridge?.account.connector?.id === embeddedWalletId ? bridge.account.address : undefined)
         const connectorId = bridge?.account.connector?.id
         const connectorKind = !bridge
           ? 'embedded'
@@ -202,10 +217,10 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
           data,
         })
       } catch (error) {
-        const isUnsupported =
-          error instanceof Error &&
-          /Method not supported|grantPermissions|wallet_grantPermissions|does not support/i.test(error.message)
-        const message = isUnsupported
+        // EIP-1193 code 4200 is the structured "unsupported method" signal.
+        // Matching on the message instead would also catch the parameter
+        // validation error, which names the method but is a caller mistake.
+        const message = hasProviderErrorCode(error, UNSUPPORTED_METHOD_CODE)
           ? 'Session keys (grantPermissions) are not supported by the embedded wallet provider. Use an external wallet for this flow.'
           : undefined
         const openfortError =
@@ -225,7 +240,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = {
         })
       }
     },
-    [bridge, chains, chainId, client, ethereum, hookOptions]
+    [bridge, chains, chainId, client, connectedEmbeddedAddress, hookOptions]
   )
 
   return {
