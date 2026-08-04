@@ -7,7 +7,7 @@ Typed action results, a TanStack Query data layer, and a narrower supported runt
 
 **Breaking**
 
-- Requires React `>=18.3.1 <20`, viem `>=2.52.2 <3` and Node.js `^20.19.0 || >=22.12.0`. React 17 and Node.js 18 are no longer supported.
+- `@openfort/react` requires React `>=18.3.1 <20`, viem `>=2.52.2 <3` and Node.js `>=20`. React 17 and Node.js 18 are no longer supported. `create-openfort` needs Node.js `^20.19.0 || >=22.12.0`, because the project it scaffolds builds on Vite 8.
 - `@tanstack/react-query` `>=5.99.2 <6` is now a required peer dependency. `OpenfortProvider` reuses the application's `QueryClient` when one is in scope and creates its own otherwise.
 - Embedded-wallet actions resolve instead of rejecting: create and import return `{ account } | { error }`, activation `{ needsRecovery } | { error }`, recovery `{} | { error }` and export `{ privateKey } | { error }`. Branch on `error` before advancing a success path.
 - Removed `OpenfortHookOptions.throwOnError`, `invalidateBalance()` (use the `useInvalidateBalance()` hook) and the `openfort:balance-invalidate` event.
