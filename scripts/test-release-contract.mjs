@@ -60,7 +60,7 @@ assert.deepEqual(
   "Private templates and examples must stay outside release version plans.",
 );
 
-const statusDirectory = mkdtempSync(join(tmpdir(), "fortkit-changeset-status-"));
+const statusDirectory = mkdtempSync(join(tmpdir(), "openfort-react-changeset-status-"));
 const statusPath = join(statusDirectory, "status.json");
 try {
   execFileSync("pnpm", ["exec", "changeset", "status", "--output", statusPath], {

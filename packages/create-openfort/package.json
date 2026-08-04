@@ -6,7 +6,7 @@
   "author": "Openfort (https://www.openfort.xyz)",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/openfort-xyz/fortkit.git",
+    "url": "git+https://github.com/openfort-xyz/openfort-react.git",
     "directory": "packages/create-openfort"
   },
   "keywords": [

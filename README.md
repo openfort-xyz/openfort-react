@@ -83,15 +83,15 @@ Wallet applications are a frequent target for attacks on users' assets. A few th
 
 ## Examples
 
-There are various runnable examples included in this repository in the [examples folder](https://github.com/openfort-xyz/fortkit/tree/main/examples)
+There are various runnable examples included in this repository in the [examples folder](https://github.com/openfort-xyz/openfort-react/tree/main/examples)
 
 ### Running Examples Locally
 
 Clone the project and install the necessary dependencies:
 
 ```sh
-git clone git@github.com:openfort-xyz/fortkit.git
-cd fortkit
+git clone git@github.com:openfort-xyz/openfort-react.git
+cd openfort-react
 pnpm install
 ```
 
@@ -111,7 +111,7 @@ pnpm dev:openfort-ui # Openfort UI
 
 ## License
 
-See [LICENSE](https://github.com/openfort-xyz/fortkit/blob/main/LICENSE) for more information.
+See [LICENSE](https://github.com/openfort-xyz/openfort-react/blob/main/LICENSE) for more information.
 
 ## Credits
 

@@ -3,7 +3,7 @@
   "changelog": [
     "@changesets/changelog-github",
     {
-      "repo": "openfort-xyz/fortkit"
+      "repo": "openfort-xyz/openfort-react"
     }
   ],
   "snapshot": {

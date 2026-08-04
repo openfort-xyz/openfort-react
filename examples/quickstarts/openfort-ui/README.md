@@ -5,7 +5,7 @@ Implementation using Openfort UI components.
 ## Quick Start
 
 ```bash
-npx gitpick openfort-xyz/fortkit/tree/main/examples/quickstarts/openfort-ui openfort-ui && cd openfort-ui
+npx gitpick openfort-xyz/openfort-react/tree/main/examples/quickstarts/openfort-ui openfort-ui && cd openfort-ui
 ```
 
 ## Setup

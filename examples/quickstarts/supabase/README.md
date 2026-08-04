@@ -5,7 +5,7 @@ Supabase authentication integration example with Openfort React and Vite.js.
 ## Quick Start
 
 ```bash
-npx gitpick openfort-xyz/fortkit/tree/main/examples/quickstarts/supabase openfort-supabase && cd openfort-supabase
+npx gitpick openfort-xyz/openfort-react/tree/main/examples/quickstarts/supabase openfort-supabase && cd openfort-supabase
 ```
 
 ## Setup

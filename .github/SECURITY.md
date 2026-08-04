@@ -3,7 +3,7 @@
 ## Reporting a Vulnerability
 
 Report privately through
-[GitHub private vulnerability reporting](https://github.com/openfort-xyz/fortkit/security/advisories/new),
+[GitHub private vulnerability reporting](https://github.com/openfort-xyz/openfort-react/security/advisories/new),
 or by email to security@openfort.xyz. Please do not open a public issue, pull
 request, or discussion for an unfixed vulnerability.
 

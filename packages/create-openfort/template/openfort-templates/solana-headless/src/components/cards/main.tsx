@@ -48,7 +48,7 @@ export const Main = () => {
       name: 'Home',
       component: (
         <Profile
-          sampleGithubUrl="https://github.com/openfort-xyz/fortkit/tree/main/examples/quickstarts/solana-headless"
+          sampleGithubUrl="https://github.com/openfort-xyz/openfort-react/tree/main/examples/quickstarts/solana-headless"
           description="This is a demo app using Headless Wallet with Solana and Openfort."
         />
       ),

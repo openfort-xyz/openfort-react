@@ -46,7 +46,7 @@ export const Main = () => {
       name: 'Home',
       component: (
         <UserProfileCard
-          sampleGithubUrl="https://github.com/openfort-xyz/fortkit/tree/main/examples/quickstarts/supabase"
+          sampleGithubUrl="https://github.com/openfort-xyz/openfort-react/tree/main/examples/quickstarts/supabase"
           description="This is a demo app using Supabase Authentication and Openfort."
         />
       ),

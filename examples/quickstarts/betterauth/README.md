@@ -5,7 +5,7 @@ A clean, production-ready example of integrating [Openfort](https://www.openfort
 ## Quick Start
 
 ```bash
-npx gitpick openfort-xyz/fortkit/tree/main/examples/quickstarts/betterauth openfort-betterauth && cd openfort-betterauth
+npx gitpick openfort-xyz/openfort-react/tree/main/examples/quickstarts/betterauth openfort-betterauth && cd openfort-betterauth
 ```
 
 ## Overview

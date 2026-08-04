@@ -5,7 +5,7 @@ Minimal headless implementation example with Openfort React.
 ## Quick Start
 
 ```bash
-npx gitpick openfort-xyz/fortkit/tree/main/examples/quickstarts/headless openfort-headless && cd openfort-headless
+npx gitpick openfort-xyz/openfort-react/tree/main/examples/quickstarts/headless openfort-headless && cd openfort-headless
 ```
 
 ## Setup

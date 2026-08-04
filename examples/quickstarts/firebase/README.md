@@ -5,7 +5,7 @@ Firebase authentication integration example with Openfort React and Vite.js.
 ## Quick Start
 
 ```bash
-npx gitpick openfort-xyz/fortkit/tree/main/examples/quickstarts/firebase openfort-firebase && cd openfort-firebase
+npx gitpick openfort-xyz/openfort-react/tree/main/examples/quickstarts/firebase openfort-firebase && cd openfort-firebase
 ```
 
 ## Setup

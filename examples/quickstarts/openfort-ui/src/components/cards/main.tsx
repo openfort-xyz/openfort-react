@@ -44,7 +44,7 @@ const tabs: TabType[] = [
     name: 'Home',
     component: (
       <Profile
-        sampleGithubUrl="https://github.com/openfort-xyz/fortkit/tree/main/examples/quickstarts/openfort-ui"
+        sampleGithubUrl="https://github.com/openfort-xyz/openfort-react/tree/main/examples/quickstarts/openfort-ui"
         description="This is a demo app using Openfort UI."
       />
     ),
