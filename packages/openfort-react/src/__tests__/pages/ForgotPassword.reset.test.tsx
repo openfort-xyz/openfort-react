@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { routes } from '../../components/Openfort/types.js'
 
-const RESET_EMAIL = 'reset-user@example.test'
+const RESET_EMAIL = 'reset+tag@example.test'
 const RESET_STATE = 'fake-reset-state'
 
 const h = vi.hoisted(() => ({
@@ -144,7 +144,7 @@ describe('ForgotPassword reset URL handling', () => {
     expect(h.requestResetPassword).toHaveBeenCalledOnce()
     expect(h.requestResetPassword).toHaveBeenCalledWith({
       email: RESET_EMAIL,
-      redirectUrl: `${window.location.origin}/?openfortForgotPasswordUI=true&email=${RESET_EMAIL}`,
+      redirectUrl: `${window.location.origin}/?openfortForgotPasswordUI=true&email=${encodeURIComponent(RESET_EMAIL)}`,
     })
   })
 

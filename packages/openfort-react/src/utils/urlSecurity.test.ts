@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { suppressReferrer } from './urlSecurity.js'
+import { ValidationError } from '../errors/validation.js'
+import { assertNavigableRedirect, suppressReferrer } from './urlSecurity.js'
 
 describe('suppressReferrer', () => {
   beforeEach(() => {
@@ -36,5 +37,23 @@ describe('suppressReferrer', () => {
     restore()
 
     expect(meta.content).toBe('same-origin')
+  })
+})
+
+describe('assertNavigableRedirect', () => {
+  it('accepts an https redirect', () => {
+    expect(assertNavigableRedirect('https://auth.openfort.io/oauth?state=abc')).toBe(
+      'https://auth.openfort.io/oauth?state=abc'
+    )
+  })
+
+  it.each([
+    'javascript:fetch("//evil.example")',
+    'data:text/html,<script>1</script>',
+    'http://auth.openfort.io/oauth',
+    '//evil.example/oauth',
+    'not a url',
+  ])('refuses to navigate to %s', (value) => {
+    expect(() => assertNavigableRedirect(value)).toThrow(ValidationError)
   })
 })

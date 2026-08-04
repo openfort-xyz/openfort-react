@@ -1,3 +1,5 @@
+import { ValidationError } from '../errors/validation.js'
+
 const REFERRER_META_ID = '__openfort_no_referrer'
 let activeReferrerSuppressions = 0
 let managedReferrerMeta: HTMLMetaElement | null = null
@@ -63,4 +65,29 @@ export function parseCallbackUrl(href: string): URL {
 
   const fixed = `${href.slice(0, secondQ)}&${href.slice(secondQ + 1)}`
   return new URL(fixed)
+}
+
+/**
+ * Returns an https URL the browser may be navigated to, or throws.
+ *
+ * The auth API's redirect is a response body, not a constant, and it is assigned
+ * straight to `window.location.href`. A `javascript:` value there would run in
+ * the application's own origin, so the scheme is checked the same way funding
+ * links already are.
+ */
+export function assertNavigableRedirect(value: string): string {
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new ValidationError('The authentication provider returned an unusable redirect URL.')
+  }
+
+  if (url.protocol !== 'https:') {
+    throw new ValidationError('The authentication provider returned a redirect URL that is not https.', {
+      details: `Refused to navigate to a "${url.protocol}" URL.`,
+    })
+  }
+
+  return url.href
 }

@@ -9,6 +9,7 @@ import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
+import { assertNavigableRedirect } from '../../../utils/urlSecurity.js'
 import { onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { buildCallbackUrl } from './requestEmailVerification.js'
@@ -153,12 +154,12 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
           provider: authProvider,
           redirectTo: buildCallbackUrl({
             provider: authProvider,
-            callbackUrl: hookOptions?.redirectTo ?? options?.redirectTo,
+            callbackUrl: options?.redirectTo ?? hookOptions?.redirectTo,
             isOpen,
           }),
         })
 
-        window.location.href = redirectUrl
+        window.location.href = assertNavigableRedirect(redirectUrl)
 
         return onSuccess<InitOAuthReturnType>({
           data: {},
@@ -216,7 +217,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
         const redirectUrl = await transition.result
         if (!isCurrent()) return authTransitionSupersededResult()
 
-        window.location.href = redirectUrl
+        window.location.href = assertNavigableRedirect(redirectUrl)
 
         return onSuccess<InitOAuthReturnType>({
           data: {},

@@ -6,7 +6,7 @@ import { ConnectorTypeMismatchError } from '../../errors/connection.js'
 import { useAuthTransitions } from '../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
-import { parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity.js'
+import { assertNavigableRedirect, parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity.js'
 import Loader from '../Common/Loading/index.js'
 import { routes } from '../Openfort/types.js'
 import { useOpenfort } from '../Openfort/useOpenfort.js'
@@ -184,13 +184,13 @@ const ConnectWithOAuth: React.FC = () => {
               linkIsCurrent = () => session.isCurrent() && transition.isCurrent()
               const linkResponse = await transition.result
               if (!linkIsCurrent()) return
-              win.location.href = linkResponse
+              win.location.href = assertNavigableRedirect(linkResponse)
             } else {
               const r = await client.auth.initOAuth({
                 provider,
                 redirectTo,
               })
-              win.location.href = r
+              win.location.href = assertNavigableRedirect(r)
             }
           } catch (e) {
             if (linkIsCurrent && !linkIsCurrent()) return

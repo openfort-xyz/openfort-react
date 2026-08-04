@@ -4,7 +4,7 @@ import React, { useEffect } from 'react'
 import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { logger } from '../../../utils/logger.js'
-import { parseCallbackUrl } from '../../../utils/urlSecurity.js'
+import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity.js'
 import Button from '../../Common/Button/index.js'
 import FitText from '../../Common/FitText/index.js'
 import Input from '../../Common/Input/index.js'
@@ -60,7 +60,9 @@ const RequestEmail: React.FC = () => {
     try {
       await client.auth.requestResetPassword({
         email,
-        redirectUrl: `${cleanURL}?openfortForgotPasswordUI=true&email=${email}`,
+        // Encoded so a '+' in the address survives the round trip —
+        // URLSearchParams decodes a bare '+' as a space.
+        redirectUrl: `${cleanURL}?openfortForgotPasswordUI=true&email=${encodeURIComponent(email)}`,
       })
       setMessage('Reset email sent.')
       setTimeout(() => {
@@ -132,26 +134,11 @@ const ResetPassword: React.FC<{ resetRequest: ResetRequest }> = ({ resetRequest 
   })
 
   React.useLayoutEffect(() => {
-    const existingReferrerMeta = document.head.querySelector<HTMLMetaElement>('meta[name="referrer"]')
-    const referrerMeta = existingReferrerMeta ?? document.createElement('meta')
-    const previousPolicy = existingReferrerMeta?.getAttribute('content') ?? null
-
-    if (!existingReferrerMeta) {
-      referrerMeta.name = 'referrer'
-      document.head.appendChild(referrerMeta)
-    }
-    referrerMeta.content = 'no-referrer'
+    // Shared with the OAuth callback paths: reference-counted, and it declines
+    // to restore a policy the host changed while the reset form was open.
+    const restoreReferrerPolicy = suppressReferrer()
     window.history.replaceState(window.history.state, document.title, sanitizedUrl)
-
-    return () => {
-      if (!existingReferrerMeta) {
-        referrerMeta.remove()
-      } else if (previousPolicy === null) {
-        referrerMeta.removeAttribute('content')
-      } else {
-        referrerMeta.content = previousPolicy
-      }
-    }
+    return restoreReferrerPolicy
   }, [sanitizedUrl])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `error` and `message` are re-measure triggers — each banner adds a row to the form
