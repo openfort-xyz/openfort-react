@@ -25,6 +25,18 @@ type UseAuthCallbackOptions = {
 } & OpenfortHookOptions<CallbackResult> &
   CreateWalletPostAuthOptions
 
+/** Error codes the verification endpoint appends to the callback URL when it rejects a link. */
+const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
+  TOKEN_EXPIRED: 'This verification link has expired. Request a new one.',
+  INVALID_TOKEN: 'This verification link is not valid. Request a new one.',
+  USER_NOT_FOUND: 'No account matches this verification link.',
+  INVALID_USER: 'This verification link belongs to a different account.',
+}
+
+function describeCallbackError(code: string): string {
+  return CALLBACK_ERROR_MESSAGES[code] ?? `Authentication callback failed (${code}).`
+}
+
 /**
  * Hook for handling authentication callbacks from OAuth providers and email verification
  *

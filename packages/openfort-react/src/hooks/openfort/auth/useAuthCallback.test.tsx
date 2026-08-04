@@ -108,6 +108,75 @@ describe('useAuthCallback credential cleanup', () => {
     })
   })
 
+  it.each([
+    ['TOKEN_EXPIRED', 'This verification link has expired. Request a new one.'],
+    ['INVALID_TOKEN', 'This verification link is not valid. Request a new one.'],
+    ['USER_NOT_FOUND', 'No account matches this verification link.'],
+    ['INVALID_USER', 'This verification link belongs to a different account.'],
+  ])('fails a rejected verification callback carrying error=%s', (code, message) => {
+    const onError = vi.fn()
+    const onSuccess = vi.fn()
+    window.history.replaceState(
+      {},
+      '',
+      `/callback?openfortAuthProvider=email&email=user%40example.com&error=${code}&keep=value`
+    )
+
+    const { result } = renderHook(() => useAuthCallback({ onError, onSuccess }))
+
+    expect(result.current.isSuccess).toBe(false)
+    expect(result.current.isError).toBe(true)
+    expect(result.current.error).toMatchObject({ name: 'AuthenticationError', shortMessage: message })
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledOnce()
+    expect(h.verifyEmail).not.toHaveBeenCalled()
+    expect(h.storeCredentials).not.toHaveBeenCalled()
+
+    const callbackUrl = new URL(window.location.href)
+    expect(callbackUrl.searchParams.has('error')).toBe(false)
+    expect(callbackUrl.searchParams.has('email')).toBe(false)
+    expect(callbackUrl.searchParams.get('keep')).toBe('value')
+  })
+
+  it('reports an unrecognised callback error code instead of signalling success', () => {
+    const onSuccess = vi.fn()
+    window.history.replaceState({}, '', '/callback?openfortAuthProvider=email&email=user%40example.com&error=SOMETHING')
+
+    const { result } = renderHook(() => useAuthCallback({ onSuccess }))
+
+    expect(result.current.isSuccess).toBe(false)
+    expect(result.current.error).toMatchObject({
+      shortMessage: 'Authentication callback failed (SOMETHING).',
+    })
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
+  it('reports a rejected OAuth callback carrying an error instead of a missing-token failure', () => {
+    const onError = vi.fn()
+    window.history.replaceState({}, '', '/callback?openfortAuthProvider=google&error=TOKEN_EXPIRED')
+
+    const { result } = renderHook(() => useAuthCallback({ onError }))
+
+    expect(result.current.isError).toBe(true)
+    expect(result.current.error).toMatchObject({
+      shortMessage: 'This verification link has expired. Request a new one.',
+    })
+    expect(h.storeCredentials).not.toHaveBeenCalled()
+    expect(onError).toHaveBeenCalledOnce()
+  })
+
+  it('signals success for a verification callback that carries no state and no error', () => {
+    const onSuccess = vi.fn()
+    window.history.replaceState({}, '', '/callback?openfortAuthProvider=email&email=user%40example.com')
+
+    const { result } = renderHook(() => useAuthCallback({ onSuccess }))
+
+    expect(result.current.isSuccess).toBe(true)
+    expect(result.current.email).toBe('user@example.com')
+    expect(h.verifyEmail).not.toHaveBeenCalled()
+    expect(onSuccess).toHaveBeenCalledWith({ email: 'user@example.com', type: 'verifyEmail' })
+  })
+
   it('removes an access token when the callback is missing its user id', async () => {
     const onError = vi.fn()
     window.history.replaceState({}, '', '/callback?openfortAuthProvider=google&access_token=oauth-secret&keep=value')

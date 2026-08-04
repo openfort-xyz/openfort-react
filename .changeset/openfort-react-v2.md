@@ -25,6 +25,7 @@ Typed action results, a TanStack Query data layer, and a narrower supported runt
 
 **Fixed**
 
+- A rejected email-verification link no longer reports success. The verification endpoint redirects to the same callback URL on failure with an `error` code appended, which `useAuthCallback` and the modal's verification page both ignored — so an expired or invalid link showed "email verified". Both now fail with the reason and strip `error` from the URL.
 - Serialized embedded-signer work and credential transitions, so a stale session can no longer publish wallet, user or callback state after logout or a newer sign-in.
 - Scoped query keys per client and endpoint, keeping credentialed RPC URLs out of the cache and preventing cross-account reuse.
 - Restricted funding and onramp links to their expected HTTPS origins.

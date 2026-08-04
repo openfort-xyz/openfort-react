@@ -20,6 +20,14 @@ type VerificationResponse = {
   error?: string
 }
 
+/** Error codes the verification endpoint appends to the callback URL when it rejects a link. */
+const EMAIL_VERIFICATION_ERRORS: Record<string, string> = {
+  TOKEN_EXPIRED: 'This verification link has expired. Request a new one.',
+  INVALID_TOKEN: 'This verification link is not valid. Request a new one.',
+  USER_NOT_FOUND: 'No account matches this verification link.',
+  INVALID_USER: 'This verification link belongs to a different account.',
+}
+
 const EmailVerification: React.FC = () => {
   const { setRoute, emailInput, setEmailInput } = useOpenfort()
   const user = useOpenfortCore((s) => s.user)
@@ -45,14 +53,27 @@ const EmailVerification: React.FC = () => {
 
     // Verify email flow
     const email = url.searchParams.get('email')
+    const errorCode = url.searchParams.get('error')
 
     const removeParams = () => {
-      ;['state', 'openfortEmailVerificationUI', 'email', 'openfortAuthProvider'].forEach((key) => {
+      ;['state', 'openfortEmailVerificationUI', 'email', 'openfortAuthProvider', 'error'].forEach((key) => {
         url.searchParams.delete(key)
       })
       window.history.replaceState({}, document.title, url.toString())
     }
     logger.log('Starting email verification')
+
+    // A rejected link redirects back here with `error` appended and is otherwise shaped like a
+    // success, so this has to be checked before anything is reported to the user.
+    if (errorCode) {
+      setVerificationResponse({
+        success: false,
+        error: EMAIL_VERIFICATION_ERRORS[errorCode] ?? 'There was an error verifying your email. Please try again.',
+      })
+      removeParams()
+      setLoading(false)
+      return
+    }
 
     if (!email) {
       setRoute(routes.EMAIL_LOGIN)
@@ -60,8 +81,8 @@ const EmailVerification: React.FC = () => {
     }
 
     try {
-      // ASSUMING IT WORKS
-      // TODO: TMP FIX
+      // The link was accepted server-side: reaching this callback without an `error` is the only
+      // signal available, since the redirect carries no verification receipt.
       setEmailInput(email)
       setVerificationResponse({
         success: true,
