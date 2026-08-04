@@ -77,6 +77,14 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+          # `changeset status` resolves where HEAD diverged from the base branch,
+          # which a shallow checkout cannot answer.
+          fetch-depth: 0
+
+      # Checkout leaves the base branch as a remote-tracking ref, and changesets
+      # resolves it by plain name.
+      - name: Make the base branch resolvable
+        run: git branch --force main origin/main
 
       - name: Install pnpm
         uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
@@ -190,61 +198,19 @@ jobs:
       - name: Install matrix versions
         # Keep one React type graph across every workspace dependency while
         # exercising the selected peer versions.
+        env:
+          REACT_VERSION: ${{ matrix.react-version }}
+          VIEM_VERSION: ${{ matrix.viem-version }}
+          TANSTACK_VERSION: 5.99.2
         run: |
-          node -e "
-            const fs = require('fs')
-            const manifest = 'pnpm-workspace.yaml'
-            const selected = new Map([
-              ['react', '${{ matrix.react-version }}'],
-              ['react-dom', '${{ matrix.react-version }}'],
-              [\"'@types/react'\", '${{ matrix.react-version }}'],
-              [\"'@types/react-dom'\", '${{ matrix.react-version }}'],
-              ['viem', '${{ matrix.viem-version }}'],
-              ["'@tanstack/react-query'", '5.99.2'],
-              ["'@tanstack/query-core'", '5.99.2'],
-            ])
-            const replaced = new Set()
-            const workspace = fs
-              .readFileSync(manifest, 'utf8')
-              .split('\n')
-              .map((line) => {
-                const match = line.match(
-                  /^  (react|react-dom|'@types\\/react'|'@types\\/react-dom'|viem|'@tanstack\\/react-query'|'@tanstack\\/query-core'): /
-                )
-                if (!match || !selected.has(match[1])) return line
-                replaced.add(match[1])
-                return \`  \${match[1]}: \${JSON.stringify(selected.get(match[1]))}\`
-              })
-              .join('\n')
-            if (replaced.size !== selected.size) throw new Error('Compatibility overrides are incomplete')
-            fs.writeFileSync(manifest, workspace)
-          "
+          node scripts/matrix-versions.mjs apply
           pnpm install --no-frozen-lockfile
           # An override the committed lockfile already satisfies leaves that
           # version in place, so an open range such as `2` would silently reuse
           # the pinned lower bound and this axis would test it twice. Re-resolving
           # moves each dependency to the newest release its override allows.
           pnpm update --recursive react react-dom @types/react @types/react-dom viem
-          node -e "
-            const fs = require('fs')
-            const read = (name) =>
-              JSON.parse(
-                fs.readFileSync('packages/openfort-react/node_modules/' + name + '/package.json', 'utf8')
-              ).version
-            const resolved = {
-              react: read('react'),
-              'react-dom': read('react-dom'),
-              '@types/react': read('@types/react'),
-              viem: read('viem'),
-            }
-            console.log('Resolved matrix versions:', JSON.stringify(resolved))
-            if (!resolved.react.startsWith('${{ matrix.react-version }}'.split('.')[0])) {
-              throw new Error('React did not resolve inside the requested major')
-            }
-            if (!resolved.viem.startsWith('${{ matrix.viem-version }}'.split('.')[0])) {
-              throw new Error('viem did not resolve inside the requested major')
-            }
-          "
+          node scripts/matrix-versions.mjs verify
 
       - name: Check types
         # rollup-plugin-typescript2 type-checks the package sources as it
