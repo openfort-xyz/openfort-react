@@ -79,6 +79,7 @@ type OpenfortProviderProps = {
 } & useConnectCallbackProps
 
 let openfortProviderWarnedNoWagmi = false
+let openfortProviderWarnedNoAutomaticRecovery = false
 
 /** Placeholder connector for a modal session that has not picked one yet. */
 const initialConnector: RoutingContextValue['connector'] = { id: '' }
@@ -206,9 +207,14 @@ export const OpenfortProvider = ({
     }
     if (walletRecovery.allowedMethods.includes(RecoveryMethod.AUTOMATIC) && !allowAutomaticRecovery) {
       walletRecovery.allowedMethods = walletRecovery.allowedMethods.filter((m) => m !== RecoveryMethod.AUTOMATIC)
-      logger.warn(
-        'Automatic recovery method was removed from allowedMethods because no recovery options are configured in the walletConfig. Please provide either createEncryptedSessionEndpoint or getEncryptionSession to enable automatic recovery.'
-      )
+      // An inline uiConfig literal gives this memo a new input every render, so
+      // the warning needs its own latch to stay a one-off.
+      if (!openfortProviderWarnedNoAutomaticRecovery) {
+        openfortProviderWarnedNoAutomaticRecovery = true
+        logger.warn(
+          'Automatic recovery method was removed from allowedMethods because no recovery options are configured in the walletConfig. Please provide either createEncryptedSessionEndpoint or getEncryptionSession to enable automatic recovery.'
+        )
+      }
     }
     if (walletRecovery.allowedMethods.length === 0) {
       walletRecovery.allowedMethods = [RecoveryMethod.PASSWORD]

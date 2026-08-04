@@ -44,25 +44,40 @@ const EVM_CHAINS_BY_ID = {
 
 function appendPath(base: string, options: { address?: string; txHash?: string }, queryParams?: string): string {
   let path = base
-  if (options.address) path = `${base}/address/${options.address}`
-  else if (options.txHash) path = `${base}/tx/${options.txHash}`
+  // Encoded so a value carrying '?', '#' or '../' cannot retarget the URL.
+  if (options.address) path = `${base}/address/${encodeURIComponent(options.address)}`
+  else if (options.txHash) path = `${base}/tx/${encodeURIComponent(options.txHash)}`
   return queryParams ? `${path}?${queryParams}` : path
 }
 
 type ExplorerUrlBuilder = (options: ExplorerUrlOptions) => string
+
+/**
+ * `getExplorerUrl` is called from render bodies, so an unsupported chain would
+ * otherwise warn on every render. Each distinct reason is reported once.
+ */
+const warnedExplorerReasons = new Set<string>()
+const warnOnceForExplorer = (reason: string, message: string) => {
+  if (warnedExplorerReasons.has(reason)) return
+  warnedExplorerReasons.add(reason)
+  logger.warn(message)
+}
 
 const explorerRegistry: Record<ChainTypeEnum, ExplorerUrlBuilder> = {
   [ChainTypeEnum.EVM]: (options) => {
     // Never fall back to an unrelated chain's explorer — a valid hash on the wrong
     // explorer reads as "transaction not found". Return '' so callers hide the link.
     if (!options.chainId) {
-      logger.warn('No chain ID provided; cannot build an explorer URL for this transaction.')
+      warnOnceForExplorer('evm:no-chain-id', 'No chain ID provided; cannot build an explorer URL for this transaction.')
       return ''
     }
     const chain = EVM_CHAINS_BY_ID[options.chainId as keyof typeof EVM_CHAINS_BY_ID]
     const explorerUrl = chain?.blockExplorers?.default.url
     if (!explorerUrl) {
-      logger.warn(`No explorer URL known for chain ${options.chainId}; the explorer link is unavailable.`)
+      warnOnceForExplorer(
+        `evm:${options.chainId}`,
+        `No explorer URL known for chain ${options.chainId}; the explorer link is unavailable.`
+      )
       return ''
     }
     return appendPath(explorerUrl, options)

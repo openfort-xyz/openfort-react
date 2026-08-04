@@ -65,6 +65,28 @@ Proxy-Authorization=Basic fake-proxy`)
     expect(emitted).not.toContain('fake-proxy')
   })
 
+  it('redacts authentication headers carried in a JSON-serialized message', () => {
+    // toError() stringifies a non-Error rejection, so an HTTP failure thrown as
+    // a plain object reaches the logger as text and never sees the object-key
+    // redaction path.
+    logger.error(new Error(JSON.stringify({ status: 401, headers: { 'set-cookie': 'of_session=fake-session' } })))
+    logger.error(new Error(JSON.stringify({ headers: { authorization: 'Basic ZmFrZS1iYXNpYw==' } })))
+    logger.error(new Error(JSON.stringify({ headers: { Cookie: 'sid=fake-sid' } })))
+
+    const emitted = JSON.stringify(error.mock.calls)
+    expect(emitted).not.toContain('fake-session')
+    expect(emitted).not.toContain('ZmFrZS1iYXNpYw==')
+    expect(emitted).not.toContain('fake-sid')
+  })
+
+  it('redacts every cookie in a comma-joined Set-Cookie value', () => {
+    logger.error('Set-Cookie: of_at=fake-access, of_rt=fake-refresh')
+
+    const emitted = JSON.stringify(error.mock.calls)
+    expect(emitted).not.toContain('fake-access')
+    expect(emitted).not.toContain('fake-refresh')
+  })
+
   it('redacts URL paths and credentials while retaining diagnostic origins', () => {
     logger.error(
       'request failed for https://rpc-user:rpc-password@rpc.example/v1?key=query-secret&network=base; docs: https://docs.example/path@release?network=base; prose key=public'

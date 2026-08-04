@@ -36,7 +36,13 @@ const isSensitiveKey = (key: unknown): key is string =>
 const SERIALIZED_SENSITIVE_VALUE =
   /((?:["']?)(?:(?:access|refresh|id)[_-]?token|token|private[_-]?key|client[_-]?secret|api[_-]?key|encryption[_-]?session|recovery[_-]?share|shield[_-]?encryption[_-]?key|passkey[_-]?(?:derived[_-]?)?key|password|recovery[_-]?password|encryption[_-]?key|secret[_-]?key)(?:["']?)\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;)\]}&]+)/gi
 
-const SERIALIZED_AUTH_HEADER = /\b((?:proxy[_-]?)?authorization|cookie|set[_-]?cookie)(\s*[:=]\s*)[^,\r\n)\]}]+/gi
+/**
+ * Matches a header name and its value in serialized text. The key may be quoted
+ * — `toError` JSON-stringifies non-Error rejections, so these most often arrive
+ * as `"set-cookie":"…"` rather than the bare `Set-Cookie: …` header form.
+ */
+const SERIALIZED_AUTH_HEADER =
+  /((?:["']?)(?:set[_-]?cookie|(?:proxy[_-]?)?authorization|cookie)(?:["']?)\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n)\]}]+)/gi
 const NETWORK_URL = /\b(?:https?|wss?):\/\/[^\s,;)}"']+/gi
 
 function sanitizeUrl(value: string): string {
@@ -50,17 +56,18 @@ function sanitizeUrl(value: string): string {
   }
 }
 
+/** Replaces the value that follows a matched key, keeping the quoting it arrived with. */
+function redactCredentialAfterPrefix(_match: string, prefix: string, credential: string): string {
+  const quote = credential.startsWith('"') ? '"' : credential.startsWith("'") ? "'" : ''
+  return `${prefix}${quote}${REDACTED}${quote}`
+}
+
 const sanitizeString = (value: string) =>
   value
     .replaceAll(NETWORK_URL, (url: string) => sanitizeUrl(url))
     .replaceAll(/\bBearer\s+[^\s,;)\]}"']+/gi, 'Bearer [REDACTED]')
-    .replaceAll(SERIALIZED_AUTH_HEADER, (_match, name: string, separator: string) => {
-      return `${name}${separator}${REDACTED}`
-    })
-    .replaceAll(SERIALIZED_SENSITIVE_VALUE, (_match, prefix: string, credential: string) => {
-      const quote = credential.startsWith('"') ? '"' : credential.startsWith("'") ? "'" : ''
-      return `${prefix}${quote}${REDACTED}${quote}`
-    })
+    .replaceAll(SERIALIZED_AUTH_HEADER, redactCredentialAfterPrefix)
+    .replaceAll(SERIALIZED_SENSITIVE_VALUE, redactCredentialAfterPrefix)
 
 function sanitizeForLogging(value: unknown, seen = new WeakMap<object, unknown>(), depth = 0): unknown {
   if (typeof value === 'string') return sanitizeString(value)
