@@ -20,7 +20,7 @@ describe('serializeEmbeddedEthereumProvider', () => {
     expect(serializeEmbeddedEthereumProvider(provider, client)).toBe(provider)
   })
 
-  it('rejects every request from a retained provider after its account stops being active', async () => {
+  it('rejects signing from a retained provider after its account stops being active', async () => {
     let activeAddress: `0x${string}` = ACCOUNT_A
     const request = vi.fn(async ({ method }: { method: string }) => {
       if (method === 'eth_accounts') return [activeAddress]
@@ -36,7 +36,6 @@ describe('serializeEmbeddedEthereumProvider', () => {
     activeAddress = ACCOUNT_B
 
     for (const args of [
-      { method: 'eth_accounts' },
       { method: 'personal_sign', params: ['message', ACCOUNT_A] },
       { method: 'eth_sendTransaction', params: [{ from: ACCOUNT_A }] },
     ]) {
@@ -44,6 +43,26 @@ describe('serializeEmbeddedEthereumProvider', () => {
     }
 
     expect(request.mock.calls.filter(([args]) => args.method !== 'eth_accounts')).toEqual([])
+  })
+
+  it('reports the current accounts rather than throwing once the pinned account is stale', async () => {
+    let activeAddress: `0x${string}` = ACCOUNT_A
+    const request = vi.fn(async ({ method }: { method: string }) => {
+      if (method === 'eth_accounts') return [activeAddress]
+      return 'signed'
+    })
+    const provider = serializeEmbeddedEthereumProvider(
+      { request } as unknown as OpenfortEmbeddedEthereumWalletProvider,
+      {} as Openfort,
+      ACCOUNT_A
+    )
+
+    activeAddress = ACCOUNT_B
+
+    // EIP-1193 requires eth_accounts to report current state, and wagmi's
+    // isAuthorized() reads a rejection as a failed reconnect.
+    await expect(provider.request({ method: 'eth_accounts' })).resolves.toEqual([ACCOUNT_B])
+    await expect(provider.request({ method: 'eth_chainId' })).resolves.toBe('signed')
   })
 
   it('performs the account assertion and request atomically in the client queue', async () => {

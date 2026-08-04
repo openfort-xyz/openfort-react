@@ -1,4 +1,5 @@
 import type { Openfort } from '@openfort/openfort-js'
+import { toError } from '../../errors/base.js'
 import { WalletNotConnectedError } from '../../errors/wallet.js'
 
 const operationTails = new WeakMap<Openfort, Promise<void>>()
@@ -6,6 +7,44 @@ const operationGenerations = new WeakMap<Openfort, number>()
 const publicationGenerations = new WeakMap<Openfort, number>()
 
 class EmbeddedSignerOperationInvalidatedError extends WalletNotConnectedError {}
+
+class EmbeddedSignerOperationTimeoutError extends WalletNotConnectedError {}
+
+/**
+ * Upper bound on a single queued operation.
+ *
+ * The queue is strictly serial, so an operation that never settles would
+ * otherwise hold every later one for the lifetime of the page. This sits above
+ * openfort-js's own 90s iframe timeouts so a signer request reports its real
+ * error rather than being pre-empted here.
+ */
+const OPERATION_TIMEOUT_MS = 120_000
+
+/** Identifies the bounded-wait failure so callers can offer a retry. */
+export function isEmbeddedSignerOperationTimeoutError(error: unknown): error is EmbeddedSignerOperationTimeoutError {
+  return error instanceof EmbeddedSignerOperationTimeoutError
+}
+
+/** Rejects when the operation outlives its bound, so the queue always drains. */
+async function withOperationTimeout<T>(operation: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      operation,
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(
+          () =>
+            reject(
+              new EmbeddedSignerOperationTimeoutError('The wallet operation did not complete in time. Try again.')
+            ),
+          OPERATION_TIMEOUT_MS
+        )
+      }),
+    ])
+  } finally {
+    if (timer !== undefined) clearTimeout(timer)
+  }
+}
 
 function assertOperationGeneration(client: Openfort, generation: number, shortMessage: string): void {
   if ((operationGenerations.get(client) ?? 0) !== generation) {
@@ -95,9 +134,16 @@ export function runEmbeddedSignerOperation<T>(
     const context = captureEmbeddedSignerSession(client)
     let value: T
     try {
-      value = await operation(context)
+      value = await withOperationTimeout(operation(context))
     } catch (error) {
-      assertOperationGeneration(client, generation, 'The wallet session changed before the operation could finish.')
+      // A session change explains the failure, but it does not replace it —
+      // keep the original as the cause so the caller can still see why.
+      if (!isEmbeddedSignerOperationTimeoutError(error) && (operationGenerations.get(client) ?? 0) !== generation) {
+        throw new EmbeddedSignerOperationInvalidatedError(
+          'The wallet session changed before the operation could finish.',
+          { cause: toError(error) }
+        )
+      }
       throw error
     }
     assertOperationGeneration(client, generation, 'The wallet session changed before the operation could finish.')
