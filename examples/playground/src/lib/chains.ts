@@ -11,26 +11,6 @@ interface PlaygroundEvmChain {
   usdc?: string
 }
 
-/**
- * When set, Base Sepolia is served by this URL instead of its public endpoint.
- * The e2e suite points it at a local anvil fork so on-chain reads resolve against
- * pinned, test-seeded state rather than a live testnet. Unset in normal use.
- */
-const FORK_RPC_URL = import.meta.env.VITE_EVM_FORK_RPC_URL
-
-/**
- * Fork overrides. Redirects the forked chain's RPC while leaving every other
- * chain on its public endpoint, and moves the forked chain to the front of the
- * list — the first entry is wagmi's default chain, so wallet creation and every
- * default-chain probe land on the forked chain. That keeps a fork run
- * deterministic and free of any dependency on the other chains' public RPCs.
- */
-function applyForkOverrides(chains: PlaygroundEvmChain[]): PlaygroundEvmChain[] {
-  if (!FORK_RPC_URL) return chains
-  const withFork = chains.map((c) => (c.id === baseSepolia.id ? { ...c, rpcUrl: FORK_RPC_URL } : c))
-  return withFork.sort((a, b) => (a.id === baseSepolia.id ? -1 : b.id === baseSepolia.id ? 1 : 0))
-}
-
 // Order matters: the first entry is wagmi's default chain (useChainId when not
 // connected), which is also the chain the embedded wallet is created on. Keep
 // Polygon Amoy first so guest-wallet creation works under the CI test API key
@@ -73,13 +53,12 @@ const BASE_EVM_CHAINS: PlaygroundEvmChain[] = [
   },
 ]
 
-export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = applyForkOverrides(BASE_EVM_CHAINS)
+export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = BASE_EVM_CHAINS
 
 /**
- * Public RPC endpoints, untouched by the fork override. The embedded signer's
- * iframe and Openfort's backend resolve these URLs from outside this machine, so
- * they must always point at reachable public nodes; only in-browser reads follow
- * `PLAYGROUND_EVM_CHAINS` onto a local fork.
+ * Public RPC endpoints. The embedded signer's iframe and Openfort's backend
+ * resolve these URLs from outside this machine, so they must always point at
+ * reachable public nodes.
  */
 export const WALLET_RPC_URLS: Record<number, string> = Object.fromEntries(BASE_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
 

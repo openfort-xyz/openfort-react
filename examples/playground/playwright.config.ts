@@ -1,7 +1,6 @@
 import { readdirSync } from 'node:fs'
 import path from 'node:path'
 import { defineConfig, devices, type Project } from '@playwright/test'
-import { ANVIL_RPC_URL, FORK_MINT_CONTRACT, IS_FORK_RUN } from './tests/anvil/fork.js'
 import {
   AUTH_STATE_EVM,
   AUTH_STATE_EVM_REFRESH,
@@ -15,8 +14,6 @@ const BASE_URL = process.env.PLAYGROUND_BASE_URL ?? `http://127.0.0.1:${PORT}`
 
 const REPORT_DIR = path.join(ROOT_OUT, 'playwright-report')
 
-/** Suites whose chain reads resolve against the anvil fork; excluded from live runs. */
-const FORK_SPECS = /\.fork\.spec\.ts/
 const EVM_LIVE_SPECS = ['evm-integration.spec.ts']
 /** Runs on its own guest — see AUTH_STATE_EVM_REFRESH for why. */
 const EVM_REFRESH_SPECS = ['refresh-persistence.spec.ts']
@@ -48,7 +45,7 @@ function assertEverySpecHasAnOwner() {
     ...UNAUTHENTICATED_SPECS,
     ...SMOKE_SPECS,
   ])
-  const unowned = specFiles.filter((file) => !explicitlyOwned.has(file) && !FORK_SPECS.test(file))
+  const unowned = specFiles.filter((file) => !explicitlyOwned.has(file))
   const missing = [...explicitlyOwned].filter((file) => !specFiles.includes(file))
 
   if (unowned.length > 0 || missing.length > 0) {
@@ -60,25 +57,11 @@ function assertEverySpecHasAnOwner() {
 
 assertEverySpecHasAnOwner()
 
-/**
- * Guest sign-in runs against live Openfort in both modes, so a fork run still needs
- * it — but only the EVM half, since no fork-backed suite touches Solana.
- */
+/** Guest sign-in runs against live Openfort. */
 const setup: Project = {
   name: 'setup',
-  testMatch: IS_FORK_RUN ? /auth\.setup\.evm\.ts/ : /.*\.setup\..+\.ts/,
+  testMatch: /.*\.setup\..+\.ts/,
   use: { ...devices['Desktop Chrome'] },
-}
-
-const forkProject: Project = {
-  name: 'chromium-evm-fork',
-  dependencies: ['setup'],
-  testMatch: FORK_SPECS,
-  timeout: 360_000,
-  use: {
-    ...devices['Desktop Chrome'],
-    storageState: AUTH_STATE_EVM,
-  },
 }
 
 const smokeProject: Project = {
@@ -130,19 +113,13 @@ export default defineConfig({
   timeout: 90_000,
   expect: { timeout: 30_000 },
 
-  // Chain state is deterministic on a fork, so a fork run only retries for the live
-  // sign-in it still depends on.
-  retries: IS_SMOKE_RUN ? 0 : process.env.CI ? (IS_FORK_RUN ? 1 : 2) : 0,
-  // One anvil instance is shared by the whole run (the dev server resolves its RPC
-  // URL once, at build time), so fork-backed suites must not race on chain state.
-  workers: IS_SMOKE_RUN || IS_FORK_RUN ? 1 : process.env.CI ? 2 : 4,
+  retries: IS_SMOKE_RUN ? 0 : process.env.CI ? 2 : 0,
+  workers: IS_SMOKE_RUN ? 1 : process.env.CI ? 2 : 4,
   fullyParallel: false,
 
   reporter: [['list'], ['html', { outputFolder: REPORT_DIR, open: 'never' }]],
 
   outputDir: TEST_RESULTS_DIR,
-
-  globalSetup: IS_FORK_RUN ? './tests/anvil/global-setup.ts' : undefined,
 
   use: {
     baseURL: BASE_URL,
@@ -154,28 +131,19 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
   },
 
-  projects: IS_SMOKE_RUN ? [smokeProject] : [setup, ...(IS_FORK_RUN ? [forkProject] : liveProjects)],
+  projects: IS_SMOKE_RUN ? [smokeProject] : [setup, ...liveProjects],
 
   webServer: {
     // `--port` keeps vite on the port BASE_URL points at instead of letting it pick
     // the next free one when 5173 is taken.
     command: `./node_modules/.bin/vite --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: BASE_URL,
-    // A fork run needs its own dev server: the fork RPC URL below is baked in at
-    // startup, so an already-running server would still be talking to public nodes.
-    reuseExistingServer: !process.env.CI && !IS_FORK_RUN && !IS_SMOKE_RUN,
+    reuseExistingServer: !process.env.CI && !IS_SMOKE_RUN,
     env: IS_SMOKE_RUN
       ? {
           VITE_OPENFORT_PUBLISHABLE_KEY: 'pk_test_offline_browser_smoke',
           VITE_SHIELD_PUBLISHABLE_KEY: 'pk_test_offline_browser_smoke',
         }
-      : IS_FORK_RUN
-        ? {
-            VITE_EVM_FORK_RPC_URL: ANVIL_RPC_URL,
-            // The fork serves Base Sepolia, so pin the mint contract to the one deployed
-            // there instead of whatever the live runs configure.
-            VITE_POLYGON_MINT_CONTRACT: FORK_MINT_CONTRACT,
-          }
-        : {},
+      : {},
   },
 })
