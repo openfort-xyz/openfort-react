@@ -100,7 +100,9 @@ async function getEncryptionSession(params: {
       walletConfig.createEncryptedSessionEndpoint,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        // The endpoint mints the credential that unlocks the wallet's key share,
+        // so it has to be able to tell which signed-in user is asking.
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ user_id: userId, otp_code: otpCode }),
       },
       'Create wallet recovery encryption session'
