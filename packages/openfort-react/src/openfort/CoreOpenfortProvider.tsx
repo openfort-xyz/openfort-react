@@ -1,6 +1,14 @@
 'use client'
 
-import { ChainTypeEnum, EmbeddedState, type Openfort, type User } from '@openfort/openfort-js'
+import {
+  ChainTypeEnum,
+  type EmbeddedAccount,
+  EmbeddedState,
+  type EmbeddedWalletConnectionLostPayload,
+  type Openfort,
+  OpenfortEvents,
+  type User,
+} from '@openfort/openfort-js'
 import { useQueryClient } from '@tanstack/react-query'
 import type React from 'react'
 import {
@@ -25,12 +33,25 @@ import { resolveEthereumFeeSponsorship } from '../core/strategyUtils.js'
 import { OpenfortEthereumBridgeContext } from '../ethereum/OpenfortEthereumBridgeContext.js'
 import { useConnectLifecycle } from '../hooks/useConnectLifecycle.js'
 import { QueryClientBoundary } from '../query/QueryClientBoundary.js'
-import { openfortKeys } from '../query/queryKeys.js'
+import { getOpenfortQueryScope, openfortKeys } from '../query/queryKeys.js'
 import { fetchEmbeddedAccounts as fetchEmbeddedAccountsFromApi, fetchUser } from '../query/queryOptions.js'
+import type { AuthTransition } from '../shared/utils/authTransitionQueue.js'
+import {
+  captureAuthSession,
+  reserveAuthenticatedMutation,
+  reserveAuthTransition,
+} from '../shared/utils/authTransitionQueue.js'
+import {
+  holdEmbeddedSignerOperationsDuringAuthTransition,
+  invalidateEmbeddedSignerOperations,
+  runEmbeddedSignerOperation,
+} from '../shared/utils/embeddedSignerOperationQueue.js'
+import { invalidatePersistentOperations } from '../shared/utils/persistentOperationRegistry.js'
 import { showInitBanner } from '../utils/banner.js'
 import { logger } from '../utils/logger.js'
 import { handleOAuthConfigError } from '../utils/oauthErrorHandler.js'
 import { mapBridgeConnectorsToWalletProps } from '../wallets/useExternalConnectors.js'
+import { AuthTransitionContext, type AuthTransitionContextValue } from './authTransitionContext.js'
 import type { ConnectCallbackProps } from './connectCallbackTypes.js'
 import { StoreContext } from './context.js'
 import { createOpenfortClient, setDefaultClient } from './core/index.js'
@@ -57,6 +78,40 @@ type CoreOpenfortProviderProps = PropsWithChildren<
     openfortConfig: ConstructorParameters<typeof Openfort>[0]
   } & ConnectCallbackProps
 >
+
+type ProviderInitKey = {
+  kind: string
+  chainType: ChainTypeEnum
+  evmChainId: number | undefined
+  feeSponsorshipPolicy: string | undefined
+}
+
+function isSameInitKey(left: ProviderInitKey | null, right: ProviderInitKey): boolean {
+  return (
+    left !== null &&
+    left.kind === right.kind &&
+    left.chainType === right.chainType &&
+    left.evmChainId === right.evmChainId &&
+    left.feeSponsorshipPolicy === right.feeSponsorshipPolicy
+  )
+}
+
+function isAccountQueryOwnedByClient(queryKey: readonly unknown[], clientScope: string): boolean {
+  if (
+    queryKey[0] !== 'openfort' ||
+    (queryKey[1] !== 'balance' &&
+      queryKey[1] !== 'walletAssets' &&
+      queryKey[1] !== 'erc20Balance' &&
+      queryKey[1] !== 'transactionReceipt' &&
+      queryKey[1] !== 'solanaFee' &&
+      queryKey[1] !== 'gasEstimate')
+  )
+    return false
+  const parameters = queryKey[2]
+  return typeof parameters === 'object' && parameters !== null && 'clientScope' in parameters
+    ? parameters.clientScope === clientScope
+    : false
+}
 
 /**
  * Provides the Openfort store, client and connection strategy.
@@ -153,6 +208,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     setDefaultClient(newClient)
     return newClient
   }, [])
+  const openfortQueryScope = getOpenfortQueryScope(openfort)
 
   // The store is the single source of truth shared by every consumer through StoreContext, so it
   // is created once per provider mount: recreating it would reset user, accounts and embedded
@@ -194,6 +250,9 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     return strategyByChain[chainType] ?? null
   }, [chainType, solanaStrategy, evmStrategy])
 
+  const explicitLogoutRef = useRef<AuthTransition<void> | null>(null)
+  const explicitLogoutUnauthenticatedRef = useRef<AuthTransition<void> | null>(null)
+
   // ---- Embedded state ----
   useEffect(() => {
     showInitBanner()
@@ -216,29 +275,140 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     return unwatch
   }, [openfort, store])
 
+  useEffect(() => {
+    const handleConnectionLost = ({ reason }: EmbeddedWalletConnectionLostPayload) => {
+      if (reason !== 'iframe-reloaded') return
+      if (store.getState().embeddedState !== EmbeddedState.READY) return
+
+      store.getState().setEmbeddedState(EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED)
+    }
+
+    openfort.eventEmitter.on(OpenfortEvents.ON_EMBEDDED_WALLET_CONNECTION_LOST, handleConnectionLost)
+    return () => {
+      openfort.eventEmitter.off(OpenfortEvents.ON_EMBEDDED_WALLET_CONNECTION_LOST, handleConnectionLost)
+    }
+  }, [openfort, store])
+
+  const sessionGenerationRef = useRef(0)
+  const userFetchSeqRef = useRef(0)
+  const fetchSeqRef = useRef(0)
+  const accountsFetchInFlightRef = useRef<{
+    key: string
+    promise: Promise<EmbeddedAccount[]>
+  } | null>(null)
+  const [silentRefetchInProgress, setSilentRefetchInProgress] = useState(false)
+  const [isAccountsPending, setAccountsPending] = useState(false)
+
+  const invalidateSessionWork = useCallback(() => {
+    sessionGenerationRef.current += 1
+    invalidatePersistentOperations(openfort)
+    setAccountsPending(false)
+    setSilentRefetchInProgress(false)
+  }, [openfort])
+
+  useEffect(
+    () => () => {
+      invalidatePersistentOperations(openfort)
+    },
+    [openfort]
+  )
+
+  const invalidateSession = useCallback(() => {
+    invalidateSessionWork()
+    invalidateEmbeddedSignerOperations(openfort)
+  }, [invalidateSessionWork, openfort])
+
+  const startAuthTransition = useCallback(
+    <T,>(mutation: () => Promise<T>) => {
+      const transition = reserveAuthTransition(openfort, mutation)
+      invalidateSessionWork()
+      holdEmbeddedSignerOperationsDuringAuthTransition(openfort, transition.result)
+      return transition
+    },
+    [invalidateSessionWork, openfort]
+  )
+
+  const startAuthenticatedMutation = useCallback(
+    <T,>(mutation: () => Promise<T>) => reserveAuthenticatedMutation(openfort, mutation),
+    [openfort]
+  )
+
+  const captureCurrentAuthSession = useCallback(() => captureAuthSession(openfort), [openfort])
+
+  const clearSessionState = useCallback(
+    (shouldInvalidateSession = true) => {
+      if (shouldInvalidateSession) {
+        const explicitLogout = explicitLogoutUnauthenticatedRef.current
+        if (explicitLogout) {
+          explicitLogoutUnauthenticatedRef.current = null
+          if (!explicitLogout.isCurrent()) return
+        } else {
+          const transition = startAuthTransition(() => openfort.auth.logout())
+          void transition.result.catch((error) => {
+            if (transition.isCurrent()) logger.error('Failed to clear unauthenticated credentials', error)
+          })
+        }
+      }
+      const state = store.getState()
+      state.setUser(null)
+      state.setLinkedAccounts([])
+      state.setActiveEmbeddedAddress(undefined)
+      state.setEmbeddedAccounts(undefined)
+      state.setIsLoadingAccounts(false)
+      state.setWalletStatus({ status: 'idle' })
+      state.setRecoveryError(null)
+      queryClient.removeQueries({ queryKey: openfortKeys.user(openfortQueryScope), exact: true })
+      queryClient.removeQueries({ queryKey: openfortKeys.embeddedAccounts(openfortQueryScope), exact: true })
+      queryClient.removeQueries({
+        predicate: (query) => isAccountQueryOwnedByClient(query.queryKey, openfortQueryScope),
+      })
+    },
+    [openfort, openfortQueryScope, queryClient, startAuthTransition, store]
+  )
+
+  const publishAuthenticatedUser = useCallback(
+    (user: User): User => {
+      const state = store.getState()
+      if (state.user?.id !== user.id) {
+        invalidateSession()
+        state.setLinkedAccounts([])
+        state.setActiveEmbeddedAddress(undefined)
+        state.setEmbeddedAccounts(undefined)
+        state.setWalletStatus({ status: 'idle' })
+        state.setRecoveryError(null)
+        queryClient.removeQueries({ queryKey: openfortKeys.embeddedAccounts(openfortQueryScope), exact: true })
+        queryClient.removeQueries({
+          predicate: (query) => isAccountQueryOwnedByClient(query.queryKey, openfortQueryScope),
+        })
+      }
+      state.setLinkedAccounts(user.linkedAccounts ?? [])
+      state.setUser(user)
+      queryClient.setQueryData(openfortKeys.user(openfortQueryScope), user)
+      return user
+    },
+    [invalidateSession, openfortQueryScope, queryClient, store]
+  )
+
   const updateUser = useCallback(
     async (user?: User, logoutOnError: boolean = false) => {
       if (!openfort) return null
       logger.log('Updating user', { hasUser: !!user, logoutOnError })
 
       if (user) {
-        store.getState().setUser(user)
-        // Keep the query cache in step with the store so a consumer reading
-        // `useQuery(getUserQueryOptions(client))` sees the same user.
-        queryClient.setQueryData(openfortKeys.user(), user)
-        return user
+        return publishAuthenticatedUser(user)
       }
 
+      const generation = sessionGenerationRef.current
+      const seq = ++userFetchSeqRef.current
       try {
         const user = await fetchUser(openfort)
+        if (generation !== sessionGenerationRef.current || seq !== userFetchSeqRef.current) return null
         logger.log('Getting user')
         // A user with no linked accounts omits the field; the store holds a list
         // that callers iterate unguarded, so it stays an array either way.
-        store.getState().setLinkedAccounts(user.linkedAccounts ?? [])
-        store.getState().setUser(user)
-        queryClient.setQueryData(openfortKeys.user(), user)
-        return user
+        return publishAuthenticatedUser(user)
       } catch (err: unknown) {
+        if (generation !== sessionGenerationRef.current || seq !== userFetchSeqRef.current) return null
         logger.log('Error getting user', err)
         if (!logoutOnError) return null
 
@@ -258,37 +428,48 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
         return null
       }
     },
-    [openfort, store, queryClient]
+    [openfort, publishAuthenticatedUser, store]
   )
 
-  const [silentRefetchInProgress, setSilentRefetchInProgress] = useState(false)
-
-  const [isAccountsPending, setAccountsPending] = useState(false)
-  const fetchSeqRef = useRef(0)
-
   const fetchEmbeddedAccounts = useCallback(
-    async (options?: { silent?: boolean }) => {
+    (options?: { silent?: boolean }): Promise<EmbeddedAccount[]> => {
+      const generation = sessionGenerationRef.current
+      const silent = options?.silent === true
+      const key = `${generation}:${store.getState().user ? 'user' : 'no-user'}:${silent ? 'silent' : 'visible'}`
+      const existing = accountsFetchInFlightRef.current
+      if (existing?.key === key) return existing.promise
+
       const seq = ++fetchSeqRef.current
-      setSilentRefetchInProgress(options?.silent === true)
+      setSilentRefetchInProgress(silent)
       setAccountsPending(true)
-      try {
-        const accounts = await fetchEmbeddedAccountsFromApi(openfort)
-        if (seq === fetchSeqRef.current) {
-          store.getState().setEmbeddedAccounts(accounts)
-          queryClient.setQueryData(openfortKeys.embeddedAccounts(), accounts)
+      const promise = (async () => {
+        try {
+          const accounts = await fetchEmbeddedAccountsFromApi(openfort)
+          if (generation === sessionGenerationRef.current && seq === fetchSeqRef.current) {
+            store.getState().setEmbeddedAccounts(accounts)
+            queryClient.setQueryData(openfortKeys.embeddedAccounts(openfortQueryScope), accounts)
+          }
+          return accounts
+        } catch (error: unknown) {
+          handleOAuthConfigError(error)
+          throw error
+        } finally {
+          if (generation === sessionGenerationRef.current && seq === fetchSeqRef.current) {
+            setAccountsPending(false)
+            if (silent) setSilentRefetchInProgress(false)
+          }
         }
-        return accounts
-      } catch (error: unknown) {
-        handleOAuthConfigError(error)
-        throw error
-      } finally {
-        if (seq === fetchSeqRef.current) {
-          setAccountsPending(false)
-          if (options?.silent) setSilentRefetchInProgress(false)
+      })()
+      accountsFetchInFlightRef.current = { key, promise }
+      const clearInFlight = () => {
+        if (accountsFetchInFlightRef.current?.promise === promise) {
+          accountsFetchInFlightRef.current = null
         }
       }
+      void promise.then(clearInFlight, clearInFlight)
+      return promise
     },
-    [openfort, store, queryClient]
+    [openfort, openfortQueryScope, store, queryClient]
   )
 
   const isLoadingAccounts = isAccountsPending && !silentRefetchInProgress
@@ -325,12 +506,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
 
   // Track what we last initialized to avoid redundant initProvider calls when
   // the strategy object is recreated but nothing meaningful changed.
-  const lastInitRef = useRef<{
-    kind: string
-    chainType: ChainTypeEnum
-    evmChainId: number | undefined
-    feeSponsorshipPolicy: string | undefined
-  } | null>(null)
+  const lastInitRef = useRef<ProviderInitKey | null>(null)
   const initQueueRef = useRef<Promise<void>>(Promise.resolve())
 
   // Init provider; only fetch accounts when READY (prevents list() before auth is stored)
@@ -352,34 +528,18 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     const feeSponsorshipPolicy =
       evmChainId != null ? resolveEthereumFeeSponsorship(walletConfig, evmChainId)?.policy : undefined
     const initKey = { kind: strategy.kind, chainType: strategy.chainType, evmChainId, feeSponsorshipPolicy }
-    const prev = lastInitRef.current
-    if (
-      prev &&
-      prev.kind === initKey.kind &&
-      prev.chainType === initKey.chainType &&
-      prev.evmChainId === initKey.evmChainId &&
-      prev.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy
-    ) {
-      return
-    }
+    if (isSameInitKey(lastInitRef.current, initKey)) return
 
     let cancelled = false
     initQueueRef.current = initQueueRef.current
       .catch(() => undefined)
       .then(async () => {
         if (cancelled) return
-        const latest = lastInitRef.current
-        if (
-          latest &&
-          latest.kind === initKey.kind &&
-          latest.chainType === initKey.chainType &&
-          latest.evmChainId === initKey.evmChainId &&
-          latest.feeSponsorshipPolicy === initKey.feeSponsorshipPolicy
-        ) {
-          return
-        }
+        if (isSameInitKey(lastInitRef.current, initKey)) return
 
-        await strategy.initProvider(openfort, walletConfig, evmChainId)
+        await runEmbeddedSignerOperation(openfort, (operation) =>
+          strategy.initProvider(openfort, walletConfig, evmChainId, operation)
+        )
         if (cancelled) return
         lastInitRef.current = initKey
 
@@ -417,6 +577,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     storeEmbeddedState,
     storeUser,
     store,
+    clearSessionState,
     updateUserRef,
     fetchEmbeddedAccountsRef,
   })
@@ -484,35 +645,53 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   const logout = useCallback(async () => {
     if (!openfort) return
 
-    store.getState().setUser(null)
-    store.getState().setActiveEmbeddedAddress(undefined)
-    store.getState().setEmbeddedAccounts(undefined)
-    store.getState().setWalletStatus({ status: 'idle' })
+    const transition = startAuthTransition(() => openfort.auth.logout())
+    explicitLogoutRef.current = transition
+    explicitLogoutUnauthenticatedRef.current = transition
+    clearSessionState(false)
     connectingRef.current = false
     setIsConnectedWithEmbeddedSigner(false)
     lastInitRef.current = null
-    // Drop every cached Openfort query so the next session never reads the
-    // previous user's data (user, accounts, balances, assets).
-    queryClient.removeQueries({ queryKey: openfortKeys.all })
     logger.log('Logging out...')
-    await openfort.auth.logout()
-    if (bridge) {
-      await bridge.disconnect()
-      bridge.reset()
+    let sdkLogoutSucceeded = false
+    try {
+      await transition.result
+      sdkLogoutSucceeded = true
+      if (!transition.isCurrent()) return
+      if (bridge) {
+        await bridge.disconnect()
+        if (!transition.isCurrent()) return
+        bridge.reset()
+      }
+    } catch (error) {
+      if (!sdkLogoutSucceeded && explicitLogoutUnauthenticatedRef.current === transition) {
+        explicitLogoutUnauthenticatedRef.current = null
+      }
+      if (!transition.isCurrent()) return
+      throw error
+    } finally {
+      if (explicitLogoutRef.current === transition) explicitLogoutRef.current = null
     }
-  }, [openfort, bridge, store, connectingRef, setIsConnectedWithEmbeddedSigner, queryClient])
+  }, [openfort, bridge, connectingRef, setIsConnectedWithEmbeddedSigner, clearSessionState, startAuthTransition])
 
   const signUpGuest = useCallback(async () => {
     if (!openfort) return
 
+    let isCurrent: (() => boolean) | undefined
     try {
       logger.log('Signing up as guest...')
-      await openfort.auth.signUpGuest()
+      const transition = startAuthTransition(() => openfort.auth.signUpGuest())
+      isCurrent = transition.isCurrent
+      await transition.result
+      if (!transition.isCurrent()) return
+      await updateUser()
+      if (!transition.isCurrent()) return
       logger.log('Signed up as guest')
     } catch (error) {
+      if (isCurrent && !isCurrent()) return
       logger.error('Error logging in as guest:', error)
     }
-  }, [openfort])
+  }, [openfort, startAuthTransition, updateUser])
 
   // ---- Inject actions into store ----
   useLayoutEffect(() => {
@@ -525,13 +704,26 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     })
   }, [store, logout, signUpGuest, updateUser, fetchEmbeddedAccounts, setChainType])
 
+  const authTransitionContextValue = useMemo<AuthTransitionContextValue>(
+    () => ({
+      captureAuthSession: captureCurrentAuthSession,
+      startAuthTransition,
+      startAuthenticatedMutation,
+    }),
+    [captureCurrentAuthSession, startAuthenticatedMutation, startAuthTransition]
+  )
+
   return createElement(
-    StoreContext.Provider,
-    { value: store },
+    AuthTransitionContext.Provider,
+    { value: authTransitionContextValue },
     createElement(
-      ConnectionStrategyProvider,
-      { strategy },
-      createElement(Fragment, null, createElement(ConnectLifecycleEffect, { onConnect, onDisconnect }), children)
+      StoreContext.Provider,
+      { value: store },
+      createElement(
+        ConnectionStrategyProvider,
+        { strategy },
+        createElement(Fragment, null, createElement(ConnectLifecycleEffect, { onConnect, onDisconnect }), children)
+      )
     )
   )
 }

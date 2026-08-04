@@ -2,9 +2,17 @@ import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from
 
 type OperationErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 
-export type UnsupportedOperationErrorType = UnsupportedOperationError & { name: 'UnsupportedOperationError' }
-
-/** The SDK reached a branch it has no implementation for, such as an unknown asset or transaction format. */
+/**
+ * The SDK reached a branch it has no implementation for, such as an unknown asset or transaction format.
+ *
+ * @example
+ * ```ts
+ * import { UnsupportedOperationError } from '@openfort/react'
+ *
+ * const error = new UnsupportedOperationError({ operation: 'Legacy transaction signing' })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class UnsupportedOperationError extends OpenfortError {
   override name = 'UnsupportedOperationError'
 
@@ -13,13 +21,19 @@ export class UnsupportedOperationError extends OpenfortError {
   }
 }
 
-export type ApiRequestErrorType = ApiRequestError & { name: 'ApiRequestError' }
-
 /**
  * An HTTP call to an Openfort or partner API returned a non-OK response.
  *
  * `status` and `body` are kept on the instance so a caller can retry or report
  * without re-parsing the composed message.
+ *
+ * @example
+ * ```ts
+ * import { ApiRequestError } from '@openfort/react'
+ *
+ * const error = new ApiRequestError({ operation: 'Create funding session', status: 503 })
+ * if (error.status === 503) console.log('Try again later')
+ * ```
  */
 export class ApiRequestError extends OpenfortError {
   override name = 'ApiRequestError'

@@ -8,13 +8,15 @@ import type { getAssets } from 'viem/experimental/erc7811'
 import type { Asset, MultiChainAsset } from '../../components/Openfort/types.js'
 import { useOpenfortUIContext as useOpenfort } from '../../components/Openfort/useOpenfort.js'
 import { NotAuthenticatedError } from '../../errors/auth.js'
-import { OpenfortError, toError } from '../../errors/base.js'
+import { asOpenfortError, OpenfortError } from '../../errors/base.js'
 import { ApiRequestError, UnsupportedOperationError } from '../../errors/operation.js'
 import { WalletNotConnectedError } from '../../errors/wallet.js'
 import type { EthereumConfig } from '../../ethereum/types.js'
 import { useUser } from '../../hooks/openfort/useUser.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { getWalletAssetsQueryScope } from '../../query/queryOptions.js'
 import { type UseQueryReturnType, useQuery } from '../../query/useQuery.js'
+import { withQueryResultOverrides } from '../../query/withQueryResultOverrides.js'
 import { getDefaultEthereumRpcUrl } from '../../utils/rpc.js'
 import { useEthereumEmbeddedWallet } from './useEthereumEmbeddedWallet.js'
 
@@ -96,9 +98,8 @@ async function readEvmAssetsViaRpc(args: {
 
   if (tokens.length === 0) return out
 
-  // Batch every token's balanceOf/decimals/symbol/name into ONE multicall request
-  // (via Multicall3) instead of 4 calls per token — keeps us well under public-RPC
-  // rate limits (429s) that previously broke the fallback.
+  // Batch every token's balanceOf/decimals/symbol/name through Multicall3 to
+  // keep the fallback within public RPC rate limits.
   const contracts = tokens.flatMap((token) => [
     { address: token, abi: erc20Abi, functionName: 'balanceOf', args: [address] } as const,
     { address: token, abi: erc20Abi, functionName: 'decimals' } as const,
@@ -160,6 +161,7 @@ export const useEthereumWalletAssets = ({
   multiChain = false,
   staleTime = 30000,
 }: UseEthereumWalletAssetsOptions = {}): UseEthereumWalletAssetsResult => {
+  const client = useOpenfortCore((state) => state.client)
   const wallet = useEthereumEmbeddedWallet()
   const isConnected = wallet.status === 'connected'
   const address = isConnected ? wallet.address : undefined
@@ -194,18 +196,37 @@ export const useEthereumWalletAssets = ({
     return headers
   }, [publishableKey, getAccessToken, thirdPartyAuth])
 
-  /** For multiChain: walletConfig.ethereum.assets as backend assetFilter format (hex chainId -> [{ address, type }]). */
-  const customAssetsMultiChain = useMemo(() => {
+  const multiChainAssetsByChain = useMemo(() => {
     if (!multiChain) return undefined
-    const configAssets = walletConfig?.ethereum?.assets
-    if (!configAssets) return undefined
+    const configuredAssets = walletConfig?.ethereum?.assets ?? {}
+    const requestedAssets = hookCustomAssets ?? {}
+    const chainIds = new Set([...Object.keys(configuredAssets), ...Object.keys(requestedAssets)])
+
+    const entries = [...chainIds]
+      .map((configuredChainId) => {
+        const assetChainId = Number(configuredChainId)
+        const assets = [...(configuredAssets[assetChainId] ?? []), ...(requestedAssets[assetChainId] ?? [])].filter(
+          (asset): asset is `0x${string}` => typeof asset === 'string'
+        )
+        return {
+          chainId: assetChainId,
+          assets,
+        }
+      })
+      .filter(({ assets }) => assets.length > 0)
+    return entries.length > 0 ? entries : undefined
+  }, [multiChain, walletConfig?.ethereum?.assets, hookCustomAssets])
+
+  /** Backend assetFilter format: hex chain id to requested ERC-20 addresses. */
+  const customAssetsMultiChain = useMemo(() => {
+    if (!multiChainAssetsByChain) return undefined
     const mapped: Record<string, { address: string; type: string }[]> = {}
-    for (const [cid, addresses] of Object.entries(configAssets)) {
-      const hexChainId = numberToHex(Number(cid))
-      mapped[hexChainId] = addresses.map((addr) => ({ address: addr, type: 'erc20' }))
+    for (const { chainId: assetChainId, assets } of multiChainAssetsByChain) {
+      const hexChainId = numberToHex(assetChainId)
+      mapped[hexChainId] = assets.map((address) => ({ address, type: 'erc20' }))
     }
-    return Object.keys(mapped).length > 0 ? mapped : undefined
-  }, [multiChain, walletConfig?.ethereum?.assets])
+    return mapped
+  }, [multiChainAssetsByChain])
 
   const customTransport = useMemo(
     () => (): Transport => {
@@ -239,24 +260,40 @@ export const useEthereumWalletAssets = ({
     if (!chainId) return []
     const assetsFromConfig = walletConfig?.ethereum?.assets ? walletConfig.ethereum.assets[chainId] || [] : []
     const assetsFromHook = hookCustomAssets ? hookCustomAssets[chainId] || [] : []
-    const allAssets = [...assetsFromConfig, ...assetsFromHook]
+    const allAssets = [...assetsFromConfig, ...assetsFromHook].filter(
+      (asset): asset is `0x${string}` => typeof asset === 'string'
+    )
     return allAssets
   }, [walletConfig?.ethereum?.assets, hookCustomAssets, chainId])
 
-  const multiChainAssetAddresses = useMemo(
-    () => (customAssetsMultiChain ? Object.values(customAssetsMultiChain).flatMap((a) => a.map((x) => x.address)) : []),
-    [customAssetsMultiChain]
-  )
+  const singleChainRpcUrl =
+    multiChain || chainId == null
+      ? undefined
+      : (walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId))
+  const fallbackChains = useMemo(() => {
+    if (!multiChain) return []
+    return chains.map((configuredChain) => ({
+      chainId: configuredChain.id,
+      assets:
+        multiChainAssetsByChain?.find(({ chainId: assetChainId }) => assetChainId === configuredChain.id)?.assets ?? [],
+      rpcUrl: walletConfig?.ethereum?.rpcUrls?.[configuredChain.id] ?? getDefaultEthereumRpcUrl(configuredChain.id),
+    }))
+  }, [chains, multiChain, multiChainAssetsByChain, walletConfig?.ethereum?.rpcUrls])
 
   const { queryKey, enabled } = getWalletAssetsQueryScope({
+    client,
     address,
     chainId,
     multiChain,
-    assets: multiChain ? multiChainAssetAddresses : customAssetsToFetch,
+    assets: customAssetsToFetch,
     hasChain: !!chain,
+    backendUrl,
+    rpcUrl: singleChainRpcUrl,
+    assetFilter: multiChainAssetsByChain,
+    fallbackChains,
   })
 
-  const { data, error, ...query } = useQuery({
+  const query = useQuery({
     queryKey,
     queryFn: async (): Promise<readonly Asset[] | readonly MultiChainAsset[]> => {
       if (multiChain) {
@@ -292,7 +329,8 @@ export const useEthereumWalletAssets = ({
           // ERC-7811 asset proxy failed — fall back to per-chain RPC reads.
           const out: MultiChainAsset[] = []
           for (const c of chains) {
-            const tokens = (walletConfig?.ethereum?.assets?.[c.id] ?? []) as `0x${string}`[]
+            const tokens = (multiChainAssetsByChain?.find(({ chainId: assetChainId }) => assetChainId === c.id)
+              ?.assets ?? []) as `0x${string}`[]
             const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[c.id] ?? getDefaultEthereumRpcUrl(c.id)
             const rpcAssets = await readEvmAssetsViaRpc({ address: address as `0x${string}`, chain: c, rpcUrl, tokens })
             for (const a of rpcAssets) out.push({ ...a, chainId: c.id })
@@ -467,13 +505,6 @@ export const useEthereumWalletAssets = ({
         const mergedAssets = [...defaultAssets]
         const customAssetsForChain: Asset[] = customChainAssets.flatMap((asset: getAssets.Asset<false>) => {
           if (asset.type !== 'erc20') return []
-          if (!walletConfig?.ethereum?.assets) return [{ ...asset, raw: asset }]
-
-          const configAsset = walletConfig.ethereum.assets[chainId]?.find(
-            (a) => a.toLowerCase() === asset.address.toLowerCase()
-          )
-          if (!configAsset) return [{ ...asset, raw: asset }]
-
           return [
             {
               type: 'erc20' as const,
@@ -533,21 +564,15 @@ export const useEthereumWalletAssets = ({
     staleTime,
   })
 
-  const mappedError = useMemo(() => {
-    if (!error) return undefined
-
-    if (error instanceof OpenfortError) {
-      return error
-    }
-
-    return new OpenfortError('Failed to fetch wallet assets.', { cause: toError(error) })
-  }, [error])
-
-  return {
-    ...query,
-    data: data ?? null,
+  return withQueryResultOverrides(query, {
+    get data() {
+      return query.data ?? null
+    },
+    get error() {
+      if (!query.error) return undefined
+      return asOpenfortError(query.error, (cause) => new OpenfortError('Failed to fetch wallet assets.', { cause }))
+    },
     multiChain,
     isIdle: !isConnected || !enabled,
-    error: mappedError,
-  } as UseEthereumWalletAssetsResult
+  }) as UseEthereumWalletAssetsResult
 }

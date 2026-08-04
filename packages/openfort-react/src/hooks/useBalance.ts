@@ -6,7 +6,8 @@ import { useCallback } from 'react'
 import { createPublicClient, formatEther, http } from 'viem'
 import { useOpenfort } from '../components/Openfort/useOpenfort.js'
 import { DEFAULT_TESTNET_CHAIN_ID } from '../core/ConnectionStrategy.js'
-import { openfortKeys } from '../query/queryKeys.js'
+import { useOpenfortCore } from '../openfort/useOpenfort.js'
+import { getOpenfortQueryScope, openfortKeys } from '../query/queryKeys.js'
 import { useQuery } from '../query/useQuery.js'
 import { formatSol } from '../solana/hooks/utils.js'
 import type { SolanaCluster } from '../solana/types.js'
@@ -19,9 +20,12 @@ import { getDefaultEthereumRpcUrl, getDefaultSolanaRpcUrl, getNativeCurrency } f
  *
  * @example
  * ```tsx
- * const invalidateBalance = useInvalidateBalance()
- * await sendTransaction()
- * invalidateBalance()
+ * import { useInvalidateBalance } from '@openfort/react'
+ *
+ * function RefreshBalancesButton() {
+ *   const invalidateBalance = useInvalidateBalance()
+ *   return <button onClick={invalidateBalance}>Refresh balances</button>
+ * }
  * ```
  */
 export function useInvalidateBalance(): () => void {
@@ -82,6 +86,7 @@ export async function fetchSolanaBalance(
 
 /** Hook for fetching native token balance. */
 export function useBalance(options: UseBalanceOptions): BalanceState {
+  const client = useOpenfortCore((state) => state.client)
   const {
     address,
     chainType,
@@ -102,7 +107,9 @@ export function useBalance(options: UseBalanceOptions): BalanceState {
 
   const { data, error, isLoading, refetch } = useQuery({
     queryKey: openfortKeys.balance(
-      chainType === ChainTypeEnum.EVM ? { address, chainType, chainId } : { address, chainType, cluster }
+      chainType === ChainTypeEnum.EVM
+        ? { address, chainType, clientScope: getOpenfortQueryScope(client), chainId, rpcUrl }
+        : { address, chainType, clientScope: getOpenfortQueryScope(client), cluster, rpcUrl, commitment }
     ),
     queryFn: () =>
       chainType === ChainTypeEnum.EVM

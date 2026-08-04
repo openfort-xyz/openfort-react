@@ -2,7 +2,9 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useId, useState } from 'react'
-import { useAccount, useChainId } from 'wagmi'
+// wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
+// namespace import rather than named bindings.
+import * as wagmi from 'wagmi'
 import ChainIcons from '../../../assets/chains.js'
 import Alert from '../../../components/Common/Alert/index.js'
 import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
@@ -50,8 +52,8 @@ const Spinner = () => {
 }
 
 const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => {
-  const { connector } = useAccount()
-  const activeChainId = useChainId()
+  const { connector } = wagmi.useAccount()
+  const activeChainId = wagmi.useChainId()
   const {
     chains,
     isPending: bridgeIsPending,
@@ -146,7 +148,7 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
                 </span>
                 {variant !== 'secondary' && (
                   <ChainButtonStatus>
-                    <AnimatePresence initial={false} exitBeforeEnter>
+                    <AnimatePresence initial={false} mode="wait">
                       {ch.id === activeChainId && (
                         <motion.span
                           key={`connected-${ch.id}`}

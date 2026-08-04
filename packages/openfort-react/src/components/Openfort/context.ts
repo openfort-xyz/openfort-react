@@ -76,7 +76,10 @@ export type FormContextValue = {
   setSendForm: React.Dispatch<React.SetStateAction<SendFormState>>
   buyForm: BuyFormState
   setBuyForm: React.Dispatch<React.SetStateAction<BuyFormState>>
+}
 
+/** In-flight request consumed by the signature-confirmation flow. */
+export type SignRequestContextValue = {
   /** In-flight message/typed-data sign request driving the Sign message screen. */
   signRequest: SignRequest | null
   setSignRequest: React.Dispatch<React.SetStateAction<SignRequest | null>>
@@ -95,9 +98,14 @@ export type ConfigContextValue = {
   chains: Chain[]
 } & useConnectCallbackProps
 
-export type ContextValue = ThemeContextValue & RoutingContextValue & FormContextValue & ConfigContextValue
+export type ContextValue = ThemeContextValue &
+  RoutingContextValue &
+  FormContextValue &
+  SignRequestContextValue &
+  ConfigContextValue
 
 export const ThemeStateContext = createContext<ThemeContextValue | null>(null)
 export const RoutingContext = createContext<RoutingContextValue | null>(null)
 export const FormContext = createContext<FormContextValue | null>(null)
+export const SignRequestContext = createContext<SignRequestContextValue | null>(null)
 export const OpenfortContext = createContext<ConfigContextValue | null>(null)

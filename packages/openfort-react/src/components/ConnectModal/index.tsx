@@ -3,13 +3,19 @@
 import { OAuthProvider } from '@openfort/openfort-js'
 import { memo, useEffect, useMemo, useRef } from 'react'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
+import { WalletError } from '../../errors/wallet.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import type { CustomTheme, Languages, Mode, Theme } from '../../types.js'
 import { logger } from '../../utils/logger.js'
 import Modal from '../Common/Modal/index.js'
 import { ConnectKitThemeProvider } from '../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
 import { routes, type SetRouteOptions } from '../Openfort/types.js'
-import { useOpenfort, useOpenfortConfig, useOpenfortRouting, useOpenfortTheme } from '../Openfort/useOpenfort.js'
+import {
+  useOpenfortConfig,
+  useOpenfortRouting,
+  useOpenfortSignRequest,
+  useOpenfortTheme,
+} from '../Openfort/useOpenfort.js'
 import { chainPrefixedPages, defaultConnectedRoute, sharedPages } from './pageRegistry.js'
 
 type ValueOf<T> = T[keyof T]
@@ -23,7 +29,7 @@ const ConnectModal: React.FC<{
   lang?: Languages
 }> = ({ mode = 'auto', theme = 'auto', customTheme = customThemeDefault, lang = 'en-US' }) => {
   const routing = useOpenfortRouting()
-  const { signRequest, setSignRequest } = useOpenfort()
+  const { signRequest, setSignRequest } = useOpenfortSignRequest()
   const { chains, uiConfig } = useOpenfortConfig()
   const themeControls = useOpenfortTheme()
   const user = useOpenfortCore((s) => s.user)
@@ -31,17 +37,14 @@ const ConnectModal: React.FC<{
   const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
   const embeddedState = useOpenfortCore((s) => s.embeddedState)
   const strategy = useConnectionStrategy()
-  const state = useMemo(
-    () => ({
+  const isConnected =
+    strategy?.isConnected({
       user,
       embeddedAccounts,
       activeEmbeddedAddress,
       chainType: routing.chainType,
       embeddedState,
-    }),
-    [user, embeddedAccounts, activeEmbeddedAddress, routing.chainType, embeddedState]
-  )
-  const isConnected = strategy?.isConnected(state) ?? false
+    }) ?? false
   const chainId = strategy?.getChainId()
   const chainIsSupported = chainId != null && chains.some((c) => c.id === chainId)
 
@@ -85,7 +88,7 @@ const ConnectModal: React.FC<{
   }, [effectivePageId, route, routing.setRoute])
 
   function hide() {
-    signRequest?.reject(new Error('User rejected the signature request'))
+    signRequest?.settle({ error: new WalletError('Signature request was cancelled.') })
     setSignRequest(null)
     routing.setOpen(false)
   }

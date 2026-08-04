@@ -9,6 +9,7 @@ import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWall
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import Button from '../../Common/Button/index.js'
+import { usePageActivity } from '../../Common/Modal/pageActivity.js'
 import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles.js'
 import SquircleSpinner from '../../Common/SquircleSpinner/index.js'
 import { routes } from '../../Openfort/types.js'
@@ -23,6 +24,7 @@ import { isSameToken } from '../Send/utils.js'
 
 const BuyProcessing = () => {
   const { buyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
+  const pageActive = usePageActivity()
   const chainType = useOpenfortCore((s) => s.chainType)
 
   // Use chain-specific hooks
@@ -61,11 +63,24 @@ const BuyProcessing = () => {
 
   // Create session and open popup once wallet is ready
   const sessionStartedRef = useRef(false)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: exactly one onramp session per visit — `sessionStartedRef` latches on the first run with a wallet, so the order form is read once and a later edit must not open a second popup
+  const popupNavigatedRef = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one onramp session belongs to the current active page and wallet network; the order form is captured when that session starts
   useEffect(() => {
+    if (!pageActive) {
+      sessionStartedRef.current = false
+      popupNavigatedRef.current = false
+      setPopupWindow(null)
+      return
+    }
     if (!address || !network) return
     if (sessionStartedRef.current) return
     sessionStartedRef.current = true
+    let cancelled = false
+    let reservedPopup: Window | null = null
+
+    const closeReservedPopup = () => {
+      if (reservedPopup && !reservedPopup.closed) reservedPopup.close()
+    }
 
     const createSessionAndOpenPopup = async () => {
       if (!fiatAmount || fiatAmount <= 0) {
@@ -77,6 +92,36 @@ const BuyProcessing = () => {
       setSessionError(false)
 
       try {
+        const popupWidth = 500
+        const popupHeight = 700
+        const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX
+        const dualScreenTop = window.screenTop !== undefined ? window.screenTop : window.screenY
+        const width = window.innerWidth
+          ? window.innerWidth
+          : document.documentElement.clientWidth
+            ? document.documentElement.clientWidth
+            : screen.width
+        const height = window.innerHeight
+          ? window.innerHeight
+          : document.documentElement.clientHeight
+            ? document.documentElement.clientHeight
+            : screen.height
+        const left = width / 2 - popupWidth / 2 + dualScreenLeft
+        const top = height / 2 - popupHeight / 2 + dualScreenTop
+
+        reservedPopup = window.open(
+          'about:blank',
+          'BuyPopup',
+          `scrollbars=yes,width=${popupWidth},height=${popupHeight},top=${top},left=${left}`
+        )
+        if (!reservedPopup) {
+          setSessionError(true)
+          return
+        }
+        reservedPopup.opener = null
+        popupNavigatedRef.current = false
+        setPopupWindow(reservedPopup)
+
         let onrampUrl: string | null = null
 
         // Create session based on selected provider
@@ -90,6 +135,7 @@ const BuyProcessing = () => {
             sourceCurrency: buyForm.currency,
             redirectUrl: `${window.location.origin}?coinbase_onramp=success`,
           })
+          if (cancelled) return
           onrampUrl = session.onrampUrl
         } else if (buyForm.providerId === 'stripe') {
           const session = await createStripeSession({
@@ -101,10 +147,13 @@ const BuyProcessing = () => {
             sourceCurrency: buyForm.currency,
             redirectUrl: `${window.location.origin}?stripe_onramp=success`,
           })
+          if (cancelled) return
           onrampUrl = session.onrampUrl
         }
 
         if (!onrampUrl) {
+          closeReservedPopup()
+          setPopupWindow(null)
           setSessionError(true)
           return
         }
@@ -115,45 +164,26 @@ const BuyProcessing = () => {
         url.searchParams.delete('fiatCurrency')
         const sanitizedProviderUrl = url.toString()
 
-        if (typeof window !== 'undefined') {
-          const popupWidth = 500
-          const popupHeight = 700
-          const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX
-          const dualScreenTop = window.screenTop !== undefined ? window.screenTop : window.screenY
-          const width = window.innerWidth
-            ? window.innerWidth
-            : document.documentElement.clientWidth
-              ? document.documentElement.clientWidth
-              : screen.width
-          const height = window.innerHeight
-            ? window.innerHeight
-            : document.documentElement.clientHeight
-              ? document.documentElement.clientHeight
-              : screen.height
-          const left = width / 2 - popupWidth / 2 + dualScreenLeft
-          const top = height / 2 - popupHeight / 2 + dualScreenTop
-
-          const popup = window.open(
-            sanitizedProviderUrl,
-            'BuyPopup',
-            `scrollbars=yes,width=${popupWidth},height=${popupHeight},top=${top},left=${left}`
-          )
-
-          if (popup) {
-            setPopupWindow(popup)
-          } else {
-            setSessionError(true)
-          }
-        }
+        if (cancelled || reservedPopup.closed) return
+        reservedPopup.location.href = sanitizedProviderUrl
+        popupNavigatedRef.current = true
       } catch (_error) {
+        if (cancelled) return
+        closeReservedPopup()
+        setPopupWindow(null)
         setSessionError(true)
       } finally {
-        setIsCreatingSession(false)
+        if (!cancelled) setIsCreatingSession(false)
       }
     }
 
     createSessionAndOpenPopup()
-  }, [address, network]) // Run when wallet becomes ready
+    return () => {
+      cancelled = true
+      sessionStartedRef.current = false
+      closeReservedPopup()
+    }
+  }, [pageActive, address, network])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — each of the three states swaps in a differently sized body (spinner, continue button, error)
   useEffect(() => {
@@ -162,18 +192,18 @@ const BuyProcessing = () => {
 
   // Show continue button after 2 seconds
   useEffect(() => {
-    if (isCreatingSession) return
+    if (!pageActive || isCreatingSession) return
 
     setShowContinueButton(false)
     const timer = setTimeout(() => {
       setShowContinueButton(true)
     }, 2000)
     return () => clearTimeout(timer)
-  }, [isCreatingSession])
+  }, [pageActive, isCreatingSession])
 
   // Monitor popup window for redirect or close
   useEffect(() => {
-    if (!popupWindow || isCreatingSession) return
+    if (!pageActive || !popupWindow || isCreatingSession) return
 
     const checkPopup = setInterval(() => {
       try {
@@ -182,7 +212,7 @@ const BuyProcessing = () => {
           clearInterval(checkPopup)
           setPopupWindow(null)
           // Only auto-advance for Coinbase
-          if (buyForm.providerId === 'coinbase') {
+          if (popupNavigatedRef.current && buyForm.providerId === 'coinbase') {
             setRoute(routes.BUY_COMPLETE)
           }
           return
@@ -210,7 +240,7 @@ const BuyProcessing = () => {
     return () => {
       clearInterval(checkPopup)
     }
-  }, [popupWindow, buyForm.providerId, setRoute, isCreatingSession])
+  }, [pageActive, popupWindow, buyForm.providerId, setRoute, isCreatingSession])
 
   const handleCancel = () => {
     if (popupWindow && !popupWindow.closed) {

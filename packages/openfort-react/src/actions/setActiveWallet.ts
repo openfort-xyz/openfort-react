@@ -1,5 +1,7 @@
-import type { EmbeddedAccount, Openfort } from '@openfort/openfort-js'
+import { ChainTypeEnum, type EmbeddedAccount, type Openfort } from '@openfort/openfort-js'
 import type { OpenfortWalletConfig } from '../components/Openfort/types.js'
+import { asOpenfortError } from '../errors/base.js'
+import { SetActiveWalletError } from '../errors/wallet.js'
 import type { SetActiveEmbeddedWalletOptionsBase } from '../shared/types.js'
 import { buildClientRecoveryConfig } from './buildClientRecoveryConfig.js'
 import { resolveSetActiveRecovery } from './resolveSetActiveRecovery.js'
@@ -11,6 +13,8 @@ type SetActiveWalletParameters = {
   account: EmbeddedAccount
   /** Recovery-related options passed to `setActive`. */
   options: SetActiveEmbeddedWalletOptionsBase
+  /** Rejects work reserved by an authentication session that is no longer current. */
+  assertCurrent: () => void
 }
 
 type SetActiveWalletResult = {
@@ -28,15 +32,24 @@ type SetActiveWalletResult = {
  * @returns Whether the caller still has to collect a recovery password.
  */
 export async function setActiveWallet(parameters: SetActiveWalletParameters): Promise<SetActiveWalletResult> {
-  const { client, walletConfig, account, options } = parameters
+  const { client, walletConfig, account, options, assertCurrent } = parameters
 
-  const resolved = await resolveSetActiveRecovery(account, options, buildClientRecoveryConfig(client, walletConfig))
+  try {
+    const resolved = await resolveSetActiveRecovery(account, options, buildClientRecoveryConfig(client, walletConfig))
 
-  if (resolved.needsRecovery) {
-    return { needsRecovery: true }
+    if (resolved.needsRecovery) {
+      return { needsRecovery: true }
+    }
+
+    assertCurrent()
+    await client.embeddedWallet.recover({ account: account.id, recoveryParams: resolved.recoveryParams })
+
+    return { needsRecovery: false }
+  } catch (error) {
+    throw asOpenfortError(
+      error,
+      (cause) =>
+        new SetActiveWalletError({ chain: account.chainType === ChainTypeEnum.EVM ? 'Ethereum' : 'Solana', cause })
+    )
   }
-
-  await client.embeddedWallet.recover({ account: account.id, recoveryParams: resolved.recoveryParams })
-
-  return { needsRecovery: false }
 }

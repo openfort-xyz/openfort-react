@@ -26,7 +26,25 @@ export const FORK_BLOCK_NUMBER = 44_800_000n
  * endpoint so the suite needs no RPC secret; point `EVM_FORK_URL` at a dedicated
  * provider to avoid public rate limits.
  */
-export const FORK_UPSTREAM_URL = process.env.EVM_FORK_URL ?? 'https://sepolia.base.org'
+export function resolveForkUpstreamUrl(configuredUrl = process.env.EVM_FORK_URL): string {
+  return configuredUrl?.trim() || 'https://sepolia.base.org'
+}
+
+/** Returns only the upstream origin for diagnostics, excluding credential-bearing URL paths and queries. */
+export function forkUpstreamOrigin(upstreamUrl: string): string {
+  try {
+    return new URL(upstreamUrl).origin
+  } catch {
+    return '[invalid fork upstream URL]'
+  }
+}
+
+/** Removes URL paths and queries from process diagnostics before they reach CI logs. */
+export function redactForkDiagnostics(diagnostics: string): string {
+  return diagnostics.replaceAll(/https?:\/\/[^\s]+/g, (value) => forkUpstreamOrigin(value))
+}
+
+export const FORK_UPSTREAM_URL = resolveForkUpstreamUrl()
 
 /** Port the local anvil instance listens on. */
 export const ANVIL_PORT = Number(process.env.ANVIL_PORT ?? 8545)

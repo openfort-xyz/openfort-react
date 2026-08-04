@@ -27,11 +27,12 @@ const setOpen = vi.fn((value: boolean) => {
   state.open = value
 })
 const setConnector = vi.fn()
-const rejectSignRequest = vi.fn()
+const settleSignRequest = vi.fn()
 const setSignRequest = vi.fn()
+const pendingSignRequest = { settle: settleSignRequest }
 
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({ signRequest: { reject: rejectSignRequest }, setSignRequest }),
+vi.mock('../../components/Openfort/useOpenfort.js', () => ({
+  useOpenfort: () => ({ signRequest: pendingSignRequest, setSignRequest }),
   useOpenfortRouting: () => ({
     open: state.open,
     setOpen,
@@ -42,7 +43,7 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
   }),
   useOpenfortForms: () => ({ setSendForm: vi.fn() }),
 }))
-vi.mock('../../openfort/useOpenfort', () => {
+vi.mock('../../openfort/useOpenfort.js', () => {
   const getState = () => ({
     isLoading: false,
     user: null,
@@ -54,10 +55,10 @@ vi.mock('../../openfort/useOpenfort', () => {
   return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
 })
 // The active chain's strategy decides what counts as connected.
-vi.mock('../../core/ConnectionStrategyContext', () => ({
+vi.mock('../../core/ConnectionStrategyContext.js', () => ({
   useConnectionStrategy: () => ({ kind: 'embedded', isConnected: () => state.connected }),
 }))
-vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({ useEthereumBridge: () => null }))
+vi.mock('../../ethereum/OpenfortEthereumBridgeContext.js', () => ({ useEthereumBridge: () => null }))
 
 const { useUI } = await import('../../hooks/openfort/useUI.js')
 
@@ -131,10 +132,24 @@ describe('useUI gotoAndOpen', () => {
 
     act(() => result.current.setIsOpen(false))
 
-    expect(rejectSignRequest).toHaveBeenCalledWith(
-      expect.objectContaining({ message: 'User rejected the signature request' })
+    expect(settleSignRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ name: 'WalletError' }) })
     )
-    expect(setSignRequest).toHaveBeenCalledWith(null)
+    const clearRequest = setSignRequest.mock.calls.at(-1)?.[0]
+    expect(clearRequest).toBeTypeOf('function')
+    expect(clearRequest?.(pendingSignRequest)).toBeNull()
     expect(setOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('settles a pending signature before a public navigation routes away', () => {
+    state.connected = true
+    const { result } = renderHook(() => useUI())
+
+    act(() => result.current.openProfile())
+
+    expect(settleSignRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ name: 'WalletError' }) })
+    )
+    expect(state.route).toMatchObject({ route: routes.CONNECTED })
   })
 })

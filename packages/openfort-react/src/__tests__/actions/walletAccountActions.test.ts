@@ -4,7 +4,8 @@ import { activateEmbeddedAccount } from '../../actions/activateEmbeddedAccount.j
 import { exportPrivateKey } from '../../actions/exportPrivateKey.js'
 import { findEmbeddedAccount } from '../../actions/findEmbeddedAccount.js'
 import { setRecoveryMethod } from '../../actions/setRecoveryMethod.js'
-import { RecoveryError, WalletNotFoundError } from '../../errors/wallet.js'
+import { RecoveryError, WalletError, WalletNotFoundError } from '../../errors/wallet.js'
+import { logger } from '../../utils/logger.js'
 import {
   asOpenfort,
   TEST_EVM_ADDRESS,
@@ -70,24 +71,36 @@ describe('activateEmbeddedAccount', () => {
       return [account]
     })
 
-    await activateEmbeddedAccount({ account, setActiveEmbeddedAddress, updateEmbeddedAccounts })
+    await activateEmbeddedAccount({
+      account,
+      assertCurrent: vi.fn(),
+      shouldPublish: () => true,
+      setActiveEmbeddedAddress,
+      updateEmbeddedAccounts,
+    })
 
     expect(order).toEqual(['setActiveEmbeddedAddress', 'updateEmbeddedAccounts'])
     expect(setActiveEmbeddedAddress).toHaveBeenCalledWith(TEST_EVM_ADDRESS)
     expect(updateEmbeddedAccounts).toHaveBeenCalledWith({ silent: true })
   })
 
-  it('rejects when the accounts refetch fails, after the address was published', async () => {
+  it('keeps activation successful when the accounts refetch fails', async () => {
     const setActiveEmbeddedAddress = vi.fn()
 
     await expect(
       activateEmbeddedAccount({
         account: testAccount(),
+        assertCurrent: vi.fn(),
+        shouldPublish: () => true,
         setActiveEmbeddedAddress,
         updateEmbeddedAccounts: vi.fn().mockRejectedValue(new Error('network down')),
       })
-    ).rejects.toThrow('network down')
+    ).resolves.toBeUndefined()
     expect(setActiveEmbeddedAddress).toHaveBeenCalledWith(TEST_EVM_ADDRESS)
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[embedded-wallet] account was activated but the account list could not be refreshed',
+      expect.any(Error)
+    )
   })
 })
 
@@ -142,10 +155,10 @@ describe('exportPrivateKey', () => {
     expect(client.embeddedWallet.exportPrivateKey).toHaveBeenCalledTimes(1)
   })
 
-  it('propagates a rejected export', async () => {
+  it('wraps a rejected export in WalletError', async () => {
     const client = testClient()
     client.embeddedWallet.exportPrivateKey.mockRejectedValue(new Error('user declined'))
 
-    await expect(exportPrivateKey({ client: asOpenfort(client) })).rejects.toThrow('user declined')
+    await expect(exportPrivateKey({ client: asOpenfort(client) })).rejects.toBeInstanceOf(WalletError)
   })
 })

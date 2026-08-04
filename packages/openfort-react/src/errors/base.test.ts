@@ -139,6 +139,25 @@ test('toError coerces non-Error rejections', () => {
   expect(toError(error)).toBe(error)
   expect(toError('a string').message).toBe('a string')
   expect(toError({ code: 4001 }).message).toBe('{"code":4001}')
+  expect(toError(4001n).message).toBe('4001n')
+  expect(toError(undefined).message).toBe('undefined')
+
+  const cyclic: { self?: unknown } = {}
+  cyclic.self = cyclic
+  expect(toError(cyclic).message).toBe('{"self":"[Circular]"}')
+})
+
+test('toError survives values whose serialization and string conversion both throw', () => {
+  const hostile = new Proxy(
+    {},
+    {
+      get() {
+        throw new Error('blocked property access')
+      },
+    }
+  )
+
+  expect(toError(hostile).message).toBe('Unknown thrown value')
 })
 
 test('asOpenfortError passes through Openfort errors and wraps everything else', () => {
@@ -213,6 +232,9 @@ test('MissingParameterError lists the parameters in the message', () => {
 test('ChainNotConfiguredError names the chain when it knows it', () => {
   expect(new ChainNotConfiguredError().shortMessage).toBe('No chain configured.')
   expect(new ChainNotConfiguredError({ chainId: 8453 }).shortMessage).toBe('Chain 8453 is not configured.')
+  expect(new ChainNotConfiguredError({ chainId: 8453 }).metaMessages).toEqual([
+    'Add the chain to the `chains` passed to your Wagmi config.',
+  ])
 })
 
 test('ApiRequestError keeps the status and body reachable', () => {

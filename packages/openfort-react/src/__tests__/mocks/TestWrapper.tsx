@@ -1,16 +1,24 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createElement, type PropsWithChildren } from 'react'
+import { AuthTransitionContext, type AuthTransitionContextValue } from '../../openfort/authTransitionContext.js'
 import type { OpenfortCoreContextValue } from '../../openfort/CoreOpenfortProvider.js'
 import { StoreContext } from '../../openfort/context.js'
 import { createOpenfortStore } from '../../openfort/store.js'
+import {
+  captureAuthSession,
+  reserveAuthenticatedMutation,
+  reserveAuthTransition,
+} from '../../shared/utils/authTransitionQueue.js'
 import { createMockOpenfortClient } from './openfortClient.js'
 
 /**
  * Builds default OpenfortCoreContextValue fields for tests.
  * Use in tests to provide only the values your test cares about.
  */
-export function buildContextValue(overrides: Partial<OpenfortCoreContextValue> = {}): OpenfortCoreContextValue {
+type TestContextOverrides = Partial<OpenfortCoreContextValue> & Partial<AuthTransitionContextValue>
+
+export function buildContextValue(overrides: TestContextOverrides = {}): OpenfortCoreContextValue {
   const mockClient = createMockOpenfortClient()
 
   return {
@@ -44,7 +52,7 @@ export function buildContextValue(overrides: Partial<OpenfortCoreContextValue> =
 /**
  * Creates a Zustand store pre-populated with test state.
  */
-function createTestStore(overrides: Partial<OpenfortCoreContextValue> = {}) {
+function createTestStore(overrides: TestContextOverrides = {}) {
   const defaults = buildContextValue(overrides)
   const store = createOpenfortStore(defaults.chainType, defaults.client)
   const s = store.getState()
@@ -71,10 +79,21 @@ function createTestStore(overrides: Partial<OpenfortCoreContextValue> = {}) {
  * Test wrapper that provides StoreContext.
  * Usage: `renderHook(useUser, { wrapper: createStoreWrapper({ user: mockUser }) })`
  */
-export function createStoreWrapper(overrides: Partial<OpenfortCoreContextValue> = {}) {
+export function createStoreWrapper(overrides: TestContextOverrides = {}) {
   const store = createTestStore(overrides)
+  const client = store.getState().client
+  const transitionValue: AuthTransitionContextValue = {
+    captureAuthSession: overrides.captureAuthSession ?? (() => captureAuthSession(client)),
+    startAuthTransition: overrides.startAuthTransition ?? ((mutation) => reserveAuthTransition(client, mutation)),
+    startAuthenticatedMutation:
+      overrides.startAuthenticatedMutation ?? ((mutation) => reserveAuthenticatedMutation(client, mutation)),
+  }
   return function TestCoreWrapper({ children }: PropsWithChildren) {
-    return createElement(StoreContext.Provider, { value: store }, children)
+    return createElement(
+      AuthTransitionContext.Provider,
+      { value: transitionValue },
+      createElement(StoreContext.Provider, { value: store }, children)
+    )
   }
 }
 

@@ -44,7 +44,8 @@ test.describe('EVM integration', () => {
       // Wait for full connection and the Openfort UI card to be ready
       await expect(page.getByText(/Connected with 0x/i)).toBeVisible({ timeout: 60_000 })
       const uiCard = await dashboardPage.getCardByTitle(/openfort ui/i)
-      await expect(uiCard.getByRole('button', { name: /^sign message$/i })).toBeEnabled({ timeout: 60_000 })
+      const signButton = uiCard.getByRole('button', { name: /^sign message$/i })
+      await expect(signButton).toBeEnabled({ timeout: 60_000 })
     })
 
     // ── Step 2: Sign message ────────────────────────────────────────────
@@ -63,18 +64,41 @@ test.describe('EVM integration', () => {
         .first()
       await expect(currentChain).toBeVisible({ timeout: 30_000 })
 
-      const switchBtn = chainCard.getByRole('button', { name: /switch to base sepolia/i })
-      await expect(switchBtn).toBeEnabled({ timeout: 60_000 })
-      await switchBtn.click()
+      // The wallet is created on whichever chain the Openfort project configures,
+      // not on wagmi's default, so the starting chain is not known up front. The
+      // card disables the button for the active chain, so the enabled buttons are
+      // exactly the chains worth switching to. The heading reads "Current chain:
+      // Base Sepolia (84532)" while the buttons carry the bare name.
+      const readChainName = async () =>
+        ((await currentChain.textContent()) ?? '')
+          .replace(/^current chain:\s*/i, '')
+          .replace(/\s*\(\d+\)\s*$/, '')
+          .trim()
+      const startingChain = await readChainName()
+      expect(startingChain).toBeTruthy()
 
-      await expect(currentChain).toContainText(/base sepolia/i, { timeout: 90_000 })
+      const switchBtn = chainCard.locator('button:enabled').filter({ hasText: /^switch to /i })
+      await expect(switchBtn.first()).toBeEnabled({ timeout: 60_000 })
+      const targetLabel = ((await switchBtn.first().textContent()) ?? '').replace(/^switch to\s*/i, '').trim()
+      expect(targetLabel).toBeTruthy()
+      expect(targetLabel).not.toBe(startingChain)
+      await switchBtn.first().click()
+
+      await expect(currentChain).toContainText(targetLabel, { timeout: 90_000 })
 
       // Sign after chain switch
       const msg = `Chain-sign ${Date.now()}`
       await dashboardPage.signMessage(msg, mode)
 
       // Verify chain stayed
-      await expect(currentChain).toContainText(/base sepolia/i, { timeout: 30_000 })
+      await expect(currentChain).toContainText(targetLabel, { timeout: 30_000 })
+
+      // Return to the wallet's own chain so the mint below runs where the wallet
+      // was deployed rather than on whichever chain this step happened to pick.
+      const backBtn = chainCard.getByRole('button', { name: new RegExp(`^switch to ${startingChain}$`, 'i') })
+      await expect(backBtn).toBeEnabled({ timeout: 60_000 })
+      await backBtn.click()
+      await expect(currentChain).toContainText(startingChain, { timeout: 90_000 })
     })
 
     // ── Step 4: Write contract (mint) ───────────────────────────────────

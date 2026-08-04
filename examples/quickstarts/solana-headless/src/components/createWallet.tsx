@@ -41,12 +41,12 @@ export const CreateWallet = ({ onWalletCreated }: { onWalletCreated?: () => void
   }
 
   const handleCreate = async (recoveryMethod: RecoveryMethod, password?: string) => {
-    try {
-      await create({ recoveryMethod, ...(password && { password }) })
-      onWalletCreated?.()
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create wallet')
+    const result = await create({ recoveryMethod, ...(password && { password }) })
+    if (result.error) {
+      setError(result.error.message)
+      return
     }
+    onWalletCreated?.()
   }
 
   return (

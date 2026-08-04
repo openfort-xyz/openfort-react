@@ -77,6 +77,19 @@ function RouteComponent() {
             description:
               'The configuration for the Openfort wallet components. If not set, users will need to connect their web3 wallets.',
           },
+          connectOnLogin: {
+            type: 'boolean',
+            description: 'Whether the SDK creates or recovers an embedded wallet immediately after authentication.',
+            onEdit: (value) => {
+              setProviderOptions({
+                ...providerOptions,
+                walletConfig: {
+                  ...providerOptions.walletConfig,
+                  connectOnLogin: value === true || value === 'true',
+                },
+              })
+            },
+          },
           recoveryMethod: {
             description: 'The recovery method to use for the embedded wallet.',
             type: 'select',

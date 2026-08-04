@@ -5,6 +5,11 @@ import { useCallback } from 'react'
 import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
 import { DEFAULT_ACCOUNT_TYPE } from '../../../constants/openfort.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import {
+  captureEmbeddedSignerSession,
+  isEmbeddedSignerOperationInvalidationError,
+  runEmbeddedSignerOperation,
+} from '../../../shared/utils/embeddedSignerOperationQueue.js'
 import { buildRecoveryParams } from '../../../shared/utils/recovery.js'
 import { logger } from '../../../utils/logger.js'
 import {
@@ -79,8 +84,17 @@ export const useConnectToWalletPostAuth = () => {
         return {}
       }
 
+      const session = captureEmbeddedSignerSession(client)
+
       // Fetch + sync accounts directly via the store — no TanStack Query peer dep needed
-      const wallets = await updateEmbeddedAccounts()
+      let wallets: Awaited<ReturnType<typeof updateEmbeddedAccounts>>
+      try {
+        wallets = await updateEmbeddedAccounts()
+        session.assertCurrent()
+      } catch (error) {
+        if (isEmbeddedSignerOperationInvalidationError(error)) return {}
+        throw error
+      }
       if (!wallets) return {}
 
       const chainWallets = wallets.filter((w) => w.chainType === chainType)
@@ -99,15 +113,22 @@ export const useConnectToWalletPostAuth = () => {
               getUserId: async () => (await client.user.get())?.id,
             }
           )
+          session.assertCurrent()
           const accountType = walletConfig?.ethereum?.accountType ?? DEFAULT_ACCOUNT_TYPE
-          const account = await client.embeddedWallet.create({
-            chainType,
-            accountType: chainType === ChainTypeEnum.EVM ? accountType : DEFAULT_ACCOUNT_TYPE,
-            ...(chainType === ChainTypeEnum.EVM && accountType !== DEFAULT_ACCOUNT_TYPE && { chainId }),
-            recoveryParams,
+          const account = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+            session.assertCurrent()
+            const createdAccount = await client.embeddedWallet.create({
+              chainType,
+              accountType: chainType === ChainTypeEnum.EVM ? accountType : DEFAULT_ACCOUNT_TYPE,
+              ...(chainType === ChainTypeEnum.EVM && accountType !== DEFAULT_ACCOUNT_TYPE && { chainId }),
+              recoveryParams,
+            })
+            assertCurrent()
+            await updateEmbeddedAccounts({ silent: true })
+            assertCurrent()
+            setActiveEmbeddedAddress(createdAccount.address)
+            return createdAccount
           })
-          await updateEmbeddedAccounts({ silent: true })
-          setActiveEmbeddedAddress(account.address)
           return {
             wallet:
               chainType === ChainTypeEnum.SVM
@@ -116,7 +137,7 @@ export const useConnectToWalletPostAuth = () => {
           }
         } catch (err) {
           logger.error('Error creating wallet:', err)
-          if (signOutOnError) await signOut()
+          if (signOutOnError && !isEmbeddedSignerOperationInvalidationError(err)) await signOut()
           return {}
         }
       }
@@ -173,8 +194,13 @@ export const useConnectToWalletPostAuth = () => {
               getUserId: async () => (await client.user.get())?.id,
             }
           )
-          await client.embeddedWallet.recover({ account: autoRecoverableWallet.id, recoveryParams })
-          setActiveEmbeddedAddress(autoRecoverableWallet.address)
+          session.assertCurrent()
+          await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+            session.assertCurrent()
+            await client.embeddedWallet.recover({ account: autoRecoverableWallet.id, recoveryParams })
+            assertCurrent()
+            setActiveEmbeddedAddress(autoRecoverableWallet.address)
+          })
           return {
             wallet:
               chainType === ChainTypeEnum.SVM
@@ -183,7 +209,7 @@ export const useConnectToWalletPostAuth = () => {
           }
         } catch (error) {
           logger.error('Error recovering wallet:', error)
-          if (signOutOnError) await signOut()
+          if (signOutOnError && !isEmbeddedSignerOperationInvalidationError(error)) await signOut()
           return {}
         }
       }

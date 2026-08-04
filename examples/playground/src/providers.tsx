@@ -11,8 +11,8 @@ import { ChainTypeEnum, OpenfortProvider } from '@openfort/react'
 import { getDefaultConfig, getDefaultConnectors, OpenfortWagmiBridge } from '@openfort/react/wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type React from 'react'
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import { createConfig, http, useChainId, WagmiProvider } from 'wagmi'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { createConfig, http, useAccount, useChainId, useSwitchChain, WagmiProvider } from 'wagmi'
 import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
 import {
@@ -191,6 +191,45 @@ function SolanaFundingTargetSync() {
   return null
 }
 
+/** Where the last chain the user picked is kept between reloads. */
+const SELECTED_CHAIN_KEY = 'openfort.playground.evmChainId'
+
+/**
+ * Restores the chain the user last switched to.
+ *
+ * wagmi persists its active chain, but `createConfig` resets the store to
+ * `chains[0]` before anything can rehydrate it, so the stored value is already
+ * overwritten by the time the app mounts (verified against wagmi 3.5.0). The
+ * selection therefore has to be kept here and re-applied once, after which the
+ * active chain is written back on every change.
+ */
+function SelectedChainSync() {
+  const chainId = useChainId()
+  const { isConnected } = useAccount()
+  const { switchChainAsync } = useSwitchChain()
+  const restoredRef = useRef(false)
+
+  useEffect(() => {
+    if (!isConnected) return
+
+    if (!restoredRef.current) {
+      restoredRef.current = true
+      const saved = Number(window.localStorage.getItem(SELECTED_CHAIN_KEY))
+      const restorable = saved !== chainId && PLAYGROUND_EVM_CHAINS.some((c) => c.id === saved)
+      if (restorable) {
+        switchChainAsync({ chainId: saved }).catch(() => {
+          // The wallet may not be usable on that chain; keep the current one.
+        })
+        return
+      }
+    }
+
+    window.localStorage.setItem(SELECTED_CHAIN_KEY, String(chainId))
+  }, [isConnected, chainId, switchChainAsync])
+
+  return null
+}
+
 function WagmiProviders({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(() => new QueryClient())
   const { providerOptions } = useAppStore()
@@ -212,6 +251,7 @@ function WagmiProviders({ children }: { children: React.ReactNode }) {
           <OpenfortWagmiBridge>
             <OpenfortProvider {...options}>
               <FundingTargetSync />
+              <SelectedChainSync />
               <EthereumAddressProviderWagmi>{children}</EthereumAddressProviderWagmi>
             </OpenfortProvider>
           </OpenfortWagmiBridge>

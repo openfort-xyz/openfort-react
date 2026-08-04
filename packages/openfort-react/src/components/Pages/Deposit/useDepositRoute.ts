@@ -117,17 +117,10 @@ export function useDepositRoute(kind: DepositRouteKind) {
       currency: activeCurrency.symbol,
       destChain: target.chain,
     })
-    fund(
+    void fund(
       { chain: target.chain, currency: target.currency, address },
       paymentMethodFor(activeChain.id, activeCurrency)
-    ).catch((fundingError) => {
-      // useFunding records the typed error in hook state; this handler prevents an
-      // effect-owned promise rejection without hiding the failure from the UI.
-      logger.warn('[funding:route] failed to resolve funding route', {
-        kind,
-        errorName: fundingError instanceof Error ? fundingError.name : 'UnknownError',
-      })
-    })
+    )
   }, [
     address,
     activeChain,

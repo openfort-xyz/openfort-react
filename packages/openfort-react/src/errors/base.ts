@@ -1,15 +1,6 @@
 import { OPENFORT_VERSION } from '../version.js'
 
 /**
- * Narrowing helper: an `Error` pinned to a single `name`.
- *
- * Every error class in this module ships a companion `XErrorType` built with
- * this so consumers can discriminate on `error.name` without `instanceof`,
- * which survives bundler duplication and cross-realm boundaries.
- */
-export type ErrorType<name extends string = 'Error'> = Error & { name: name }
-
-/**
  * Coarse category attached to every Openfort error.
  *
  * @deprecated Narrow on `error.name` (or `instanceof`) instead — the concrete
@@ -120,7 +111,32 @@ function walk(err: unknown, fn?: (err: unknown) => boolean): unknown {
  */
 export function toError(value: unknown): Error {
   if (value instanceof Error) return value
-  return new Error(typeof value === 'string' ? value : JSON.stringify(value))
+  if (typeof value === 'string') return new Error(value)
+  if (typeof value === 'bigint') return new Error(`${value}n`)
+  if (value === undefined || typeof value === 'number' || typeof value === 'boolean' || typeof value === 'symbol') {
+    return new Error(String(value))
+  }
+
+  try {
+    const seen = new WeakSet<object>()
+    const serialized = JSON.stringify(value, (_key, nestedValue: unknown) => {
+      if (typeof nestedValue === 'bigint') return `${nestedValue}n`
+      if (nestedValue != null && typeof nestedValue === 'object') {
+        if (seen.has(nestedValue)) return '[Circular]'
+        seen.add(nestedValue)
+      }
+      return nestedValue
+    })
+    if (serialized !== undefined) return new Error(serialized)
+  } catch {
+    // Some thrown values expose hostile serialization hooks; the string fallback remains safe.
+  }
+
+  try {
+    return new Error(String(value))
+  } catch {
+    return new Error('Unknown thrown value')
+  }
 }
 
 /**

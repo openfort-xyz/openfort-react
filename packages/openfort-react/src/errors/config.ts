@@ -2,9 +2,17 @@ import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from
 
 type ConfigErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 
-export type OpenfortConfigErrorType = OpenfortConfigError & { name: 'OpenfortConfigError' }
-
-/** The SDK was given an incomplete or contradictory configuration. */
+/**
+ * The SDK was given an incomplete or contradictory configuration.
+ *
+ * @example
+ * ```ts
+ * import { OpenfortConfigError } from '@openfort/react'
+ *
+ * const error = new OpenfortConfigError('The wallet configuration is invalid.')
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class OpenfortConfigError extends OpenfortError {
   override name = 'OpenfortConfigError'
 
@@ -13,9 +21,17 @@ export class OpenfortConfigError extends OpenfortError {
   }
 }
 
-export type WalletConfigNotFoundErrorType = WalletConfigNotFoundError & { name: 'WalletConfigNotFoundError' }
-
-/** A wallet operation ran without `walletConfig` on `OpenfortProvider`. */
+/**
+ * A wallet operation ran without `walletConfig` on `OpenfortProvider`.
+ *
+ * @example
+ * ```ts
+ * import { WalletConfigNotFoundError } from '@openfort/react'
+ *
+ * const error = new WalletConfigNotFoundError()
+ * console.log(error.name)
+ * ```
+ */
 export class WalletConfigNotFoundError extends OpenfortConfigError {
   override name = 'WalletConfigNotFoundError'
 
@@ -27,9 +43,17 @@ export class WalletConfigNotFoundError extends OpenfortConfigError {
   }
 }
 
-export type ClientNotInitializedErrorType = ClientNotInitializedError & { name: 'ClientNotInitializedError' }
-
-/** The Openfort client was used before `OpenfortProvider` finished initializing it. */
+/**
+ * The Openfort client was used before `OpenfortProvider` finished initializing it.
+ *
+ * @example
+ * ```ts
+ * import { ClientNotInitializedError } from '@openfort/react'
+ *
+ * const error = new ClientNotInitializedError()
+ * console.log(error.name)
+ * ```
+ */
 export class ClientNotInitializedError extends OpenfortConfigError {
   override name = 'ClientNotInitializedError'
 
@@ -41,23 +65,39 @@ export class ClientNotInitializedError extends OpenfortConfigError {
   }
 }
 
-export type ChainNotConfiguredErrorType = ChainNotConfiguredError & { name: 'ChainNotConfiguredError' }
-
-/** A chain was requested that is absent from the configured chain list. */
+/**
+ * A chain was requested that is absent from the configured chain list.
+ *
+ * @example
+ * ```ts
+ * import { ChainNotConfiguredError } from '@openfort/react'
+ *
+ * const error = new ChainNotConfiguredError({ chainId: 8453 })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class ChainNotConfiguredError extends OpenfortConfigError {
   override name = 'ChainNotConfiguredError'
 
   constructor({ chainId, ...options }: ConfigErrorOptions & { chainId?: number | undefined } = {}) {
     super(chainId === undefined ? 'No chain configured.' : `Chain ${chainId} is not configured.`, {
-      metaMessages: ['Add the chain to `walletConfig.ethereum.chains` on `OpenfortProvider`.'],
+      metaMessages: ['Add the chain to the `chains` passed to your Wagmi config.'],
       ...options,
     })
   }
 }
 
-export type RpcUrlNotConfiguredErrorType = RpcUrlNotConfiguredError & { name: 'RpcUrlNotConfiguredError' }
-
-/** A chain is configured but has no RPC endpoint to talk to. */
+/**
+ * A chain is configured but has no RPC endpoint to talk to.
+ *
+ * @example
+ * ```ts
+ * import { RpcUrlNotConfiguredError } from '@openfort/react'
+ *
+ * const error = new RpcUrlNotConfiguredError({ chainId: 8453 })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class RpcUrlNotConfiguredError extends OpenfortConfigError {
   override name = 'RpcUrlNotConfiguredError'
 
@@ -69,11 +109,17 @@ export class RpcUrlNotConfiguredError extends OpenfortConfigError {
   }
 }
 
-export type SolanaClusterNotSupportedErrorType = SolanaClusterNotSupportedError & {
-  name: 'SolanaClusterNotSupportedError'
-}
-
-/** A Solana cluster was named that the SDK has no default endpoint for. */
+/**
+ * A Solana cluster was named that the SDK has no default endpoint for.
+ *
+ * @example
+ * ```ts
+ * import { SolanaClusterNotSupportedError } from '@openfort/react'
+ *
+ * const error = new SolanaClusterNotSupportedError({ cluster: 'customnet' })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class SolanaClusterNotSupportedError extends OpenfortConfigError {
   override name = 'SolanaClusterNotSupportedError'
 

@@ -2,9 +2,17 @@ import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from
 
 type AuthErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 
-export type AuthenticationErrorType = AuthenticationError & { name: 'AuthenticationError' }
-
-/** An authentication flow (login, signup, link, verify, sign out) failed. */
+/**
+ * An authentication flow (login, signup, link, verify, sign out) failed.
+ *
+ * @example
+ * ```ts
+ * import { AuthenticationError } from '@openfort/react'
+ *
+ * const error = new AuthenticationError('Email verification failed.')
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class AuthenticationError extends OpenfortError {
   override name = 'AuthenticationError'
 
@@ -13,9 +21,17 @@ export class AuthenticationError extends OpenfortError {
   }
 }
 
-export type NotAuthenticatedErrorType = NotAuthenticatedError & { name: 'NotAuthenticatedError' }
-
-/** An operation needing a signed-in user ran without a session. */
+/**
+ * An operation needing a signed-in user ran without a session.
+ *
+ * @example
+ * ```ts
+ * import { NotAuthenticatedError } from '@openfort/react'
+ *
+ * const error = new NotAuthenticatedError()
+ * console.log(error.name)
+ * ```
+ */
 export class NotAuthenticatedError extends AuthenticationError {
   override name = 'NotAuthenticatedError'
 

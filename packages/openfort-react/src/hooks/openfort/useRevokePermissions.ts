@@ -7,11 +7,13 @@ import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
 import { DEFAULT_TESTNET_CHAIN_ID } from '../../core/ConnectionStrategy.js'
 import { type OpenfortError, toError } from '../../errors/base.js'
 import { ChainNotConfiguredError } from '../../errors/config.js'
-import { WalletError } from '../../errors/wallet.js'
+import { WalletError, WalletNotConnectedError } from '../../errors/wallet.js'
 import { getEmbeddedWalletClient } from '../../ethereum/hooks/getEmbeddedWalletClient.js'
 import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import type { OpenfortEmbeddedEthereumWalletProvider } from '../../ethereum/types.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { assertEmbeddedEthereumAccount } from '../../shared/utils/assertEmbeddedEthereumAccount.js'
+import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
 import type { OpenfortHookOptions } from '../../types.js'
 import { logger } from '../../utils/logger.js'
 import { type BaseFlowState, mapStatus } from './auth/status.js'
@@ -67,6 +69,7 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
       { sessionKey }: RevokePermissionsRequest,
       options: RevokePermissionsHookOptions = {}
     ): Promise<RevokePermissionsHookResult> => {
+      const intendedEmbeddedAddress = ethereum.status === 'connected' ? ethereum.address : undefined
       try {
         const chain = chains.find((c) => c.id === chainId)
         if (!chain) {
@@ -84,21 +87,33 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
           },
         ] as [RevokePermissionsRequestParams]
 
-        let provider: OpenfortEmbeddedEthereumWalletProvider
-        if (ethereum.status === 'connected') {
-          provider = await ethereum.activeWallet.getProvider()
-        } else {
-          provider = (await client.embeddedWallet.getEthereumProvider()) as OpenfortEmbeddedEthereumWalletProvider
-          await provider.request({ method: 'eth_requestAccounts' })
-        }
-        const walletClient = await getEmbeddedWalletClient(provider, chain)
-        const revokePermissionsResult: SessionResponse = await walletClient.request<{
-          Method: 'wallet_revokePermissions'
-          Parameters: [RevokePermissionsRequestParams]
-          ReturnType: SessionResponse
-        }>({
-          method: 'wallet_revokePermissions',
-          params: revokeParams,
+        const revokePermissionsResult = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+          const provider = (await client.embeddedWallet.getEthereumProvider({
+            announceProvider: false,
+          })) as OpenfortEmbeddedEthereumWalletProvider
+          assertCurrent()
+          let intendedAddress = intendedEmbeddedAddress
+          if (!intendedAddress) {
+            assertCurrent()
+            const requestedAccounts = (await provider.request({ method: 'eth_requestAccounts' })) as
+              | `0x${string}`[]
+              | undefined
+            assertCurrent()
+            intendedAddress = requestedAccounts?.[0]
+          }
+          if (!intendedAddress) throw new WalletNotConnectedError('No account on wallet client.')
+          await assertEmbeddedEthereumAccount(provider, intendedAddress, chain.id)
+          assertCurrent()
+          const walletClient = await getEmbeddedWalletClient(provider, chain)
+          assertCurrent()
+          return walletClient.request<{
+            Method: 'wallet_revokePermissions'
+            Parameters: [RevokePermissionsRequestParams]
+            ReturnType: SessionResponse
+          }>({
+            method: 'wallet_revokePermissions',
+            params: revokeParams,
+          })
         })
 
         logger.log('Permissions revoked')

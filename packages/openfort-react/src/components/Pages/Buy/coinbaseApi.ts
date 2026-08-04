@@ -1,4 +1,5 @@
 import { MissingParameterError } from '../../../errors/validation.js'
+import { getTrustedFundingProviderUrl } from '../../../utils/fundingProviderUrl.js'
 import type { Asset } from '../../Openfort/types.js'
 import { getAssetSymbol } from '../Send/utils.js'
 import { ONRAMP_SESSIONS_PATH } from './onrampApi.js'
@@ -90,10 +91,11 @@ export const createCoinbaseSession = async (
   if (rest.redirectUrl) requestBody.redirectUrl = rest.redirectUrl
   if (rest.clientIp) requestBody.clientIp = rest.clientIp
 
-  return postOnramp<CoinbaseOnrampResponse>({
+  const response = await postOnramp<CoinbaseOnrampResponse>({
     path: ONRAMP_SESSIONS_PATH,
     body: requestBody,
     publishableKey,
     operation: 'Coinbase session creation',
   })
+  return { ...response, onrampUrl: getTrustedFundingProviderUrl(response.onrampUrl, 'coinbase').href }
 }

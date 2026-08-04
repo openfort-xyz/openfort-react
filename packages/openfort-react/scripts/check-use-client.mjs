@@ -10,8 +10,9 @@
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
+import { fileURLToPath } from 'node:url'
 
-const packageRoot = resolve(import.meta.dirname, '..')
+const packageRoot = resolve(fileURLToPath(new URL('..', import.meta.url)))
 const srcRoot = join(packageRoot, 'src')
 const buildRoot = join(packageRoot, 'build')
 

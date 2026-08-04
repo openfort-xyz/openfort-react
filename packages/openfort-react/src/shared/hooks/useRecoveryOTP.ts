@@ -9,6 +9,7 @@ import { ApiRequestError } from '../../errors/operation.js'
 import { RecoveryError } from '../../errors/wallet.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
+import { fetchRecoveryRequest } from '../utils/recoveryRequest.js'
 
 export type OTPResponse = {
   error?: OpenfortError
@@ -57,13 +58,17 @@ export function useRecoveryOTP(): { isEnabled: boolean; requestOTP: () => Promis
         throw new RecoveryError('No `requestWalletRecoverOTPEndpoint` set in `walletConfig`.')
       }
 
-      const resp = await fetch(walletConfig.requestWalletRecoverOTPEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const resp = await fetchRecoveryRequest(
+        walletConfig.requestWalletRecoverOTPEndpoint,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ user_id: userId, email, phone }),
         },
-        body: JSON.stringify({ user_id: userId, email, phone }),
-      })
+        'Request wallet recovery OTP'
+      )
 
       if (!resp.ok) {
         throw new ApiRequestError({ operation: 'Wallet recovery OTP request', status: resp.status })

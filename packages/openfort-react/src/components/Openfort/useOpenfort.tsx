@@ -9,6 +9,8 @@ import {
   OpenfortContext,
   RoutingContext,
   type RoutingContextValue,
+  SignRequestContext,
+  type SignRequestContextValue,
   type ThemeContextValue,
   ThemeStateContext,
 } from './context.js'
@@ -28,6 +30,9 @@ export const useOpenfortRouting = (): RoutingContextValue => useRequiredContext(
 /** Draft input shared across the auth, send and buy flows. */
 export const useOpenfortForms = (): FormContextValue => useRequiredContext(FormContext)
 
+/** In-flight signature request and its updater. */
+export const useOpenfortSignRequest = (): SignRequestContextValue => useRequiredContext(SignRequestContext)
+
 /** Values fixed by the props passed to OpenfortProvider. */
 export const useOpenfortConfig = (): ConfigContextValue => useRequiredContext(OpenfortContext)
 
@@ -40,9 +45,13 @@ export const useOpenfort = (): ContextValue => {
   const theme = useOpenfortTheme()
   const routing = useOpenfortRouting()
   const forms = useOpenfortForms()
+  const signature = useOpenfortSignRequest()
   const config = useOpenfortConfig()
 
-  return useMemo(() => ({ ...theme, ...routing, ...forms, ...config }), [theme, routing, forms, config])
+  return useMemo(
+    () => ({ ...theme, ...routing, ...forms, ...signature, ...config }),
+    [theme, routing, forms, signature, config]
+  )
 }
 
 /** Alias used by sub-path bundles to avoid naming collision with the public useOpenfort (useOpenfortCore). */

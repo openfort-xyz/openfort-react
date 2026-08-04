@@ -5,9 +5,17 @@ type WalletErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 /** The chain family a wallet error happened on, used to build its message. */
 export type WalletChain = 'Ethereum' | 'Solana'
 
-export type WalletErrorType = WalletError & { name: 'WalletError' }
-
-/** An embedded or external wallet operation failed. */
+/**
+ * An embedded or external wallet operation failed.
+ *
+ * @example
+ * ```ts
+ * import { WalletError } from '@openfort/react'
+ *
+ * const error = new WalletError('The wallet request failed.')
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class WalletError extends OpenfortError {
   override name = 'WalletError'
 
@@ -16,9 +24,17 @@ export class WalletError extends OpenfortError {
   }
 }
 
-export type WalletCreationErrorType = WalletCreationError & { name: 'WalletCreationError' }
-
-/** Creating an embedded wallet failed. */
+/**
+ * Creating an embedded wallet failed.
+ *
+ * @example
+ * ```ts
+ * import { WalletCreationError } from '@openfort/react'
+ *
+ * const error = new WalletCreationError({ chain: 'Ethereum' })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class WalletCreationError extends WalletError {
   override name = 'WalletCreationError'
 
@@ -27,9 +43,17 @@ export class WalletCreationError extends WalletError {
   }
 }
 
-export type WalletImportErrorType = WalletImportError & { name: 'WalletImportError' }
-
-/** Importing an existing key into an embedded wallet failed. */
+/**
+ * Importing an existing key into an embedded wallet failed.
+ *
+ * @example
+ * ```ts
+ * import { WalletImportError } from '@openfort/react'
+ *
+ * const error = new WalletImportError({ chain: 'Solana' })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class WalletImportError extends WalletError {
   override name = 'WalletImportError'
 
@@ -38,9 +62,17 @@ export class WalletImportError extends WalletError {
   }
 }
 
-export type SetActiveWalletErrorType = SetActiveWalletError & { name: 'SetActiveWalletError' }
-
-/** Switching the active embedded wallet failed. */
+/**
+ * Switching the active embedded wallet failed.
+ *
+ * @example
+ * ```ts
+ * import { SetActiveWalletError } from '@openfort/react'
+ *
+ * const error = new SetActiveWalletError({ chain: 'Ethereum' })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class SetActiveWalletError extends WalletError {
   override name = 'SetActiveWalletError'
 
@@ -49,9 +81,17 @@ export class SetActiveWalletError extends WalletError {
   }
 }
 
-export type WalletNotFoundErrorType = WalletNotFoundError & { name: 'WalletNotFoundError' }
-
-/** No wallet is available for the requested operation. */
+/**
+ * No wallet is available for the requested operation.
+ *
+ * @example
+ * ```ts
+ * import { WalletNotFoundError } from '@openfort/react'
+ *
+ * const error = new WalletNotFoundError()
+ * console.log(error.name)
+ * ```
+ */
 export class WalletNotFoundError extends WalletError {
   override name = 'WalletNotFoundError'
 
@@ -60,9 +100,17 @@ export class WalletNotFoundError extends WalletError {
   }
 }
 
-export type WalletNotConnectedErrorType = WalletNotConnectedError & { name: 'WalletNotConnectedError' }
-
-/** A wallet exists but is not connected, so it cannot sign or read accounts. */
+/**
+ * A wallet exists but is not connected, so it cannot sign or read accounts.
+ *
+ * @example
+ * ```ts
+ * import { WalletNotConnectedError } from '@openfort/react'
+ *
+ * const error = new WalletNotConnectedError()
+ * console.log(error.name)
+ * ```
+ */
 export class WalletNotConnectedError extends WalletError {
   override name = 'WalletNotConnectedError'
 
@@ -74,9 +122,17 @@ export class WalletNotConnectedError extends WalletError {
   }
 }
 
-export type ProviderNotReadyErrorType = ProviderNotReadyError & { name: 'ProviderNotReadyError' }
-
-/** The embedded wallet provider has not finished booting. */
+/**
+ * The embedded wallet provider has not finished booting.
+ *
+ * @example
+ * ```ts
+ * import { ProviderNotReadyError } from '@openfort/react'
+ *
+ * const error = new ProviderNotReadyError()
+ * console.log(error.name)
+ * ```
+ */
 export class ProviderNotReadyError extends WalletError {
   override name = 'ProviderNotReadyError'
 
@@ -85,9 +141,17 @@ export class ProviderNotReadyError extends WalletError {
   }
 }
 
-export type RecoveryErrorType = RecoveryError & { name: 'RecoveryError' }
-
-/** Configuring or running embedded wallet recovery failed. */
+/**
+ * Configuring or running embedded wallet recovery failed.
+ *
+ * @example
+ * ```ts
+ * import { RecoveryError } from '@openfort/react'
+ *
+ * const error = new RecoveryError('Automatic recovery failed.')
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class RecoveryError extends WalletError {
   override name = 'RecoveryError'
 
@@ -96,13 +160,19 @@ export class RecoveryError extends WalletError {
   }
 }
 
-export type OtpRequiredErrorType = OtpRequiredError & { name: 'OtpRequiredError' }
-
 /**
  * Recovery cannot proceed until the user supplies a one-time code.
  *
  * `canRequestOtp` reflects whether the app configured a way to send that code;
  * when it did not, the message says which option to set.
+ *
+ * @example
+ * ```ts
+ * import { OtpRequiredError } from '@openfort/react'
+ *
+ * const error = new OtpRequiredError({ canRequestOtp: true })
+ * console.log(error.shortMessage)
+ * ```
  */
 export class OtpRequiredError extends RecoveryError {
   override name = 'OtpRequiredError'

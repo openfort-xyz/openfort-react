@@ -2,13 +2,21 @@
 
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { motion } from 'framer-motion'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { FingerPrintIcon, KeyIcon, LockIcon, PlusIcon, ShieldIcon } from '../../../assets/icons.js'
 import Logos from '../../../assets/logos.js'
 import { OpenfortError } from '../../../errors/base.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import {
+  clearPersistentOperation,
+  getOrCreatePersistentOperation,
+  getPersistentOperation,
+  type PersistentOperation,
+  PersistentOperationLaneBusyError,
+} from '../../../shared/utils/persistentOperationRegistry.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { logger } from '../../../utils/logger.js'
 import Button from '../../Common/Button/index.js'
@@ -25,6 +33,7 @@ import { PasswordStrengthIndicator } from '../../PasswordStrength/PasswordStreng
 import { getPasswordStrength, MEDIUM_SCORE_THRESHOLD } from '../../PasswordStrength/password-utility.js'
 import Connectors from '../Connectors/index.js'
 import { ProviderIcon, ProviderLabel, ProvidersButton } from '../Providers/styles.js'
+import { useLatestAsyncAttempt } from '../useLatestAsyncAttempt.js'
 import AutomaticRecoveryOtpPage from './AutomaticRecoveryOtpPage.js'
 import SolanaCreateWallet from './SolanaCreateWallet.js'
 import { OtherMethodButton } from './styles.js'
@@ -121,7 +130,7 @@ const CreateWalletAutomaticRecovery = ({
 
   // When connectOnLogin is false, auto-creation is skipped — show a manual
   // trigger instead of an infinite spinner.
-  if (!recovery.shouldCreate && !recovery.isCreating && !recovery.recoveryError) {
+  if (!recovery.shouldCreate && !recovery.recoveryError) {
     return (
       <PageContent onBack={onBack} logoutOnBack={logoutOnBack}>
         <ModalHeading>Create wallet</ModalHeading>
@@ -155,30 +164,71 @@ const CreateWalletPasskeyRecovery = ({
   const { triggerResize, setRoute, walletConfig } = useOpenfort()
   const { create } = useEthereumEmbeddedWallet()
   const [shouldCreateWallet, setShouldCreateWallet] = useState(false)
-  const isCreatingRef = useRef(false)
   const hasAttemptedCreationRef = useRef(false)
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
   const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const client = useOpenfortCore((s) => s.client)
+  const { captureAuthSession } = useAuthTransitions()
+  const operationLane = 'wallet-create:Ethereum'
+  const operationKey = `${operationLane}:passkey`
+  const { active, beginAttempt, isCurrentAttempt, cancelAttempt } = useLatestAsyncAttempt()
 
   useEffect(() => {
-    if (!shouldCreateWallet) return
-    if (isCreatingRef.current) return
-    isCreatingRef.current = true
+    if (!active || !shouldCreateWallet) return
+    const attempt = beginAttempt()
+    const session = captureAuthSession()
+    const operation = getOrCreatePersistentOperation({
+      owner: client,
+      key: operationKey,
+      lane: operationLane,
+      principalIsCurrent: session.isCurrent,
+      start: () => create({ recoveryMethod: RecoveryMethod.PASSKEY }),
+    })
+    let observing = true
     ;(async () => {
       logger.log('Creating wallet passkey recovery')
       try {
-        await create({ recoveryMethod: RecoveryMethod.PASSKEY })
+        const result = await operation.promise
+        if (!observing || !session.isCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
         setShouldCreateWallet(false)
+        if (result.error) {
+          clearPersistentOperation(client, operationKey)
+          logger.log('Error creating wallet', result.error)
+          setRecoveryError(new Error('Failed to create wallet'))
+          return
+        }
+        clearPersistentOperation(client, operationKey)
         setRoute(routes.CONNECTED_SUCCESS)
       } catch (err) {
+        if (
+          !observing ||
+          !session.isCurrent() ||
+          (!operation.isCurrent() && !(err instanceof PersistentOperationLaneBusyError)) ||
+          !isCurrentAttempt(attempt)
+        )
+          return
+        clearPersistentOperation(client, operationKey)
         logger.log('Error creating wallet', err)
         setRecoveryError(new Error('Failed to create wallet'))
         setShouldCreateWallet(false)
-      } finally {
-        isCreatingRef.current = false
       }
     })()
-  }, [shouldCreateWallet, create, setRoute])
+    return () => {
+      observing = false
+      cancelAttempt(attempt)
+    }
+  }, [
+    active,
+    shouldCreateWallet,
+    create,
+    setRoute,
+    beginAttempt,
+    isCurrentAttempt,
+    cancelAttempt,
+    captureAuthSession,
+    client,
+    operationKey,
+  ])
 
   useEffect(() => {
     if (embeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
@@ -199,7 +249,10 @@ const CreateWalletPasskeyRecovery = ({
         isError={!!recoveryError}
         header={recoveryError ? 'Invalid passkey.' : 'Creating wallet with passkey...'}
         description={recoveryError ? 'There was an error creating your passkey. Please try again.' : undefined}
-        onRetry={() => setShouldCreateWallet(true)}
+        onRetry={() => {
+          setRecoveryError(null)
+          setShouldCreateWallet(true)
+        }}
       />
       <OtherMethod currentMethod={RecoveryMethod.PASSKEY} onChangeMethod={onChangeMethod} />
     </PageContent>
@@ -221,26 +274,73 @@ const CreateWalletPasswordRecovery = ({
   const [showPasswordIsTooWeakError, setShowPasswordIsTooWeakError] = useState(false)
   const [loading, setLoading] = useState(false)
   const { create } = useEthereumEmbeddedWallet()
+  const { active, beginAttempt, isCurrentAttempt } = useLatestAsyncAttempt()
+  const client = useOpenfortCore((state) => state.client)
+  const { captureAuthSession } = useAuthTransitions()
+  const operationLane = 'wallet-create:Ethereum'
+  const operationKey = `${operationLane}:password`
 
-  const handleSubmit = async () => {
+  const observeCreation = useCallback(
+    async (operation: PersistentOperation<Awaited<ReturnType<typeof create>>>, principalIsCurrent: () => boolean) => {
+      setLoading(true)
+      const attempt = beginAttempt()
+      try {
+        const result = await operation.promise
+        if (!principalIsCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
+        clearPersistentOperation(client, operationKey)
+        if (result.error) {
+          setRecoveryError(result.error.message)
+          return
+        }
+        logger.log('Recovery success')
+        setRoute(routes.CONNECTED_SUCCESS)
+      } catch (err) {
+        if (
+          !principalIsCurrent() ||
+          (!operation.isCurrent() && !(err instanceof PersistentOperationLaneBusyError)) ||
+          !isCurrentAttempt(attempt)
+        )
+          return
+        clearPersistentOperation(client, operationKey)
+        setRecoveryError(err instanceof OpenfortError ? err.message : 'There was an error recovering your account')
+      } finally {
+        if (principalIsCurrent() && isCurrentAttempt(attempt)) setLoading(false)
+      }
+    },
+    [beginAttempt, client, isCurrentAttempt, operationKey, setRoute]
+  )
+
+  const handleSubmit = () => {
     if (getPasswordStrength(recoveryPhrase) < MEDIUM_SCORE_THRESHOLD) {
       setShowPasswordIsTooWeakError(true)
       return
     }
 
-    setLoading(true)
-    try {
-      await create({
-        recoveryMethod: RecoveryMethod.PASSWORD,
-        password: recoveryPhrase,
+    const authSession = captureAuthSession()
+    const existing = getPersistentOperation<Awaited<ReturnType<typeof create>>>(client, operationKey)
+    const operation =
+      existing ??
+      getOrCreatePersistentOperation({
+        owner: client,
+        key: operationKey,
+        lane: operationLane,
+        principalIsCurrent: authSession.isCurrent,
+        start: () =>
+          create({
+            recoveryMethod: RecoveryMethod.PASSWORD,
+            password: recoveryPhrase,
+          }),
       })
-      logger.log('Recovery success')
-      setRoute(routes.CONNECTED_SUCCESS)
-    } catch (err) {
-      setRecoveryError(err instanceof OpenfortError ? err.message : 'There was an error recovering your account')
-    }
-    setLoading(false)
+    void observeCreation(operation, authSession.isCurrent)
   }
+
+  useEffect(() => {
+    if (!active) return
+    const existing = getPersistentOperation<Awaited<ReturnType<typeof create>>>(client, operationKey)
+    if (!existing) return
+    const authSession = captureAuthSession()
+    void observeCreation(existing, authSession.isCurrent)
+  }, [active, captureAuthSession, client, observeCreation, operationKey])
 
   useEffect(() => {
     if (recoveryError) triggerResize()
@@ -284,6 +384,7 @@ const CreateWalletPasswordRecovery = ({
             type="password"
             placeholder="Enter your password"
             autoComplete="off"
+            disabled={loading}
           />
 
           <PasswordStrengthIndicator
@@ -307,7 +408,7 @@ const CreateWalletPasswordRecovery = ({
             </motion.div>
           )}
 
-          <Button onClick={handleSubmit} waiting={loading} disabled={loading}>
+          <Button type="submit" waiting={loading} disabled={loading}>
             Create wallet
           </Button>
         </form>
@@ -366,7 +467,12 @@ const CreateEmbeddedWallet = ({ onBack, logoutOnBack }: { onBack: SetOnBackFunct
     triggerResize()
   }, [userSelectedMethod, triggerResize])
 
-  const method = userSelectedMethod ?? uiConfig.walletRecovery.defaultMethod
+  const configuredDefault = uiConfig.walletRecovery.defaultMethod
+  const method =
+    userSelectedMethod ??
+    (uiConfig.walletRecovery.allowedMethods.includes(configuredDefault)
+      ? configuredDefault
+      : (uiConfig.walletRecovery.allowedMethods[0] ?? RecoveryMethod.PASSWORD))
   switch (method) {
     case RecoveryMethod.PASSWORD:
       return (

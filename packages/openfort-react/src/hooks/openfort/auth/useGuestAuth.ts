@@ -1,10 +1,12 @@
 'use client'
 
 import type { User } from '@openfort/openfort-js'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { AuthenticationError } from '../../../errors/auth.js'
 import { type OpenfortError, toError } from '../../../errors/base.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { onError, onSuccess } from '../hookConsistency.js'
@@ -33,100 +35,80 @@ type GuestHookOptions = OpenfortHookOptions<GuestHookResult> & CreateWalletPostA
  *
  * @example
  * ```tsx
- * const guestAuth = useGuestAuth({
- *   onSignUpGuestSuccess: (result) => console.log('Guest user created:', result.user),
- *   onSignUpGuestError: (error) => console.error('Guest signup failed:', error),
- *   recoverWalletAutomatically: true,
- *   logoutOnError: false,
- * });
+ * import { useGuestAuth } from '@openfort/react'
  *
- * // Sign up as guest user
- * const handleGuestSignup = async () => {
- *   try {
- *     const result = await guestAuth.signUpGuest();
- *     if (result.user) {
- *       console.log('Guest user created:', result.user.id);
- *       console.log('User wallet:', result.wallet);
- *     }
- *   } catch (error) {
- *     console.error('Guest signup failed:', error);
+ * function GuestSignIn() {
+ *   const { signUpGuest, isLoading, error } = useGuestAuth()
+ *   const signIn = async () => {
+ *     const result = await signUpGuest()
+ *     if (result.error) return
+ *     console.log(result.user?.id)
  *   }
- * };
- *
- * // Check authentication state
- * if (guestAuth.isLoading) {
- *   console.log('Creating guest account...');
- * } else if (guestAuth.isError) {
- *   console.error('Guest auth error:', guestAuth.error);
- * } else if (guestAuth.isSuccess) {
- *   console.log('Guest authentication successful');
+ *   return <button onClick={signIn} disabled={isLoading}>{error ? error.shortMessage : 'Continue as guest'}</button>
  * }
- *
- * // Example usage in component
- * return (
- *   <div>
- *     <button
- *       onClick={handleGuestSignup}
- *       disabled={guestAuth.isLoading}
- *     >
- *       {guestAuth.isLoading ? 'Creating Guest Account...' : 'Continue as Guest'}
- *     </button>
- *
- *     {guestAuth.isError && (
- *       <p>Error: {guestAuth.error?.message}</p>
- *     )}
- *   </div>
- * );
  * ```
  */
 const DEFAULT_GUEST_HOOK_OPTIONS: GuestHookOptions = {}
 
 export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
+  const { startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
+  const authInvocationRef = useRef(0)
   const { tryUseWallet } = useConnectToWalletPostAuth()
 
   const signUpGuest = useCallback(
     async (options: GuestHookOptions = {}): Promise<GuestHookResult> => {
+      let settleStale: (() => boolean) | undefined
       try {
         setStatus({
           status: 'loading',
         })
 
-        let user: User | undefined
+        const transition = startLocalAuthTransition(
+          startAuthTransition,
+          authInvocationRef,
+          async (): Promise<User | undefined> => {
+            try {
+              logger.log('Guest signup: calling auth.signUpGuest()')
+              const result = await client.auth.signUpGuest()
+              logger.log('Guest signup: authentication succeeded')
+              return result.user
+            } catch (authError: unknown) {
+              const isAlreadyLoggedIn =
+                (authError as Error)?.message?.includes('Already logged in') ||
+                (authError as Error)?.name === 'SessionError'
+              if (!isAlreadyLoggedIn) throw authError
 
-        try {
-          logger.log('Guest signup: calling auth.signUpGuest()')
-          const result = await client.auth.signUpGuest()
-          user = result.user
-          logger.log('Guest signup: authentication succeeded')
-        } catch (authError: unknown) {
-          const isAlreadyLoggedIn =
-            (authError as Error)?.message?.includes('Already logged in') ||
-            (authError as Error)?.name === 'SessionError'
-          if (isAlreadyLoggedIn) {
-            logger.log('Guest signup: already logged in, using existing session')
-            user = (await client.user.get()) ?? undefined
-            if (!user) throw authError
-          } else {
-            throw authError
-          }
-        }
+              logger.log('Guest signup: already logged in, using existing session')
+              const user = (await client.user.get()) ?? undefined
+              if (!user) throw authError
+              return user
+            }
+          },
+          () => setStatus({ status: 'idle' })
+        )
+        settleStale = transition.settleStale
+        const user = await transition.result
+        if (settleStale()) return authTransitionSupersededResult()
 
         await updateUser(user)
+        if (settleStale()) return authTransitionSupersededResult()
 
         logger.log('Guest signup: calling tryUseWallet()')
         const { wallet } = await tryUseWallet({
           logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
           recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
         })
+        if (settleStale()) return authTransitionSupersededResult()
 
         if (wallet && typeof updateEmbeddedAccounts === 'function') {
           await updateEmbeddedAccounts()
+          if (settleStale()) return authTransitionSupersededResult()
         }
 
         setStatus({
@@ -140,6 +122,7 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_
           data: { user, wallet },
         })
       } catch (error) {
+        if (settleStale?.()) return authTransitionSupersededResult()
         logger.error('Guest signup failed:', error)
         const openfortError = new AuthenticationError('Failed to signup guest.', { cause: toError(error) })
 
@@ -155,7 +138,7 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_
         })
       }
     },
-    [client, updateUser, updateEmbeddedAccounts, tryUseWallet, hookOptions]
+    [client, startAuthTransition, updateUser, updateEmbeddedAccounts, tryUseWallet, hookOptions]
   )
 
   return {

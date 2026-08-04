@@ -1,6 +1,6 @@
 'use client'
 
-import { type EasingFunction, motion } from 'framer-motion'
+import { type EasingFunction, motion, type Transition } from 'framer-motion'
 import { useId } from 'react'
 import { keyframes } from 'styled-components'
 import styled from '../../../styles/styled/index.js'
@@ -21,7 +21,7 @@ export type Easing =
   | EasingFunction
 
 const pulseAnim = { scale: [0.9, 1.25, 1.6], opacity: [0, 0.11, 0] }
-const pulseTransition = { ease: 'linear', duration: 2, repeat: Infinity }
+const pulseTransition = { ease: 'linear', duration: 2, repeat: Infinity } satisfies Transition
 
 const Center = styled.div`
   position: absolute;

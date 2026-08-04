@@ -16,6 +16,8 @@ import {
   WALLET_RPC_URLS,
 } from '@/lib/chains'
 
+const polygonMintContract = import.meta.env.VITE_POLYGON_MINT_CONTRACT as `0x${string}` | undefined
+
 const defaultWalletConfig: OpenfortWalletConfig = {
   shieldPublishableKey: import.meta.env.VITE_SHIELD_PUBLISHABLE_KEY,
   chainType: ChainTypeEnum.EVM,
@@ -27,7 +29,7 @@ const defaultWalletConfig: OpenfortWalletConfig = {
     ),
     assets: {
       [base.id]: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`], // USDC on Base
-      [polygonAmoy.id]: [import.meta.env.VITE_POLYGON_MINT_CONTRACT!],
+      ...(polygonMintContract ? { [polygonAmoy.id]: [polygonMintContract] } : {}),
     },
   },
   solana: {

@@ -13,6 +13,10 @@ export type {
   CreateEmbeddedWalletResult,
 } from '../shared/types.js'
 export { useSolanaEmbeddedWallet } from './hooks/useSolanaEmbeddedWallet.js'
+export type {
+  SolanaAsset,
+  UseSolanaWalletAssetsResult,
+} from './hooks/useSolanaWalletAssets.js'
 export { useSolanaWalletAssets } from './hooks/useSolanaWalletAssets.js'
 export type {
   // Wallet types

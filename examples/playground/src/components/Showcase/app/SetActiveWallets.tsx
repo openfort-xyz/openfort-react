@@ -6,7 +6,8 @@ import { EmbeddedWalletsList } from './EmbeddedWalletsList'
 export const SetActiveWalletsCardEthereum = () => {
   const { ethereum, activeWallet, connectingAddress } = useActiveEthereumEmbeddedWallet()
   const setActive = async (opts: { address: `0x${string}`; password?: string; recoveryMethod?: RecoveryMethod }) => {
-    await ethereum.setActive(opts)
+    const result = await ethereum.setActive(opts)
+    if (result.error) throw result.error
   }
 
   return (

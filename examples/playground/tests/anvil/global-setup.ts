@@ -10,7 +10,15 @@
 
 import { type ChildProcess, spawn } from 'node:child_process'
 import { createPublicClient, http } from 'viem'
-import { ANVIL_PORT, ANVIL_RPC_URL, FORK_BLOCK_NUMBER, FORK_CHAIN, FORK_UPSTREAM_URL } from './fork'
+import {
+  ANVIL_PORT,
+  ANVIL_RPC_URL,
+  FORK_BLOCK_NUMBER,
+  FORK_CHAIN,
+  FORK_UPSTREAM_URL,
+  forkUpstreamOrigin,
+  redactForkDiagnostics,
+} from './fork.js'
 
 const READY_TIMEOUT_MS = 90_000
 const POLL_INTERVAL_MS = 250
@@ -34,7 +42,7 @@ async function waitUntilReady(anvil: ChildProcess, stderr: () => string): Promis
 
   throw new Error(
     `anvil did not answer on ${ANVIL_RPC_URL} within ${READY_TIMEOUT_MS}ms. ` +
-      `Check that ${FORK_UPSTREAM_URL} is reachable.\n${stderr()}`
+      `Check that ${forkUpstreamOrigin(FORK_UPSTREAM_URL)} is reachable.\n${stderr()}`
   )
 }
 
@@ -71,7 +79,7 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   process.on('exit', stop)
 
   try {
-    await waitUntilReady(anvil, () => stderr)
+    await waitUntilReady(anvil, () => redactForkDiagnostics(stderr))
   } catch (error) {
     stop()
     throw error

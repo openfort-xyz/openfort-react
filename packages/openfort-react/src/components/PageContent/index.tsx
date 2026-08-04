@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useSignOut } from '../../hooks/openfort/auth/useSignOut.js'
+import { usePageActivity } from '../Common/Modal/pageActivity.js'
 import { ModalHeading } from '../Common/Modal/styles.js'
 import type { SetRouteOptions } from '../Openfort/types.js'
 import { useOpenfort } from '../Openfort/useOpenfort.js'
@@ -26,6 +27,7 @@ export const PageContent = ({
   header,
   className,
 }: PageContentProps) => {
+  const pageActive = usePageActivity()
   const { setOnBack, setRoute, setPreviousRoute, setRouteHistory } = useOpenfort()
   const { signOut } = useSignOut()
 
@@ -55,6 +57,7 @@ export const PageContent = ({
   const backMode = onBack === 'inherit' ? 'inherit' : onBack === null ? 'clear-history' : onBack ? 'handle' : 'clear'
 
   useEffect(() => {
+    if (!pageActive) return
     switch (backMode) {
       case 'inherit':
         break
@@ -71,7 +74,7 @@ export const PageContent = ({
       default:
         setOnBack(null)
     }
-  }, [backMode, handleBack, setOnBack, setRouteHistory])
+  }, [pageActive, backMode, handleBack, setOnBack, setRouteHistory])
 
   return (
     <PageContentStyle className={className} style={{ width }}>

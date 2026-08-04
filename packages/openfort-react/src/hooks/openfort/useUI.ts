@@ -5,6 +5,7 @@ import React from 'react'
 import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types.js'
 import { useOpenfort, useOpenfortForms, useOpenfortRouting } from '../../components/Openfort/useOpenfort.js'
 import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
+import { WalletError } from '../../errors/wallet.js'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
@@ -106,7 +107,14 @@ export function useUI() {
   // keeps useUI off the embedded-wallet hooks, which hold a provider each.
   const isConnected = strategy?.isConnected(state) ?? false
 
+  const rejectPendingSignature = () => {
+    if (!signRequest) return
+    signRequest.settle({ error: new WalletError('Signature request was cancelled.') })
+    setSignRequest((current) => (current === signRequest ? null : current))
+  }
+
   function defaultOpen() {
+    rejectPendingSignature()
     setOpen(true)
     if (isAccountId(connector.id)) {
       setConnector({ id: '' })
@@ -124,12 +132,14 @@ export function useUI() {
    * for the active chain, skipping asset/amount/recipient entry.
    */
   const openSendPreview = (tx: { to: string; amount: string; asset?: Asset }) => {
+    rejectPendingSignature()
     setSendForm({ recipient: tx.to, amount: tx.amount, asset: tx.asset ?? { type: 'native', balance: BigInt(0) } })
     setOpen(true)
     setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_SEND_CONFIRMATION : routes.SEND_CONFIRMATION)
   }
 
   const gotoAndOpen = (route: ValidRoutes) => {
+    rejectPendingSignature()
     const safeList = isConnected ? safeRoutes.connected : safeRoutes.disconnected
     const fallback = isConnected ? routes.CONNECTED : routes.PROVIDERS
 
@@ -150,8 +160,7 @@ export function useUI() {
   }
 
   const close = () => {
-    signRequest?.reject(new Error('User rejected the signature request'))
-    setSignRequest(null)
+    rejectPendingSignature()
     setOpen(false)
   }
 

@@ -9,12 +9,14 @@ import {
 } from '@openfort/openfort-js'
 import { useCallback, useContext, useEffect } from 'react'
 import type { EmbeddedAccountRequest } from '../../actions/createEmbeddedWallet.js'
+import { WalletNotConnectedError } from '../../errors/wallet.js'
 import type { WalletFlowStatus } from '../../hooks/openfort/walletTypes.js'
 import type {
   EmbeddedWalletChainBindings,
   EmbeddedWalletSyncParameters,
 } from '../../shared/hooks/createEmbeddedWalletHook.js'
 import { createEmbeddedWalletHook, rejectUnreadyProvider } from '../../shared/hooks/createEmbeddedWalletHook.js'
+import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
 import { getDefaultSolanaRpcUrl } from '../../utils/rpc.js'
 import { getTransactionBytes } from '../operations.js'
 import { createSolanaProvider } from '../provider.js'
@@ -41,21 +43,52 @@ function createSolanaProviderForAccount(
   client: Openfort,
   account: EmbeddedAccount
 ): OpenfortEmbeddedSolanaWalletProvider {
-  const signBytes = async (transaction: SolanaTransaction): Promise<SignedSolanaTransaction> => {
+  const assertBoundAccount = async (): Promise<void> => {
+    const currentAccount = await client.embeddedWallet.get()
+    if (currentAccount?.id !== account.id || currentAccount.address !== account.address) {
+      throw new WalletNotConnectedError('The active Solana wallet changed before the operation could run.')
+    }
+  }
+  const signBytes = async (
+    transaction: SolanaTransaction,
+    assertCurrent: () => void
+  ): Promise<SignedSolanaTransaction> => {
     const messageBytes = getTransactionBytes(transaction)
+    assertCurrent()
     const signature = await client.embeddedWallet.signMessage(new Uint8Array(messageBytes), SIGN_RAW)
     return { signature: signature as string, publicKey: account.address }
+  }
+  const signAllBytes = async (
+    transactions: SolanaTransaction[],
+    assertCurrent: () => void
+  ): Promise<SignedSolanaTransaction[]> => {
+    const signed: SignedSolanaTransaction[] = []
+    for (const transaction of transactions) signed.push(await signBytes(transaction, assertCurrent))
+    return signed
   }
 
   return createSolanaProvider({
     account,
     signMessage: async (message: string): Promise<string> => {
-      const signature = await client.embeddedWallet.signMessage(message, SIGN_RAW)
+      const signature = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+        await assertBoundAccount()
+        assertCurrent()
+        return client.embeddedWallet.signMessage(message, SIGN_RAW)
+      })
       return signature as string
     },
-    signTransaction: signBytes,
+    signTransaction: (transaction: SolanaTransaction) =>
+      runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+        await assertBoundAccount()
+        assertCurrent()
+        return signBytes(transaction, assertCurrent)
+      }),
     signAllTransactions: (transactions: SolanaTransaction[]): Promise<SignedSolanaTransaction[]> =>
-      Promise.all(transactions.map(signBytes)),
+      runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+        await assertBoundAccount()
+        assertCurrent()
+        return signAllBytes(transactions, assertCurrent)
+      }),
   })
 }
 
@@ -126,7 +159,8 @@ function useSyncSolanaWallet(parameters: SolanaSyncParameters): void {
       embeddedState !== EmbeddedState.READY ||
       state.status === 'connecting' ||
       state.status === 'reconnecting' ||
-      state.status === 'creating'
+      state.status === 'creating' ||
+      state.status === 'needs-recovery'
       // NOTE: 'error' is intentionally NOT blocked here — mirrors EVM hook behaviour.
       // If setActive failed but embeddedState is READY, the sync can self-heal by
       // rebuilding the provider directly (no recover() call needed).

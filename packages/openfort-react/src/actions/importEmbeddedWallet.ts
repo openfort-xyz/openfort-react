@@ -1,5 +1,8 @@
 import type { EmbeddedAccount } from '@openfort/openfort-js'
+import { ChainTypeEnum } from '@openfort/openfort-js'
+import { asOpenfortError } from '../errors/base.js'
 import { WalletConfigNotFoundError } from '../errors/config.js'
+import { WalletImportError } from '../errors/wallet.js'
 import { buildRecoveryParams } from '../shared/utils/recovery.js'
 import { activateEmbeddedAccount } from './activateEmbeddedAccount.js'
 import { buildClientRecoveryConfig } from './buildClientRecoveryConfig.js'
@@ -25,6 +28,8 @@ export async function importEmbeddedWallet(parameters: ImportEmbeddedWalletParam
     accountRequest,
     recovery,
     privateKey,
+    assertCurrent,
+    shouldPublish,
     setActiveEmbeddedAddress,
     updateEmbeddedAccounts,
   } = parameters
@@ -33,11 +38,25 @@ export async function importEmbeddedWallet(parameters: ImportEmbeddedWalletParam
     throw new WalletConfigNotFoundError()
   }
 
-  const recoveryParams = await buildRecoveryParams(recovery, buildClientRecoveryConfig(client, walletConfig))
+  try {
+    const recoveryParams = await buildRecoveryParams(recovery, buildClientRecoveryConfig(client, walletConfig))
+    assertCurrent()
 
-  const account = await client.embeddedWallet.import({ privateKey, chainType, ...accountRequest, recoveryParams })
+    const account = await client.embeddedWallet.import({ privateKey, chainType, ...accountRequest, recoveryParams })
 
-  await activateEmbeddedAccount({ account, setActiveEmbeddedAddress, updateEmbeddedAccounts })
+    await activateEmbeddedAccount({
+      account,
+      assertCurrent,
+      shouldPublish,
+      setActiveEmbeddedAddress,
+      updateEmbeddedAccounts,
+    })
 
-  return account
+    return account
+  } catch (error) {
+    throw asOpenfortError(
+      error,
+      (cause) => new WalletImportError({ chain: chainType === ChainTypeEnum.EVM ? 'Ethereum' : 'Solana', cause })
+    )
+  }
 }

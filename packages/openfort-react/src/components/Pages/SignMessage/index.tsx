@@ -1,14 +1,18 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { asOpenfortError } from '../../../errors/base.js'
 import { UnsupportedOperationError } from '../../../errors/operation.js'
-import { WalletNotConnectedError } from '../../../errors/wallet.js'
+import { WalletError, WalletNotConnectedError } from '../../../errors/wallet.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { assertEmbeddedEthereumAccount } from '../../../shared/utils/assertEmbeddedEthereumAccount.js'
+import { runEmbeddedSignerOperation } from '../../../shared/utils/embeddedSignerOperationQueue.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import Button from '../../Common/Button/index.js'
 import { CopyButton } from '../../Common/CopyToClipboard/CopyButton.js'
+import type { SignRequest } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent } from '../../PageContent/index.js'
 import {
@@ -53,7 +57,35 @@ const SignMessage = () => {
   const [signing, setSigning] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [signature, setSignature] = useState<string | null>(null)
+  const mountedRef = useRef(false)
+  const activeRequestRef = useRef<SignRequest | null>(null)
+  const settledRequestsRef = useRef(new WeakSet<SignRequest>())
   const walletReady = chainType === ChainTypeEnum.SVM ? solana.status === 'connected' : wallet.status === 'connected'
+
+  useEffect(() => {
+    if (activeRequestRef.current && activeRequestRef.current !== signRequest) {
+      setSigning(false)
+      setError(null)
+      setSignature(null)
+    }
+    mountedRef.current = true
+    activeRequestRef.current = signRequest
+    const request = signRequest
+
+    return () => {
+      mountedRef.current = false
+      queueMicrotask(() => {
+        const requestWasReplaced = mountedRef.current && activeRequestRef.current !== request
+        const screenUnmounted = !mountedRef.current && activeRequestRef.current === request
+        if (!request || settledRequestsRef.current.has(request) || (!requestWasReplaced && !screenUnmounted)) return
+
+        settledRequestsRef.current.add(request)
+        request.settle({ error: new WalletError('Signature request was cancelled.') })
+        setSignRequest((current) => (current === request ? null : current))
+      })
+    }
+  }, [signRequest, setSignRequest])
+
   // Content height changes between the views; re-measure.
   useEffect(() => {
     triggerResize()
@@ -69,33 +101,52 @@ const SignMessage = () => {
   }
 
   const handleSign = async () => {
+    const request = signRequest
     setError(null)
     setSigning(true)
     try {
       let signed: string
       if (chainType === ChainTypeEnum.SVM) {
-        if (signRequest.kind !== 'message')
+        if (request.kind !== 'message')
           throw new UnsupportedOperationError({ operation: 'Typed data signing on Solana' })
         if (solana.status !== 'connected') throw new WalletNotConnectedError('No connected wallet to sign with.')
-        signed = await solana.provider.signMessage(signRequest.message)
+        signed = await solana.provider.signMessage(request.message)
       } else {
-        signed =
-          signRequest.kind === 'message'
-            ? await client.embeddedWallet.signMessage(signRequest.message)
-            : await client.embeddedWallet.signTypedData(
-                signRequest.typedData.domain ?? {},
-                signRequest.typedData.types,
-                signRequest.typedData.message
+        if (wallet.status !== 'connected') throw new WalletNotConnectedError('No connected wallet to sign with.')
+        const intendedAddress = wallet.address
+        signed = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+          const provider = await client.embeddedWallet.getEthereumProvider({ announceProvider: false })
+          assertCurrent()
+          await assertEmbeddedEthereumAccount(provider, intendedAddress)
+          assertCurrent()
+          return request.kind === 'message'
+            ? client.embeddedWallet.signMessage(request.message)
+            : client.embeddedWallet.signTypedData(
+                request.typedData.domain ?? {},
+                request.typedData.types,
+                request.typedData.message
               )
+        })
       }
 
-      signRequest.resolve(signed)
+      if (!mountedRef.current || activeRequestRef.current !== request || settledRequestsRef.current.has(request)) return
+      settledRequestsRef.current.add(request)
+      request.settle({ signature: signed })
       setSignature(signed)
       setSigning(false)
       triggerResize()
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to sign the message')
+    } catch (cause) {
+      if (!mountedRef.current || activeRequestRef.current !== request || settledRequestsRef.current.has(request)) return
+      const error = asOpenfortError(
+        cause,
+        (wrappedCause) => new WalletError('Failed to sign the message.', { cause: wrappedCause })
+      )
+      settledRequestsRef.current.add(request)
+      request.settle({ error })
+      setError(error.shortMessage)
       setSigning(false)
+      setSignRequest((current) => (current === request ? null : current))
+      setOpen(false)
     }
   }
 

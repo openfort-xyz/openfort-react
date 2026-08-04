@@ -14,6 +14,8 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
 import { currencyLogoUrl } from '../../../constants/logos.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { getOpenfortQueryInputScope, getOpenfortQueryScope, openfortKeys } from '../../../query/queryKeys.js'
 import { useQuery } from '../../../query/useQuery.js'
 import { getExplorerUrl } from '../../../shared/utils/explorer.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
@@ -38,6 +40,7 @@ import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesVal
 const SOL_DECIMALS = 9
 
 export const SolanaSendConfirmation = () => {
+  const client = useOpenfortCore((state) => state.client)
   const { sendForm, setRoute, publishableKey, triggerResize, walletConfig } = useOpenfort()
   const wallet = useSolanaEmbeddedWallet()
 
@@ -45,6 +48,8 @@ export const SolanaSendConfirmation = () => {
   const provider = wallet.status === 'connected' ? wallet.provider : undefined
   const cluster = wallet.cluster ?? 'devnet'
   const rpcUrl = wallet.rpcUrl
+  const clientScope = getOpenfortQueryScope(client)
+  const rpcScope = getOpenfortQueryInputScope(rpcUrl)
 
   const recipient = sendForm.recipient
   const amount = sendForm.amount
@@ -57,7 +62,10 @@ export const SolanaSendConfirmation = () => {
 
   // Real network fee from the RPC (getFeeForMessage). Null while loading or on failure.
   const feeQuery = useQuery({
-    queryKey: ['sol-fee', address, recipient, rpcUrl],
+    queryKey:
+      address && recipient && rpcScope
+        ? openfortKeys.solanaFee({ clientScope, address, recipient, rpcScope })
+        : openfortKeys.solanaFee(),
     queryFn: () =>
       address && recipient && rpcUrl
         ? estimateSolanaTransferFeeLamports({ from: address, to: recipient, rpcUrl })

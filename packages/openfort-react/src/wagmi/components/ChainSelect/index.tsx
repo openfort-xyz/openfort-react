@@ -3,7 +3,9 @@
 import { motion } from 'framer-motion'
 import type React from 'react'
 import { useEffect, useState } from 'react'
-import { useChainId } from 'wagmi'
+// wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
+// namespace import rather than named bindings.
+import * as wagmi from 'wagmi'
 import Chain from '../../../components/Common/Chain/index.js'
 import { SwitchChainButton } from '../../../components/Common/Chain/styles.js'
 import Tooltip from '../../../components/Common/Tooltip/index.js'
@@ -35,7 +37,7 @@ const ChevronDown = ({ ...props }) => (
 const ChainSelector: React.FC = () => {
   const { open, triggerResize, setRoute } = useOpenfort()
   const [isOpen, setIsOpen] = useState(false)
-  const chainId = useChainId()
+  const chainId = wagmi.useChainId()
   const { chains } = useSwitchChainFiltered()
 
   const chain = chains.find((c) => c.id === chainId)

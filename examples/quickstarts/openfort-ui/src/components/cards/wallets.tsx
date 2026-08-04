@@ -139,10 +139,12 @@ export const Wallets = () => {
     setExportError(null)
     setExportedKey(null)
     try {
-      const key = await exportPrivateKey()
-      setExportedKey(key)
-    } catch {
-      setExportError('Cannot export private key for this wallet.')
+      const result = await exportPrivateKey()
+      if (result.error) {
+        setExportError(result.error.message)
+      } else {
+        setExportedKey(result.privateKey)
+      }
     } finally {
       setIsExporting(false)
     }

@@ -89,3 +89,7 @@ test('exports', () => {
     ]
   `)
 })
+
+test('keeps the legacy error category export as an alias', () => {
+  expect(index.OpenfortErrorType).toBe(index.OpenfortReactErrorType)
+})

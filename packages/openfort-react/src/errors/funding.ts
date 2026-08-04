@@ -3,9 +3,17 @@ import { OpenfortConfigError } from './config.js'
 
 type FundingErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 
-export type FundingNotConfiguredErrorType = FundingNotConfiguredError & { name: 'FundingNotConfiguredError' }
-
-/** A funding action ran without the funding service being pointed at a host. */
+/**
+ * A funding action ran without the funding service being pointed at a host.
+ *
+ * @example
+ * ```ts
+ * import { FundingNotConfiguredError } from '@openfort/react'
+ *
+ * const error = new FundingNotConfiguredError()
+ * console.log(error.name)
+ * ```
+ */
 export class FundingNotConfiguredError extends OpenfortConfigError {
   override name = 'FundingNotConfiguredError'
 
@@ -17,9 +25,17 @@ export class FundingNotConfiguredError extends OpenfortConfigError {
   }
 }
 
-export type FundingErrorType = FundingError & { name: 'FundingError' }
-
-/** A funding session or quote request failed. */
+/**
+ * A funding session or quote request failed.
+ *
+ * @example
+ * ```ts
+ * import { FundingError } from '@openfort/react'
+ *
+ * const error = new FundingError('Unable to create a funding quote.')
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class FundingError extends OpenfortError {
   override name = 'FundingError'
 

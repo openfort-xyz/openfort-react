@@ -1,12 +1,14 @@
 'use client'
 
 import type { User } from '@openfort/openfort-js'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useOpenfortRouting } from '../../../components/Openfort/useOpenfort.js'
 import { AuthenticationError, NotAuthenticatedError } from '../../../errors/auth.js'
 import { type OpenfortError, toError } from '../../../errors/base.js'
 import { InvalidEmailError, MissingParameterError } from '../../../errors/validation.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { isValidEmail } from '../../../utils/validation.js'
@@ -81,73 +83,29 @@ type UseEmailHookOptions = {
  *
  * @example
  * ```tsx
- * const emailAuth = useEmailAuth({
- *   onSignInEmailSuccess: (result) => console.log('Signed in:', result.user),
- *   onSignInEmailError: (error) => console.error('Sign-in failed:', error),
- *   emailVerificationRedirectTo: 'https://yourapp.com/verify',
- *   recoverWalletAutomatically: true,
- * });
+ * import { useEmailAuth } from '@openfort/react'
  *
- * // Sign up with email and password
- * await emailAuth.signUpEmail({
- *   email: 'user@example.com',
- *   password: 'securePassword123',
- *   name: 'John Doe',
- * });
- *
- * // Sign in with email and password
- * await emailAuth.signInEmail({
- *   email: 'user@example.com',
- *   password: 'securePassword123',
- * });
- *
- * // Request password reset
- * await emailAuth.requestResetPassword({
- *   email: 'user@example.com',
- * });
- *
- * // Reset password with state token
- * await emailAuth.resetPassword({
- *   email: 'user@example.com',
- *   password: 'newPassword123',
- *   state: 'reset-token-from-email',
- * });
- *
- * // Verify email with state token
- * await emailAuth.verifyEmail({
- *   email: 'user@example.com',
- *   state: 'verification-token-from-email',
- * });
- *
- * // Link email to existing authenticated account
- * await emailAuth.linkEmail({
- *   email: 'secondary@example.com',
- *   password: 'password123',
- * });
- *
- * // Check authentication state
- * if (emailAuth.isLoading) {
- *   console.log('Processing authentication...');
- * } else if (emailAuth.isError) {
- *   console.error('Authentication error:', emailAuth.error);
- * } else if (emailAuth.isSuccess) {
- *   console.log('Authentication successful');
- * }
- *
- * // Handle email verification requirement
- * if (emailAuth.requiresEmailVerification) {
- *   console.log('Please check your email to verify your account');
+ * function EmailSignIn() {
+ *   const { signInEmail, isLoading, error } = useEmailAuth()
+ *   const signIn = async () => {
+ *     const result = await signInEmail({ email: 'user@example.com', password: 'securePassword123' })
+ *     if (result.error) return
+ *     console.log(result.user)
+ *   }
+ *   return <button onClick={signIn} disabled={isLoading}>{error ? error.shortMessage : 'Sign in'}</button>
  * }
  * ```
  */
 export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
   const client = useOpenfortCore((s) => s.client)
+  const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const { open: isOpen } = useOpenfortRouting()
   const [requiresEmailVerification, setRequiresEmailVerification] = useState(false)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
+  const authInvocationRef = useRef(0)
   const reset = useCallback(() => {
     setStatus({
       status: 'idle',
@@ -159,6 +117,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
 
   const signInEmail = useCallback(
     async (options: SignInEmailOptions): Promise<EmailAuthResult> => {
+      let settleStale: (() => boolean) | undefined
       try {
         setStatus({
           status: 'loading',
@@ -191,10 +150,19 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
           })
         }
 
-        const result = await client.auth.logInWithEmailPassword({
-          email: options.email,
-          password: options.password,
-        })
+        const transition = startLocalAuthTransition(
+          startAuthTransition,
+          authInvocationRef,
+          () =>
+            client.auth.logInWithEmailPassword({
+              email: options.email,
+              password: options.password,
+            }),
+          () => setStatus({ status: 'idle' })
+        )
+        settleStale = transition.settleStale
+        const result = await transition.result
+        if (settleStale()) return authTransitionSupersededResult()
 
         if ('action' in result) {
           setStatus({
@@ -210,6 +178,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
               isOpen,
             }),
           })
+          if (settleStale()) return authTransitionSupersededResult()
 
           setRequiresEmailVerification(true)
           return onSuccess<EmailAuthResult>({
@@ -218,18 +187,19 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
             options,
           })
         } else {
+          const user = result.user
+          await updateUser(user)
+          if (settleStale()) return authTransitionSupersededResult()
+
           const { wallet } = await tryUseWallet({
             logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
             recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
           })
+          if (settleStale()) return authTransitionSupersededResult()
 
           setStatus({
             status: 'success',
           })
-          const user = result.user
-
-          await updateUser()
-
           return onSuccess<EmailAuthResult>({
             data: { user, wallet },
             hookOptions,
@@ -237,6 +207,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
           })
         }
       } catch (e) {
+        if (settleStale?.()) return authTransitionSupersededResult()
         const error = new AuthenticationError('Failed to login with email and password.', { cause: toError(e) })
 
         setStatus({
@@ -251,7 +222,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, updateUser, hookOptions, isOpen, tryUseWallet]
+    [client, startAuthTransition, updateUser, hookOptions, isOpen, tryUseWallet]
   )
 
   const requestResetPassword = useCallback(
@@ -367,6 +338,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
 
   const signUpEmail = useCallback(
     async (options: SignUpEmailOptions): Promise<EmailAuthResult> => {
+      let settleStale: (() => boolean) | undefined
       try {
         if (!options.email || !options.password) {
           const error = new MissingParameterError({ params: ['email', 'password'] })
@@ -399,31 +371,42 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
         setRequiresEmailVerification(false)
 
-        const result = await client.auth.signUpWithEmailPassword({
-          email: options.email,
-          password: options.password,
-          callbackURL: buildCallbackUrl({
-            email: options.email,
-            callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
-            provider: 'email',
-            isOpen,
-          }),
-          ...(options.name && { name: options.name }),
-        })
+        const transition = startLocalAuthTransition(
+          startAuthTransition,
+          authInvocationRef,
+          () =>
+            client.auth.signUpWithEmailPassword({
+              email: options.email,
+              password: options.password,
+              callbackURL: buildCallbackUrl({
+                email: options.email,
+                callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
+                provider: 'email',
+                isOpen,
+              }),
+              ...(options.name && { name: options.name }),
+            }),
+          () => setStatus({ status: 'idle' })
+        )
+        settleStale = transition.settleStale
+        const result = await transition.result
+        if (settleStale()) return authTransitionSupersededResult()
 
         // API returns token when auth succeeds immediately; otherwise requires email verification
         if ('token' in result && result.token != null) {
+          const user = result.user
+          await updateUser(user)
+          if (settleStale()) return authTransitionSupersededResult()
+
           const { wallet } = await tryUseWallet({
             logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
             recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
           })
+          if (settleStale()) return authTransitionSupersededResult()
 
           setStatus({
             status: 'success',
           })
-          const user = result.user
-          await updateUser(user)
-
           return onSuccess<EmailAuthResult>({
             data: { user, wallet },
             hookOptions,
@@ -442,6 +425,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
           })
         }
       } catch (e) {
+        if (settleStale?.()) return authTransitionSupersededResult()
         const error = new AuthenticationError('Failed to login with email and password.', { cause: toError(e) })
         setStatus({
           status: 'error',
@@ -455,11 +439,14 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, updateUser, hookOptions, isOpen, tryUseWallet]
+    [client, startAuthTransition, updateUser, hookOptions, isOpen, tryUseWallet]
   )
 
   const linkEmail = useCallback(
     async (options: LinkEmailOptions): Promise<EmailAuthResult> => {
+      const session = captureAuthSession()
+      let mutationIsCurrent: (() => boolean) | undefined
+      const isCurrent = () => session.isCurrent() && (mutationIsCurrent?.() ?? true)
       try {
         if (!isValidEmail(options.email)) {
           const error = new InvalidEmailError()
@@ -474,34 +461,31 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
           })
         }
 
-        await client.validateAndRefreshToken()
-        const authToken = await client.getAccessToken()
-        if (!authToken) {
-          logger.log('No token found')
-          const error = new NotAuthenticatedError('No token found.')
-          setStatus({
-            status: 'error',
-            error,
-          })
-          return onError<EmailAuthResult>({
-            hookOptions,
-            options,
-            error,
-          })
-        }
+        const transition = startAuthenticatedMutation(async () => {
+          await client.validateAndRefreshToken()
+          if (!session.isCurrent()) return false
+          const authToken = await client.getAccessToken()
+          if (!session.isCurrent()) return false
+          if (!authToken) {
+            logger.log('No token found')
+            throw new NotAuthenticatedError('No token found.')
+          }
 
-        await client.auth.addEmail({
-          // name: options.name || '',
-          email: options.email,
-          // password: options.password,
-          // method: 'password',
-          callbackURL: buildCallbackUrl({
-            callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
+          await client.auth.addEmail({
             email: options.email,
-            provider: 'email',
-            isOpen,
-          }),
+            callbackURL: buildCallbackUrl({
+              callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
+              email: options.email,
+              provider: 'email',
+              isOpen,
+            }),
+          })
+          return true
         })
+        mutationIsCurrent = transition.isCurrent
+        const linked = await transition.result
+        if (!isCurrent()) return authTransitionSupersededResult()
+        if (!linked) return authTransitionSupersededResult()
         logger.log('Email linked successfully')
 
         return onSuccess<EmailAuthResult>({
@@ -510,7 +494,11 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
           options,
         })
       } catch (e) {
-        const error = new AuthenticationError('Failed to link email.', { cause: toError(e) })
+        if (!isCurrent()) return authTransitionSupersededResult()
+        const error =
+          e instanceof NotAuthenticatedError
+            ? e
+            : new AuthenticationError('Failed to link email.', { cause: toError(e) })
 
         setStatus({
           status: 'error',
@@ -524,7 +512,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
         })
       }
     },
-    [client, hookOptions, isOpen]
+    [captureAuthSession, client, hookOptions, isOpen, startAuthenticatedMutation]
   )
 
   const verifyEmail = useCallback(

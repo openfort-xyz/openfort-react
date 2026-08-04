@@ -18,14 +18,3 @@ regexes = [
   # every start and controls funds only inside a local fork.
   '''0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80''',
 ]
-
-[[allowlists]]
-description = "Test fixtures use public addresses and obviously fake values"
-paths = [
-  '''packages/openfort-react/src/.*\.test\.tsx?$''',
-  '''packages/openfort-react/src/__tests__/.*''',
-]
-
-[[allowlists]]
-description = "Environment templates hold placeholders, never real values"
-paths = ['''.*\.env\.example$''']

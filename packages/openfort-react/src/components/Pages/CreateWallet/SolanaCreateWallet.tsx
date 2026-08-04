@@ -2,9 +2,18 @@
 
 import { RecoveryMethod } from '@openfort/openfort-js'
 import { motion } from 'framer-motion'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { FingerPrintIcon, KeyIcon, LockIcon } from '../../../assets/icons.js'
 import { OpenfortError } from '../../../errors/base.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import {
+  clearPersistentOperation,
+  getOrCreatePersistentOperation,
+  getPersistentOperation,
+  type PersistentOperation,
+  PersistentOperationLaneBusyError,
+} from '../../../shared/utils/persistentOperationRegistry.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { logger } from '../../../utils/logger.js'
 import Button from '../../Common/Button/index.js'
@@ -20,6 +29,7 @@ import { PageContent, type SetOnBackFunction } from '../../PageContent/index.js'
 import { PasswordStrengthIndicator } from '../../PasswordStrength/PasswordStrengthIndicator.js'
 import { getPasswordStrength, MEDIUM_SCORE_THRESHOLD } from '../../PasswordStrength/password-utility.js'
 import { ProviderIcon, ProviderLabel, ProvidersButton } from '../Providers/styles.js'
+import { useLatestAsyncAttempt } from '../useLatestAsyncAttempt.js'
 import AutomaticRecoveryOtpPage from './AutomaticRecoveryOtpPage.js'
 import { OtherMethodButton } from './styles.js'
 import { useAutomaticRecovery } from './useAutomaticRecovery.js'
@@ -106,26 +116,72 @@ const SolanaCreatePasskey = ({
 }) => {
   const { triggerResize, setRoute } = useOpenfort()
   const embeddedWallet = useSolanaEmbeddedWallet()
+  const create = embeddedWallet.create
   const [shouldCreate, setShouldCreate] = useState(false)
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
+  const client = useOpenfortCore((state) => state.client)
+  const { captureAuthSession } = useAuthTransitions()
+  const operationLane = 'wallet-create:Solana'
+  const operationKey = `${operationLane}:passkey`
+  const { active, beginAttempt, isCurrentAttempt, cancelAttempt } = useLatestAsyncAttempt()
 
-  // Wallet creation is not idempotent, so this runs on the `shouldCreate` edge alone: re-running it
-  // for a new `embeddedWallet.create` identity would prompt the user for a second passkey.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: one create call per `shouldCreate` edge, see above
   useEffect(() => {
-    if (!shouldCreate) return
+    if (!active || !shouldCreate) return
+    const attempt = beginAttempt()
+    const session = captureAuthSession()
+    const operation = getOrCreatePersistentOperation({
+      owner: client,
+      key: operationKey,
+      lane: operationLane,
+      principalIsCurrent: session.isCurrent,
+      start: () => create({ recoveryMethod: RecoveryMethod.PASSKEY }),
+    })
+    let observing = true
     ;(async () => {
       logger.log('Creating Solana wallet with passkey recovery')
       try {
-        await embeddedWallet.create({ recoveryMethod: RecoveryMethod.PASSKEY })
+        const result = await operation.promise
+        if (!observing || !session.isCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
+        if (result.error) {
+          clearPersistentOperation(client, operationKey)
+          logger.log('Error creating Solana wallet with passkey', result.error)
+          setRecoveryError(new Error('Failed to create wallet'))
+          setShouldCreate(false)
+          return
+        }
+        setShouldCreate(false)
+        clearPersistentOperation(client, operationKey)
         setRoute(routes.SOL_CONNECTED)
       } catch (err) {
+        if (
+          !observing ||
+          !session.isCurrent() ||
+          (!operation.isCurrent() && !(err instanceof PersistentOperationLaneBusyError)) ||
+          !isCurrentAttempt(attempt)
+        )
+          return
+        clearPersistentOperation(client, operationKey)
         logger.log('Error creating Solana wallet with passkey', err)
         setRecoveryError(new Error('Failed to create wallet'))
         setShouldCreate(false)
       }
     })()
-  }, [shouldCreate])
+    return () => {
+      observing = false
+      cancelAttempt(attempt)
+    }
+  }, [
+    active,
+    shouldCreate,
+    create,
+    setRoute,
+    beginAttempt,
+    isCurrentAttempt,
+    cancelAttempt,
+    captureAuthSession,
+    client,
+    operationKey,
+  ])
 
   // Trigger creation on mount. We only land here when no Solana wallet exists.
   // Don't gate on embeddedState — the user may have an EVM wallet (embeddedState=READY)
@@ -145,7 +201,10 @@ const SolanaCreatePasskey = ({
         isError={!!recoveryError}
         header={recoveryError ? 'Invalid passkey.' : 'Creating wallet with passkey...'}
         description={recoveryError ? 'There was an error creating your passkey. Please try again.' : undefined}
-        onRetry={() => setShouldCreate(true)}
+        onRetry={() => {
+          setRecoveryError(null)
+          setShouldCreate(true)
+        }}
       />
       <OtherMethod currentMethod={RecoveryMethod.PASSKEY} onChangeMethod={onChangeMethod} />
     </PageContent>
@@ -167,25 +226,75 @@ const SolanaCreatePassword = ({
   const [showPasswordIsTooWeakError, setShowPasswordIsTooWeakError] = useState(false)
   const [loading, setLoading] = useState(false)
   const embeddedWallet = useSolanaEmbeddedWallet()
+  const { active, beginAttempt, isCurrentAttempt } = useLatestAsyncAttempt()
+  const client = useOpenfortCore((state) => state.client)
+  const { captureAuthSession } = useAuthTransitions()
+  const operationLane = 'wallet-create:Solana'
+  const operationKey = `${operationLane}:password`
 
-  const handleSubmit = async () => {
+  const observeCreation = useCallback(
+    async (
+      operation: PersistentOperation<Awaited<ReturnType<typeof embeddedWallet.create>>>,
+      principalIsCurrent: () => boolean
+    ) => {
+      setLoading(true)
+      const attempt = beginAttempt()
+      try {
+        const result = await operation.promise
+        if (!principalIsCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
+        clearPersistentOperation(client, operationKey)
+        if (result.error) {
+          setRecoveryError(result.error.message)
+          return
+        }
+        setRoute(routes.SOL_CONNECTED)
+      } catch (err) {
+        if (
+          !principalIsCurrent() ||
+          (!operation.isCurrent() && !(err instanceof PersistentOperationLaneBusyError)) ||
+          !isCurrentAttempt(attempt)
+        )
+          return
+        clearPersistentOperation(client, operationKey)
+        setRecoveryError(err instanceof OpenfortError ? err.message : 'Failed to create wallet. Please try again.')
+      } finally {
+        if (principalIsCurrent() && isCurrentAttempt(attempt)) setLoading(false)
+      }
+    },
+    [beginAttempt, client, isCurrentAttempt, operationKey, setRoute]
+  )
+
+  const handleSubmit = () => {
     if (getPasswordStrength(recoveryPhrase) < MEDIUM_SCORE_THRESHOLD) {
       setShowPasswordIsTooWeakError(true)
       return
     }
 
-    setLoading(true)
-    try {
-      await embeddedWallet.create({
-        recoveryMethod: RecoveryMethod.PASSWORD,
-        password: recoveryPhrase,
+    const authSession = captureAuthSession()
+    const existing = getPersistentOperation<Awaited<ReturnType<typeof embeddedWallet.create>>>(client, operationKey)
+    const operation =
+      existing ??
+      getOrCreatePersistentOperation({
+        owner: client,
+        key: operationKey,
+        lane: operationLane,
+        principalIsCurrent: authSession.isCurrent,
+        start: () =>
+          embeddedWallet.create({
+            recoveryMethod: RecoveryMethod.PASSWORD,
+            password: recoveryPhrase,
+          }),
       })
-      setRoute(routes.SOL_CONNECTED)
-    } catch (err) {
-      setRecoveryError(err instanceof OpenfortError ? err.message : 'Failed to create wallet. Please try again.')
-    }
-    setLoading(false)
+    void observeCreation(operation, authSession.isCurrent)
   }
+
+  useEffect(() => {
+    if (!active) return
+    const existing = getPersistentOperation<Awaited<ReturnType<typeof embeddedWallet.create>>>(client, operationKey)
+    if (!existing) return
+    const authSession = captureAuthSession()
+    void observeCreation(existing, authSession.isCurrent)
+  }, [active, captureAuthSession, client, observeCreation, operationKey])
 
   useEffect(() => {
     if (recoveryError) triggerResize()
@@ -219,6 +328,7 @@ const SolanaCreatePassword = ({
             type="password"
             placeholder="Enter your password"
             autoComplete="off"
+            disabled={loading}
           />
           <PasswordStrengthIndicator
             password={recoveryPhrase}
@@ -238,7 +348,7 @@ const SolanaCreatePassword = ({
               </ModalBody>
             </motion.div>
           )}
-          <Button onClick={handleSubmit} waiting={loading} disabled={loading}>
+          <Button type="submit" waiting={loading} disabled={loading}>
             Create wallet
           </Button>
         </form>

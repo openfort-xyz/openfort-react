@@ -97,6 +97,12 @@ describe("published templates", () => {
 
         expect(existsSync(path.join(projectDir, ".gitignore"))).toBe(true);
         expect(existsSync(path.join(projectDir, "gitignore"))).toBe(false);
+        const gitignore = readFileSync(
+          path.join(projectDir, ".gitignore"),
+          "utf8",
+        );
+        expect(gitignore).toContain(".env*");
+        expect(gitignore).toContain("!.env.example");
         expect(
           readFileSync(path.join(projectDir, ".env.example"), "utf8"),
         ).toContain("VITE_OPENFORT_PUBLISHABLE_KEY=");
@@ -106,9 +112,25 @@ describe("published templates", () => {
         ) as {
           scripts?: Record<string, string>;
           dependencies?: Record<string, string>;
+          devDependencies?: Record<string, string>;
         };
         expect(packageJson.scripts?.build).toBeTruthy();
         expect(packageJson.dependencies?.["@openfort/react"]).toBe("latest");
+        expect(packageJson.dependencies?.["@tanstack/react-query"]).toBe(
+          ">=5.99.2 <6",
+        );
+
+        const reactRange =
+          template === "solana-headless" ? "^19.0.0" : "^18.3.1";
+        const reactMajor = template === "solana-headless" ? "19" : "18";
+        expect(packageJson.dependencies?.react).toBe(reactRange);
+        expect(packageJson.dependencies?.["react-dom"]).toBe(reactRange);
+        expect(packageJson.devDependencies?.["@types/react"]).toMatch(
+          new RegExp(`^\\^${reactMajor}\\.`),
+        );
+        expect(packageJson.devDependencies?.["@types/react-dom"]).toMatch(
+          new RegExp(`^\\^${reactMajor}\\.`),
+        );
       }
     } finally {
       rmSync(sandbox, { recursive: true, force: true });

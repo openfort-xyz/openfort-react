@@ -49,14 +49,11 @@ export const Send = () => {
 
   const balanceSol = balance != null ? balance / 1e9 : null
   const balanceFormatted =
-    balanceSol != null
-      ? balanceSol < 0.001
-        ? balanceSol.toExponential(2)
-        : balanceSol.toFixed(4)
-      : null
+    balanceSol != null ? (balanceSol < 0.001 ? balanceSol.toExponential(2) : balanceSol.toFixed(4)) : null
 
   const handleSend = async (gasless: boolean) => {
-    if (solana.status !== 'connected' || !address) return
+    if (solana.status !== 'connected') return
+    if (!address) return
     const form = document.getElementById('send-sol-form') as HTMLFormElement
     const recipient = (form.elements.namedItem('recipient') as HTMLInputElement)?.value?.trim()
     const amountStr = (form.elements.namedItem('amount') as HTMLInputElement)?.value
@@ -99,7 +96,9 @@ export const Send = () => {
       }
       // Refresh balance after transaction
       if (address) {
-        fetchSolanaBalance(rpc, address).then(setBalance).catch(() => null)
+        fetchSolanaBalance(rpc, address)
+          .then(setBalance)
+          .catch(() => null)
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Transaction failed')
@@ -108,10 +107,7 @@ export const Send = () => {
     }
   }
 
-  const explorerUrl =
-    txSignature && cluster
-      ? getSolanaExplorerUrl(txSignature, cluster)
-      : null
+  const explorerUrl = txSignature && cluster ? getSolanaExplorerUrl(txSignature, cluster) : null
 
   const isConnected = solana.status === 'connected'
   const otherWallets = solana.wallets.filter((w) => w.address !== address)
@@ -179,24 +175,9 @@ export const Send = () => {
         </div>
       )}
 
-      <form
-        id="send-sol-form"
-        className="space-y-3"
-        onSubmit={(e) => e.preventDefault()}
-      >
-        <input
-          type="text"
-          name="recipient"
-          placeholder="Recipient address"
-        />
-        <input
-          type="number"
-          name="amount"
-          placeholder="Amount (SOL)"
-          step="0.001"
-          min="0.001"
-          defaultValue="0.001"
-        />
+      <form id="send-sol-form" className="space-y-3" onSubmit={(e) => e.preventDefault()}>
+        <input type="text" name="recipient" placeholder="Recipient address" />
+        <input type="number" name="amount" placeholder="Amount (SOL)" step="0.001" min="0.001" defaultValue="0.001" />
         <div className="flex gap-2">
           <button
             type="button"
@@ -222,21 +203,14 @@ export const Send = () => {
           <p className="text-green-400 text-sm">Transaction sent!</p>
           <TruncateData data={txSignature} />
           {explorerUrl && (
-            <a
-              href={explorerUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="text-sm text-primary hover:underline"
-            >
+            <a href={explorerUrl} target="_blank" rel="noreferrer" className="text-sm text-primary hover:underline">
               View on Solana Explorer
             </a>
           )}
         </div>
       )}
 
-      {error && (
-        <TruncateData data={error} className="text-red-500" />
-      )}
+      {error && <TruncateData data={error} className="text-red-500" />}
     </div>
   )
 }

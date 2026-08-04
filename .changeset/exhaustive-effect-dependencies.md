@@ -2,7 +2,7 @@
 '@openfort/react': patch
 ---
 
-Fix stale closures across hooks, providers and modal pages.
+Fixed stale closures across hooks, providers and modal pages.
 
 Email, OAuth and OTP sign-in built their verification callback URL from the modal's open flag as it stood when the callback was created, so a link mailed after the modal state changed pointed at the wrong destination; the same callbacks also ran post-auth wallet connection against an outdated wallet config. `useAuthCallback` now processes the URL callback when `enabled` flips from false to true instead of only on mount.
 

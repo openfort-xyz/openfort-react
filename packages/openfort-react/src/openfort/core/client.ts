@@ -20,8 +20,8 @@ export function createOpenfortClient(config: OpenfortSDKConfiguration): Openfort
 }
 
 /**
- * Compatibility no-op retained for callers that previously configured a shared client.
- * `OpenfortProvider` creates and provides its own client through React context.
+ * Deprecated no-op. `OpenfortProvider` creates and provides the active client
+ * through React context.
  *
  * @param client - Ignored. Pass configuration to `OpenfortProvider` instead.
  * @deprecated This function has no effect and will be removed in a future major release.
@@ -33,5 +33,5 @@ export function createOpenfortClient(config: OpenfortSDKConfiguration): Openfort
  * ```
  */
 export function setDefaultClient(_client: OpenfortClient): void {
-  // No-op: client is provided via CoreOpenfortProvider context
+  // The active client is provided by CoreOpenfortProvider.
 }

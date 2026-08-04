@@ -86,7 +86,8 @@ const Avatar: React.FC<{
 
   if (!isMounted) return <div style={{ width: size, height: size, borderRadius: radius }} />
 
-  if (context.uiConfig.customAvatar)
+  const CustomAvatar = context.uiConfig.customAvatar
+  if (CustomAvatar)
     return (
       <div
         style={{
@@ -96,13 +97,13 @@ const Avatar: React.FC<{
           overflow: 'hidden',
         }}
       >
-        {context.uiConfig.customAvatar({
-          address: address ?? ens?.address,
-          ensName: name ?? ens?.name,
-          ensImage: ens?.avatar,
-          size,
-          radius,
-        })}
+        <CustomAvatar
+          address={address ?? ens?.address}
+          ensName={name ?? ens?.name}
+          ensImage={ens?.avatar}
+          size={size}
+          radius={radius}
+        />
       </div>
     )
 

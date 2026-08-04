@@ -1,5 +1,5 @@
 import type { EmbeddedAccount } from '@openfort/openfort-js'
-import { AccountTypeEnum, ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
+import { AccountTypeEnum, ChainTypeEnum, EmbeddedState, OpenfortEvents, RecoveryMethod } from '@openfort/openfort-js'
 import type { Hex } from 'viem'
 import type { Mock } from 'vitest'
 import { vi } from 'vitest'
@@ -113,10 +113,23 @@ export function createMockOpenfortClient() {
   let currentOnChange: OnChange | null = null
   let currentOnError: OnError | null = null
   let currentState = EmbeddedState.NONE
+  let connectionLostListener:
+    | ((payload: { reason: 'rpc-timeout' | 'handshake-timeout' | 'iframe-reloaded' }) => void)
+    | null = null
 
   const unwatchFn = vi.fn()
 
   const client = {
+    eventEmitter: {
+      on: vi.fn((event: OpenfortEvents, listener: typeof connectionLostListener) => {
+        if (event === OpenfortEvents.ON_EMBEDDED_WALLET_CONNECTION_LOST) connectionLostListener = listener
+      }),
+      off: vi.fn((event: OpenfortEvents, listener: typeof connectionLostListener) => {
+        if (event === OpenfortEvents.ON_EMBEDDED_WALLET_CONNECTION_LOST && connectionLostListener === listener) {
+          connectionLostListener = null
+        }
+      }),
+    },
     embeddedWallet: {
       watchEmbeddedState: vi.fn((params: { onChange: OnChange; onError?: OnError }) => {
         currentOnChange = params.onChange
@@ -138,6 +151,7 @@ export function createMockOpenfortClient() {
     auth: {
       logout: vi.fn(async () => {}),
       signUpGuest: vi.fn(async () => ({})),
+      linkPhoneOtp: vi.fn(),
     },
     user: {
       get: vi.fn(async () => ({
@@ -163,6 +177,9 @@ export function createMockOpenfortClient() {
       emitError(error: Error) {
         currentOnError?.(error)
       },
+      emitConnectionLost(reason: 'rpc-timeout' | 'handshake-timeout' | 'iframe-reloaded') {
+        connectionLostListener?.({ reason })
+      },
       /** Get the current internal state */
       get currentState() {
         return currentState
@@ -172,8 +189,9 @@ export function createMockOpenfortClient() {
         currentState = EmbeddedState.NONE
         currentOnChange = null
         currentOnError = null
+        connectionLostListener = null
         unwatchFn.mockClear()
-        for (const ns of [client.embeddedWallet, client.auth, client.user]) {
+        for (const ns of [client.embeddedWallet, client.auth, client.user, client.eventEmitter]) {
           for (const val of Object.values(ns)) {
             if (typeof val === 'function' && 'mockClear' in val) {
               ;(val as ReturnType<typeof vi.fn>).mockClear()

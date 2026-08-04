@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { UIAuthProvider } from '../../../components/Openfort/types.js'
 import { AuthenticationError } from '../../../errors/auth.js'
+import { type OpenfortError, toError } from '../../../errors/base.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity.js'
+import { notifyHookCallback } from '../hookConsistency.js'
 import type { CreateWalletPostAuthOptions } from './useConnectToWalletPostAuth.js'
 import { type EmailVerificationResult, useEmailAuth } from './useEmailAuth.js'
 import { type StoreCredentialsResult, useOAuth } from './useOAuth.js'
@@ -29,8 +31,8 @@ type UseAuthCallbackOptions = {
  * This hook automatically processes authentication callbacks when the page loads with
  * authentication parameters in the URL. It handles both OAuth provider callbacks
  * (with access tokens) and email verification callbacks (with state tokens).
- * The hook extracts parameters from the URL and automatically calls the appropriate
- * authentication methods, then cleans up the URL parameters.
+ * The hook captures and removes callback parameters from the URL before it calls the
+ * appropriate authentication method.
  *
  * @param options - Optional configuration with callback functions and authentication options
  * @returns Current callback processing state and extracted information
@@ -91,6 +93,7 @@ export const useAuthCallback = ({
   const [provider, setProvider] = useState<UIAuthProvider | null>(null)
   const [email, setEmail] = useState<string | null>(null)
   const [alreadyVerified, setAlreadyVerified] = useState(false)
+  const [callbackError, setCallbackError] = useState<OpenfortError | null>(null)
   const {
     verifyEmail,
     isSuccess: isEmailSuccess,
@@ -112,7 +115,8 @@ export const useAuthCallback = ({
   // The callback effect below re-runs only when `enabled` flips, so it reads the handlers and
   // consumer options through this ref to always invoke the current ones. Depending on their
   // identities directly would re-run the effect on every render for no gain: `callbackProcessedRef`
-  // makes every run after the first a no-op, and the URL parameters are consumed exactly once.
+  // makes every run after the first a no-op, and Openfort-marked URL parameters are consumed
+  // exactly once.
   const latestRef = useRef({ verifyEmail, storeCredentials, hookOptions })
   useEffect(() => {
     latestRef.current = { verifyEmail, storeCredentials, hookOptions }
@@ -129,26 +133,46 @@ export const useAuthCallback = ({
       hookOptions: callbacks,
     } = latestRef.current
 
-    // Parse callback URL (fixes OF-1013 duplicate `?` issue)
     const url = parseCallbackUrl(window.location.href)
     const rawProvider = url.searchParams.get('openfortAuthProvider')
-    // Allowlist: UIAuthProvider values + callback-only providers set by buildCallbackUrl
-    const validProviders = new Set<string>([
-      ...Object.values(UIAuthProvider),
-      'email', // set by buildCallbackUrl for email verification
-      'password', // set by buildCallbackUrl for password reset
-    ])
+    if (rawProvider === null) return
+    setCallbackError(null)
+
+    const restoreReferrer = suppressReferrer()
+    const state = url.searchParams.get('state')
+    const callbackEmail = url.searchParams.get('email')
+    const userId = url.searchParams.get('user_id')
+    const token = url.searchParams.get('access_token')
+
+    try {
+      for (const key of [
+        'openfortAuthProvider',
+        'access_token',
+        'refresh_token',
+        'user_id',
+        'player_id',
+        'state',
+        'email',
+      ]) {
+        url.searchParams.delete(key)
+      }
+      window.history.replaceState(window.history.state, document.title, url.toString())
+    } finally {
+      restoreReferrer()
+    }
+
+    const validProviders = new Set<string>([...Object.values(UIAuthProvider), 'email', 'password'])
+    const reportCallbackError = (error: OpenfortError) => {
+      setCallbackError(error)
+      notifyHookCallback(callbacks.onError, error, 'onError')
+    }
 
     if (!rawProvider || !validProviders.has(rawProvider)) {
+      reportCallbackError(new AuthenticationError(`Unsupported authentication callback provider "${rawProvider}".`))
       return
     }
 
-    // Validated against the allowlist above
     const openfortAuthProvider = rawProvider
-
-    // Suppress Referer SYNCHRONOUSLY — before any async work — so that
-    // subresource requests cannot leak access_token to third parties.
-    const restoreReferrer = suppressReferrer()
 
     ;(async () => {
       setProvider(openfortAuthProvider as UIAuthProvider)
@@ -157,79 +181,51 @@ export const useAuthCallback = ({
         // The backend verifies the email server-side via /auth/verify-email?token=...
         // and then redirects here. If a `state` token is present we verify client-side
         // as well; otherwise the email is already verified and we just signal success.
-        const state = url.searchParams.get('state')
-        const email = url.searchParams.get('email')
-        const removeParams = () => {
-          ;['state', 'openfortAuthProvider', 'email'].forEach((key) => {
-            url.searchParams.delete(key)
-          })
-          window.history.replaceState({}, document.title, url.toString())
-          restoreReferrer()
-        }
-
-        if (state && email) {
+        if (state && callbackEmail) {
           // State present — verify client-side as well
           const options: OpenfortHookOptions<Omit<CallbackResult, 'type'>> = {
             onSuccess: (data) => {
-              callbacks.onSuccess?.({
-                ...data,
-                type: 'verifyEmail',
-              })
+              notifyHookCallback(callbacks.onSuccess, { ...data, type: 'verifyEmail' }, 'onSuccess')
             },
             onError: callbacks.onError,
           }
 
-          await runVerifyEmail({ email, state, ...options })
-          setEmail(email)
-          removeParams()
-        } else if (email) {
+          await runVerifyEmail({ email: callbackEmail, state, ...options })
+          setEmail(callbackEmail)
+        } else if (callbackEmail) {
           // No state — backend already verified the email, just signal success
-          setEmail(email)
+          setEmail(callbackEmail)
           setAlreadyVerified(true)
-          callbacks.onSuccess?.({
-            email,
-            type: 'verifyEmail',
-          })
-          removeParams()
+          notifyHookCallback(
+            callbacks.onSuccess,
+            {
+              email: callbackEmail,
+              type: 'verifyEmail',
+            },
+            'onSuccess'
+          )
         } else {
-          restoreReferrer()
           const err = new AuthenticationError('No email found in URL.')
           logger.error('No email found in URL')
-          callbacks.onError?.(err)
+          reportCallbackError(err)
           return
         }
       } else {
-        const userId = url.searchParams.get('user_id')
-        const token = url.searchParams.get('access_token')
-
         if (!userId || !token) {
-          restoreReferrer()
           logger.error(`Missing user id or access token`, {
             hasUserId: !!userId,
             hasToken: !!token,
           })
-          const err = new AuthenticationError('Missing player id or access token or refresh token.')
-          callbacks.onError?.(err)
-
+          const err = new AuthenticationError('Missing user id or access token.')
+          reportCallbackError(err)
           return
-        }
-
-        const removeParams = () => {
-          ;['openfortAuthProvider', 'access_token', 'user_id'].forEach((key) => {
-            url.searchParams.delete(key)
-          })
-          window.history.replaceState({}, document.title, url.toString())
-          restoreReferrer()
         }
 
         logger.log('Processing authentication callback')
 
         const options: OpenfortHookOptions<Omit<CallbackResult, 'type'>> = {
           onSuccess: (data) => {
-            callbacks.onSuccess?.({
-              ...data,
-              type: 'storeCredentials',
-            })
+            notifyHookCallback(callbacks.onSuccess, { ...data, type: 'storeCredentials' }, 'onSuccess')
           },
           onError: callbacks.onError,
         }
@@ -241,9 +237,14 @@ export const useAuthCallback = ({
           recoverWalletAutomatically: callbacks.recoverWalletAutomatically,
           ...options,
         })
-        removeParams()
       }
-    })()
+    })().catch((error) => {
+      const callbackFailure = new AuthenticationError('Failed to process authentication callback.', {
+        cause: toError(error),
+      })
+      logger.error('Failed to process authentication callback', callbackFailure)
+      reportCallbackError(callbackFailure)
+    })
   }, [enabled])
 
   return {
@@ -252,8 +253,8 @@ export const useAuthCallback = ({
     verifyEmail,
     storeCredentials,
     isLoading: isEmailLoading || isOAuthLoading,
-    isError: isEmailError || isOAuthError,
+    isError: callbackError !== null || isEmailError || isOAuthError,
     isSuccess: isEmailSuccess || isOAuthSuccess || alreadyVerified,
-    error: emailError || oAuthError,
+    error: callbackError || emailError || oAuthError,
   }
 }

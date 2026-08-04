@@ -31,7 +31,7 @@ export function useContentBounds(retriggers: readonly unknown[]) {
   const nodeRef = useRef<HTMLElement | null>(null)
   const observerRef = useRef<ResizeObserver | null>(null)
   // Held in a ref so a page swap during the block window cancels the pending timer.
-  const blockTimeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const blockTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Re-measuring is cheap and happens on every resize notification, so keep the
   // previous state object when nothing moved.
@@ -43,10 +43,18 @@ export function useContentBounds(retriggers: readonly unknown[]) {
 
   const contentRef = useCallback(
     (node: HTMLElement | null) => {
-      if (!node) return
+      if (!node) {
+        nodeRef.current = null
+        observerRef.current?.disconnect()
+        observerRef.current = null
+        clearTimeout(blockTimeoutRef.current)
+        blockTimeoutRef.current = undefined
+        setInTransition(false)
+        return
+      }
       nodeRef.current = node
 
-      setInTransition(inTransition !== undefined)
+      setInTransition((current) => current !== undefined)
       clearTimeout(blockTimeoutRef.current)
       blockTimeoutRef.current = setTimeout(() => setInTransition(false), transitionBlockMs)
 
@@ -62,7 +70,7 @@ export function useContentBounds(retriggers: readonly unknown[]) {
       observer.observe(node)
       observerRef.current = observer
     },
-    [inTransition, updateBounds]
+    [updateBounds]
   )
 
   // `retriggers` are triggers rather than inputs: the effect re-reads the same
@@ -71,7 +79,14 @@ export function useContentBounds(retriggers: readonly unknown[]) {
     if (nodeRef.current) updateBounds(nodeRef.current)
   }, [...retriggers, updateBounds])
 
-  useEffect(() => () => observerRef.current?.disconnect(), [])
+  useEffect(
+    () => () => {
+      observerRef.current?.disconnect()
+      clearTimeout(blockTimeoutRef.current)
+      nodeRef.current = null
+    },
+    []
+  )
 
   /** Forget the last measurement, so a reopened modal sizes itself from scratch. */
   const clearBounds = useCallback(() => setDimensions(unmeasured), [])

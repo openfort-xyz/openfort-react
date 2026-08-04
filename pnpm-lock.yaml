@@ -6,7 +6,7 @@ settings:
 
 overrides:
   bn.js: '>=5.2.3'
-  axios: '>=1.15.1'
+  axios: '>=1.18.1'
   react: 18.3.1
   react-dom: 18.3.1
   '@types/react': 18.3.1
@@ -17,7 +17,7 @@ overrides:
   '@tanstack/query-core': ^5.99.2
   use-sync-external-store: ^1.6.0
   typescript: ^5.9.3
-  hono: '>=4.12.25'
+  hono: '>=4.12.27 <5'
   protobufjs: '>=8.6.0'
   follow-redirects: '>=1.16.0'
   '@hono/node-server': '>=1.19.13'
@@ -57,7 +57,8 @@ overrides:
   '@grpc/grpc-js@<1.9.16': '>=1.9.16'
   form-data@>=4.0.0 <4.0.6: '>=4.0.6'
   vite@<6.4.3: '>=6.4.3'
-  js-yaml@<4.2.0: '>=4.2.0'
+  js-yaml@>=4.0.0 <4.3.0: '>=4.3.0 <5'
+  read-yaml-file@1.1.0>js-yaml: 3.15.1
   dompurify@<3.4.11: '>=3.4.11'
   '@opentelemetry/core@<2.8.0': '>=2.8.0'
   '@babel/core@<7.29.6': '>=7.29.6 <8'
@@ -879,8 +880,8 @@ importers:
         specifier: ^2.2.0
         version: 2.2.0(react@18.3.1)
       '@openfort/react':
-        specifier: latest
-        version: 1.0.1(@babel/core@7.29.7)(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@tanstack/react-query@5.99.2(react@18.3.1))(@types/react@18.3.1)(bufferutil@4.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))(utf-8-validate@6.0.6)(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))(wagmi@3.6.16)
+        specifier: workspace:*
+        version: link:../../../../openfort-react
       '@solana-program/compute-budget':
         specifier: ^0.12.0
         version: 0.12.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
@@ -919,8 +920,8 @@ importers:
         specifier: 18.3.1
         version: 18.3.1
       '@vitejs/plugin-react':
-        specifier: ^4.3.4
-        version: 4.7.0(vite@8.0.16(@types/node@25.9.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
+        specifier: ^6.0.0
+        version: 6.0.2(vite@8.0.16(@types/node@25.9.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))
       tailwindcss:
         specifier: ^4.1.15
         version: 4.2.1
@@ -928,14 +929,14 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
       vite:
-        specifier: '>=6.4.3'
+        specifier: ^8.0.0
         version: 8.0.16(@types/node@25.9.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
 
   packages/openfort-react:
     dependencies:
       '@openfort/openfort-js':
-        specifier: ^1.3.9
-        version: 1.3.9(bufferutil@4.1.0)(utf-8-validate@6.0.6)
+        specifier: ^1.6.0
+        version: 1.6.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       '@solana-program/system':
         specifier: ^0.10.0
         version: 0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
@@ -958,8 +959,8 @@ importers:
         specifier: ^1.1.1
         version: 1.1.1
       framer-motion:
-        specifier: ^6.3.11
-        version: 6.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        specifier: ^12.42.2
+        version: 12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       qrcode:
         specifier: ^1.5.0
         version: 1.5.4
@@ -1195,18 +1196,6 @@ packages:
 
   '@babel/plugin-syntax-typescript@7.28.6':
     resolution: {integrity: sha512-+nDNmQye7nlnuuHDboPbGm00Vqg3oO8niRRL27/4LYHUsHYh0zJ1xWOz0uRwNFmM1Avzk8wZbc6rdiYhomzv/A==}
-    engines: {node: '>=6.9.0'}
-    peerDependencies:
-      '@babel/core': '>=7.29.6 <8'
-
-  '@babel/plugin-transform-react-jsx-self@7.27.1':
-    resolution: {integrity: sha512-6UzkCs+ejGdZ5mFFC/OCUrv028ab2fp1znZmCZjAOBKiBK2jXD1O+BPSfX8X2qjJ75fZBMSnQn3Rq2mrBJK2mw==}
-    engines: {node: '>=6.9.0'}
-    peerDependencies:
-      '@babel/core': '>=7.29.6 <8'
-
-  '@babel/plugin-transform-react-jsx-source@7.27.1':
-    resolution: {integrity: sha512-zbwoTsBruTeKB9hSq73ha66iFeJHuaFkUbwvqElnygoNbj/jHRsSeokowZFN3CZ64IvEqcmmkVe89OPXc7ldAw==}
     engines: {node: '>=6.9.0'}
     peerDependencies:
       '@babel/core': '>=7.29.6 <8'
@@ -1692,14 +1681,8 @@ packages:
   '@emnapi/wasi-threads@1.2.1':
     resolution: {integrity: sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w==}
 
-  '@emotion/is-prop-valid@0.8.8':
-    resolution: {integrity: sha512-u5WtneEAr5IDG2Wv65yhunPSMLIpuKsbuOktRojfrEiEvRyC85LgPMZI63cr7NUqT8ZIGdSVg8ZKGxIug4lXcA==}
-
   '@emotion/is-prop-valid@1.4.0':
     resolution: {integrity: sha512-QgD4fyscGcbbKwJmqNvUMSE02OsHUa+lAWKdEUIJKgqe5IwRSKd7+KhibEWdaKwgjLj0DRSHA9biAIqGBk05lw==}
-
-  '@emotion/memoize@0.7.4':
-    resolution: {integrity: sha512-Ja/Vfqe3HpuzRsG1oBtWTHk2PGZ7GR+2Vz5iYGelAw8dx32K0y7PjVuxK6z1nMpZOqAFsRUPCkK1YjJ56qJlgw==}
 
   '@emotion/memoize@0.9.0':
     resolution: {integrity: sha512-30FAj7/EoJ5mwVPOWhAyCX+FPfMDrVecJAM+Iw9NRoSl4BBAQeqj4cApHHUXOVvIPgLVDsCFoz/hGD+5QQD1GQ==}
@@ -2239,24 +2222,6 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
-  '@motionone/animation@10.18.0':
-    resolution: {integrity: sha512-9z2p5GFGCm0gBsZbi8rVMOAJCtw1WqBTIPw3ozk06gDvZInBPIsQcHgYogEJ4yuHJ+akuW8g1SEIOpTOvYs8hw==}
-
-  '@motionone/dom@10.12.0':
-    resolution: {integrity: sha512-UdPTtLMAktHiqV0atOczNYyDd/d8Cf5fFsd1tua03PqTwwCe/6lwhLSQ8a7TbnQ5SN0gm44N1slBfj+ORIhrqw==}
-
-  '@motionone/easing@10.18.0':
-    resolution: {integrity: sha512-VcjByo7XpdLS4o9T8t99JtgxkdMcNWD3yHU/n6CLEz3bkmKDRZyYQ/wmSf6daum8ZXqfUAgFeCZSpJZIMxaCzg==}
-
-  '@motionone/generators@10.18.0':
-    resolution: {integrity: sha512-+qfkC2DtkDj4tHPu+AFKVfR/C30O1vYdvsGYaR13W/1cczPrrcjdvYCj0VLFuRMN+lP1xvpNZHCRNM4fBzn1jg==}
-
-  '@motionone/types@10.17.1':
-    resolution: {integrity: sha512-KaC4kgiODDz8hswCrS0btrVrzyU2CSQKO7Ps90ibBVSQmjkrt2teqta6/sOG59v7+dPnKMAg13jyqtMKV2yJ7A==}
-
-  '@motionone/utils@10.18.0':
-    resolution: {integrity: sha512-3XVF7sgyTSI2KWvTf6uLlBJ5iAgRgmvp3bpuOiQJvInd4nZ19ET8lX5unn30SlmRH7hXbBbH+Gxd0m0klJ3Xtw==}
-
   '@msgpack/msgpack@3.1.2':
     resolution: {integrity: sha512-JEW4DEtBzfe8HvUYecLU9e6+XJnKDlUAIve8FvPzF3Kzs6Xo/KuZkZJsDH0wJXl/qEZbeeE7edxDNY3kMs39hQ==}
     engines: {node: '>= 18'}
@@ -2327,11 +2292,8 @@ packages:
       better-auth: ^1.6.5
       zod: ^3.24.2 || ^4
 
-  '@openfort/openfort-js@1.3.6':
-    resolution: {integrity: sha512-vngknFeIoZ1TSn2CR29QbJ06D1CaVhlXtV2Izxp1U6gU1hAOHxYmcAhQ91OLJUArMsahV9QY2Dw5+qcqw4UR2w==}
-
-  '@openfort/openfort-js@1.3.9':
-    resolution: {integrity: sha512-TC1H05QpVzYvhW7wFex28bKP9lZNBLE4+8e8PHvMNh8JwrNEaY8WNdr2PhQkj77cTJMwcgWuP6HYGgsTgGaXww==}
+  '@openfort/openfort-js@1.6.0':
+    resolution: {integrity: sha512-aflScY3qadV+N2WbBijZ0eEqWexRsb43QEoCxPzv6KRDHZsxNYm9tcqd+0g26whZiylAVY4+8Znn43Q8sCX3FQ==}
 
   '@openfort/openfort-node@0.10.8':
     resolution: {integrity: sha512-/cWf3GhSAb+4lo2Vt6pe7Y5ZuBgqtcapkFmbKJBGG3we8xlAlD/r6Sg5sbocvmLaJjHKgVnnt1D/pJGoPOFSWg==}
@@ -2362,29 +2324,8 @@ packages:
   '@openfort/openfort-node@0.7.7':
     resolution: {integrity: sha512-z/8tFDJwj9G18Vjr3Fki2wwgZLhnbjhB7FHhPUBmonKjv9V7nGa5bwVWRnX/Q4THIN7xmRhrJIFf9K2bpRyQTQ==}
 
-  '@openfort/react@1.0.1':
-    resolution: {integrity: sha512-II5Hto7VVQiKwYRPDYeGxZXePTuGsckqIA4MWAlxjIQsZlDK0SRiVi2yG2mBkcwUQCPN4eKWk26impllad//tA==}
-    engines: {node: '>=12.4'}
-    peerDependencies:
-      '@solana/kit': ^2.0.0 || ^5.0.0
-      '@tanstack/react-query': '*'
-      react: 18.3.1
-      react-dom: 18.3.1
-      viem: ^2.52.2
-      wagmi: ^3.6.16
-    peerDependenciesMeta:
-      '@solana/kit':
-        optional: true
-      '@tanstack/react-query':
-        optional: true
-      wagmi:
-        optional: true
-
   '@openfort/shield-js@0.1.35':
     resolution: {integrity: sha512-S/v73xRnbgv5i47IRJ7cPWOnJ1bUTOJN+048Y8mJ+ya+iRJUXKTTqePaWApvfrVHHcKA+li8QGyDsRRDefLLVQ==}
-
-  '@openfort/shield-js@0.1.36':
-    resolution: {integrity: sha512-0vB5HvIxFr7IAzEFc7xr7FtiLvx6Zt+ByI48R8tywLb0+xp7ZAo/psB4sVz4aRyo+d+q5wW/5ulGP3mxkQeJyA==}
 
   '@openfort/shield-js@0.1.38':
     resolution: {integrity: sha512-vdQDHv8fY1s46rZ5Qd5RqdPZxOdeuya3QsFp5r5lLpyidqHOEktK3E1Novi/2UpK2oV9r3C+R68Ck3GZIhZXAQ==}
@@ -3398,9 +3339,6 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@rolldown/pluginutils@1.0.0-beta.27':
-    resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
-
   '@rolldown/pluginutils@1.0.1':
     resolution: {integrity: sha512-2j9bGt5Jh8hj+vPtgzPtl72j0yRxHAyumoo6TNfAjsLB04UtpSvPbPcDcBMxz7n+9CYB0c1GxQFxYRg2jimqGw==}
 
@@ -4340,18 +4278,6 @@ packages:
   '@types/aria-query@5.0.4':
     resolution: {integrity: sha512-rfT93uj5s0PRL7EzccGMs3brplhcrghnDoV26NqKhCAS1hVo+WdNsPvE/yb6ilfr5hi2MEk6d5EWJTKdxg8jVw==}
 
-  '@types/babel__core@7.20.5':
-    resolution: {integrity: sha512-qoQprZvz5wQFJwMDqeseRXWv3rqMvhgpbXFfVyWhbx9X47POIA6i/+dXefEmZKoAgOaTdaIgNSMqMIU61yRyzA==}
-
-  '@types/babel__generator@7.27.0':
-    resolution: {integrity: sha512-ufFd2Xi92OAVPYsy+P4n7/U7e68fex0+Ee8gSG9KX7eo084CWiQ4sdxktvdl0bOPupXtVJPY19zk6EwWqUQ8lg==}
-
-  '@types/babel__template@7.4.4':
-    resolution: {integrity: sha512-h/NUaSyG5EyxBIp8YRxo4RMe2/qQgvyowRwVMzhYhBCONbW8PUsg4lkFMrhgZhUe5z3L3MiLDuvyJ/CaPa2A8A==}
-
-  '@types/babel__traverse@7.28.0':
-    resolution: {integrity: sha512-8PvcXf70gTDZBgt9ptxJ8elBeBjcLOAcOtoO/mPJjtji1+CdGbHgm77om1GrsPxsiE+uXIpNSK64UYaIwQXd4Q==}
-
   '@types/better-sqlite3@7.6.13':
     resolution: {integrity: sha512-NMv9ASNARoKksWtsq/SHakpYAYnhBrQgGD8zkLYk/jaK8jUGn08CfEdTRgYhMypUQAfzSP8W6gNLe0q19/t4VA==}
 
@@ -4467,12 +4393,6 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
-
-  '@vitejs/plugin-react@4.7.0':
-    resolution: {integrity: sha512-gUu9hwfWvvEDBBmgtAowQCojwZmJ5mcLn3aufeCsitijs3+f2NsrPtlAWIR6OPiqljl96GVCUbLe0HyqIpVaoA==}
-    engines: {node: ^14.18.0 || >=16.0.0}
-    peerDependencies:
-      vite: '>=6.4.3'
 
   '@vitejs/plugin-react@6.0.2':
     resolution: {integrity: sha512-DlSMqo4WhThw4vB8Mpn0Woe9J+Jfq1geJ61AKW0QEgLzGMNwtIMdxbDUzLxcun8W7NbJO0e2Jg/Nxm3cCSVzzg==}
@@ -4758,6 +4678,9 @@ packages:
   arg@4.1.3:
     resolution: {integrity: sha512-58S9QDqG0Xx27YwPSt9fJxivjYl432YCwfDMfZ+71RAqUrZef7LrKQZ3LHLOwCS4FLNBplP533Zx895SeOCHvA==}
 
+  argparse@1.0.10:
+    resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
+
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
 
@@ -4796,13 +4719,10 @@ packages:
   axios-retry@4.5.0:
     resolution: {integrity: sha512-aR99oXhpEDGo0UuAlYcn2iGRds30k366Zfa05XWScR9QaQD4JYiP3/1Qt1u7YlefUOK+cn0CcwoL1oefavQUlQ==}
     peerDependencies:
-      axios: '>=1.15.1'
+      axios: '>=1.18.1'
 
-  axios@1.16.1:
-    resolution: {integrity: sha512-caYkukvroVPO8KrzuJEb50Hm07KwfBZPEC3VeFHTsqWHvKTsy54hjJz9BS/cdaypROE2rH6xvm9mHX4fgWkr3A==}
-
-  axios@1.17.0:
-    resolution: {integrity: sha512-J8SwNxprqqpbfenehxWYXE7CW+wM1BB4w3+N+g+/Wx40xM4rsLrfPmHHxSWIxJLYDgSY/HqlFPIYb2/S3rxafw==}
+  axios@1.19.0:
+    resolution: {integrity: sha512-ht/iuYZXEjFxLH/Hkezgd7m6JKlHHXEUSneaDz8uZe1Gj5QZtCnpyDsckvAiEnT89OEbCLmnte4R4sn7P0EKFw==}
 
   babel-dead-code-elimination@1.0.12:
     resolution: {integrity: sha512-GERT7L2TiYcYDtYk1IpD+ASAYXjKbLTDPhBtYj7X1NuRMDTMtAx9kyBenub1Ev41lo91OHCKdmP+egTDmfQ7Ig==}
@@ -5531,14 +5451,19 @@ packages:
       react-dom:
         optional: true
 
-  framer-motion@6.5.1:
-    resolution: {integrity: sha512-o1BGqqposwi7cgDrtg0dNONhkmPsUFDaLcKXigzuTFC5x58mE8iyTazxSudFzmT6MEyJKfjjU8ItoMe3W+3fiw==}
+  framer-motion@12.43.0:
+    resolution: {integrity: sha512-1eaL3RvR/kAlbG7UYcpMptEyzPoENO0c6w7ZnB3/hh2vSAz/6uGAFn6fdoqTBguNstf3MsFhJHsD/0DHiclG+g==}
     peerDependencies:
+      '@emotion/is-prop-valid': '*'
       react: 18.3.1
       react-dom: 18.3.1
-
-  framesync@6.0.1:
-    resolution: {integrity: sha512-fUY88kXvGiIItgNC7wcTOl0SNRCVXMKSWW2Yzfmn7EKNc+MpCzcz9DhdHcdjbrtN3c6R4H5dTY2jiCpPdysEjA==}
+    peerDependenciesMeta:
+      '@emotion/is-prop-valid':
+        optional: true
+      react:
+        optional: true
+      react-dom:
+        optional: true
 
   fresh@0.5.2:
     resolution: {integrity: sha512-zJ2mQYM18rEFOudeV4GShTGIQ7RbzA7ozbU9I/XBpm7kqgMywgmylMwXHxZJmkVoYkna9d2pVXVXPdYTP9ej8Q==}
@@ -5666,9 +5591,6 @@ packages:
     resolution: {integrity: sha512-T2UbfbBEF32wiepXIsMlTW9+dDYC6wMh/t/vYA4tuOMKqWz/n3vr1NFSxQiyP+zk2mXsoMA/i/7qV6LKut1t1A==}
     engines: {node: '>= 0.4'}
 
-  hey-listen@1.0.8:
-    resolution: {integrity: sha512-COpmrF2NOg4TBWUJ5UVyaCU2A88wEMkUPK4hNqyCkqHbxT92BbvfjoSozkAIIm6XhicGlJHhFdullInrdhwU8Q==}
-
   highlight.js@10.7.3:
     resolution: {integrity: sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A==}
 
@@ -5678,8 +5600,8 @@ packages:
   hoist-non-react-statics@3.3.2:
     resolution: {integrity: sha512-/gGivxi8JPKWNm/W0jSmzcMPpfpPLc3dY/6GxhX2hQ9iGj3aDfklV4ET7NjKpSinLpJ5vafa9iiGIEZg10SfBw==}
 
-  hono@4.12.25:
-    resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
+  hono@4.12.33:
+    resolution: {integrity: sha512-+SwvkaiJtxsiPjhy9LivY/1m7UsNqCJetM1BrZl9A5DkQhlbHQDU730mMiDPWjnoCYOM8Chf3WrCJw27kNTPFQ==}
     engines: {node: '>=16.9.0'}
 
   html-encoding-sniffer@6.0.0:
@@ -5861,8 +5783,12 @@ packages:
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
-  js-yaml@4.2.0:
-    resolution: {integrity: sha512-ePWsvanv0DWuDRsW8dnt+R4jQ31SCRCQ7hhNcPXZPsoBZiemuZNYGf7adZdqX2D86j6rvKp3RpCxVTSb8WQlOw==}
+  js-yaml@3.15.1:
+    resolution: {integrity: sha512-S99WuO3HlhO3XN41EtYUNl9zzXjoJx7QvmipxsJVxtCBT0YHEFy+iOJhjSvrmV12nYhWpZaM8lPHkJm0yUMbag==}
+    hasBin: true
+
+  js-yaml@4.3.1:
+    resolution: {integrity: sha512-CY6crGq313MX8GkwvB7tzgp99vjQxY1++5y10/BKN/GUfHqWaOGQMNZkBvqSzsZKWk/ijwHlWzzkLulsGHhjWQ==}
     hasBin: true
 
   jsdom@29.1.1:
@@ -6247,8 +6173,14 @@ packages:
   motion-dom@12.35.0:
     resolution: {integrity: sha512-FFMLEnIejK/zDABn+vqGVAUN4T0+3fw+cVAY8MMT65yR+j5uMuvWdd4npACWhh94OVWQs79CrBBuwOwGRZAQiA==}
 
+  motion-dom@12.43.0:
+    resolution: {integrity: sha512-azKON4d9S65PEoFUiQTMTgPheEmzf2QngdRc50AKfJp9Q9mmcBVw22c8eMq9k8kxOFHdL7+WZY7N/5F/lwiDag==}
+
   motion-utils@12.29.2:
     resolution: {integrity: sha512-G3kc34H2cX2gI63RqU+cZq+zWRRPSsNIOjpdl9TN4AQwC4sgwYPl/Q/Obf/d53nOm569T0fYK+tcoSV50BWx8A==}
+
+  motion-utils@12.39.0:
+    resolution: {integrity: sha512-8nadJAJjTtqRkmRF36FoJTrywK9nnFmnPwnSMyxaOCU7GDjN9RTMJIxx9De8ErM+vpPhMccr/6fo5WciyQLnMQ==}
 
   mri@1.2.0:
     resolution: {integrity: sha512-tzzskb3bG8LvYGFF/mDTpq3jpI6Q9wc3LEmBaghu+DdCssd1FakN7Bc0hVNmEyGq1bq3RgfkCb3cmQLpNPOroA==}
@@ -6532,9 +6464,6 @@ packages:
     resolution: {integrity: sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==}
     engines: {node: '>=10.13.0'}
 
-  popmotion@11.0.3:
-    resolution: {integrity: sha512-Y55FLdj3UxkR7Vl3s7Qr4e9m0onSnP8W7d/xQLsoJM40vs6UKHFdygs6SWryasTZYqugMjm3BepCF4CWXDiHgA==}
-
   porto@0.2.35:
     resolution: {integrity: sha512-gu9FfjjvvYBgQXUHWTp6n3wkTxVtEcqFotM7i3GEZeoQbvLGbssAicCz6hFZ8+xggrJWwi/RLmbwNra50SMmUQ==}
     hasBin: true
@@ -6736,10 +6665,6 @@ packages:
 
   react-is@19.2.7:
     resolution: {integrity: sha512-kZFnouyVv7eP/Phmrlo9FK+zcAdriZJvzxXHF1Sl1P377WSGe2G/JxVolhTrB/jeV47lKImhNUsijjHAAbcl/A==}
-
-  react-refresh@0.17.0:
-    resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
-    engines: {node: '>=0.10.0'}
 
   react-remove-scroll-bar@2.3.8:
     resolution: {integrity: sha512-9r+yi9+mgU33AKcj6IbT9oRCO78WriSj6t/cF8DWBZJ9aOGPOTEDvdUDz1FwKim7QXWwmHqtdHnRJfhAxEG46Q==}
@@ -7101,6 +7026,9 @@ packages:
     resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
     engines: {node: '>= 10.x'}
 
+  sprintf-js@1.0.3:
+    resolution: {integrity: sha512-D9cPgkvLlV3t3IzL0D0YLvGA9Ahk4PcvVwUbN0dSGr1aP0Nrt4AEnTUbuGvquEC0mA64Gqt1fzirlRs5ibXx8g==}
+
   stackback@0.0.2:
     resolution: {integrity: sha512-1XMJE5fQo1jGH6Y/7ebnwPOBEkIEnT4QF32d5R1+VXdXveM0IBMJt8zfaxX1P3QhVwrYe+576+jkANtSS2mBbw==}
 
@@ -7145,9 +7073,6 @@ packages:
   strip-json-comments@5.0.3:
     resolution: {integrity: sha512-1tB5mhVo7U+ETBKNf92xT4hrQa3pm0MZ0PQvuDnWgAAGHDsfp4lPSpiS6psrSiet87wyGPh9ft6wmhOMQ0hDiw==}
     engines: {node: '>=14.16'}
-
-  style-value-types@5.0.0:
-    resolution: {integrity: sha512-08yq36Ikn4kx4YU6RD7jWEv27v4V+PUsOGa4n/as8Et3CuODMJQ00ENeAVXAeydX4Z2j1XHZF1K2sX4mGl18fA==}
 
   styled-components@5.3.11:
     resolution: {integrity: sha512-uuzIIfnVkagcVHv9nE0VPlHPSCmXIUGKfJ42LNjxCCTDTL5sgnJ8Z7GZBq0EnLYGln77tPpEpExt2+qa+cZqSw==}
@@ -8052,16 +7977,6 @@ snapshots:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.28.6
 
-  '@babel/plugin-transform-react-jsx-self@7.27.1(@babel/core@7.29.7)':
-    dependencies:
-      '@babel/core': 7.29.7
-      '@babel/helper-plugin-utils': 7.28.6
-
-  '@babel/plugin-transform-react-jsx-source@7.27.1(@babel/core@7.29.7)':
-    dependencies:
-      '@babel/core': 7.29.7
-      '@babel/helper-plugin-utils': 7.28.6
-
   '@babel/runtime@7.28.6': {}
 
   '@babel/runtime@7.29.7': {}
@@ -8486,7 +8401,7 @@ snapshots:
   '@changesets/parse@0.4.3':
     dependencies:
       '@changesets/types': 6.1.0
-      js-yaml: 4.2.0
+      js-yaml: 4.3.1
 
   '@changesets/pre@2.0.2':
     dependencies:
@@ -8538,8 +8453,8 @@ snapshots:
       '@solana-program/token': 0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
       '@solana/kit': 5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       abitype: 1.0.6(typescript@5.9.3)(zod@3.25.76)
-      axios: 1.17.0
-      axios-retry: 4.5.0(axios@1.17.0)
+      axios: 1.19.0
+      axios-retry: 4.5.0(axios@1.19.0)
       bs58: 6.0.0
       jose: 6.2.3
       md5: 2.3.0
@@ -8629,17 +8544,9 @@ snapshots:
       tslib: 2.8.1
     optional: true
 
-  '@emotion/is-prop-valid@0.8.8':
-    dependencies:
-      '@emotion/memoize': 0.7.4
-    optional: true
-
   '@emotion/is-prop-valid@1.4.0':
     dependencies:
       '@emotion/memoize': 0.9.0
-
-  '@emotion/memoize@0.7.4':
-    optional: true
 
   '@emotion/memoize@0.9.0': {}
 
@@ -9324,41 +9231,6 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@motionone/animation@10.18.0':
-    dependencies:
-      '@motionone/easing': 10.18.0
-      '@motionone/types': 10.17.1
-      '@motionone/utils': 10.18.0
-      tslib: 2.8.1
-
-  '@motionone/dom@10.12.0':
-    dependencies:
-      '@motionone/animation': 10.18.0
-      '@motionone/generators': 10.18.0
-      '@motionone/types': 10.17.1
-      '@motionone/utils': 10.18.0
-      hey-listen: 1.0.8
-      tslib: 2.8.1
-
-  '@motionone/easing@10.18.0':
-    dependencies:
-      '@motionone/utils': 10.18.0
-      tslib: 2.8.1
-
-  '@motionone/generators@10.18.0':
-    dependencies:
-      '@motionone/types': 10.17.1
-      '@motionone/utils': 10.18.0
-      tslib: 2.8.1
-
-  '@motionone/types@10.17.1': {}
-
-  '@motionone/utils@10.18.0':
-    dependencies:
-      '@motionone/types': 10.17.1
-      hey-listen: 1.0.8
-      tslib: 2.8.1
-
   '@msgpack/msgpack@3.1.2': {}
 
   '@msgpack/msgpack@3.1.3': {}
@@ -9412,7 +9284,7 @@ snapshots:
       better-auth: 1.6.25(@opentelemetry/api@1.9.1)(better-sqlite3@12.11.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@4.1.8)
       zod: 4.3.6
 
-  '@openfort/openfort-js@1.3.6(bufferutil@4.1.0)(utf-8-validate@6.0.6)':
+  '@openfort/openfort-js@1.6.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)':
     dependencies:
       '@ethersproject/abi': 5.8.0
       '@ethersproject/bytes': 5.8.0
@@ -9420,32 +9292,11 @@ snapshots:
       '@ethersproject/keccak256': 5.8.0
       '@ethersproject/providers': 5.8.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
       '@ethersproject/transactions': 5.8.0
-      '@openfort/shield-js': 0.1.36
+      '@openfort/shield-js': 0.1.38
       '@sentry/browser': 9.47.1
       '@sentry/core': 9.47.1
-      axios: 1.17.0
-      axios-retry: 4.5.0(axios@1.17.0)
-      eventemitter3: 5.0.1
-      human-id: 4.1.3
-    transitivePeerDependencies:
-      - bufferutil
-      - debug
-      - supports-color
-      - utf-8-validate
-
-  '@openfort/openfort-js@1.3.9(bufferutil@4.1.0)(utf-8-validate@6.0.6)':
-    dependencies:
-      '@ethersproject/abi': 5.8.0
-      '@ethersproject/bytes': 5.8.0
-      '@ethersproject/hash': 5.8.0
-      '@ethersproject/keccak256': 5.8.0
-      '@ethersproject/providers': 5.8.0(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      '@ethersproject/transactions': 5.8.0
-      '@openfort/shield-js': 0.1.36
-      '@sentry/browser': 9.47.1
-      '@sentry/core': 9.47.1
-      axios: 1.17.0
-      axios-retry: 4.5.0(axios@1.17.0)
+      axios: 1.19.0
+      axios-retry: 4.5.0(axios@1.19.0)
       eventemitter3: 5.0.1
       human-id: 4.1.3
     transitivePeerDependencies:
@@ -9457,8 +9308,8 @@ snapshots:
   '@openfort/openfort-node@0.10.8(@solana-program/compute-budget@0.12.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/system@0.10.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@solana/kora@0.1.3(@solana-program/token@0.9.0(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)))(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))':
     dependencies:
       '@openfort/shield-js': 0.1.38
-      axios: 1.17.0
-      axios-retry: 4.5.0(axios@1.17.0)
+      axios: 1.19.0
+      axios-retry: 4.5.0(axios@1.19.0)
       bs58: 6.0.0
       jose: 6.2.3
       zod: 3.25.76
@@ -9478,8 +9329,8 @@ snapshots:
       '@openfort/shield-js': 0.1.35
       '@types/node': 25.9.2
       '@types/node-fetch': 2.6.13
-      axios: 1.16.1
-      axios-retry: 4.5.0(axios@1.16.1)
+      axios: 1.19.0
+      axios-retry: 4.5.0(axios@1.19.0)
       bs58: 6.0.0
       jose: 5.10.0
       node-fetch: 2.7.0
@@ -9493,58 +9344,18 @@ snapshots:
       - utf-8-validate
       - zod
 
-  '@openfort/react@1.0.1(@babel/core@7.29.7)(@solana/kit@5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))(@tanstack/react-query@5.99.2(react@18.3.1))(@types/react@18.3.1)(bufferutil@4.1.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))(utf-8-validate@6.0.6)(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))(wagmi@3.6.16)':
-    dependencies:
-      '@openfort/openfort-js': 1.3.6(bufferutil@4.1.0)(utf-8-validate@6.0.6)
-      buffer: 6.0.3
-      detect-browser: 5.3.0
-      fast-password-entropy: 1.1.1
-      framer-motion: 6.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      qrcode: 1.5.4
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      react-international-phone: 4.8.0(react@18.3.1)
-      react-is: 19.2.7
-      react-transition-state: 1.1.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      react-use-measure: 2.1.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      resize-observer-polyfill: 1.5.1
-      styled-components: 5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@19.2.7)(react@18.3.1)
-      viem: 2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6)
-      zustand: 5.0.14(@types/react@18.3.1)(react@18.3.1)(use-sync-external-store@1.6.0(react@18.3.1))
-    optionalDependencies:
-      '@solana/kit': 5.5.1(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
-      '@tanstack/react-query': 5.99.2(react@18.3.1)
-      wagmi: 3.6.16(@coinbase/wallet-sdk@4.3.7(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))(@safe-global/safe-apps-provider@0.18.6(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))(@safe-global/safe-apps-sdk@9.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))(@tanstack/query-core@5.99.2)(@tanstack/react-query@5.99.2(react@18.3.1))(@types/react@18.3.1)(@walletconnect/ethereum-provider@2.23.9(@types/react@18.3.1)(bufferutil@4.1.0)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@18.3.1))(utf-8-validate@6.0.6)(zod@4.3.6))(porto@0.2.35)(react@18.3.1)(typescript@5.9.3)(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))
-    transitivePeerDependencies:
-      - '@babel/core'
-      - '@types/react'
-      - bufferutil
-      - debug
-      - immer
-      - supports-color
-      - use-sync-external-store
-      - utf-8-validate
-
   '@openfort/shield-js@0.1.35':
     dependencies:
-      axios: 1.17.0
-      axios-retry: 4.5.0(axios@1.17.0)
-    transitivePeerDependencies:
-      - debug
-      - supports-color
-
-  '@openfort/shield-js@0.1.36':
-    dependencies:
-      axios: 1.17.0
-      axios-retry: 4.5.0(axios@1.17.0)
+      axios: 1.19.0
+      axios-retry: 4.5.0(axios@1.19.0)
     transitivePeerDependencies:
       - debug
       - supports-color
 
   '@openfort/shield-js@0.1.38':
     dependencies:
-      axios: 1.17.0
-      axios-retry: 4.5.0(axios@1.17.0)
+      axios: 1.19.0
+      axios-retry: 4.5.0(axios@1.19.0)
     transitivePeerDependencies:
       - debug
       - supports-color
@@ -11062,8 +10873,6 @@ snapshots:
   '@rolldown/binding-win32-x64-msvc@1.0.3':
     optional: true
 
-  '@rolldown/pluginutils@1.0.0-beta.27': {}
-
   '@rolldown/pluginutils@1.0.1': {}
 
   '@rollup/pluginutils@4.2.1':
@@ -12032,27 +11841,6 @@ snapshots:
 
   '@types/aria-query@5.0.4': {}
 
-  '@types/babel__core@7.20.5':
-    dependencies:
-      '@babel/parser': 7.29.7
-      '@babel/types': 7.29.7
-      '@types/babel__generator': 7.27.0
-      '@types/babel__template': 7.4.4
-      '@types/babel__traverse': 7.28.0
-
-  '@types/babel__generator@7.27.0':
-    dependencies:
-      '@babel/types': 7.29.7
-
-  '@types/babel__template@7.4.4':
-    dependencies:
-      '@babel/parser': 7.29.7
-      '@babel/types': 7.29.7
-
-  '@types/babel__traverse@7.28.0':
-    dependencies:
-      '@babel/types': 7.29.7
-
   '@types/better-sqlite3@7.6.13':
     dependencies:
       '@types/node': 22.20.1
@@ -12190,18 +11978,6 @@ snapshots:
   '@types/ws@8.18.1':
     dependencies:
       '@types/node': 25.9.2
-
-  '@vitejs/plugin-react@4.7.0(vite@8.0.16(@types/node@25.9.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))':
-    dependencies:
-      '@babel/core': 7.29.7
-      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.29.7)
-      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.29.7)
-      '@rolldown/pluginutils': 1.0.0-beta.27
-      '@types/babel__core': 7.20.5
-      react-refresh: 0.17.0
-      vite: 8.0.16(@types/node@25.9.2)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0)
-    transitivePeerDependencies:
-      - supports-color
 
   '@vitejs/plugin-react@6.0.2(vite@8.0.16(@types/node@22.20.1)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.21.0)(yaml@2.9.0))':
     dependencies:
@@ -13350,6 +13126,10 @@ snapshots:
 
   arg@4.1.3: {}
 
+  argparse@1.0.10:
+    dependencies:
+      sprintf-js: 1.0.3
+
   argparse@2.0.1: {}
 
   aria-hidden@1.2.6:
@@ -13380,27 +13160,12 @@ snapshots:
 
   atomic-sleep@1.0.0: {}
 
-  axios-retry@4.5.0(axios@1.16.1):
+  axios-retry@4.5.0(axios@1.19.0):
     dependencies:
-      axios: 1.16.1
+      axios: 1.19.0
       is-retry-allowed: 2.2.0
 
-  axios-retry@4.5.0(axios@1.17.0):
-    dependencies:
-      axios: 1.17.0
-      is-retry-allowed: 2.2.0
-
-  axios@1.16.1:
-    dependencies:
-      follow-redirects: 1.16.0
-      form-data: 4.0.6
-      https-proxy-agent: 5.0.1
-      proxy-from-env: 2.1.0
-    transitivePeerDependencies:
-      - debug
-      - supports-color
-
-  axios@1.17.0:
+  axios@1.19.0:
     dependencies:
       follow-redirects: 1.16.0
       form-data: 4.0.6
@@ -14161,22 +13926,15 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  framer-motion@6.5.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
+  framer-motion@12.43.0(@emotion/is-prop-valid@1.4.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
-      '@motionone/dom': 10.12.0
-      framesync: 6.0.1
-      hey-listen: 1.0.8
-      popmotion: 11.0.3
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      style-value-types: 5.0.0
+      motion-dom: 12.43.0
+      motion-utils: 12.39.0
       tslib: 2.8.1
     optionalDependencies:
-      '@emotion/is-prop-valid': 0.8.8
-
-  framesync@6.0.1:
-    dependencies:
-      tslib: 2.8.1
+      '@emotion/is-prop-valid': 1.4.0
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
 
   fresh@0.5.2: {}
 
@@ -14230,7 +13988,7 @@ snapshots:
       get-proto: 1.0.1
       gopd: 1.2.0
       has-symbols: 1.1.0
-      hasown: 2.0.2
+      hasown: 2.0.4
       math-intrinsics: 1.1.0
 
   get-nonce@1.0.1: {}
@@ -14327,8 +14085,6 @@ snapshots:
     dependencies:
       function-bind: 1.1.2
 
-  hey-listen@1.0.8: {}
-
   highlight.js@10.7.3: {}
 
   hmac-drbg@1.0.1:
@@ -14341,7 +14097,7 @@ snapshots:
     dependencies:
       react-is: 16.13.1
 
-  hono@4.12.25:
+  hono@4.12.33:
     optional: true
 
   html-encoding-sniffer@6.0.0(@noble/hashes@2.0.1):
@@ -14484,7 +14240,12 @@ snapshots:
 
   js-tokens@4.0.0: {}
 
-  js-yaml@4.2.0:
+  js-yaml@3.15.1:
+    dependencies:
+      argparse: 1.0.10
+      esprima: 4.0.1
+
+  js-yaml@4.3.1:
     dependencies:
       argparse: 2.0.1
 
@@ -14537,7 +14298,7 @@ snapshots:
       fast-glob: 3.3.3
       formatly: 0.3.0
       jiti: 2.6.1
-      js-yaml: 4.2.0
+      js-yaml: 4.3.1
       minimist: 1.2.8
       oxc-resolver: 11.19.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       picocolors: 1.1.1
@@ -14824,7 +14585,13 @@ snapshots:
     dependencies:
       motion-utils: 12.29.2
 
+  motion-dom@12.43.0:
+    dependencies:
+      motion-utils: 12.39.0
+
   motion-utils@12.29.2: {}
+
+  motion-utils@12.39.0: {}
 
   mri@1.2.0: {}
 
@@ -15192,17 +14959,10 @@ snapshots:
 
   pngjs@5.0.0: {}
 
-  popmotion@11.0.3:
-    dependencies:
-      framesync: 6.0.1
-      hey-listen: 1.0.8
-      style-value-types: 5.0.0
-      tslib: 2.8.1
-
   porto@0.2.35(@tanstack/react-query@5.101.0(react@18.3.1))(@types/react@18.3.1)(@wagmi/core@3.5.0(@tanstack/query-core@5.99.2)(@types/react@18.3.1)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@18.3.1))(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76)))(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@18.3.1))(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))(wagmi@3.6.16):
     dependencies:
       '@wagmi/core': 3.5.0(@tanstack/query-core@5.99.2)(@types/react@18.3.1)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@18.3.1))(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@3.25.76))
-      hono: 4.12.25
+      hono: 4.12.33
       idb-keyval: 6.2.5
       mipd: 0.0.7(typescript@5.9.3)
       ox: 0.9.17(typescript@5.9.3)(zod@4.3.6)
@@ -15223,7 +14983,7 @@ snapshots:
   porto@0.2.35(@tanstack/react-query@5.101.0(react@18.3.1))(@types/react@18.3.1)(@wagmi/core@3.5.0(@tanstack/query-core@5.99.2)(@types/react@18.3.1)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@18.3.1))(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6)))(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@18.3.1))(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))(wagmi@3.6.16):
     dependencies:
       '@wagmi/core': 3.5.0(@tanstack/query-core@5.99.2)(@types/react@18.3.1)(react@18.3.1)(typescript@5.9.3)(use-sync-external-store@1.6.0(react@18.3.1))(viem@2.52.2(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)(zod@4.3.6))
-      hono: 4.12.25
+      hono: 4.12.33
       idb-keyval: 6.2.5
       mipd: 0.0.7(typescript@5.9.3)
       ox: 0.9.17(typescript@5.9.3)(zod@4.3.6)
@@ -15464,8 +15224,6 @@ snapshots:
 
   react-is@19.2.7: {}
 
-  react-refresh@0.17.0: {}
-
   react-remove-scroll-bar@2.3.8(@types/react@18.3.1)(react@18.3.1):
     dependencies:
       react: 18.3.1
@@ -15511,7 +15269,7 @@ snapshots:
   read-yaml-file@1.1.0:
     dependencies:
       graceful-fs: 4.2.11
-      js-yaml: 4.2.0
+      js-yaml: 3.15.1
       pify: 4.0.1
       strip-bom: 3.0.0
 
@@ -15841,6 +15599,8 @@ snapshots:
 
   split2@4.2.0: {}
 
+  sprintf-js@1.0.3: {}
+
   stackback@0.0.2: {}
 
   statuses@2.0.2: {}
@@ -15876,11 +15636,6 @@ snapshots:
   strip-json-comments@2.0.1: {}
 
   strip-json-comments@5.0.3: {}
-
-  style-value-types@5.0.0:
-    dependencies:
-      hey-listen: 1.0.8
-      tslib: 2.8.1
 
   styled-components@5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@19.2.7)(react@18.3.1):
     dependencies:

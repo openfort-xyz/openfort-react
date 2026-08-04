@@ -1,11 +1,13 @@
 'use client'
 
 import type { OAuthProvider, User } from '@openfort/openfort-js'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { useOpenfortRouting } from '../../../components/Openfort/useOpenfort.js'
 import { AuthenticationError, NotAuthenticatedError } from '../../../errors/auth.js'
 import { type OpenfortError, toError } from '../../../errors/base.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
@@ -53,99 +55,65 @@ type AuthHookOptions = {
  *
  * @example
  * ```tsx
- * const oauth = useOAuth({
- *   onInitializeOAuthSuccess: (result) => console.log('OAuth initialized'),
- *   onInitializeOAuthError: (error) => console.error('OAuth init failed:', error),
- *   onStoreCredentialsSuccess: (result) => console.log('Authenticated:', result.user),
- *   redirectTo: 'https://yourapp.com/auth/callback',
- *   recoverWalletAutomatically: true,
- * });
+ * import { OAuthProvider, useOAuth } from '@openfort/react'
  *
- * // Initialize OAuth with a provider
- * const handleGoogleAuth = async () => {
- *   await oauth.initOAuth({
- *     provider: OAuthProvider.GOOGLE,
- *     redirectTo: 'https://yourapp.com/auth/callback',
- *   });
- * };
- *
- * const handleDiscordAuth = async () => {
- *   await oauth.initOAuth({
- *     provider: OAuthProvider.DISCORD,
- *   });
- * };
- *
- * // Store OAuth credentials (typically called from callback handler)
- * const handleStoreCredentials = async () => {
- *   await oauth.storeCredentials({
- *     player: 'player-id-from-callback',
- *     accessToken: 'access-token-from-callback',
- *     refreshToken: 'refresh-token-from-callback',
- *   });
- * };
- *
- * // Link OAuth provider to existing authenticated account
- * const handleLinkOAuth = async () => {
- *   await oauth.linkOauth({
- *     provider: OAuthProvider.GOOGLE,
- *     redirectTo: 'https://yourapp.com/auth/callback',
- *   });
- * };
- *
- * // Check authentication state
- * if (oauth.isLoading) {
- *   console.log('Processing OAuth authentication...');
- * } else if (oauth.isError) {
- *   console.error('OAuth error:', oauth.error);
- * } else if (oauth.isSuccess) {
- *   console.log('OAuth authentication successful');
+ * function OAuthSignIn() {
+ *   const { initOAuth, isLoading, error } = useOAuth()
+ *   const signIn = async () => {
+ *     const result = await initOAuth({ provider: OAuthProvider.GOOGLE })
+ *     if (result.error) console.error(result.error.shortMessage)
+ *   }
+ *   return <button onClick={signIn} disabled={isLoading}>{error ? error.shortMessage : 'Sign in with Google'}</button>
  * }
- *
- * // Example usage in component with multiple providers
- * return (
- *   <div>
- *     <button onClick={handleGoogleAuth} disabled={oauth.isLoading}>
- *       Sign in with Google
- *     </button>
- *     <button onClick={handleDiscordAuth} disabled={oauth.isLoading}>
- *       Sign in with Discord
- *     </button>
- *   </div>
- * );
  * ```
  */
 const DEFAULT_AUTH_HOOK_OPTIONS: AuthHookOptions = {}
 
 export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
+  const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
+  const authInvocationRef = useRef(0)
   const { open: isOpen } = useOpenfortRouting()
 
   const { tryUseWallet } = useConnectToWalletPostAuth()
 
   const storeCredentials = useCallback(
     async ({ userId, token, ...options }: StoreCredentialsOptions): Promise<StoreCredentialsResult> => {
+      let settleStale: (() => boolean) | undefined
       setStatus({
         status: 'loading',
       })
 
       try {
-        await client.auth.storeCredentials({
-          userId,
-          token,
-        })
-        setStatus({
-          status: 'success',
-        })
+        const transition = startLocalAuthTransition(
+          startAuthTransition,
+          authInvocationRef,
+          () =>
+            client.auth.storeCredentials({
+              userId,
+              token,
+            }),
+          () => setStatus({ status: 'idle' })
+        )
+        settleStale = transition.settleStale
+        await transition.result
+        if (settleStale()) return authTransitionSupersededResult()
 
         const user = (await updateUser()) || undefined
+        if (settleStale()) return authTransitionSupersededResult()
 
         const { wallet } = await tryUseWallet({
           logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
           recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
+        })
+        if (settleStale()) return authTransitionSupersededResult()
+
+        setStatus({
+          status: 'success',
         })
 
         return onSuccess({
@@ -154,6 +122,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
           options,
         })
       } catch (e) {
+        if (settleStale?.()) return authTransitionSupersededResult()
         const error = new AuthenticationError('Failed to store credentials.', { cause: toError(e) })
 
         setStatus({
@@ -168,7 +137,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
         })
       }
     },
-    [client, hookOptions, tryUseWallet, updateUser]
+    [client, hookOptions, startAuthTransition, tryUseWallet, updateUser]
   )
 
   const initOAuth = useCallback(
@@ -217,6 +186,9 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
   const linkOauth = useCallback(
     async (options: InitializeOAuthOptions): Promise<InitOAuthReturnType> => {
       const authProvider = options.provider
+      const session = captureAuthSession()
+      let mutationIsCurrent: (() => boolean) | undefined
+      const isCurrent = () => session.isCurrent() && (mutationIsCurrent?.() ?? true)
 
       try {
         setStatus({
@@ -224,19 +196,25 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
         })
 
         const authToken = await client.getAccessToken()
+        if (!isCurrent()) return authTransitionSupersededResult()
 
         if (!authToken) {
           throw new NotAuthenticatedError('No auth token found.')
         }
 
-        const redirectUrl = await client.auth.initLinkOAuth({
-          provider: authProvider,
-          redirectTo: buildCallbackUrl({
+        const transition = startAuthenticatedMutation(() =>
+          client.auth.initLinkOAuth({
             provider: authProvider,
-            callbackUrl: options?.redirectTo ?? hookOptions?.redirectTo,
-            isOpen,
-          }),
-        })
+            redirectTo: buildCallbackUrl({
+              provider: authProvider,
+              callbackUrl: options?.redirectTo ?? hookOptions?.redirectTo,
+              isOpen,
+            }),
+          })
+        )
+        mutationIsCurrent = transition.isCurrent
+        const redirectUrl = await transition.result
+        if (!isCurrent()) return authTransitionSupersededResult()
 
         window.location.href = redirectUrl
 
@@ -246,6 +224,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
           options,
         })
       } catch (e) {
+        if (!isCurrent()) return authTransitionSupersededResult()
         const error = new AuthenticationError('Failed to link OAuth.', { cause: toError(e) })
 
         setStatus({
@@ -260,7 +239,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTION
         })
       }
     },
-    [client, hookOptions, isOpen]
+    [captureAuthSession, client, hookOptions, isOpen, startAuthenticatedMutation]
   )
 
   return {

@@ -1,4 +1,5 @@
 import type { AccountTypeEnum, EmbeddedAccount, RecoveryMethod, RecoveryParams } from '@openfort/openfort-js'
+import type { OpenfortError } from '../errors/base.js'
 import type { OpenfortHookOptions } from '../types.js'
 
 export type RecoverableWallet = {
@@ -8,10 +9,20 @@ export type RecoverableWallet = {
   accounts: { id: string }[]
 }
 
+type ActionFailure = {
+  error: OpenfortError
+}
+
+export type SetRecoverySuccess = {
+  error?: never
+}
+
+export type SetRecoveryResult = SetRecoverySuccess | ActionFailure
+
 export type SetRecoveryOptions = {
   previousRecovery: RecoveryParams
   newRecovery: RecoveryParams
-}
+} & OpenfortHookOptions<SetRecoverySuccess>
 
 export type WalletStatus =
   | 'disconnected'
@@ -41,10 +52,28 @@ export type WalletDerived = {
 }
 
 /** Result of creating an embedded wallet (EVM or Solana). */
-export type CreateEmbeddedWalletResult = {
+export type CreateEmbeddedWalletSuccess = {
   account: EmbeddedAccount
-  error?: string
+  error?: never
 }
+
+export type CreateEmbeddedWalletResult = CreateEmbeddedWalletSuccess | (ActionFailure & { account?: never })
+
+export type SetActiveEmbeddedWalletSuccess = {
+  needsRecovery: boolean
+  error?: never
+}
+
+export type SetActiveEmbeddedWalletResult = SetActiveEmbeddedWalletSuccess | (ActionFailure & { needsRecovery?: never })
+
+export type ExportPrivateKeySuccess = {
+  privateKey: string
+  error?: never
+}
+
+export type ExportPrivateKeyResult = ExportPrivateKeySuccess | (ActionFailure & { privateKey?: never })
+
+export type ExportPrivateKeyOptions = OpenfortHookOptions<ExportPrivateKeySuccess>
 
 /** Common options for setting active embedded wallet (recovery only; each chain adds address). */
 export type SetActiveEmbeddedWalletOptionsBase = {
@@ -58,7 +87,7 @@ export type SetActiveEmbeddedWalletOptionsBase = {
   password?: string
   /** OTP code for AUTOMATIC recovery */
   otpCode?: string
-}
+} & OpenfortHookOptions<SetActiveEmbeddedWalletSuccess>
 
 /** Options for creating an embedded wallet (EVM and Solana; EOA and gas sponsorship). */
 export type CreateEmbeddedWalletOptions = {
@@ -76,7 +105,7 @@ export type CreateEmbeddedWalletOptions = {
   accountType?: AccountTypeEnum
   /** Fee sponsorship ID for gas sponsorship */
   feeSponsorshipId?: string
-} & OpenfortHookOptions<CreateEmbeddedWalletResult>
+} & OpenfortHookOptions<CreateEmbeddedWalletSuccess>
 
 /**
  * Options for importing an embedded wallet from a raw private key.

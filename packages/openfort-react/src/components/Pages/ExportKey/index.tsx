@@ -74,8 +74,13 @@ const ExportKey: React.FC = () => {
   useEffect(() => {
     const asyncExportKey = async () => {
       try {
-        const key = await exportPrivateKey()
-        setExportedKey(key)
+        const result = await exportPrivateKey()
+        if (result.error) {
+          setExportError('You cannot export the private key for this wallet.')
+          setExportedKey(null)
+          return
+        }
+        setExportedKey(result.privateKey)
       } catch {
         setExportError('You cannot export the private key for this wallet.')
         setExportedKey(null)

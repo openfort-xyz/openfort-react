@@ -1,5 +1,5 @@
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
-import type { EmbeddedAccount } from '@openfort/react'
+import type { CreateEmbeddedWalletResult } from '@openfort/react'
 import { RecoveryMethod } from '@openfort/react'
 import { type ConnectedEmbeddedSolanaWallet, useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { useState } from 'react'
@@ -9,7 +9,7 @@ type CreateWalletPasswordSheetProps = {
   open: boolean
   onClose: () => void
   onCreateWallet?: () => void
-  create: (options: { recoveryMethod: RecoveryMethod; password?: string }) => Promise<EmbeddedAccount>
+  create: (options: { recoveryMethod: RecoveryMethod; password?: string }) => Promise<CreateEmbeddedWalletResult>
   status: string
 }
 
@@ -40,16 +40,16 @@ export const CreateWalletPasswordSheet = ({
           const formData = new FormData(e.target as HTMLFormElement)
           const password = formData.get('password') as string
 
-          try {
-            await create({
-              recoveryMethod: RecoveryMethod.PASSWORD,
-              password,
-            })
-            onCreateWallet?.()
-            onClose()
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create wallet')
+          const result = await create({
+            recoveryMethod: RecoveryMethod.PASSWORD,
+            password,
+          })
+          if (result.error) {
+            setError(result.error.message)
+            return
           }
+          onCreateWallet?.()
+          onClose()
         }}
       >
         <div className="flex flex-col gap-2 mr-4 mb-4">
@@ -111,16 +111,16 @@ export const WalletRecoverPasswordSheet = ({ open, onClose, wallet }: WalletReco
           const password = formData.get('password') as string
           if (!wallet) throw new Error('No wallet to recover')
 
-          try {
-            await setActive({
-              address: wallet.address,
-              recoveryMethod: RecoveryMethod.PASSWORD,
-              password,
-            })
-            onClose()
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to recover wallet')
+          const result = await setActive({
+            address: wallet.address,
+            recoveryMethod: RecoveryMethod.PASSWORD,
+            password,
+          })
+          if (result.error) {
+            setError(result.error.message)
+            return
           }
+          if (!result.needsRecovery) onClose()
         }}
       >
         {wallet && (

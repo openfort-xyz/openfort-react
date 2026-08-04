@@ -73,75 +73,55 @@ export { FundingMethod, LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider
 export { embeddedWalletId } from './constants/openfort.js'
 export {
   ApiRequestError,
-  type ApiRequestErrorType,
   AuthenticationError,
-  type AuthenticationErrorType,
   ChainNotConfiguredError,
-  type ChainNotConfiguredErrorType,
   ClientNotInitializedError,
-  type ClientNotInitializedErrorType,
   ConnectorNotFoundError,
-  type ConnectorNotFoundErrorType,
   ConnectorTypeMismatchError,
-  type ConnectorTypeMismatchErrorType,
-  type ErrorType,
   FundingError,
-  type FundingErrorType,
   FundingNotConfiguredError,
-  type FundingNotConfiguredErrorType,
   InvalidEmailError,
-  type InvalidEmailErrorType,
   MissingParameterError,
-  type MissingParameterErrorType,
   NotAuthenticatedError,
-  type NotAuthenticatedErrorType,
   OpenfortConfigError,
-  type OpenfortConfigErrorType,
   OpenfortError,
-  type OpenfortErrorOptions,
   /**
-   * @deprecated Narrow on `error.name` (or `instanceof`) instead. The concrete
-   * error classes carry far more information than these five buckets; the enum
-   * stays populated on every instance's `type` field and is removed in the next major.
-   */
-  OpenfortReactErrorType,
-  /**
-   * @deprecated Narrow on `error.name` (or `instanceof`) instead. Removed in the next major.
+   * @deprecated This is an alias of `OpenfortReactErrorType`. Prefer
+   * `error.name` or `instanceof` for precise error handling.
+   *
+   * @example
+   * ```ts
+   * import { OpenfortErrorType, WalletError } from '@openfort/react'
+   *
+   * const error = new WalletError('Wallet unavailable.')
+   * if (error.type === OpenfortErrorType.WALLET_ERROR) {
+   *   console.error(error.shortMessage)
+   * }
+   * ```
    */
   OpenfortReactErrorType as OpenfortErrorType,
+  /**
+   * @deprecated Narrow on `error.name` (or `instanceof`) instead. The concrete
+   * error classes carry far more information than these five buckets. Every
+   * SDK error exposes one of these values on its `type` field.
+   */
+  OpenfortReactErrorType,
   OtpRequiredError,
-  type OtpRequiredErrorType,
   ProviderNotFoundError,
-  type ProviderNotFoundErrorType,
   ProviderNotReadyError,
-  type ProviderNotReadyErrorType,
   RecoveryError,
-  type RecoveryErrorType,
   RpcUrlNotConfiguredError,
-  type RpcUrlNotConfiguredErrorType,
   SetActiveWalletError,
-  type SetActiveWalletErrorType,
   SiweMessageError,
-  type SiweMessageErrorType,
   SolanaClusterNotSupportedError,
-  type SolanaClusterNotSupportedErrorType,
   UnsupportedOperationError,
-  type UnsupportedOperationErrorType,
   ValidationError,
-  type ValidationErrorType,
-  type WalletChain,
   WalletConfigNotFoundError,
-  type WalletConfigNotFoundErrorType,
   WalletCreationError,
-  type WalletCreationErrorType,
   WalletError,
-  type WalletErrorType,
   WalletImportError,
-  type WalletImportErrorType,
   WalletNotConnectedError,
-  type WalletNotConnectedErrorType,
   WalletNotFoundError,
-  type WalletNotFoundErrorType,
 } from './errors/index.js'
 export type {
   ConnectedEmbeddedEthereumWallet,
@@ -166,20 +146,29 @@ export type {
   PaymentMethodInput,
 } from './hooks/openfort/fundingClient.js'
 export {
+  type SignAuthorizationOptions,
   type SignAuthorizationParameters,
+  type SignAuthorizationResult,
   type SignAuthorizationReturnType,
+  type Use7702AuthorizationOptions,
   use7702Authorization,
 } from './hooks/openfort/use7702Authorization.js'
-export type { UseFunding, UseFundingOptions } from './hooks/openfort/useFunding.js'
+export type {
+  FundingPayLinkResult,
+  FundingSessionResult,
+  UseFunding,
+  UseFundingOptions,
+} from './hooks/openfort/useFunding.js'
 export { useFunding } from './hooks/openfort/useFunding.js'
 export { useGrantPermissions } from './hooks/openfort/useGrantPermissions.js'
 export { useRevokePermissions } from './hooks/openfort/useRevokePermissions.js'
+export type { SignMessageResult, UseSignMessageOptions } from './hooks/openfort/useSignMessage.js'
 export { useSignMessage } from './hooks/openfort/useSignMessage.js'
 export { useUI } from './hooks/openfort/useUI.js'
 export { useUser } from './hooks/openfort/useUser.js'
 export type { UserWallet } from './hooks/openfort/walletTypes.js'
 export { useInvalidateBalance } from './hooks/useBalance.js'
-// ── Store internals (moved to `@openfort/react/internal`) ────────────────────
+// ── Deprecated store internals ──────────────────────────────────────────────
 export type {
   /** @deprecated import from `@openfort/react/internal` instead */
   OpenfortStore,

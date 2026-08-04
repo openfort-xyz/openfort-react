@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createEmbeddedWallet } from '../../actions/createEmbeddedWallet.js'
 import { WalletConfigNotFoundError } from '../../errors/config.js'
 import { MissingParameterError } from '../../errors/validation.js'
+import { WalletCreationError, WalletNotConnectedError } from '../../errors/wallet.js'
 import {
   asOpenfort,
   TEST_ENCRYPTION_SESSION,
@@ -12,8 +13,18 @@ import {
   testWalletConfig,
 } from '../mocks/actionFixtures.js'
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 describe('createEmbeddedWallet', () => {
   let client: TestClient
+  let assertCurrent: ReturnType<typeof vi.fn>
+  let shouldPublish: ReturnType<typeof vi.fn>
   let setActiveEmbeddedAddress: ReturnType<typeof vi.fn>
   let updateEmbeddedAccounts: ReturnType<typeof vi.fn>
 
@@ -26,6 +37,8 @@ describe('createEmbeddedWallet', () => {
       chainType: ChainTypeEnum.EVM,
       accountRequest: { accountType: AccountTypeEnum.SMART_ACCOUNT, chainId: 84532 },
       recovery: undefined,
+      assertCurrent,
+      shouldPublish,
       setActiveEmbeddedAddress,
       updateEmbeddedAccounts,
       ...overrides,
@@ -34,6 +47,8 @@ describe('createEmbeddedWallet', () => {
 
   beforeEach(() => {
     client = testClient(account)
+    assertCurrent = vi.fn()
+    shouldPublish = vi.fn(() => true)
     setActiveEmbeddedAddress = vi.fn()
     updateEmbeddedAccounts = vi.fn().mockResolvedValue([account])
   })
@@ -73,6 +88,28 @@ describe('createEmbeddedWallet', () => {
     expect(updateEmbeddedAccounts).toHaveBeenCalledWith({ silent: true })
   })
 
+  it('checks the reserving session before publishing the created account', async () => {
+    assertCurrent.mockImplementation(() => {
+      throw new WalletCreationError({ chain: 'Ethereum' })
+    })
+
+    await expect(createEmbeddedWallet(params())).rejects.toBeInstanceOf(WalletCreationError)
+
+    expect(assertCurrent).toHaveBeenCalledOnce()
+    expect(setActiveEmbeddedAddress).not.toHaveBeenCalled()
+    expect(updateEmbeddedAccounts).not.toHaveBeenCalled()
+  })
+
+  it('returns a created account without publishing when a newer wallet mutation owns publication', async () => {
+    shouldPublish.mockReturnValue(false)
+
+    await expect(createEmbeddedWallet(params())).resolves.toBe(account)
+
+    expect(assertCurrent).toHaveBeenCalledTimes(2)
+    expect(setActiveEmbeddedAddress).not.toHaveBeenCalled()
+    expect(updateEmbeddedAccounts).not.toHaveBeenCalled()
+  })
+
   it('resolves the account from the create call, not the refetched list', async () => {
     const stale = testAccount({ id: 'emb_stale', address: '0x0000000000000000000000000000000000000001' })
     updateEmbeddedAccounts.mockResolvedValue([stale])
@@ -105,10 +142,37 @@ describe('createEmbeddedWallet', () => {
     expect(setActiveEmbeddedAddress).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ChainTypeEnum.EVM,
+    ChainTypeEnum.SVM,
+  ])('does not create on %s when the signer session changes during recovery preparation', async (chainType) => {
+    const encryptionSession = deferred<string>()
+    const getEncryptionSession = vi.fn(() => encryptionSession.promise)
+    let current = true
+    assertCurrent.mockImplementation(() => {
+      if (!current) throw new WalletNotConnectedError('The wallet session changed.')
+    })
+
+    const pending = createEmbeddedWallet(
+      params({
+        chainType,
+        accountRequest: { accountType: AccountTypeEnum.EOA },
+        walletConfig: testWalletConfig({ getEncryptionSession }),
+      })
+    )
+    await vi.waitFor(() => expect(getEncryptionSession).toHaveBeenCalledOnce())
+
+    current = false
+    encryptionSession.resolve(TEST_ENCRYPTION_SESSION)
+
+    await expect(pending).rejects.toBeInstanceOf(WalletNotConnectedError)
+    expect(client.embeddedWallet.create).not.toHaveBeenCalled()
+  })
+
   it('does not activate anything when the create call rejects', async () => {
     client.embeddedWallet.create.mockRejectedValue(new Error('boom'))
 
-    await expect(createEmbeddedWallet(params())).rejects.toThrow('boom')
+    await expect(createEmbeddedWallet(params())).rejects.toBeInstanceOf(WalletCreationError)
     expect(setActiveEmbeddedAddress).not.toHaveBeenCalled()
     expect(updateEmbeddedAccounts).not.toHaveBeenCalled()
   })

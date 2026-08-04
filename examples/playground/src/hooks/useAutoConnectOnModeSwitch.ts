@@ -80,9 +80,8 @@ export function useAutoConnectOnModeSwitch(mode: OpenfortPlaygroundMode) {
     if (!target) return
 
     handledModeRef.current = mode
-    setActive({ address: target.address as string }).catch(() => {
-      // Allow retry on next render cycle
-      handledModeRef.current = null
+    setActive({ address: target.address as string }).then((result) => {
+      if (result.error || result.needsRecovery) handledModeRef.current = null
     })
     // wallet.create() intentionally omitted — autoCreateWalletAfterAuth:false in config.
   }, [mode, user, isLoadingAccounts, embeddedAccounts, connectOnLogin])

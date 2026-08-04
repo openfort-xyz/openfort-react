@@ -1,13 +1,19 @@
 #!/usr/bin/env node
 
-/**
- * Syncs quickstart templates to create-openfort package templates
- * Run this script before publishing to ensure templates are up-to-date
- */
+/** Synchronizes versioned frontend quickstarts with the templates shipped by create-openfort. */
 
 const { execFileSync } = require('node:child_process');
-const { existsSync, readFileSync, rmSync, writeFileSync } = require('node:fs');
-const { join, resolve } = require('node:path');
+const {
+  existsSync,
+  mkdtempSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} = require('node:fs');
+const { tmpdir } = require('node:os');
+const { isAbsolute, join, relative, resolve, sep } = require('node:path');
 
 const REPO_ROOT = join(__dirname, '..');
 const QUICKSTARTS_DIR = join(REPO_ROOT, 'examples/quickstarts');
@@ -15,118 +21,141 @@ const TEMPLATES_DIR = join(
   REPO_ROOT,
   'packages/create-openfort/template/openfort-templates'
 );
-const BACKEND_TEMPLATE_DIR = join(
-  REPO_ROOT,
-  'packages/create-openfort/template/backend'
-);
+const TEMPLATES_TO_SYNC = [
+  'firebase',
+  'headless',
+  'openfort-ui',
+  'solana-headless',
+];
+const CHECK_ONLY = process.argv.includes('--check');
+const unknownArguments = process.argv
+  .slice(2)
+  .filter((argument) => argument !== '--check');
 
-// Templates to sync (excluding betterauth and supabase as they might not be in create-openfort)
-const TEMPLATES_TO_SYNC = ['firebase', 'headless', 'openfort-ui', 'solana-headless'];
-const BACKEND_REPO_URL = 'https://github.com/openfort-xyz/openfort-backend-quickstart.git';
+if (unknownArguments.length > 0) {
+  throw new Error(`Unknown argument: ${unknownArguments.join(', ')}`);
+}
 
-console.log('🔄 Syncing quickstart templates to create-openfort...\n');
+function assertWithin(candidate, parent, label) {
+  const pathFromParent = relative(resolve(parent), resolve(candidate));
+  if (
+    pathFromParent === '..' ||
+    pathFromParent.startsWith(`..${sep}`) ||
+    isAbsolute(pathFromParent)
+  ) {
+    throw new Error(
+      `${label} is outside its expected directory: ${candidate}`
+    );
+  }
+}
 
-// Sync openfort-templates from quickstarts
-for (const template of TEMPLATES_TO_SYNC) {
+function generateTemplate(template, templatesDirectory) {
   const sourcePath = join(QUICKSTARTS_DIR, template);
-  const targetPath = join(TEMPLATES_DIR, template);
+  const targetPath = join(templatesDirectory, template);
 
   if (!existsSync(sourcePath)) {
-    console.warn(`⚠️  Warning: Source template not found: ${sourcePath}`);
-    continue;
+    throw new Error(`Source template does not exist: ${sourcePath}`);
   }
 
-  console.log(`🔄 Syncing ${template}...`);
+  assertWithin(sourcePath, QUICKSTARTS_DIR, 'Source template');
+  assertWithin(targetPath, templatesDirectory, 'Generated template');
+
+  rmSync(targetPath, { recursive: true, force: true });
+  execFileSync(
+    'rsync',
+    [
+      '-a',
+      '--exclude=node_modules',
+      '--exclude=dist',
+      '--exclude=CHANGELOG.md',
+      '--include=.env.example',
+      '--exclude=.env*',
+      `${sourcePath}/`,
+      `${targetPath}/`,
+    ],
+    { stdio: 'pipe' },
+  );
+
+  const dotGitignore = join(targetPath, '.gitignore');
+  const npmSafeGitignore = join(targetPath, 'gitignore');
+  if (existsSync(dotGitignore)) {
+    writeFileSync(npmSafeGitignore, readFileSync(dotGitignore));
+    rmSync(dotGitignore);
+  }
+
+  const manifestPath = join(targetPath, 'package.json');
+  const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+  manifest.name = `create-openfort-template-${template}`;
+  manifest.version = '0.0.0';
+  writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+}
+
+function listFiles(directory, prefix = '') {
+  return readdirSync(directory, { withFileTypes: true })
+    .sort((left, right) => left.name.localeCompare(right.name))
+    .flatMap((entry) => {
+      if (entry.name === 'node_modules') return [];
+
+      const relativePath = join(prefix, entry.name);
+      if (entry.isDirectory()) {
+        return listFiles(join(directory, entry.name), relativePath);
+      }
+      if (!entry.isFile()) {
+        throw new Error(
+          `Template contains unsupported filesystem entry: ${relativePath}`
+        );
+      }
+      return [relativePath];
+    });
+}
+
+function assertDirectoriesMatch(expectedDirectory, actualDirectory, template) {
+  if (!existsSync(actualDirectory)) {
+    throw new Error(`Shipped template does not exist: ${actualDirectory}`);
+  }
+
+  const expectedFiles = listFiles(expectedDirectory);
+  const actualFiles = listFiles(actualDirectory);
+  if (JSON.stringify(expectedFiles) !== JSON.stringify(actualFiles)) {
+    throw new Error(
+      `${template} template file list is stale. Run \`pnpm sync-templates\`.`
+    );
+  }
+
+  for (const relativePath of expectedFiles) {
+    const expected = readFileSync(join(expectedDirectory, relativePath));
+    const actual = readFileSync(join(actualDirectory, relativePath));
+    if (!expected.equals(actual)) {
+      throw new Error(
+        `${template} template differs at ${relativePath}. Run \`pnpm sync-templates\`.`
+      );
+    }
+  }
+}
+
+if (CHECK_ONLY) {
+  const temporaryRoot = mkdtempSync(join(tmpdir(), 'openfort-template-sync-'));
+  const expectedTemplates = join(temporaryRoot, 'openfort-templates');
+  mkdirSync(expectedTemplates);
 
   try {
-    // Validate paths are within expected directories
-    const resolvedSource = resolve(sourcePath);
-    const resolvedTarget = resolve(targetPath);
-    const resolvedQuickstarts = resolve(QUICKSTARTS_DIR);
-    const resolvedTemplates = resolve(TEMPLATES_DIR);
-    
-    if (!resolvedSource.startsWith(resolvedQuickstarts)) {
-      throw new Error(`Invalid source path: ${resolvedSource}`);
+    for (const template of TEMPLATES_TO_SYNC) {
+      generateTemplate(template, expectedTemplates);
+      assertDirectoriesMatch(
+        join(expectedTemplates, template),
+        join(TEMPLATES_DIR, template),
+        template,
+      );
     }
-    if (!resolvedTarget.startsWith(resolvedTemplates)) {
-      throw new Error(`Invalid target path: ${resolvedTarget}`);
-    }
-
-    // Remove the old template
-    if (existsSync(resolvedTarget)) {
-      rmSync(resolvedTarget, { recursive: true, force: true });
-    }
-
-    // Preserve example configuration while excluding actual local environment files.
-    execFileSync(
-      'rsync',
-      [
-        '-av',
-        '--exclude=node_modules',
-        '--exclude=dist',
-        '--include=.env.example',
-        '--exclude=.env*',
-        `${resolvedSource}/`,
-        `${resolvedTarget}/`
-      ],
-      { stdio: 'pipe' }
-    );
-
-    // npm strips files named .gitignore from package payloads. Ship it under
-    // an npm-safe name; the scaffolder restores the leading dot.
-    const dotGitignore = join(resolvedTarget, '.gitignore');
-    const npmSafeGitignore = join(resolvedTarget, 'gitignore');
-    if (existsSync(dotGitignore)) {
-      writeFileSync(npmSafeGitignore, readFileSync(dotGitignore));
-      rmSync(dotGitignore);
-    }
-
-    // The quickstart and the template live in the same pnpm workspace, so the
-    // template needs its own package name. The CLI overwrites it with the
-    // user's app name when scaffolding.
-    const templatePkgPath = join(resolvedTarget, 'package.json');
-    const templatePkg = JSON.parse(readFileSync(templatePkgPath, 'utf8'));
-    templatePkg.name = `create-openfort-template-${template}`;
-    writeFileSync(templatePkgPath, `${JSON.stringify(templatePkg, null, 2)}\n`);
-
-    console.log(`✅ ${template} synced successfully`);
-  } catch (error) {
-    console.error(`❌ Error syncing ${template}:`, error.message);
-    process.exit(1);
+  } finally {
+    rmSync(temporaryRoot, { recursive: true, force: true });
   }
+
+  console.log('All shipped frontend templates match their quickstarts.');
+} else {
+  for (const template of TEMPLATES_TO_SYNC) {
+    generateTemplate(template, TEMPLATES_DIR);
+  }
+
+  console.log('All frontend templates synchronized.');
 }
-
-// Sync backend template from git repository
-console.log('\n🔄 Syncing backend template...');
-
-try {// Remove the old backend template
-if (existsSync(BACKEND_TEMPLATE_DIR)) {
-  rmSync(BACKEND_TEMPLATE_DIR, { recursive: true, force: true });
-}
-
-// Clone the backend repository
-execFileSync(
-  'git',
-  [
-    'clone',
-    '--depth',
-    '1',
-    BACKEND_REPO_URL,
-    BACKEND_TEMPLATE_DIR
-  ],
-  { stdio: 'pipe' }
-);
-
-// Remove the .git directory to integrate it properly
-const gitDir = join(BACKEND_TEMPLATE_DIR, '.git');
-if (existsSync(gitDir)) {
-  rmSync(gitDir, { recursive: true, force: true });
-}
-
-  console.log('✅ backend synced successfully');
-} catch (error) {
-  console.error('❌ Error syncing backend:', error.message);
-  process.exit(1);
-}
-
-console.log('\n✨ All templates synced successfully!');

@@ -29,12 +29,17 @@ const USDC_ASSET: Asset = {
 }
 
 const h = vi.hoisted(() => ({
+  client: {},
   asset: null as unknown,
   sponsorFees: false,
   sendSol: vi.fn<(...args: unknown[]) => Promise<string>>(),
   sendSolGasless: vi.fn<(...args: unknown[]) => Promise<string>>(),
   sendSplToken: vi.fn<(...args: unknown[]) => Promise<string>>(),
   sendSplTokenGasless: vi.fn<(...args: unknown[]) => Promise<string>>(),
+}))
+
+vi.mock('../../openfort/useOpenfort', () => ({
+  useOpenfortCore: (selector: (state: { client: object }) => unknown) => selector({ client: h.client }),
 }))
 
 vi.mock('../../components/Openfort/useOpenfort', () => {

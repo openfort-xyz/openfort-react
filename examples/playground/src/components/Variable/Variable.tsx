@@ -318,6 +318,7 @@ export const BaseVariable = ({
     // Non-expandable values (primitives, etc.)
     return (
       <div
+        data-variable-name={name}
         className={cn(
           'flex items-center gap-2 font-mono text-sm group/parent',
           focusedVariable === name ? 'animate-focus' : '',

@@ -1,6 +1,14 @@
-import type { AccountTypeEnum, ChainTypeEnum, EmbeddedAccount, Openfort, RecoveryMethod } from '@openfort/openfort-js'
+import {
+  type AccountTypeEnum,
+  ChainTypeEnum,
+  type EmbeddedAccount,
+  type Openfort,
+  type RecoveryMethod,
+} from '@openfort/openfort-js'
 import type { OpenfortWalletConfig } from '../components/Openfort/types.js'
+import { asOpenfortError } from '../errors/base.js'
 import { WalletConfigNotFoundError } from '../errors/config.js'
+import { WalletCreationError } from '../errors/wallet.js'
 import { buildRecoveryParams } from '../shared/utils/recovery.js'
 import { activateEmbeddedAccount } from './activateEmbeddedAccount.js'
 import { buildClientRecoveryConfig } from './buildClientRecoveryConfig.js'
@@ -26,6 +34,8 @@ export type CreateEmbeddedWalletParameters = {
   chainType: ChainTypeEnum
   accountRequest: EmbeddedAccountRequest
   recovery: EmbeddedRecoveryInput | undefined
+  assertCurrent: () => void
+  shouldPublish: () => boolean
   setActiveEmbeddedAddress: (address: string | undefined) => void
   updateEmbeddedAccounts: (options?: { silent?: boolean }) => Promise<EmbeddedAccount[] | undefined>
 }
@@ -44,6 +54,8 @@ export async function createEmbeddedWallet(parameters: CreateEmbeddedWalletParam
     chainType,
     accountRequest,
     recovery,
+    assertCurrent,
+    shouldPublish,
     setActiveEmbeddedAddress,
     updateEmbeddedAccounts,
   } = parameters
@@ -52,11 +64,25 @@ export async function createEmbeddedWallet(parameters: CreateEmbeddedWalletParam
     throw new WalletConfigNotFoundError()
   }
 
-  const recoveryParams = await buildRecoveryParams(recovery, buildClientRecoveryConfig(client, walletConfig))
+  try {
+    const recoveryParams = await buildRecoveryParams(recovery, buildClientRecoveryConfig(client, walletConfig))
+    assertCurrent()
 
-  const account = await client.embeddedWallet.create({ chainType, ...accountRequest, recoveryParams })
+    const account = await client.embeddedWallet.create({ chainType, ...accountRequest, recoveryParams })
 
-  await activateEmbeddedAccount({ account, setActiveEmbeddedAddress, updateEmbeddedAccounts })
+    await activateEmbeddedAccount({
+      account,
+      assertCurrent,
+      shouldPublish,
+      setActiveEmbeddedAddress,
+      updateEmbeddedAccounts,
+    })
 
-  return account
+    return account
+  } catch (error) {
+    throw asOpenfortError(
+      error,
+      (cause) => new WalletCreationError({ chain: chainType === ChainTypeEnum.EVM ? 'Ethereum' : 'Solana', cause })
+    )
+  }
 }

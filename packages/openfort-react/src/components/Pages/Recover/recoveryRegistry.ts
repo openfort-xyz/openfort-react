@@ -1,6 +1,6 @@
 import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
 import type { OTPResponse } from '../../../shared/hooks/useRecoveryOTP.js'
-import type { RecoverableWallet } from '../../../shared/types.js'
+import type { RecoverableWallet, SetActiveEmbeddedWalletResult } from '../../../shared/types.js'
 import { handleOtpRecoveryError } from '../../../shared/utils/otpError.js'
 import { routes, type SetRouteOptions } from '../../Openfort/types.js'
 
@@ -11,7 +11,7 @@ type RecoveryContext = {
     recoveryMethod?: RecoveryMethod
     otpCode?: string
     passkeyId?: string
-  }) => Promise<void>
+  }) => Promise<SetActiveEmbeddedWalletResult>
   setRoute: (options: SetRouteOptions) => void
   setError: (e: string | false) => void
   otp: { isEnabled: boolean; request: () => Promise<OTPResponse> }
@@ -24,35 +24,50 @@ type RecoveryContext = {
 
 type RecoveryEntry = (wallet: RecoverableWallet, ctx: RecoveryContext) => Promise<void>
 
+export type AutomaticRecoveryOutcome =
+  | { status: 'success' }
+  | { status: 'needs-recovery' }
+  | { status: 'otp-required' }
+  | { status: 'error' }
+
 async function passwordEntry(wallet: RecoverableWallet, ctx: RecoveryContext): Promise<void> {
   ctx.setError(false)
-  await ctx.setActive({
+  const result = await ctx.setActive({
     address: wallet.address,
     recoveryMethod: RecoveryMethod.PASSWORD,
     password: ctx.password,
   })
-  ctx.setRoute(routes.CONNECTED_SUCCESS)
+  if (result.error) {
+    ctx.setError(result.error.message)
+  } else if (!result.needsRecovery) {
+    ctx.setRoute(routes.CONNECTED_SUCCESS)
+  }
 }
 
 async function passkeyEntry(wallet: RecoverableWallet, ctx: RecoveryContext): Promise<void> {
   ctx.setError(false)
-  await ctx.setActive({
+  const result = await ctx.setActive({
     address: wallet.address,
     recoveryMethod: RecoveryMethod.PASSKEY,
     passkeyId: ctx.passkeyId,
   })
-  ctx.setRoute(routes.CONNECTED_SUCCESS)
+  if (result.error) {
+    ctx.setError(result.error.message)
+  } else if (!result.needsRecovery) {
+    ctx.setRoute(routes.CONNECTED_SUCCESS)
+  }
 }
 
-async function automaticEntry(wallet: RecoverableWallet, ctx: RecoveryContext): Promise<void> {
+async function automaticEntry(wallet: RecoverableWallet, ctx: RecoveryContext): Promise<AutomaticRecoveryOutcome> {
   ctx.setError(false)
   try {
-    await ctx.setActive({
+    const result = await ctx.setActive({
       address: wallet.address,
       recoveryMethod: RecoveryMethod.AUTOMATIC,
       otpCode: ctx.otpCode,
     })
-    ctx.setRoute(routes.CONNECTED_SUCCESS)
+    if (result.error) throw result.error
+    return result.needsRecovery ? { status: 'needs-recovery' } : { status: 'success' }
   } catch (err) {
     const { error, isOTPRequired } = handleOtpRecoveryError(err, ctx.otp.isEnabled)
     if (isOTPRequired && ctx.otp.isEnabled) {
@@ -60,11 +75,14 @@ async function automaticEntry(wallet: RecoverableWallet, ctx: RecoveryContext): 
         const res = await ctx.otp.request()
         ctx.setNeedsOTP(true)
         ctx.setOtpResponse(res)
+        return { status: 'otp-required' }
       } catch (_otpErr) {
         ctx.setError('Failed to send recovery code')
+        return { status: 'error' }
       }
     } else {
       ctx.setError(error.message)
+      return { status: 'error' }
     }
   }
 }
@@ -72,7 +90,7 @@ async function automaticEntry(wallet: RecoverableWallet, ctx: RecoveryContext): 
 type RecoveryRegistryByChain = {
   password: RecoveryEntry
   passkey: RecoveryEntry
-  automatic: RecoveryEntry
+  automatic: (wallet: RecoverableWallet, ctx: RecoveryContext) => Promise<AutomaticRecoveryOutcome>
 }
 
 const RECOVERY_REGISTRY: RecoveryRegistryByChain = {

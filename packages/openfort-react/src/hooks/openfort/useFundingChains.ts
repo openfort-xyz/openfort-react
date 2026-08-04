@@ -5,7 +5,7 @@ import type { QueryKey } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
 import { ApiRequestError } from '../../errors/operation.js'
-import { openfortKeys } from '../../query/queryKeys.js'
+import { getOpenfortQueryInputScope, openfortKeys } from '../../query/queryKeys.js'
 import { useQuery } from '../../query/useQuery.js'
 import { getPublishableKeyEnvironment } from '../../utils/validation.js'
 
@@ -102,7 +102,7 @@ export function useFundingChains(): UseFundingChains {
   )
 
   const { data, error, isLoading, isFetching, refetch, queryKey } = useQuery({
-    queryKey: openfortKeys.fundingChains({ baseUrl, livemode }),
+    queryKey: openfortKeys.fundingChains({ baseScope: getOpenfortQueryInputScope(baseUrl), livemode }),
     queryFn: async () => {
       const response = await fetch(`${baseUrl}/v2/funding/chains?livemode=${livemode}`)
       if (!response.ok) throw new ApiRequestError({ operation: 'Funding chain lookup', status: response.status })

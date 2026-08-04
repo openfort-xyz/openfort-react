@@ -2,9 +2,17 @@ import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from
 
 type ValidationErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 
-export type ValidationErrorType = ValidationError & { name: 'ValidationError' }
-
-/** An argument reached an action hook in a shape it cannot act on. */
+/**
+ * An argument reached an action hook in a shape it cannot act on.
+ *
+ * @example
+ * ```ts
+ * import { ValidationError } from '@openfort/react'
+ *
+ * const error = new ValidationError('The transaction request is invalid.')
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class ValidationError extends OpenfortError {
   override name = 'ValidationError'
 
@@ -13,9 +21,17 @@ export class ValidationError extends OpenfortError {
   }
 }
 
-export type MissingParameterErrorType = MissingParameterError & { name: 'MissingParameterError' }
-
-/** A required argument was omitted or empty. */
+/**
+ * A required argument was omitted or empty.
+ *
+ * @example
+ * ```ts
+ * import { MissingParameterError } from '@openfort/react'
+ *
+ * const error = new MissingParameterError({ params: ['email', 'password'] })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class MissingParameterError extends ValidationError {
   override name = 'MissingParameterError'
 
@@ -27,9 +43,17 @@ export class MissingParameterError extends ValidationError {
   }
 }
 
-export type InvalidEmailErrorType = InvalidEmailError & { name: 'InvalidEmailError' }
-
-/** An email address failed the SDK's format check before any network call. */
+/**
+ * An email address failed the SDK's format check before any network call.
+ *
+ * @example
+ * ```ts
+ * import { InvalidEmailError } from '@openfort/react'
+ *
+ * const error = new InvalidEmailError({ email: 'user@example' })
+ * console.log(error.shortMessage)
+ * ```
+ */
 export class InvalidEmailError extends ValidationError {
   override name = 'InvalidEmailError'
 

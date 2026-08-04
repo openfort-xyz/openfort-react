@@ -32,7 +32,7 @@ const useFitText = ({ maxFontSize = 100, minFontSize = 20, onFinish, onStart, re
   }, [maxFontSize, minFontSize])
 
   const ref = useRef<HTMLDivElement>(null)
-  const innerHtmlPrevRef = useRef<string | null>()
+  const innerHtmlPrevRef = useRef<string | undefined>(undefined)
   const isCalculatingRef = useRef(false)
   const [state, setState] = useState(initState)
   const { calcKey, fontSize, fontSizeMax, fontSizeMin, fontSizePrev } = state

@@ -28,6 +28,8 @@ import {
   OpenfortContext,
   RoutingContext,
   type RoutingContextValue,
+  SignRequestContext,
+  type SignRequestContextValue,
   type ThemeContextValue,
   ThemeStateContext,
 } from './context.js'
@@ -208,6 +210,12 @@ export const OpenfortProvider = ({
         'Automatic recovery method was removed from allowedMethods because no recovery options are configured in the walletConfig. Please provide either createEncryptedSessionEndpoint or getEncryptionSession to enable automatic recovery.'
       )
     }
+    if (walletRecovery.allowedMethods.length === 0) {
+      walletRecovery.allowedMethods = [RecoveryMethod.PASSWORD]
+    }
+    if (!walletRecovery.allowedMethods.includes(walletRecovery.defaultMethod)) {
+      walletRecovery.defaultMethod = walletRecovery.allowedMethods[0] ?? defaultUIOptions.walletRecovery.defaultMethod
+    }
     return { ...merged, authProviders, walletRecovery }
   }, [defaultUIOptions, uiConfig, hasExternalWallets, allowAutomaticRecovery])
 
@@ -377,11 +385,11 @@ export const OpenfortProvider = ({
       setSendForm,
       buyForm,
       setBuyForm,
-      signRequest,
-      setSignRequest,
     }),
-    [emailInput, phoneInput, sendForm, buyForm, signRequest]
+    [emailInput, phoneInput, sendForm, buyForm]
   )
+
+  const signRequestValue: SignRequestContextValue = useMemo(() => ({ signRequest, setSignRequest }), [signRequest])
 
   const configValue: ConfigContextValue = useMemo(
     () => ({
@@ -408,84 +416,105 @@ export const OpenfortProvider = ({
     ]
   )
 
-  const innerChildren = (
-    <>
-      {hasWagmi && (
+  const innerChildren = useMemo(
+    () => (
+      <>
+        {hasWagmi && (
+          <Suspense fallback={null}>
+            <LazyEmbeddedWalletWagmiSync />
+          </Suspense>
+        )}
+        {debugModeOptions.debugRoutes && (
+          <pre
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              fontSize: '14px',
+              color: 'gray',
+              background: 'white',
+              zIndex: 9999,
+            }}
+          >
+            {JSON.stringify(
+              routeHistory.map((item) =>
+                Object.fromEntries(
+                  Object.entries(item).map(([key, value]) => [
+                    key,
+                    typeof value === 'object' && value !== null ? '[object]' : value,
+                  ])
+                )
+              ),
+              null,
+              2
+            )}
+          </pre>
+        )}
+        {children}
         <Suspense fallback={null}>
-          <LazyEmbeddedWalletWagmiSync />
+          <LazyConnectKitModal
+            lang={ckLang}
+            theme={ckTheme}
+            mode={safeUiConfig.mode ?? ckMode}
+            customTheme={ckCustomTheme}
+          />
         </Suspense>
-      )}
-      {debugModeOptions.debugRoutes && (
-        <pre
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            fontSize: '14px',
-            color: 'gray',
-            background: 'white',
-            zIndex: 9999,
-          }}
-        >
-          {JSON.stringify(
-            routeHistory.map((item) =>
-              Object.fromEntries(
-                Object.entries(item).map(([key, value]) => [
-                  key,
-                  typeof value === 'object' && value !== null ? '[object]' : value,
-                ])
-              )
-            ),
-            null,
-            2
-          )}
-        </pre>
-      )}
-      {children}
-      <Suspense fallback={null}>
-        <LazyConnectKitModal
-          lang={ckLang}
-          theme={ckTheme}
-          mode={safeUiConfig.mode ?? ckMode}
-          customTheme={ckCustomTheme}
-        />
-      </Suspense>
-    </>
+      </>
+    ),
+    [
+      hasWagmi,
+      debugModeOptions.debugRoutes,
+      routeHistory,
+      children,
+      ckLang,
+      ckTheme,
+      safeUiConfig.mode,
+      ckMode,
+      ckCustomTheme,
+    ]
+  )
+
+  const coreOpenfortConfig = useMemo(
+    () => ({
+      baseConfiguration: { publishableKey },
+      shieldConfiguration: walletConfig
+        ? {
+            shieldPublishableKey: walletConfig.shieldPublishableKey,
+            debug: debugModeOptions.shieldDebugMode,
+            ...(walletConfig.passkeyDisplayName && {
+              passkeyRpName: walletConfig.passkeyDisplayName,
+            }),
+          }
+        : undefined,
+      debug: debugModeOptions.openfortCoreDebugMode,
+      overrides,
+      thirdPartyAuth,
+    }),
+    [publishableKey, walletConfig, debugModeOptions, overrides, thirdPartyAuth]
+  )
+
+  const coreProviderTree = useMemo(
+    () => (
+      <CoreOpenfortProvider openfortConfig={coreOpenfortConfig} onConnect={onConnect} onDisconnect={onDisconnect}>
+        {hasSolana ? (
+          <Suspense fallback={null}>
+            <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
+          </Suspense>
+        ) : (
+          innerChildren
+        )}
+      </CoreOpenfortProvider>
+    ),
+    [coreOpenfortConfig, onConnect, onDisconnect, hasSolana, walletConfig, innerChildren]
   )
 
   return (
     <OpenfortContext.Provider value={configValue}>
       <ThemeStateContext.Provider value={themeValue}>
         <RoutingContext.Provider value={routingValue}>
-          <FormContext.Provider value={formValue}>
-            <CoreOpenfortProvider
-              openfortConfig={{
-                baseConfiguration: { publishableKey },
-                shieldConfiguration: walletConfig
-                  ? {
-                      shieldPublishableKey: walletConfig.shieldPublishableKey,
-                      debug: debugModeOptions.shieldDebugMode,
-                      ...(walletConfig.passkeyDisplayName && {
-                        passkeyRpName: walletConfig.passkeyDisplayName,
-                      }),
-                    }
-                  : undefined,
-                debug: debugModeOptions.openfortCoreDebugMode,
-                overrides,
-                thirdPartyAuth,
-              }}
-              onConnect={onConnect}
-              onDisconnect={onDisconnect}
-            >
-              {hasSolana ? (
-                <Suspense fallback={null}>
-                  <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
-                </Suspense>
-              ) : (
-                innerChildren
-              )}
-            </CoreOpenfortProvider>
-          </FormContext.Provider>
+          <SignRequestContext.Provider value={signRequestValue}>
+            <FormContext.Provider value={formValue}>{coreProviderTree}</FormContext.Provider>
+          </SignRequestContext.Provider>
         </RoutingContext.Provider>
       </ThemeStateContext.Provider>
     </OpenfortContext.Provider>

@@ -12,7 +12,7 @@ import { createPublicClient, http } from 'viem'
 import { mainnet } from 'viem/chains'
 import { normalize } from 'viem/ens'
 import { useOpenfort } from '../components/Openfort/useOpenfort.js'
-import { openfortKeys } from '../query/queryKeys.js'
+import { getOpenfortQueryInputScope, openfortKeys } from '../query/queryKeys.js'
 import { useQuery } from '../query/useQuery.js'
 import { getDefaultEthereumRpcUrl } from '../utils/rpc.js'
 
@@ -98,7 +98,12 @@ export function useResolvedIdentity(options: UseResolvedIdentityOptions): Resolv
   const isEnabled = enabled && !!address && address.length > 0 && ensChainId === 1 && !!rpcUrl
 
   const { data, error, isLoading } = useQuery({
-    queryKey: openfortKeys.identity({ address, chainType, ensChainId }),
+    queryKey: openfortKeys.identity({
+      address,
+      chainType,
+      ensChainId,
+      rpcScope: getOpenfortQueryInputScope(rpcUrl),
+    }),
     queryFn: () => resolveEthereumIdentity(address, rpcUrl!),
     enabled: isEnabled,
     staleTime: 5 * 60 * 1000,

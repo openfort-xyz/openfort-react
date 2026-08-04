@@ -3,6 +3,8 @@ import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
 import { createEthereumBridgeStrategy } from '../../core/strategies/EthereumBridgeStrategy.js'
 import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext.js'
 
+const currentOperation = { assertCurrent: () => undefined }
+
 function makeBridge(transportByChain: Record<number, string>): OpenfortEthereumBridgeValue {
   return {
     account: { address: '0xabc', isConnected: false },
@@ -34,7 +36,7 @@ describe('EthereumBridgeStrategy signer RPC endpoints', () => {
       ethereum: { rpcUrls: { 84532: 'https://sepolia.base.org' } },
     } as unknown as OpenfortWalletConfig
 
-    await strategy.initProvider(openfort, walletConfig)
+    await strategy.initProvider(openfort, walletConfig, undefined, currentOperation)
 
     expect(getEthereumProvider).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -48,7 +50,7 @@ describe('EthereumBridgeStrategy signer RPC endpoints', () => {
     const strategy = createEthereumBridgeStrategy(bridge, [])
     const { openfort, getEthereumProvider } = makeOpenfort()
 
-    await strategy.initProvider(openfort, {} as OpenfortWalletConfig)
+    await strategy.initProvider(openfort, {} as OpenfortWalletConfig, undefined, currentOperation)
 
     expect(getEthereumProvider).toHaveBeenCalledWith(
       expect.objectContaining({ chains: { 84532: 'https://sepolia.base.org' } })

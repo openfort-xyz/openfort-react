@@ -7,6 +7,7 @@ import { createProject } from "~/helpers/createProject.js";
 import { initializeGit } from "~/helpers/git.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { logger } from "~/utils/logger.js";
+import { assertSupportedNode } from "~/utils/nodeVersion.js";
 import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
 import { renderTitle } from "~/utils/renderTitle.js";
 import { getVersion } from "./utils/getVersion.js";
@@ -24,6 +25,7 @@ type OpenfortPackageJSON = PackageJson & {
 };
 
 const main = async () => {
+  assertSupportedNode();
   const npmVersion = await getNpmVersion();
 
   await renderTitle();

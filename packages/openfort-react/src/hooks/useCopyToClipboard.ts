@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 export function useCopyToClipboard(resetDelay = 1000) {
   const [copied, setCopied] = useState(false)
   const [error, setError] = useState<Error | null>(null)
-  const timeoutRef = useRef<NodeJS.Timeout>()
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
   const mountedRef = useRef(true)
 
   const copy = useCallback(

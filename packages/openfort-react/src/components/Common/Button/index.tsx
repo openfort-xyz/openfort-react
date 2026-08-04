@@ -1,4 +1,4 @@
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, type Transition } from 'framer-motion'
 import type React from 'react'
 import { flattenChildren } from '../../../utils/index.js'
 import FitText from '../FitText/index.js'
@@ -20,7 +20,7 @@ import type { ButtonProps } from './types.js'
 const transition = {
   duration: 0.4,
   ease: [0.175, 0.885, 0.32, 0.98],
-}
+} satisfies Transition
 
 const Button: React.FC<ButtonProps> = ({
   className,

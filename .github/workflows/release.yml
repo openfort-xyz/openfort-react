@@ -99,6 +99,7 @@ jobs:
 
       - name: Publish snapshot packages
         env:
+          GITHUB_TOKEN: ${{ github.token }}
           NPM_CONFIG_PROVENANCE: true
         # `changeset version --snapshot` writes the snapshot version into each
         # package.json; `changeset:prepublish` then builds, which is what copies

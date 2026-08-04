@@ -1,8 +1,11 @@
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { useSyncExternalStore } from 'react'
+import { StrictMode, useSyncExternalStore } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { PageActivityProvider } from '../../components/Common/Modal/pageActivity.js'
 import { LinkWalletOnSignUpOption, routes } from '../../components/Openfort/types.js'
+import { WalletCreationError } from '../../errors/wallet.js'
+import { invalidatePersistentOperations } from '../../shared/utils/persistentOperationRegistry.js'
 
 /**
  * The automatic-recovery page creates an embedded wallet on arrival and, when the
@@ -12,6 +15,7 @@ import { LinkWalletOnSignUpOption, routes } from '../../components/Openfort/type
  */
 
 type CoreState = {
+  client: object
   user: { id: string } | null
   chainType: ChainTypeEnum
   embeddedState: EmbeddedState
@@ -24,6 +28,8 @@ const h = vi.hoisted(() => {
   // what lets a page re-render when the SDK moves the embedded state underneath it.
   const store = { current: {} as Record<string, unknown> }
   return {
+    client: {},
+    captureAuthSession: vi.fn(() => ({ isCurrent: () => true })),
     store,
     subscribe: (listener: () => void) => {
       listeners.add(listener)
@@ -37,6 +43,8 @@ const h = vi.hoisted(() => {
     },
     connectOnLogin: true as boolean | undefined,
     otpEnabled: true,
+    defaultRecoveryMethod: undefined as unknown as RecoveryMethod,
+    allowedRecoveryMethods: [] as RecoveryMethod[],
     setRoute: vi.fn(),
     createEthereum: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
     createSolana: vi.fn<(...args: unknown[]) => Promise<unknown>>(),
@@ -52,8 +60,8 @@ vi.mock('../../components/Openfort/useOpenfort', () => {
     uiConfig: {
       linkWalletOnSignUp: LinkWalletOnSignUpOption.DISABLED,
       walletRecovery: {
-        defaultMethod: RecoveryMethod.AUTOMATIC,
-        allowedMethods: [RecoveryMethod.AUTOMATIC],
+        defaultMethod: h.defaultRecoveryMethod,
+        allowedMethods: h.allowedRecoveryMethods,
       },
     },
     setOnBack: vi.fn(),
@@ -65,6 +73,9 @@ vi.mock('../../components/Openfort/useOpenfort', () => {
 vi.mock('../../openfort/useOpenfort', () => ({
   useOpenfortCore: (selector: (s: CoreState) => unknown) =>
     useSyncExternalStore(h.subscribe, () => selector(h.store.current as unknown as CoreState)),
+}))
+vi.mock('../../openfort/authTransitionContext', () => ({
+  useAuthTransitions: () => ({ captureAuthSession: h.captureAuthSession }),
 }))
 vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
   useEthereumEmbeddedWallet: () => ({ status: 'disconnected', create: h.createEthereum }),
@@ -90,6 +101,18 @@ const { default: CreateWallet } = await import('../../components/Pages/CreateWal
 const OTP_CODE = '123456789'
 const EMAIL = 'user@example.com'
 
+function creationFailure(chain: 'Ethereum' | 'Solana', message: string) {
+  return { error: new WalletCreationError({ chain, cause: new Error(message) }) }
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 /** Fills every box of the standalone OTP input, which submits on the last digit. */
 function enterOtp(code: string) {
   const boxes = screen.getAllByRole('textbox')
@@ -105,7 +128,9 @@ function otpScreen() {
 }
 
 beforeEach(() => {
+  invalidatePersistentOperations(h.client)
   h.setCore({
+    client: h.client,
     user: { id: 'usr_1' },
     chainType: ChainTypeEnum.EVM,
     embeddedState: EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED,
@@ -113,16 +138,28 @@ beforeEach(() => {
   })
   h.connectOnLogin = true
   h.otpEnabled = true
+  h.defaultRecoveryMethod = RecoveryMethod.AUTOMATIC
+  h.allowedRecoveryMethods = [RecoveryMethod.AUTOMATIC]
   h.setRoute.mockReset()
-  for (const fn of [h.createEthereum, h.createSolana]) {
-    fn.mockReset()
-    fn.mockResolvedValue(undefined)
-  }
+  h.createEthereum.mockReset()
+  h.createEthereum.mockResolvedValue({ account: { id: 'embedded_evm_test' } })
+  h.createSolana.mockReset()
+  h.createSolana.mockResolvedValue({ account: { id: 'embedded_svm_test' } })
   h.requestOTP.mockReset()
   h.requestOTP.mockResolvedValue({ sentTo: 'email', email: EMAIL })
 })
 
 describe('Ethereum automatic recovery', () => {
+  it('falls back to an allowed method when the configured default is disallowed', () => {
+    h.defaultRecoveryMethod = RecoveryMethod.AUTOMATIC
+    h.allowedRecoveryMethods = [RecoveryMethod.PASSWORD]
+
+    render(<CreateWallet />)
+
+    expect(screen.getByText('Secure your wallet')).toBeTruthy()
+    expect(h.createEthereum).not.toHaveBeenCalled()
+  })
+
   it('creates the wallet on arrival and routes to the success page', async () => {
     render(<CreateWallet />)
 
@@ -144,7 +181,7 @@ describe('Ethereum automatic recovery', () => {
   })
 
   it('creates only once when the embedded state cycles back to unconfigured', async () => {
-    h.createEthereum.mockRejectedValue(new Error('shield unreachable'))
+    h.createEthereum.mockResolvedValue(creationFailure('Ethereum', 'shield unreachable'))
     render(<CreateWallet />)
     await waitFor(() => expect(screen.getByText('Error creating wallet.')).toBeTruthy())
 
@@ -165,11 +202,11 @@ describe('Ethereum automatic recovery', () => {
   })
 
   it('surfaces a recovery failure and retries from the loader', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('shield unreachable'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'shield unreachable'))
     render(<CreateWallet />)
 
     await waitFor(() => expect(screen.getByText('Error creating wallet.')).toBeTruthy())
-    expect(screen.getByText(/Wallet recovery failed\./)).toBeTruthy()
+    expect(screen.getByText(/Failed to create Ethereum wallet\./)).toBeTruthy()
     expect(h.setRoute).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByLabelText('Retry'))
@@ -179,7 +216,7 @@ describe('Ethereum automatic recovery', () => {
   })
 
   it('asks for a code when the recovery share is OTP-gated', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
     render(<CreateWallet />)
 
     await otpScreen()
@@ -188,7 +225,7 @@ describe('Ethereum automatic recovery', () => {
   })
 
   it('creates the wallet with the submitted code and routes to the success page', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
     render(<CreateWallet />)
     await otpScreen()
 
@@ -203,16 +240,16 @@ describe('Ethereum automatic recovery', () => {
   })
 
   it('reports a rejected code and reopens the input so it can be retyped', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
-    h.createEthereum.mockRejectedValueOnce(new Error('wrong code'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'wrong code'))
     render(<CreateWallet />)
     await otpScreen()
 
     enterOtp(OTP_CODE)
 
-    await waitFor(() => expect(screen.getByText('There was an error verifying the OTP')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText(/Failed to create Ethereum wallet\./)).toBeTruthy())
     // The failure copy clears itself after a second, which unlocks the boxes again.
-    await waitFor(() => expect(screen.queryByText('There was an error verifying the OTP')).toBeNull(), {
+    await waitFor(() => expect(screen.queryByText(/Failed to create Ethereum wallet\./)).toBeNull(), {
       timeout: 3000,
     })
 
@@ -223,7 +260,7 @@ describe('Ethereum automatic recovery', () => {
   })
 
   it('reports a failure to send the code', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
     h.requestOTP.mockRejectedValueOnce(new Error('mailer down'))
     render(<CreateWallet />)
 
@@ -233,7 +270,7 @@ describe('Ethereum automatic recovery', () => {
 
   it('reports the OTP requirement as a recovery error when no OTP sender is configured', async () => {
     h.otpEnabled = false
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
     render(<CreateWallet />)
 
     await waitFor(() => expect(screen.getByText('Error creating wallet.')).toBeTruthy())
@@ -242,7 +279,7 @@ describe('Ethereum automatic recovery', () => {
   })
 
   it('sends the user to link a contact method when the account has no real one', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
     h.requestOTP.mockResolvedValueOnce({ sentTo: 'email', email: 'abc@openfort.anonymous' })
     render(<CreateWallet />)
 
@@ -252,30 +289,27 @@ describe('Ethereum automatic recovery', () => {
     expect(h.setRoute).toHaveBeenCalledWith(routes.PROVIDERS)
   })
 
-  it('asks for a new code when resend is pressed', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+  it('blocks an immediate duplicate after the initial code request', async () => {
+    h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
     render(<CreateWallet />)
     await otpScreen()
     expect(h.requestOTP).toHaveBeenCalledTimes(1)
 
-    const resend = screen.getByText('Resend Code') as HTMLButtonElement
-    expect(resend.disabled).toBe(false)
+    const resend = screen.getByText('Code Sent!') as HTMLButtonElement
+    expect(resend.disabled).toBe(true)
 
     fireEvent.click(resend)
 
-    await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
-    expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
+    expect(h.requestOTP).toHaveBeenCalledTimes(1)
   })
 
   it('re-enables the resend button once the cooldown elapses', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
     try {
-      h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+      h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
       render(<CreateWallet />)
       await otpScreen()
 
-      fireEvent.click(screen.getByText('Resend Code'))
-      await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
       expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
 
       act(() => {
@@ -287,22 +321,30 @@ describe('Ethereum automatic recovery', () => {
 
       fireEvent.click(resend)
 
-      await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(3))
+      await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
+      expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
     } finally {
       vi.useRealTimers()
     }
   })
 
   it('reports a code that could not be resent and reopens the input', async () => {
-    h.createEthereum.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
-    render(<CreateWallet />)
-    await otpScreen()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      h.createEthereum.mockResolvedValueOnce(creationFailure('Ethereum', 'OTP_REQUIRED'))
+      render(<CreateWallet />)
+      await otpScreen()
+      act(() => vi.advanceTimersByTime(10_000))
 
-    h.requestOTP.mockRejectedValueOnce(new Error('mailer down'))
-    fireEvent.click(screen.getByText('Resend Code'))
+      h.requestOTP.mockRejectedValueOnce(new Error('mailer down'))
+      fireEvent.click(screen.getByText('Resend Code'))
 
-    await waitFor(() => expect(screen.getByText('Failed to send recovery code')).toBeTruthy())
-    await waitFor(() => expect(screen.queryByText('Failed to send recovery code')).toBeNull(), { timeout: 3000 })
+      await waitFor(() => expect(screen.getByText('Failed to send recovery code')).toBeTruthy())
+      act(() => vi.advanceTimersByTime(1000))
+      expect(screen.queryByText('Failed to send recovery code')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 
@@ -319,6 +361,21 @@ describe('Solana automatic recovery', () => {
     await waitFor(() => expect(h.setRoute).toHaveBeenCalledWith(routes.SOL_CONNECTED))
   })
 
+  it('does not route when passkey creation finishes after unmount', async () => {
+    const creation = deferred<{ account: { id: string } }>()
+    h.defaultRecoveryMethod = RecoveryMethod.PASSKEY
+    h.allowedRecoveryMethods = [RecoveryMethod.PASSKEY]
+    h.createSolana.mockReturnValueOnce(creation.promise)
+
+    const { unmount } = render(<CreateWallet />)
+    await waitFor(() => expect(h.createSolana).toHaveBeenCalledOnce())
+    unmount()
+
+    await act(async () => creation.resolve({ account: { id: 'created' } }))
+
+    expect(h.setRoute).not.toHaveBeenCalledWith(routes.SOL_CONNECTED)
+  })
+
   it('creates even when the embedded state is ready, because an EVM wallet does not count', async () => {
     h.setCore({ embeddedState: EmbeddedState.READY })
     render(<CreateWallet />)
@@ -327,11 +384,11 @@ describe('Solana automatic recovery', () => {
   })
 
   it('surfaces a recovery failure and retries from the loader', async () => {
-    h.createSolana.mockRejectedValueOnce(new Error('shield unreachable'))
+    h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'shield unreachable'))
     render(<CreateWallet />)
 
     await waitFor(() => expect(screen.getByText('Error creating wallet.')).toBeTruthy())
-    expect(screen.getByText(/Wallet recovery failed\./)).toBeTruthy()
+    expect(screen.getByText(/Failed to create Solana wallet\./)).toBeTruthy()
     expect(h.setRoute).not.toHaveBeenCalled()
 
     fireEvent.click(screen.getByLabelText('Retry'))
@@ -341,7 +398,7 @@ describe('Solana automatic recovery', () => {
   })
 
   it('asks for a code when the recovery share is OTP-gated', async () => {
-    h.createSolana.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'OTP_REQUIRED'))
     render(<CreateWallet />)
 
     await otpScreen()
@@ -350,7 +407,7 @@ describe('Solana automatic recovery', () => {
   })
 
   it('creates the wallet with the submitted code and routes to the connected page', async () => {
-    h.createSolana.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'OTP_REQUIRED'))
     render(<CreateWallet />)
     await otpScreen()
 
@@ -365,14 +422,14 @@ describe('Solana automatic recovery', () => {
   })
 
   it('reports a rejected code and reopens the input so it can be retyped', async () => {
-    h.createSolana.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
-    h.createSolana.mockRejectedValueOnce(new Error('wrong code'))
+    h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'OTP_REQUIRED'))
+    h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'wrong code'))
     render(<CreateWallet />)
     await otpScreen()
 
     enterOtp(OTP_CODE)
 
-    const failure = 'There was an error verifying the OTP. Please try again.'
+    const failure = /Failed to create Solana wallet\./
     await waitFor(() => expect(screen.getByText(failure)).toBeTruthy())
     await waitFor(() => expect(screen.queryByText(failure)).toBeNull(), { timeout: 3000 })
 
@@ -383,7 +440,7 @@ describe('Solana automatic recovery', () => {
   })
 
   it('reports a failure to send the code', async () => {
-    h.createSolana.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'OTP_REQUIRED'))
     h.requestOTP.mockRejectedValueOnce(new Error('mailer down'))
     render(<CreateWallet />)
 
@@ -391,7 +448,7 @@ describe('Solana automatic recovery', () => {
   })
 
   it('sends the user to link a contact method when the account has no real one', async () => {
-    h.createSolana.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
+    h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'OTP_REQUIRED'))
     h.requestOTP.mockResolvedValueOnce({ sentTo: 'email', email: 'abc@openfort.anonymous' })
     render(<CreateWallet />)
 
@@ -401,15 +458,170 @@ describe('Solana automatic recovery', () => {
     expect(h.setRoute).toHaveBeenCalledWith(routes.PROVIDERS)
   })
 
-  it('asks for a new code when resend is pressed', async () => {
-    h.createSolana.mockRejectedValueOnce(new Error('OTP_REQUIRED'))
-    render(<CreateWallet />)
-    await otpScreen()
-    expect(h.requestOTP).toHaveBeenCalledTimes(1)
+  it('enables a new code request after the initial cooldown', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      h.createSolana.mockResolvedValueOnce(creationFailure('Solana', 'OTP_REQUIRED'))
+      render(<CreateWallet />)
+      await otpScreen()
+      expect(h.requestOTP).toHaveBeenCalledTimes(1)
+      expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
 
-    fireEvent.click(screen.getByText('Resend Code'))
+      act(() => vi.advanceTimersByTime(10_000))
+      fireEvent.click(screen.getByText('Resend Code'))
 
-    await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
-    expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
+      await waitFor(() => expect(h.requestOTP).toHaveBeenCalledTimes(2))
+      expect((screen.getByText('Code Sent!') as HTMLButtonElement).disabled).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
+describe.each([
+  {
+    chain: 'Ethereum',
+    chainType: ChainTypeEnum.EVM,
+    create: h.createEthereum,
+    successRoute: routes.CONNECTED_SUCCESS,
+  },
+  {
+    chain: 'Solana',
+    chainType: ChainTypeEnum.SVM,
+    create: h.createSolana,
+    successRoute: routes.SOL_CONNECTED,
+  },
+])('$chain passkey recovery activity', ({ chainType, create, successRoute }) => {
+  it('reobserves one creation when its preserved page becomes active again', async () => {
+    const creation = deferred<{ account: { id: string } }>()
+    h.defaultRecoveryMethod = RecoveryMethod.PASSKEY
+    h.allowedRecoveryMethods = [RecoveryMethod.PASSKEY]
+    h.setCore({ chainType })
+    create.mockReturnValueOnce(creation.promise)
+
+    const { rerender } = render(
+      <PageActivityProvider active>
+        <CreateWallet />
+      </PageActivityProvider>
+    )
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+
+    rerender(
+      <PageActivityProvider active={false}>
+        <CreateWallet />
+      </PageActivityProvider>
+    )
+    await act(async () => creation.resolve({ account: { id: 'created' } }))
+    expect(h.setRoute).not.toHaveBeenCalledWith(successRoute)
+
+    rerender(
+      <PageActivityProvider active>
+        <CreateWallet />
+      </PageActivityProvider>
+    )
+    await waitFor(() => expect(h.setRoute).toHaveBeenCalledWith(successRoute))
+    expect(create).toHaveBeenCalledOnce()
+  })
+})
+
+describe.each([
+  {
+    chain: 'Ethereum' as const,
+    chainType: ChainTypeEnum.EVM,
+    create: h.createEthereum,
+    failure: creationFailure('Ethereum', 'shield unreachable'),
+  },
+  {
+    chain: 'Solana' as const,
+    chainType: ChainTypeEnum.SVM,
+    create: h.createSolana,
+    failure: creationFailure('Solana', 'shield unreachable'),
+  },
+])('$chain password recovery', ({ chainType, create, failure }) => {
+  beforeEach(() => {
+    h.defaultRecoveryMethod = RecoveryMethod.PASSWORD
+    h.allowedRecoveryMethods = [RecoveryMethod.PASSWORD]
+    h.setCore({ chainType })
+  })
+
+  async function submitPassword() {
+    const rendered = render(<CreateWallet />)
+    fireEvent.change(screen.getByPlaceholderText('Enter your password'), {
+      target: { value: 'correct horse battery staple 2026!' },
+    })
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: 'Create wallet' }))
+    })
+    return rendered
+  }
+
+  it('clears loading when create resolves with an error', async () => {
+    create.mockResolvedValueOnce(failure)
+
+    await submitPassword()
+
+    await waitFor(() => expect(screen.getByText(/Failed to create .* wallet\./)).toBeTruthy())
+    expect((screen.getByRole('button', { name: /Create wallet/ }) as HTMLButtonElement).disabled).toBe(false)
+    expect(create).toHaveBeenCalledOnce()
+    expect(h.setRoute).not.toHaveBeenCalled()
+  })
+
+  it('clears loading when create throws', async () => {
+    create.mockRejectedValueOnce(new Error('network unavailable'))
+
+    await submitPassword()
+
+    await waitFor(() => expect(screen.getByText(/(recovering your account|Failed to create wallet)/)).toBeTruthy())
+    expect((screen.getByRole('button', { name: /Create wallet/ }) as HTMLButtonElement).disabled).toBe(false)
+    expect(create).toHaveBeenCalledOnce()
+    expect(h.setRoute).not.toHaveBeenCalled()
+  })
+
+  it('does not route when creation finishes after unmount', async () => {
+    const creation = deferred<{ account: { id: string } }>()
+    create.mockReturnValueOnce(creation.promise)
+
+    const { unmount } = await submitPassword()
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    unmount()
+
+    await act(async () => creation.resolve({ account: { id: 'created' } }))
+
+    expect(h.setRoute).not.toHaveBeenCalled()
+  })
+})
+
+describe.each([
+  {
+    chain: 'Ethereum',
+    chainType: ChainTypeEnum.EVM,
+    create: h.createEthereum,
+    successRoute: routes.CONNECTED_SUCCESS,
+  },
+  {
+    chain: 'Solana',
+    chainType: ChainTypeEnum.SVM,
+    create: h.createSolana,
+    successRoute: routes.SOL_CONNECTED,
+  },
+])('$chain passkey recovery', ({ chainType, create, successRoute }) => {
+  it('shares one non-idempotent creation across StrictMode effect replay', async () => {
+    const creation = deferred<{ account: { id: string } }>()
+    h.defaultRecoveryMethod = RecoveryMethod.PASSKEY
+    h.allowedRecoveryMethods = [RecoveryMethod.PASSKEY]
+    h.setCore({ chainType })
+    create.mockReturnValueOnce(creation.promise)
+
+    render(
+      <StrictMode>
+        <CreateWallet />
+      </StrictMode>
+    )
+
+    await waitFor(() => expect(create).toHaveBeenCalledOnce())
+    await act(async () => creation.resolve({ account: { id: 'created' } }))
+
+    await waitFor(() => expect(h.setRoute).toHaveBeenCalledWith(successRoute))
+    expect(create).toHaveBeenCalledOnce()
   })
 })

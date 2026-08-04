@@ -10,4 +10,4 @@ Cut the re-renders every Openfort store write used to cause.
 
 `useUI` derives "connected" from the active chain's connection strategy, the same source the modal uses. It no longer mounts both embedded-wallet hooks — each of which holds a wallet provider — to answer that question.
 
-`useLocales`, `useSignMessage`, `useUI` and the core provider read the narrow theme, routing, form and configuration contexts instead of the combined one. Since every screen translates through `useLocales`, typing in a form field no longer re-renders the whole modal.
+`useLocales`, `useSignMessage`, `useUI` and the core provider were switched to narrow theme, routing, form, signature-request and configuration contexts. Form updates no longer rerender consumers that only read an in-flight signature request.

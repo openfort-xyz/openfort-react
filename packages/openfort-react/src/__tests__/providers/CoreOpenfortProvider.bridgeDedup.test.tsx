@@ -1,8 +1,12 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { act, render, waitFor } from '@testing-library/react'
-import { createElement } from 'react'
+import type React from 'react'
+import { createElement, useContext } from 'react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { useStore } from 'zustand'
 import type { OpenfortEthereumBridgeValue } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { StoreContext } from '../../openfort/context.js'
+import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
 import { createMockOpenfortClient, type MockOpenfortClient } from '../mocks/openfortClient.js'
 
 let mockClient: MockOpenfortClient
@@ -87,14 +91,30 @@ function makeBridgeValue(overrides: { chainId?: number; address?: `0x${string}` 
 
 const openfortConfig = { baseConfiguration: { publishableKey: 'pk_test_123' } }
 
-function renderWithBridge(bridge: OpenfortEthereumBridgeValue) {
+function renderWithBridge(bridge: OpenfortEthereumBridgeValue, child = createElement('div')) {
   return render(
     createElement(
       OpenfortEthereumBridgeContext.Provider,
       { value: bridge },
-      createElement(CoreOpenfortProvider, { openfortConfig }, createElement('div'))
+      createElement(CoreOpenfortProvider, { openfortConfig }, child)
     )
   )
+}
+
+function StoreReaderInner({
+  store,
+  onValue,
+}: {
+  store: NonNullable<React.ContextType<typeof StoreContext>>
+  onValue: (value: any) => void
+}) {
+  onValue(useStore(store))
+  return null
+}
+
+function StoreReader({ onValue }: { onValue: (value: any) => void }) {
+  const store = useContext(StoreContext)
+  return store ? createElement(StoreReaderInner, { store, onValue }) : null
 }
 
 function rerenderWithBridge(result: ReturnType<typeof render>, bridge: OpenfortEthereumBridgeValue) {
@@ -164,14 +184,24 @@ describe('CoreOpenfortProvider — bridge churn dedup', () => {
     })
 
     await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(1))
-    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 1)
+    expect(initProviderSpy).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      1,
+      expect.objectContaining({ assertCurrent: expect.any(Function) })
+    )
 
     await act(async () => {
       rerenderWithBridge(result, makeBridgeValue({ chainId: 137 }))
     })
 
     await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(2))
-    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 137)
+    expect(initProviderSpy).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      137,
+      expect.objectContaining({ assertCurrent: expect.any(Function) })
+    )
   })
 
   it('queues a chain change that arrives while initialization is in progress', async () => {
@@ -195,6 +225,73 @@ describe('CoreOpenfortProvider — bridge churn dedup', () => {
     })
 
     await waitFor(() => expect(initProviderSpy).toHaveBeenCalledTimes(2))
-    expect(initProviderSpy).toHaveBeenLastCalledWith(expect.anything(), expect.anything(), 137)
+    expect(initProviderSpy).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.anything(),
+      137,
+      expect.objectContaining({ assertCurrent: expect.any(Function) })
+    )
+  })
+
+  it('serializes provider initialization with other client signer operations', async () => {
+    // This case isolates queue ordering; principal-transition invalidation is covered by
+    // CoreOpenfortProvider.test.tsx.
+    mockClient.user.get.mockResolvedValue(null as never)
+    let releaseSignerOperation: (() => void) | undefined
+    const signerOperation = runEmbeddedSignerOperation(
+      mockClient as unknown as Parameters<typeof runEmbeddedSignerOperation>[0],
+      () =>
+        new Promise<void>((resolve) => {
+          releaseSignerOperation = resolve
+        })
+    )
+    renderWithBridge(makeBridgeValue())
+
+    await act(async () => {
+      mockClient._test.setEmbeddedState(EmbeddedState.READY)
+      await Promise.resolve()
+    })
+    expect(initProviderSpy).not.toHaveBeenCalled()
+
+    await act(async () => {
+      releaseSignerOperation?.()
+      await signerOperation
+    })
+    await waitFor(() => expect(initProviderSpy).toHaveBeenCalledOnce())
+  })
+
+  it('disconnects and resets the bridge once when logout emits unauthenticated state', async () => {
+    const bridge = makeBridgeValue()
+    let storeValue: any = null
+    mockClient.auth.logout.mockImplementationOnce(async () => {
+      mockClient._test.setEmbeddedState(EmbeddedState.UNAUTHENTICATED)
+    })
+    renderWithBridge(bridge, createElement(StoreReader, { onValue: (value: any) => (storeValue = value) }))
+    await waitFor(() => expect(storeValue).not.toBeNull())
+
+    await act(async () => storeValue.logout())
+
+    expect(mockClient.auth.logout).toHaveBeenCalledOnce()
+    expect(bridge.disconnect).toHaveBeenCalledOnce()
+    expect(bridge.reset).toHaveBeenCalledOnce()
+  })
+
+  it('retains delayed-event ownership when bridge cleanup fails after SDK logout', async () => {
+    const bridge = makeBridgeValue()
+    const disconnectError = new Error('bridge disconnect failed')
+    vi.mocked(bridge.disconnect).mockRejectedValueOnce(disconnectError)
+    let storeValue: any = null
+    renderWithBridge(bridge, createElement(StoreReader, { onValue: (value: any) => (storeValue = value) }))
+    await waitFor(() => expect(storeValue).not.toBeNull())
+
+    await act(async () => {
+      await expect(storeValue.logout()).rejects.toBe(disconnectError)
+    })
+    await act(async () => {
+      mockClient._test.setEmbeddedState(EmbeddedState.UNAUTHENTICATED)
+    })
+
+    expect(mockClient.auth.logout).toHaveBeenCalledOnce()
+    expect(bridge.disconnect).toHaveBeenCalledOnce()
   })
 })

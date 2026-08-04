@@ -1,4 +1,4 @@
-import { AccountTypeEnum, ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
+import { AccountTypeEnum, ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
@@ -15,6 +15,7 @@ const mockClient = createMockClient()
 const mockWalletConfig = createMockWalletConfig()
 const mockUpdateEmbeddedAccounts = vi.fn().mockResolvedValue({ data: [] })
 let mockActiveEmbeddedAddress: string | null = null
+let mockEmbeddedState = EmbeddedState.READY
 const mockSetActiveEmbeddedAddress = vi.fn((addr: string) => {
   mockActiveEmbeddedAddress = addr
 })
@@ -24,7 +25,7 @@ vi.mock('../openfort/useOpenfort', () => {
   const getState = () => ({
     client: mockClient,
     embeddedAccounts: [],
-    embeddedState: undefined,
+    embeddedState: mockEmbeddedState,
     isLoadingAccounts: false,
     updateEmbeddedAccounts: mockUpdateEmbeddedAccounts,
     setActiveEmbeddedAddress: mockSetActiveEmbeddedAddress,
@@ -78,12 +79,21 @@ function stubFetchEncryptionSession() {
   )
 }
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 // --- Tests ---
 
 describe('useSolanaEmbeddedWallet – create', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockActiveEmbeddedAddress = null
+    mockEmbeddedState = EmbeddedState.READY
     stubFetchEncryptionSession()
   })
 
@@ -187,7 +197,7 @@ describe('useSolanaEmbeddedWallet – create', () => {
 
     const onError = vi.fn()
     await act(async () => {
-      await expect(result.current.create({ onError })).resolves.toBeUndefined()
+      await expect(result.current.create({ onError })).resolves.toEqual({ error: expect.anything() })
     })
 
     expect(result.current.status).toBe('error')
@@ -201,7 +211,9 @@ describe('useSolanaEmbeddedWallet – create', () => {
     const onError = vi.fn()
 
     await act(async () => {
-      await expect(result.current.create({ recoveryMethod: RecoveryMethod.PASSWORD, onError })).resolves.toBeUndefined()
+      await expect(result.current.create({ recoveryMethod: RecoveryMethod.PASSWORD, onError })).resolves.toEqual({
+        error: expect.anything(),
+      })
     })
 
     expect(result.current.status).toBe('error')
@@ -244,5 +256,140 @@ describe('useSolanaEmbeddedWallet – create', () => {
     })
 
     expect(result.current.status).toBe('connected')
+  })
+
+  it('lets only a newer import publish after an overlapping create succeeds', async () => {
+    const createdAccount = createMockSolanaEmbeddedAccount({
+      id: 'emb_sol_created_first',
+      address: 'BrFKFNqStNnmDBCzPHfRJSVoFGCN1XSceAu3zp9VPuST',
+    })
+    const importedAccount = createMockSolanaEmbeddedAccount({
+      id: 'emb_sol_imported_latest',
+      address: 'DJM3THsP5DiLjGqXHVR6XNNmTpFRcLkPBFv1sjFqMzCA',
+    })
+    const createRequest = deferred<typeof createdAccount>()
+    const importRequest = deferred<typeof importedAccount>()
+    mockClient.embeddedWallet.create.mockReturnValueOnce(createRequest.promise)
+    const importWallet = vi.fn().mockReturnValueOnce(importRequest.promise)
+    Object.assign(mockClient.embeddedWallet, { import: importWallet })
+    const createOnSuccess = vi.fn()
+    const importOnSuccess = vi.fn()
+    const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
+    let createPromise!: ReturnType<typeof result.current.create>
+    let importPromise!: ReturnType<typeof result.current.import>
+
+    act(() => {
+      createPromise = result.current.create({ onSuccess: createOnSuccess })
+    })
+    await vi.waitFor(() => expect(mockClient.embeddedWallet.create).toHaveBeenCalledOnce())
+
+    act(() => {
+      importPromise = result.current.import({ privateKey: 'base58-secret-key', onSuccess: importOnSuccess })
+    })
+
+    let createResult!: Awaited<typeof createPromise>
+    await act(async () => {
+      createRequest.resolve(createdAccount)
+      createResult = await createPromise
+    })
+    await vi.waitFor(() => expect(importWallet).toHaveBeenCalledOnce())
+
+    expect(createResult).toEqual({ account: createdAccount })
+    expect(createOnSuccess).not.toHaveBeenCalled()
+    expect(mockSetActiveEmbeddedAddress).not.toHaveBeenCalledWith(createdAccount.address)
+    expect(result.current).toMatchObject({ status: 'creating', isLoading: true, isConnected: false })
+
+    let importResult!: Awaited<typeof importPromise>
+    await act(async () => {
+      importRequest.resolve(importedAccount)
+      importResult = await importPromise
+    })
+
+    expect(importResult).toEqual({ account: importedAccount })
+    expect(importOnSuccess).toHaveBeenCalledOnce()
+    expect(mockSetActiveEmbeddedAddress).toHaveBeenCalledWith(importedAccount.address)
+    expect(result.current).toMatchObject({
+      status: 'connected',
+      activeWallet: { address: importedAccount.address },
+      isLoading: false,
+      isConnected: true,
+    })
+  })
+
+  it('lets a newer create in another hook instance own publication over an older import', async () => {
+    const importedAccount = createMockSolanaEmbeddedAccount({
+      id: 'emb_sol_imported_in_first_hook',
+      address: 'BrFKFNqStNnmDBCzPHfRJSVoFGCN1XSceAu3zp9VPuST',
+    })
+    const createdAccount = createMockSolanaEmbeddedAccount({
+      id: 'emb_sol_created_in_second_hook',
+      address: 'DJM3THsP5DiLjGqXHVR6XNNmTpFRcLkPBFv1sjFqMzCA',
+    })
+    const importRequest = deferred<typeof importedAccount>()
+    const createRequest = deferred<typeof createdAccount>()
+    const importWallet = vi.fn().mockReturnValueOnce(importRequest.promise)
+    Object.assign(mockClient.embeddedWallet, { import: importWallet })
+    mockClient.embeddedWallet.create.mockReturnValueOnce(createRequest.promise)
+    const importOnSuccess = vi.fn()
+    const createOnSuccess = vi.fn()
+    const { result } = renderHook(() => ({ first: useSolanaEmbeddedWallet(), second: useSolanaEmbeddedWallet() }), {
+      wrapper: createQueryWrapper(),
+    })
+    let importPromise!: ReturnType<typeof result.current.first.import>
+    let createPromise!: ReturnType<typeof result.current.second.create>
+
+    act(() => {
+      importPromise = result.current.first.import({ privateKey: 'base58-secret-key', onSuccess: importOnSuccess })
+    })
+    await vi.waitFor(() => expect(importWallet).toHaveBeenCalledOnce())
+
+    act(() => {
+      createPromise = result.current.second.create({ onSuccess: createOnSuccess })
+    })
+
+    let importResult!: Awaited<typeof importPromise>
+    await act(async () => {
+      importRequest.resolve(importedAccount)
+      importResult = await importPromise
+    })
+    await vi.waitFor(() => expect(mockClient.embeddedWallet.create).toHaveBeenCalledOnce())
+
+    expect(importResult).toEqual({ account: importedAccount })
+    expect(importOnSuccess).not.toHaveBeenCalled()
+    expect(mockSetActiveEmbeddedAddress).not.toHaveBeenCalledWith(importedAccount.address)
+    expect(result.current.first).toMatchObject({ status: 'disconnected', activeWallet: null })
+
+    await act(async () => {
+      createRequest.resolve(createdAccount)
+      await createPromise
+    })
+
+    expect(createOnSuccess).toHaveBeenCalledOnce()
+    expect(mockSetActiveEmbeddedAddress).toHaveBeenCalledWith(createdAccount.address)
+    expect(result.current.second).toMatchObject({
+      status: 'connected',
+      activeWallet: { address: createdAccount.address },
+    })
+  })
+
+  it('withholds the provider while the signer reconnects', async () => {
+    mockClient.embeddedWallet.create.mockResolvedValueOnce(createMockSolanaEmbeddedAccount())
+    const { result, rerender } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
+
+    await act(async () => {
+      await result.current.create()
+    })
+    expect(result.current.status).toBe('connected')
+
+    mockEmbeddedState = EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED
+    rerender()
+
+    expect(result.current).toMatchObject({ status: 'reconnecting', isConnected: false, isReconnecting: true })
+    expect(result.current).not.toHaveProperty('provider')
+
+    mockEmbeddedState = EmbeddedState.READY
+    rerender()
+    expect(result.current.status).toBe('connected')
+    expect(result.current).toHaveProperty('provider')
   })
 })

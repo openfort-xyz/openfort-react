@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import { embeddedWalletId } from '../constants/openfort.js'
 import { AuthenticationError } from '../errors/auth.js'
 import { OpenfortError, toError } from '../errors/base.js'
@@ -8,11 +8,14 @@ import { ConnectorNotFoundError, SiweMessageError } from '../errors/connection.j
 import { type OpenfortEthereumBridgeConnector, useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
 import { type BaseFlowState, mapStatus } from '../hooks/openfort/auth/status.js'
 import { onError, onSuccess } from '../hooks/openfort/hookConsistency.js'
+import { useAuthTransitions } from '../openfort/authTransitionContext.js'
 import type { OpenfortCoreContextValue } from '../openfort/CoreOpenfortProvider.js'
 import { useOpenfortCore } from '../openfort/useOpenfort.js'
+import type { AuthSession } from '../shared/utils/authTransitionQueue.js'
 import { createSIWEMessage } from '../siwe/create-siwe-message.js'
 import type { OpenfortHookOptions } from '../types.js'
 import { logger } from '../utils/logger.js'
+import { getSiweErrorMessage, notifySiweCallback } from './siweCallbacks.js'
 
 export interface AvailableWallet {
   id: string
@@ -28,17 +31,20 @@ interface WalletAuthCallbacks {
 
 function runConnectWithSiwe(
   bridge: NonNullable<ReturnType<typeof useEthereumBridge>>,
-  openfort: Pick<OpenfortCoreContextValue, 'client' | 'updateUser'>,
+  openfort: Pick<OpenfortCoreContextValue, 'client' | 'updateUser'> &
+    Pick<ReturnType<typeof useAuthTransitions>, 'startAuthenticatedMutation'>,
   params: {
     address?: `0x${string}`
     connectorType?: string
     walletClientType?: string
     link: boolean
+    session: AuthSession
     onConnect?: () => void
     onError?: (error: string, openfortError?: OpenfortError) => void
+    onStale?: () => void
   }
 ): Promise<void> {
-  const { client, updateUser } = openfort
+  const { client, startAuthenticatedMutation, updateUser } = openfort
   const address = params.address ?? bridge.account?.address
   const connectorType = params.connectorType ?? bridge.account?.connector?.type
   const walletClientType = params.walletClientType ?? bridge.account?.connector?.id
@@ -50,23 +56,37 @@ function runConnectWithSiwe(
 
   if (!address || !connectorType || !walletClientType) {
     logger.warn('[runConnectWithSiwe] Missing params', { address, connectorType, walletClientType })
-    params.onError?.('No address found')
+    notifySiweCallback(params.onError, 'onError', 'No address found')
     return Promise.resolve()
   }
   if (!signMessage) {
     logger.warn('[runConnectWithSiwe] No signMessage on bridge')
-    params.onError?.('EVM bridge not available (signMessage)')
+    notifySiweCallback(params.onError, 'onError', 'EVM bridge not available (signMessage)')
     return Promise.resolve()
   }
 
   return (async () => {
+    let linkMutationIsCurrent: (() => boolean) | undefined
+    const settleStale = () => {
+      const current = params.session.isCurrent() && (!params.link || (linkMutationIsCurrent?.() ?? true))
+      if (current) return false
+      params.onStale?.()
+      return true
+    }
     try {
       if (accountChainId !== chainId && switchChainAsync) {
         await switchChainAsync({ chainId })
+        if (settleStale()) return
       }
-      const nonce = params.link
-        ? (await client.auth.initLinkSiwe({ address })).nonce
-        : (await client.auth.initSiwe({ address })).nonce
+      let nonce: string
+      if (params.link) {
+        const transition = startAuthenticatedMutation(() => client.auth.initLinkSiwe({ address }))
+        linkMutationIsCurrent = transition.isCurrent
+        nonce = (await transition.result).nonce
+      } else {
+        nonce = (await client.auth.initSiwe({ address })).nonce
+      }
+      if (settleStale()) return
       const siweMsg = createSIWEMessage(address, nonce, chainId)
       if (!siweMsg) throw new SiweMessageError()
       const messageStr =
@@ -75,16 +95,25 @@ function runConnectWithSiwe(
           : typeof (siweMsg as { prepareMessage?: () => Promise<string> }).prepareMessage === 'function'
             ? await (siweMsg as { prepareMessage: () => Promise<string> }).prepareMessage()
             : String(siweMsg)
+      if (settleStale()) return
       const signature = await signMessage({ message: messageStr })
+      if (settleStale()) return
       if (params.link) {
-        await client.auth.linkWithSiwe({
-          signature,
-          message: messageStr,
-          connectorType,
-          walletClientType,
-          address,
-          chainId,
-        })
+        const transition = startAuthenticatedMutation(() =>
+          client.auth.linkWithSiwe({
+            signature,
+            message: messageStr,
+            connectorType,
+            walletClientType,
+            address,
+            chainId,
+          })
+        )
+        linkMutationIsCurrent = transition.isCurrent
+        await transition.result
+        if (settleStale()) return
+        await updateUser()
+        if (settleStale()) return
       } else {
         await client.auth.loginWithSiwe({
           signature,
@@ -93,23 +122,20 @@ function runConnectWithSiwe(
           walletClientType,
           address,
         })
+        if (settleStale()) return
+        await updateUser()
+        if (settleStale()) return
       }
-      await updateUser()
-      params.onConnect?.()
+      notifySiweCallback(params.onConnect, 'onSuccess')
     } catch (err) {
+      if (settleStale()) return
       logger.error('[runConnectWithSiwe] SIWE failed', err instanceof Error ? err.message : err)
-      if (!params.onError) return
-      let message = err instanceof Error ? err.message : String(err)
-      if (message.includes('User rejected the request.')) message = 'User rejected the request.'
-      else if (message.includes('Invalid signature')) message = 'Invalid signature. Please try again.'
-      else if (message.includes('An error occurred when attempting to switch chain')) {
-        message = `Failed to switch chain. Please switch your wallet to ${chainName ?? 'the correct network'} and try again.`
-      } else if (message.includes('already linked')) {
-        message = 'This wallet is already linked to another account. Log out and connect with this wallet instead.'
-      } else {
-        message = 'Failed to connect with SIWE.'
-      }
-      params.onError(message, err instanceof OpenfortError ? err : undefined)
+      notifySiweCallback(
+        params.onError,
+        'onError',
+        getSiweErrorMessage(err, chainName),
+        err instanceof OpenfortError ? err : undefined
+      )
     }
   })()
 }
@@ -119,10 +145,12 @@ const DEFAULT_WALLET_AUTH_HOOK_OPTIONS: OpenfortHookOptions = {}
 export function useWalletAuth(hookOptions: OpenfortHookOptions = DEFAULT_WALLET_AUTH_HOOK_OPTIONS) {
   const bridge = useEthereumBridge()
   const client = useOpenfortCore((s) => s.client)
+  const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
 
   const [walletConnectingTo, setWalletConnectingTo] = useState<string | null>(null)
   const [status, setStatus] = useState<BaseFlowState>({ status: 'idle' })
+  const latestInvocationRef = useRef(0)
 
   const availableWallets = useMemo((): AvailableWallet[] => {
     if (!bridge?.connectors?.length) return []
@@ -134,35 +162,44 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = DEFAULT_WALLET_
   const runConnectThenSiwe = useCallback(
     async (connectorId: string, link: boolean, callbacks?: WalletAuthCallbacks) => {
       const connector = bridge?.connectors?.find((c) => c.id === connectorId)
-      if (!connector || !bridge?.connectAsync) {
+      const connectAsync = bridge?.connectAsync
+      if (!connector || !connectAsync) {
         logger.warn('[useWalletAuth] Connector not found', { connectorId })
         const err = new ConnectorNotFoundError({ connectorId })
         const msg = err.shortMessage
         setStatus({ status: 'error', error: err })
         onError({ hookOptions, error: err })
-        callbacks?.onError?.(msg, err)
+        notifySiweCallback(callbacks?.onError, 'onError', msg, err)
         return
       }
 
       setWalletConnectingTo(connectorId)
       setStatus({ status: 'loading' })
-
-      if (bridge.account.isConnected) {
-        try {
-          await bridge.disconnect()
-        } catch (e) {
-          logger.error('[useWalletAuth] Failed to disconnect', e)
-          setWalletConnectingTo(null)
-          const err = new AuthenticationError('Failed to disconnect.', { cause: toError(e) })
-          setStatus({ status: 'error', error: err })
-          onError({ hookOptions, error: err })
-          callbacks?.onError?.(err.message, err)
-          return
-        }
+      const invocation = ++latestInvocationRef.current
+      let operationErrorMessage = bridge.account.isConnected ? 'Failed to disconnect.' : 'Failed to connect wallet.'
+      const settleStale = () => {
+        if (latestInvocationRef.current !== invocation) return
+        setWalletConnectingTo(null)
+        setStatus({ status: 'idle' })
       }
+      const handleError = (cause: unknown, message: string) => {
+        logger.error('[useWalletAuth] connection failed', cause instanceof Error ? cause.message : cause)
+        setWalletConnectingTo(null)
+        const error = new AuthenticationError(message, { cause: toError(cause) })
+        setStatus({ status: 'error', error })
+        onError({ hookOptions, error })
+        notifySiweCallback(callbacks?.onError, 'onError', cause instanceof Error ? cause.message : message, error)
+      }
+      const run = async (session: AuthSession) => {
+        if (!session.isCurrent()) return settleStale()
+        if (bridge.account.isConnected) {
+          await bridge.disconnect()
+          if (!session.isCurrent()) return settleStale()
+        }
 
-      try {
-        const result = await bridge.connectAsync({ connector })
+        operationErrorMessage = 'Failed to connect wallet.'
+        const result = await connectAsync({ connector })
+        if (!session.isCurrent()) return settleStale()
         const connectResult =
           result && typeof result === 'object' && 'accounts' in result
             ? (result as { accounts: readonly `0x${string}`[]; chainId: number })
@@ -170,38 +207,63 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = DEFAULT_WALLET_
         const addressFromResult = connectResult?.accounts?.[0]
         await runConnectWithSiwe(
           bridge,
-          { client, updateUser },
+          { client, startAuthenticatedMutation, updateUser },
           {
             address: addressFromResult,
             connectorType: connector.type,
             walletClientType: connector.id,
             link,
+            session,
+            onStale: settleStale,
             onConnect: () => {
+              if (!session.isCurrent()) return settleStale()
               setWalletConnectingTo(null)
               setStatus({ status: 'success' })
               onSuccess({ hookOptions, data: {} })
-              callbacks?.onConnect?.()
+              notifySiweCallback(callbacks?.onConnect, 'onSuccess')
             },
             onError: (message: string, openfortError?: OpenfortError) => {
+              if (!session.isCurrent()) return settleStale()
               setWalletConnectingTo(null)
-              const err = openfortError ?? new AuthenticationError(message)
-              setStatus({ status: 'error', error: err })
-              onError({ hookOptions, error: err })
-              callbacks?.onError?.(message, err)
+              const error = openfortError ?? new AuthenticationError(message)
+              setStatus({ status: 'error', error })
+              onError({ hookOptions, error })
+              notifySiweCallback(callbacks?.onError, 'onError', message, error)
             },
           }
         )
-      } catch (err) {
-        logger.error('[useWalletAuth] connectAsync failed', err instanceof Error ? err.message : err)
-        setWalletConnectingTo(null)
-        const message = err instanceof Error ? err.message : 'Connection failed'
-        const openfortErr = new AuthenticationError('Failed to connect wallet.', { cause: toError(err) })
-        setStatus({ status: 'error', error: openfortErr })
-        onError({ hookOptions, error: openfortErr })
-        callbacks?.onError?.(message, openfortErr)
+      }
+
+      if (link) {
+        const authSession = captureAuthSession()
+        const session = {
+          isCurrent: () => authSession.isCurrent() && latestInvocationRef.current === invocation,
+        }
+        try {
+          await run(session)
+        } catch (error) {
+          if (!session.isCurrent()) return settleStale()
+          handleError(error, operationErrorMessage)
+        }
+        return
+      }
+
+      let transitionIsCurrent = () => false
+      const transition = startAuthTransition(() =>
+        run({
+          isCurrent: () => transitionIsCurrent() && latestInvocationRef.current === invocation,
+        })
+      )
+      transitionIsCurrent = transition.isCurrent
+      try {
+        await transition.result
+        if (!transitionIsCurrent()) settleStale()
+      } catch (error) {
+        if (!transitionIsCurrent()) return settleStale()
+        handleError(error, operationErrorMessage)
       }
     },
-    [bridge, client, updateUser, hookOptions]
+    [bridge, client, captureAuthSession, startAuthenticatedMutation, startAuthTransition, updateUser, hookOptions]
   )
 
   const connectWallet = useCallback(

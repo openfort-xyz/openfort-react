@@ -1,19 +1,29 @@
 import { readdirSync } from 'node:fs'
 import path from 'node:path'
 import { defineConfig, devices, type Project } from '@playwright/test'
-import { ANVIL_RPC_URL, FORK_MINT_CONTRACT, IS_FORK_RUN } from './tests/anvil/fork'
-import { AUTH_STATE_EVM, AUTH_STATE_SOLANA, ROOT_OUT, TEST_RESULTS_DIR } from './tests/utils/constants'
+import { ANVIL_RPC_URL, FORK_MINT_CONTRACT, IS_FORK_RUN } from './tests/anvil/fork.js'
+import {
+  AUTH_STATE_EVM,
+  AUTH_STATE_EVM_REFRESH,
+  AUTH_STATE_SOLANA,
+  ROOT_OUT,
+  TEST_RESULTS_DIR,
+} from './tests/utils/constants.js'
 
 const PORT = Number(process.env.PLAYGROUND_PORT ?? 5173)
-const BASE_URL = process.env.PLAYGROUND_BASE_URL ?? `http://localhost:${PORT}`
+const BASE_URL = process.env.PLAYGROUND_BASE_URL ?? `http://127.0.0.1:${PORT}`
 
 const REPORT_DIR = path.join(ROOT_OUT, 'playwright-report')
 
 /** Suites whose chain reads resolve against the anvil fork; excluded from live runs. */
 const FORK_SPECS = /\.fork\.spec\.ts/
-const EVM_LIVE_SPECS = ['evm-integration.spec.ts', 'refresh-persistence.spec.ts']
+const EVM_LIVE_SPECS = ['evm-integration.spec.ts']
+/** Runs on its own guest — see AUTH_STATE_EVM_REFRESH for why. */
+const EVM_REFRESH_SPECS = ['refresh-persistence.spec.ts']
 const SOLANA_LIVE_SPECS = ['wallets-create-new.spec.ts']
 const UNAUTHENTICATED_SPECS = ['auth.spec.ts']
+const SMOKE_SPECS = ['offline.smoke.spec.ts', 'offline.security.spec.ts']
+const IS_SMOKE_RUN = process.env.PLAYGROUND_SMOKE === '1'
 
 /** Fail configuration loading when a suite can silently fall outside every project. */
 function assertEverySpecHasAnOwner() {
@@ -31,7 +41,13 @@ function assertEverySpecHasAnOwner() {
   }
   collectSpecs(specsRoot)
 
-  const explicitlyOwned = new Set([...EVM_LIVE_SPECS, ...SOLANA_LIVE_SPECS, ...UNAUTHENTICATED_SPECS])
+  const explicitlyOwned = new Set([
+    ...EVM_LIVE_SPECS,
+    ...EVM_REFRESH_SPECS,
+    ...SOLANA_LIVE_SPECS,
+    ...UNAUTHENTICATED_SPECS,
+    ...SMOKE_SPECS,
+  ])
   const unowned = specFiles.filter((file) => !explicitlyOwned.has(file) && !FORK_SPECS.test(file))
   const missing = [...explicitlyOwned].filter((file) => !specFiles.includes(file))
 
@@ -58,11 +74,17 @@ const forkProject: Project = {
   name: 'chromium-evm-fork',
   dependencies: ['setup'],
   testMatch: FORK_SPECS,
-  timeout: 240_000,
+  timeout: 360_000,
   use: {
     ...devices['Desktop Chrome'],
     storageState: AUTH_STATE_EVM,
   },
+}
+
+const smokeProject: Project = {
+  name: 'chromium-offline-smoke',
+  testMatch: SMOKE_SPECS.map((file) => `**/${file}`),
+  use: { ...devices['Desktop Chrome'] },
 }
 
 const liveProjects: Project[] = [
@@ -74,6 +96,16 @@ const liveProjects: Project[] = [
     use: {
       ...devices['Desktop Chrome'],
       storageState: AUTH_STATE_EVM,
+    },
+  },
+  {
+    name: 'chromium-evm-refresh',
+    dependencies: ['setup'],
+    testMatch: EVM_REFRESH_SPECS.map((file) => `**/${file}`),
+    timeout: 180_000,
+    use: {
+      ...devices['Desktop Chrome'],
+      storageState: AUTH_STATE_EVM_REFRESH,
     },
   },
   {
@@ -100,10 +132,10 @@ export default defineConfig({
 
   // Chain state is deterministic on a fork, so a fork run only retries for the live
   // sign-in it still depends on.
-  retries: process.env.CI ? (IS_FORK_RUN ? 1 : 2) : 0,
+  retries: IS_SMOKE_RUN ? 0 : process.env.CI ? (IS_FORK_RUN ? 1 : 2) : 0,
   // One anvil instance is shared by the whole run (the dev server resolves its RPC
   // URL once, at build time), so fork-backed suites must not race on chain state.
-  workers: IS_FORK_RUN ? 1 : process.env.CI ? 2 : 4,
+  workers: IS_SMOKE_RUN || IS_FORK_RUN ? 1 : process.env.CI ? 2 : 4,
   fullyParallel: false,
 
   reporter: [['list'], ['html', { outputFolder: REPORT_DIR, open: 'never' }]],
@@ -122,23 +154,28 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
   },
 
-  projects: [setup, ...(IS_FORK_RUN ? [forkProject] : liveProjects)],
+  projects: IS_SMOKE_RUN ? [smokeProject] : [setup, ...(IS_FORK_RUN ? [forkProject] : liveProjects)],
 
   webServer: {
     // `--port` keeps vite on the port BASE_URL points at instead of letting it pick
     // the next free one when 5173 is taken.
-    command: `pnpm dev --port ${PORT} --strictPort`,
+    command: `./node_modules/.bin/vite --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: BASE_URL,
     // A fork run needs its own dev server: the fork RPC URL below is baked in at
     // startup, so an already-running server would still be talking to public nodes.
-    reuseExistingServer: !process.env.CI && !IS_FORK_RUN,
-    env: IS_FORK_RUN
+    reuseExistingServer: !process.env.CI && !IS_FORK_RUN && !IS_SMOKE_RUN,
+    env: IS_SMOKE_RUN
       ? {
-          VITE_EVM_FORK_RPC_URL: ANVIL_RPC_URL,
-          // The fork serves Base Sepolia, so pin the mint contract to the one deployed
-          // there instead of whatever the live runs configure.
-          VITE_POLYGON_MINT_CONTRACT: FORK_MINT_CONTRACT,
+          VITE_OPENFORT_PUBLISHABLE_KEY: 'pk_test_offline_browser_smoke',
+          VITE_SHIELD_PUBLISHABLE_KEY: 'pk_test_offline_browser_smoke',
         }
-      : {},
+      : IS_FORK_RUN
+        ? {
+            VITE_EVM_FORK_RPC_URL: ANVIL_RPC_URL,
+            // The fork serves Base Sepolia, so pin the mint contract to the one deployed
+            // there instead of whatever the live runs configure.
+            VITE_POLYGON_MINT_CONTRACT: FORK_MINT_CONTRACT,
+          }
+        : {},
   },
 })

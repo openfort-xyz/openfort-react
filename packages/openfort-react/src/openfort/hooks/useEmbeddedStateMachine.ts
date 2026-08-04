@@ -20,6 +20,7 @@ type Params = {
   storeEmbeddedState: OpenfortStore['embeddedState']
   storeUser: OpenfortStore['user']
   store: StoreApi<OpenfortStore>
+  clearSessionState: () => void
   updateUserRef: MutableRefObject<(user?: User, logoutOnError?: boolean) => Promise<User | null>>
   fetchEmbeddedAccountsRef: MutableRefObject<(options?: { silent?: boolean }) => Promise<EmbeddedAccount[]>>
 }
@@ -33,7 +34,7 @@ type Result = {
 /**
  * Reacts to embedded state transitions and performs the appropriate side effects:
  *
- * - UNAUTHENTICATED → clears the store user
+ * - UNAUTHENTICATED → clears authenticated store, query, and signer state
  * - EMBEDDED_SIGNER_NOT_CONFIGURED → resets connect state, validates token, fetches accounts
  * - READY → polls until user is confirmed in the store
  *
@@ -45,6 +46,7 @@ export function useEmbeddedStateMachine({
   storeEmbeddedState,
   storeUser,
   store,
+  clearSessionState,
   updateUserRef,
   fetchEmbeddedAccountsRef,
 }: Params): Result {
@@ -70,7 +72,9 @@ export function useEmbeddedStateMachine({
       case EmbeddedState.CREATING_ACCOUNT:
         break
       case EmbeddedState.UNAUTHENTICATED:
-        store.getState().setUser(null)
+        connectingRef.current = false
+        setIsConnectedWithEmbeddedSigner(false)
+        clearSessionState()
         break
 
       case EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED: {
@@ -116,7 +120,7 @@ export function useEmbeddedStateMachine({
     return () => {
       cancelled = true
     }
-  }, [storeEmbeddedState, openfort, store])
+  }, [storeEmbeddedState, openfort, store, clearSessionState])
 
   return { isConnectedWithEmbeddedSigner, setIsConnectedWithEmbeddedSigner, connectingRef }
 }

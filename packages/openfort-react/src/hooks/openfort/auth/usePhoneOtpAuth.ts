@@ -1,11 +1,13 @@
 'use client'
 
 import type { User } from '@openfort/openfort-js'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { AuthenticationError } from '../../../errors/auth.js'
 import { type OpenfortError, toError } from '../../../errors/base.js'
 import { MissingParameterError } from '../../../errors/validation.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
@@ -35,10 +37,12 @@ const DEFAULT_PHONE_OTP_HOOK_OPTIONS: UsePhoneHookOptions = {}
 
 export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE_OTP_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
+  const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const [status, setStatus] = useState<BaseFlowState | { status: 'requesting' }>({
     status: 'idle',
   })
+  const authInvocationRef = useRef(0)
   const reset = useCallback(() => {
     setStatus({
       status: 'idle',
@@ -49,6 +53,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
 
   const logInWithPhoneOtp = useCallback(
     async (options: LoginWithPhoneOtpOptions): Promise<PhoneAuthResult> => {
+      let settleStale: (() => boolean) | undefined
       try {
         setStatus({
           status: 'loading',
@@ -67,29 +72,40 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
           })
         }
 
-        const result = await client.auth.logInWithPhoneOtp({
-          phoneNumber: options.phoneNumber,
-          otp: options.otp,
-        })
+        const transition = startLocalAuthTransition(
+          startAuthTransition,
+          authInvocationRef,
+          () =>
+            client.auth.logInWithPhoneOtp({
+              phoneNumber: options.phoneNumber,
+              otp: options.otp,
+            }),
+          () => setStatus({ status: 'idle' })
+        )
+        settleStale = transition.settleStale
+        const result = await transition.result
+        if (settleStale()) return authTransitionSupersededResult()
+
+        const user = result.user
+        await updateUser(user)
+        if (settleStale()) return authTransitionSupersededResult()
 
         const { wallet } = await tryUseWallet({
           logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
           recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
         })
+        if (settleStale()) return authTransitionSupersededResult()
 
         setStatus({
           status: 'success',
         })
-        const user = result.user
-
-        await updateUser()
-
         return onSuccess<PhoneAuthResult>({
           data: { user, wallet },
           hookOptions,
           options,
         })
       } catch (e) {
+        if (settleStale?.()) return authTransitionSupersededResult()
         const error = new AuthenticationError('Failed to login with phone OTP.', { cause: toError(e) })
 
         setStatus({
@@ -104,7 +120,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         })
       }
     },
-    [client, updateUser, hookOptions, tryUseWallet]
+    [client, startAuthTransition, updateUser, hookOptions, tryUseWallet]
   )
 
   const requestPhoneOtp = useCallback(
@@ -159,6 +175,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
 
   const linkPhoneOtp = useCallback(
     async (options: LoginWithPhoneOtpOptions): Promise<PhoneAuthResult> => {
+      let settleStale: (() => boolean) | undefined
       try {
         setStatus({
           status: 'loading',
@@ -177,17 +194,32 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
           })
         }
 
-        const result = await client.auth.linkPhoneOtp({
-          phoneNumber: options.phoneNumber,
-          otp: options.otp,
-        })
+        const session = captureAuthSession()
+        const transition = startLocalAuthTransition(
+          startAuthenticatedMutation,
+          authInvocationRef,
+          () =>
+            client.auth.linkPhoneOtp({
+              phoneNumber: options.phoneNumber,
+              otp: options.otp,
+            }),
+          () => setStatus({ status: 'idle' })
+        )
+        settleStale = () => {
+          const sessionIsStale = !session.isCurrent()
+          const transitionIsStale = transition.settleStale()
+          return sessionIsStale || transitionIsStale
+        }
+        const result = await transition.result
+        if (settleStale()) return authTransitionSupersededResult()
+        const user = result.user
+
+        await updateUser()
+        if (settleStale()) return authTransitionSupersededResult()
 
         setStatus({
           status: 'success',
         })
-        const user = result.user
-
-        await updateUser()
 
         return onSuccess<PhoneAuthResult>({
           data: { user },
@@ -195,6 +227,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
           options,
         })
       } catch (e) {
+        if (settleStale?.()) return authTransitionSupersededResult()
         const error = new AuthenticationError('Failed to link phone OTP.', { cause: toError(e) })
 
         setStatus({
@@ -209,7 +242,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         })
       }
     },
-    [client, updateUser, hookOptions]
+    [captureAuthSession, client, startAuthenticatedMutation, updateUser, hookOptions]
   )
 
   return {

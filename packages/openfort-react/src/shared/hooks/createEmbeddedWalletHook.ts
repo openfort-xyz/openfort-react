@@ -1,7 +1,16 @@
 'use client'
 
-import type { ChainTypeEnum, EmbeddedAccount, EmbeddedState, Openfort } from '@openfort/openfort-js'
-import { type Dispatch, type SetStateAction, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ChainTypeEnum, type EmbeddedAccount, EmbeddedState, type Openfort } from '@openfort/openfort-js'
+import {
+  type Dispatch,
+  type RefObject,
+  type SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import type { EmbeddedAccountRequest } from '../../actions/createEmbeddedWallet.js'
 import { createEmbeddedWallet } from '../../actions/createEmbeddedWallet.js'
 import { exportPrivateKey } from '../../actions/exportPrivateKey.js'
@@ -14,20 +23,34 @@ import { useOpenfortConfig, useOpenfortRouting } from '../../components/Openfort
 import { asOpenfortError } from '../../errors/base.js'
 import {
   ProviderNotReadyError,
+  RecoveryError,
   SetActiveWalletError,
   WalletCreationError,
+  WalletError,
   WalletImportError,
 } from '../../errors/wallet.js'
 import type { WalletFlowStatus } from '../../hooks/openfort/walletTypes.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { formatAddress } from '../../utils/format.js'
+import { logger } from '../../utils/logger.js'
 import type {
   CreateEmbeddedWalletOptions,
+  CreateEmbeddedWalletResult,
+  ExportPrivateKeyOptions,
+  ExportPrivateKeyResult,
   ImportEmbeddedWalletOptions,
   SetActiveEmbeddedWalletOptionsBase,
+  SetActiveEmbeddedWalletResult,
   SetRecoveryOptions,
+  SetRecoveryResult,
   WalletStatus,
 } from '../types.js'
+import { assertActiveEmbeddedAccount, type EmbeddedAccountIdentity } from '../utils/assertActiveEmbeddedAccount.js'
+import {
+  type EmbeddedSignerOperationContext,
+  reserveEmbeddedSignerPublication,
+  runEmbeddedSignerOperation,
+} from '../utils/embeddedSignerOperationQueue.js'
 import { buildEmbeddedWalletStatusResult } from '../utils/embeddedWalletStatusMapper.js'
 import { toConnectedStateProperties } from '../utils/walletStatusProps.js'
 
@@ -52,8 +75,11 @@ export type EmbeddedWalletSyncParameters<TWallet, TProvider> = {
   routedChainType: ChainTypeEnum
   state: EmbeddedWalletInternalState<TWallet, TProvider>
   setState: Dispatch<SetStateAction<EmbeddedWalletInternalState<TWallet, TProvider>>>
+  setActiveInProgressRef: RefObject<Promise<unknown> | null>
+  /** Runs work that must not overlap another operation on this client's signer. */
+  runSignerOperation: <T>(operation: (context: EmbeddedSignerOperationContext) => Promise<T>) => Promise<T>
   /** Builds (or fetches) this chain's provider for an account. */
-  getProvider: (account: EmbeddedAccount) => Promise<TProvider>
+  getProvider: (account: EmbeddedAccount, context: EmbeddedSignerOperationContext) => Promise<TProvider>
   setActiveEmbeddedAddress: (address: string | undefined) => void
 }
 
@@ -90,6 +116,7 @@ type EmbeddedWalletHookConfig<TWallet extends { address: string }, TProvider, TO
     client: Openfort
     account: EmbeddedAccount
     ethereumRpcUrls: NonNullable<OpenfortWalletConfig['ethereum']>['rpcUrls'] | undefined
+    assertCurrent: () => void
   }) => Promise<TProvider>
   /** Maps this chain's accounts to the `wallets` list the hook exposes. */
   buildWallets: (parameters: {
@@ -111,6 +138,35 @@ type EmbeddedWalletHookConfig<TWallet extends { address: string }, TProvider, TO
 }
 
 const INITIAL_STATE = { status: 'disconnected', activeWallet: null, provider: null, error: null } as const
+
+function notifyConsumer<T>(callback: ((value: T) => unknown) | undefined, value: T): void {
+  if (!callback) return
+  try {
+    void Promise.resolve(callback(value)).catch((error) => {
+      logger.error('[embedded-wallet] callback rejected', error)
+    })
+  } catch (error) {
+    logger.error('[embedded-wallet] callback threw', error)
+  }
+}
+
+function captureActiveAccountIdentity(
+  accounts: EmbeddedAccount[] | null | undefined,
+  activeAddress: string | null | undefined,
+  chainType: ChainTypeEnum
+): EmbeddedAccountIdentity | null {
+  if (!activeAddress) return null
+  const account = accounts?.find((candidate) => {
+    if (candidate.chainType !== chainType) return false
+    if (candidate.chainType === ChainTypeEnum.EVM) {
+      return candidate.address.toLowerCase() === activeAddress.toLowerCase()
+    }
+    return candidate.address === activeAddress
+  })
+  return account
+    ? { id: account.id, address: account.address, chainType: account.chainType }
+    : { address: activeAddress, chainType }
+}
 
 /**
  * Builds an embedded-wallet hook for one chain.
@@ -147,6 +203,7 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
     const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
     const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
+    const setEmbeddedState = useOpenfortCore((s) => s.setEmbeddedState)
     const setWalletStatus = useOpenfortCore((s) => s.setWalletStatus)
     const { walletConfig } = useOpenfortConfig()
     const ethereumRpcUrls = walletConfig?.ethereum?.rpcUrls
@@ -154,10 +211,17 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
 
     const { buildAccountRequest, resultProps } = useChainBindings(options)
 
-    const setActiveInProgressRef = useRef<Promise<void> | null>(null)
+    const setActiveInProgressRef = useRef<Promise<unknown> | null>(null)
+    const latestLocalWalletMutationRef = useRef(0)
     const accountsRef = useRef<EmbeddedAccount[]>([])
 
     const [state, setState] = useState<EmbeddedWalletInternalState<TWallet, TProvider>>(INITIAL_STATE)
+    const stateRef = useRef(state)
+    stateRef.current = state
+    const exposedState: EmbeddedWalletInternalState<TWallet, TProvider> =
+      state.status === 'connected' && embeddedState !== EmbeddedState.READY
+        ? { ...state, status: 'reconnecting', provider: null }
+        : state
 
     const accounts = useMemo(() => {
       if (!embeddedAccounts) return []
@@ -166,13 +230,29 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     accountsRef.current = accounts
 
     const getProvider = useCallback(
-      (account: EmbeddedAccount): Promise<TProvider> => buildProvider({ client, account, ethereumRpcUrls }),
+      (account: EmbeddedAccount, { assertCurrent }: EmbeddedSignerOperationContext): Promise<TProvider> =>
+        buildProvider({ client, account, ethereumRpcUrls, assertCurrent }),
       [client, ethereumRpcUrls]
+    )
+    const runSignerOperation = useCallback(
+      <T>(operation: (context: EmbeddedSignerOperationContext) => Promise<T>) =>
+        runEmbeddedSignerOperation(client, operation),
+      [client]
+    )
+    const getSerializedProvider = useCallback(
+      (account: EmbeddedAccount): Promise<TProvider> => runSignerOperation((context) => getProvider(account, context)),
+      [getProvider, runSignerOperation]
     )
 
     const wallets = useMemo(
-      () => buildWallets({ accounts, getProvider, status: state.status, activeWallet: state.activeWallet }),
-      [accounts, getProvider, state.status, state.activeWallet]
+      () =>
+        buildWallets({
+          accounts,
+          getProvider: getSerializedProvider,
+          status: exposedState.status,
+          activeWallet: exposedState.activeWallet,
+        }),
+      [accounts, getSerializedProvider, exposedState.status, exposedState.activeWallet]
     )
 
     // The store holds one wallet status for the active chain. Publishing it only while
@@ -190,148 +270,275 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
 
     /** Moves to `connected` and caches the provider for the freshly minted account. */
     const settleNewAccount = useCallback(
-      async (account: EmbeddedAccount) => {
-        const provider = await getProvider(account)
+      async (account: EmbeddedAccount, assertCurrent: () => void, shouldPublish: () => boolean) => {
+        assertCurrent()
+        if (!shouldPublish()) return
+        const provider = await getProvider(account, { assertCurrent })
         const activeWallet = buildActiveWallet({ account, walletIndex: 0, provider })
+        assertCurrent()
+        if (!shouldPublish()) return
         setState({ status: 'connected', activeWallet, provider, error: null })
       },
       [getProvider]
     )
 
     const create = useCallback(
-      async (createOptions?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount> => {
+      async (createOptions?: CreateEmbeddedWalletOptions): Promise<CreateEmbeddedWalletResult> => {
+        const localInvocation = ++latestLocalWalletMutationRef.current
+        const previousState = stateRef.current
+        const shouldPublish = reserveEmbeddedSignerPublication(client)
+        const restoreIfSupersededElsewhere = () => {
+          if (!shouldPublish() && latestLocalWalletMutationRef.current === localInvocation) setState(previousState)
+        }
         setState((s) => ({ ...s, status: 'creating', error: null }))
 
         try {
-          const account = await createEmbeddedWallet({
-            client,
-            walletConfig,
-            chainType,
-            accountRequest: buildAccountRequest(createOptions),
-            recovery: createOptions,
-            setActiveEmbeddedAddress,
-            updateEmbeddedAccounts,
+          const account = await runSignerOperation(async ({ assertCurrent }) => {
+            const createdAccount = await createEmbeddedWallet({
+              client,
+              walletConfig,
+              chainType,
+              accountRequest: buildAccountRequest(createOptions),
+              recovery: createOptions,
+              assertCurrent,
+              shouldPublish,
+              setActiveEmbeddedAddress,
+              updateEmbeddedAccounts,
+            })
+
+            await settleNewAccount(createdAccount, assertCurrent, shouldPublish)
+            return createdAccount
           })
 
-          await settleNewAccount(account)
-
-          createOptions?.onSuccess?.({ account })
-          return account
+          const result = { account }
+          if (shouldPublish()) notifyConsumer(createOptions?.onSuccess, result)
+          else restoreIfSupersededElsewhere()
+          return result
         } catch (err) {
           const error = asOpenfortError(err, (cause) => new WalletCreationError({ chain: chainName, cause }))
 
-          setState((s) => ({ ...s, status: 'error', error: error.message }))
-
-          createOptions?.onError?.(error)
-          // Keep the established success return type while honoring the action-hook
-          // contract: failures are observable through state and onError, not rejection.
-          return undefined as unknown as EmbeddedAccount
+          if (shouldPublish()) {
+            setState((s) => ({ ...s, status: 'error', error: error.message }))
+            notifyConsumer(createOptions?.onError, error)
+          } else restoreIfSupersededElsewhere()
+          return { error }
         }
       },
-      [client, walletConfig, buildAccountRequest, settleNewAccount, updateEmbeddedAccounts, setActiveEmbeddedAddress]
+      [
+        client,
+        walletConfig,
+        buildAccountRequest,
+        settleNewAccount,
+        updateEmbeddedAccounts,
+        setActiveEmbeddedAddress,
+        runSignerOperation,
+      ]
     )
 
     const importWallet = useCallback(
-      async (importOptions: ImportEmbeddedWalletOptions): Promise<EmbeddedAccount> => {
+      async (importOptions: ImportEmbeddedWalletOptions): Promise<CreateEmbeddedWalletResult> => {
+        const localInvocation = ++latestLocalWalletMutationRef.current
+        const previousState = stateRef.current
+        const shouldPublish = reserveEmbeddedSignerPublication(client)
+        const restoreIfSupersededElsewhere = () => {
+          if (!shouldPublish() && latestLocalWalletMutationRef.current === localInvocation) setState(previousState)
+        }
         setState((s) => ({ ...s, status: 'creating', error: null }))
 
         try {
-          const account = await importEmbeddedWallet({
-            client,
-            walletConfig,
-            chainType,
-            accountRequest: buildAccountRequest(importOptions),
-            recovery: importOptions,
-            privateKey: importOptions.privateKey,
-            setActiveEmbeddedAddress,
-            updateEmbeddedAccounts,
+          const account = await runSignerOperation(async ({ assertCurrent }) => {
+            const importedAccount = await importEmbeddedWallet({
+              client,
+              walletConfig,
+              chainType,
+              accountRequest: buildAccountRequest(importOptions),
+              recovery: importOptions,
+              privateKey: importOptions.privateKey,
+              assertCurrent,
+              shouldPublish,
+              setActiveEmbeddedAddress,
+              updateEmbeddedAccounts,
+            })
+
+            await settleNewAccount(importedAccount, assertCurrent, shouldPublish)
+            return importedAccount
           })
 
-          await settleNewAccount(account)
-
-          importOptions.onSuccess?.({ account })
-          return account
+          const result = { account }
+          if (shouldPublish()) notifyConsumer(importOptions.onSuccess, result)
+          else restoreIfSupersededElsewhere()
+          return result
         } catch (err) {
           const error = asOpenfortError(err, (cause) => new WalletImportError({ chain: chainName, cause }))
 
-          setState((s) => ({ ...s, status: 'error', error: error.message }))
-
-          importOptions.onError?.(error)
-          return undefined as unknown as EmbeddedAccount
+          if (shouldPublish()) {
+            setState((s) => ({ ...s, status: 'error', error: error.message }))
+            notifyConsumer(importOptions.onError, error)
+          } else restoreIfSupersededElsewhere()
+          return { error }
         }
       },
-      [client, walletConfig, buildAccountRequest, settleNewAccount, updateEmbeddedAccounts, setActiveEmbeddedAddress]
+      [
+        client,
+        walletConfig,
+        buildAccountRequest,
+        settleNewAccount,
+        updateEmbeddedAccounts,
+        setActiveEmbeddedAddress,
+        runSignerOperation,
+      ]
     )
 
     const setActive = useCallback(
-      async (activeOptions: SetActiveEmbeddedWalletOptionsBase & { address: string }): Promise<void> => {
-        const run = async (): Promise<void> => {
-          try {
-            const currentAccounts = accountsRef.current
-            const account = findEmbeddedAccount({
-              accounts: currentAccounts,
-              address: activeOptions.address,
-              normalizeAddress,
-            })
-            const walletIndex = currentAccounts.indexOf(account)
+      async (
+        activeOptions: SetActiveEmbeddedWalletOptionsBase & { address: string }
+      ): Promise<SetActiveEmbeddedWalletResult> => {
+        const localInvocation = ++latestLocalWalletMutationRef.current
+        const previousState = stateRef.current
+        const shouldPublish = reserveEmbeddedSignerPublication(client)
+        const restoreIfSupersededElsewhere = () => {
+          if (!shouldPublish() && latestLocalWalletMutationRef.current === localInvocation) setState(previousState)
+        }
+        type SetActiveSettlement =
+          | { status: 'needs-recovery'; result: { needsRecovery: true } }
+          | {
+              status: 'connected'
+              result: { needsRecovery: false }
+              account: EmbeddedAccount
+              activeWallet: TWallet
+              provider: TProvider
+            }
 
+        const run = async ({ assertCurrent }: EmbeddedSignerOperationContext): Promise<SetActiveSettlement> => {
+          const currentAccounts = accountsRef.current
+          const account = findEmbeddedAccount({
+            accounts: currentAccounts,
+            address: activeOptions.address,
+            normalizeAddress,
+          })
+          const walletIndex = currentAccounts.indexOf(account)
+
+          if (shouldPublish()) {
             setState((s) => ({
               ...s,
               status: 'connecting',
               activeWallet: buildConnectingWallet({ account, walletIndex }),
               error: null,
             }))
+          }
 
-            const { needsRecovery } = await setActiveWallet({
-              client,
-              walletConfig,
-              account,
-              options: activeOptions,
-            })
-            if (needsRecovery) {
-              setState((s) => ({ ...s, status: 'needs-recovery', error: null }))
-              return
-            }
+          const { needsRecovery } = await setActiveWallet({
+            client,
+            walletConfig,
+            account,
+            options: activeOptions,
+            assertCurrent,
+          })
+          if (needsRecovery) {
+            return { status: 'needs-recovery' as const, result: { needsRecovery: true } as const }
+          }
 
-            const provider = await getProvider(account)
-            const activeWallet = buildActiveWallet({ account, walletIndex, provider })
-
-            setState({ status: 'connected', activeWallet, provider, error: null })
-            setActiveEmbeddedAddress(account.address)
-          } catch (err) {
-            const error = asOpenfortError(err, (cause) => new SetActiveWalletError({ chain: chainName, cause }))
-
-            setState((s) => ({ ...s, status: 'error', error: error.message }))
+          assertCurrent()
+          const provider = await getProvider(account, { assertCurrent })
+          const activeWallet = buildActiveWallet({ account, walletIndex, provider })
+          return {
+            status: 'connected' as const,
+            result: { needsRecovery: false } as const,
+            account,
+            activeWallet,
+            provider,
           }
         }
 
-        // Append before awaiting so every caller observes the latest tail. Reading
-        // the tail and awaiting it first lets two queued callers start together.
-        const previous = setActiveInProgressRef.current
-        const promise = previous ? previous.then(run, run) : run()
+        // The client-scoped queue also covers provider synchronization from other
+        // hook instances, so signer replacement and provider reads cannot overlap.
+        const promise = runSignerOperation(run)
         setActiveInProgressRef.current = promise
         try {
-          await promise
+          const settlement = await promise
+          if (shouldPublish()) {
+            if (settlement.status === 'connected') {
+              setEmbeddedState(EmbeddedState.READY)
+              setState({
+                status: 'connected',
+                activeWallet: settlement.activeWallet,
+                provider: settlement.provider,
+                error: null,
+              })
+              setActiveEmbeddedAddress(settlement.account.address)
+            } else {
+              setState((s) => ({ ...s, status: 'needs-recovery', error: null }))
+            }
+            notifyConsumer(activeOptions.onSuccess, settlement.result)
+          } else restoreIfSupersededElsewhere()
+          return settlement.result
+        } catch (err) {
+          const error = asOpenfortError(err, (cause) => new SetActiveWalletError({ chain: chainName, cause }))
+
+          if (shouldPublish()) {
+            setState((s) => ({ ...s, status: 'error', error: error.message }))
+            notifyConsumer(activeOptions.onError, error)
+          } else restoreIfSupersededElsewhere()
+          return { error }
         } finally {
           if (setActiveInProgressRef.current === promise) setActiveInProgressRef.current = null
         }
       },
-      [client, walletConfig, getProvider, setActiveEmbeddedAddress]
+      [client, walletConfig, getProvider, setActiveEmbeddedAddress, setEmbeddedState, runSignerOperation]
     )
 
     const setRecovery = useCallback(
-      async (recoveryOptions: SetRecoveryOptions): Promise<void> => {
-        await setRecoveryMethod({
-          client,
-          previousRecovery: recoveryOptions.previousRecovery,
-          newRecovery: recoveryOptions.newRecovery,
-          updateEmbeddedAccounts,
-        })
+      async (recoveryOptions: SetRecoveryOptions): Promise<SetRecoveryResult> => {
+        const intendedAccount = captureActiveAccountIdentity(embeddedAccounts, activeEmbeddedAddress, chainType)
+        try {
+          await runSignerOperation(async ({ assertCurrent }) => {
+            const currentAccount = await client.embeddedWallet.get()
+            assertCurrent()
+            assertActiveEmbeddedAccount(intendedAccount, currentAccount)
+            assertCurrent()
+            await setRecoveryMethod({
+              client,
+              previousRecovery: recoveryOptions.previousRecovery,
+              newRecovery: recoveryOptions.newRecovery,
+              updateEmbeddedAccounts,
+            })
+          })
+          const result = {}
+          notifyConsumer(recoveryOptions.onSuccess, result)
+          return result
+        } catch (err) {
+          const error = asOpenfortError(err, (cause) => new RecoveryError('Failed to set recovery method.', { cause }))
+          setState((s) => ({ ...s, status: 'error', error: error.message }))
+          notifyConsumer(recoveryOptions.onError, error)
+          return { error }
+        }
       },
-      [client, updateEmbeddedAccounts]
+      [client, embeddedAccounts, activeEmbeddedAddress, updateEmbeddedAccounts, runSignerOperation]
     )
 
-    const exportKey = useCallback(async (): Promise<string> => exportPrivateKey({ client }), [client])
+    const exportKey = useCallback(
+      async (exportOptions?: ExportPrivateKeyOptions): Promise<ExportPrivateKeyResult> => {
+        const intendedAccount = captureActiveAccountIdentity(embeddedAccounts, activeEmbeddedAddress, chainType)
+        try {
+          const privateKey = await runSignerOperation(async ({ assertCurrent }) => {
+            const currentAccount = await client.embeddedWallet.get()
+            assertCurrent()
+            assertActiveEmbeddedAccount(intendedAccount, currentAccount)
+            assertCurrent()
+            return exportPrivateKey({ client })
+          })
+          const result = { privateKey }
+          notifyConsumer(exportOptions?.onSuccess, result)
+          return result
+        } catch (err) {
+          const error = asOpenfortError(err, (cause) => new WalletError('Failed to export private key.', { cause }))
+          setState((s) => ({ ...s, status: 'error', error: error.message }))
+          notifyConsumer(exportOptions?.onError, error)
+          return { error }
+        }
+      },
+      [client, embeddedAccounts, activeEmbeddedAddress, runSignerOperation]
+    )
 
     const actions = useMemo(
       () => ({
@@ -354,35 +561,29 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
       routedChainType,
       state,
       setState,
+      setActiveInProgressRef,
+      runSignerOperation,
       getProvider,
       setActiveEmbeddedAddress,
     })
 
-    const derived = useMemo(
-      () => ({
-        isLoading:
-          state.status === 'fetching-wallets' ||
-          state.status === 'connecting' ||
-          state.status === 'creating' ||
-          state.status === 'reconnecting',
-        isError: state.status === 'error',
-        isSuccess: state.status === 'connected',
-      }),
-      [state.status]
-    )
-
-    const connectedStateProps = useMemo(
-      () => toConnectedStateProperties(state.status, state.activeWallet),
-      [state.status, state.activeWallet]
-    )
-
-    const displayAddress = useMemo(
-      () =>
-        state.activeWallet?.address && (state.status === 'connected' || state.status === 'connecting')
-          ? formatAddress(state.activeWallet.address, chainType)
-          : undefined,
-      [state.activeWallet?.address, state.status]
-    )
+    const derived = {
+      isLoading:
+        exposedState.status === 'fetching-wallets' ||
+        exposedState.status === 'connecting' ||
+        exposedState.status === 'creating' ||
+        exposedState.status === 'reconnecting',
+      isError: exposedState.status === 'error',
+      isSuccess: exposedState.status === 'connected',
+    }
+    const connectedStateProps = toConnectedStateProperties(exposedState.status, exposedState.activeWallet)
+    const displayAddress =
+      exposedState.activeWallet?.address &&
+      (exposedState.status === 'connected' ||
+        exposedState.status === 'connecting' ||
+        exposedState.status === 'reconnecting')
+        ? formatAddress(exposedState.activeWallet.address, chainType)
+        : undefined
 
     if (isLoadingAccounts) {
       return {
@@ -401,11 +602,11 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     }
 
     return {
-      ...buildEmbeddedWalletStatusResult(state, actions),
+      ...buildEmbeddedWalletStatusResult(exposedState, actions),
       ...derived,
       ...connectedStateProps,
       ...(displayAddress && { displayAddress }),
-      ...(state.activeWallet?.address && { address: state.activeWallet.address }),
+      ...(exposedState.activeWallet?.address && { address: exposedState.activeWallet.address }),
       ...resultProps,
     } as TResult
   }

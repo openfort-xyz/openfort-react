@@ -49,4 +49,33 @@ describe("initializeGit", () => {
       "Refusing to stage generated credentials",
     );
   });
+
+  test("stages a scaffold when environment variants are ignored and the example is retained", async () => {
+    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
+    temporaryDirectories.push(projectDir);
+    fs.writeFileSync(
+      path.join(projectDir, ".gitignore"),
+      ".env*\n!.env.example\n",
+    );
+    fs.writeFileSync(path.join(projectDir, ".env.production"), "SECRET=fake");
+    fs.writeFileSync(
+      path.join(projectDir, ".env.example"),
+      "PUBLISHABLE_KEY=example",
+    );
+
+    await initializeGit(projectDir);
+
+    expect(
+      execFileSync("git", ["check-ignore", ".env.production"], {
+        cwd: projectDir,
+        encoding: "utf8",
+      }).trim(),
+    ).toBe(".env.production");
+    expect(
+      execFileSync("git", ["ls-files", "--error-unmatch", ".env.example"], {
+        cwd: projectDir,
+        encoding: "utf8",
+      }).trim(),
+    ).toBe(".env.example");
+  });
 });

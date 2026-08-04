@@ -14,7 +14,7 @@ import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons.js'
 import { fetchSolanaBalance } from '../../../hooks/useBalance.js'
 import useLocales from '../../../hooks/useLocales.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
-import { openfortKeys } from '../../../query/queryKeys.js'
+import { getOpenfortQueryScope, openfortKeys } from '../../../query/queryKeys.js'
 import { useQuery } from '../../../query/useQuery.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { formatSol } from '../../../solana/hooks/utils.js'
@@ -39,6 +39,7 @@ const SolanaConnected: React.FC = () => {
   const locales = useLocales()
 
   const wallet = useSolanaEmbeddedWallet()
+  const client = useOpenfortCore((state) => state.client)
   const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
   const { rpcUrl } = useSolanaContext()
   const hasSolanaWallets = (embeddedAccounts?.filter((a) => a.chainType === ChainTypeEnum.SVM) ?? []).length > 0
@@ -53,7 +54,13 @@ const SolanaConnected: React.FC = () => {
   }, [address, triggerResize])
 
   const balanceResult = useQuery({
-    queryKey: openfortKeys.balance({ address: address ?? '', chainType: ChainTypeEnum.SVM, cluster: rpcUrl }),
+    queryKey: openfortKeys.balance({
+      address: address ?? '',
+      chainType: ChainTypeEnum.SVM,
+      clientScope: getOpenfortQueryScope(client),
+      rpcUrl,
+      commitment: 'confirmed',
+    }),
     queryFn: async () => {
       if (!address || !rpcUrl) return null
       try {

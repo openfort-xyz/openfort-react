@@ -20,6 +20,7 @@ import { routes } from '../../Openfort/types.js'
 import { useOpenfortConfig, useOpenfortRouting } from '../../Openfort/useOpenfort.js'
 import FitText from '../FitText/index.js'
 import Portal from '../Portal/index.js'
+import { PageActivityProvider } from './pageActivity.js'
 import {
   BackButton,
   BackgroundOverlay,
@@ -253,15 +254,24 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
         ? 'exit-scale-down'
         : 'exit'
 
+    const pageActive = active && rendered
+
     return (
       <Page key={key} animation={animation} initial={!positionInside && state !== 'entered'}>
         {/* Only the active page is measured: the outgoing one is absolutely positioned
             while it fades out, so the modal sizes itself to the page arriving. */}
         <PageContents
           ref={active ? contentRef : undefined}
-          style={{ pointerEvents: active && rendered ? 'auto' : 'none' }}
+          aria-hidden={pageActive ? undefined : true}
+          style={{ pointerEvents: pageActive ? 'auto' : 'none' }}
         >
-          {page}
+          <div
+            aria-hidden={pageActive ? undefined : true}
+            {...(pageActive ? {} : { inert: '' })}
+            style={{ display: 'contents' }}
+          >
+            <PageActivityProvider active={pageActive}>{page}</PageActivityProvider>
+          </div>
         </PageContents>
       </Page>
     )

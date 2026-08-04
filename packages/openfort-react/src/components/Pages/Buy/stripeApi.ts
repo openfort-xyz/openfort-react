@@ -1,4 +1,5 @@
 import { MissingParameterError } from '../../../errors/validation.js'
+import { getTrustedFundingProviderUrl } from '../../../utils/fundingProviderUrl.js'
 import type { Asset } from '../../Openfort/types.js'
 import { getAssetSymbol } from '../Send/utils.js'
 import { ONRAMP_SESSIONS_PATH } from './onrampApi.js'
@@ -60,10 +61,11 @@ export const createStripeSession = async (
     redirectUrl,
   }
 
-  return postOnramp<StripeOnrampResponse>({
+  const response = await postOnramp<StripeOnrampResponse>({
     path: ONRAMP_SESSIONS_PATH,
     body: requestBody,
     publishableKey,
     operation: 'Stripe session creation',
   })
+  return { ...response, onrampUrl: getTrustedFundingProviderUrl(response.onrampUrl, 'stripe').href }
 }

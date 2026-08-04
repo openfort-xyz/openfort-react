@@ -1,7 +1,8 @@
-import { RecoveryMethod } from '@openfort/openfort-js'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setActiveWallet } from '../../actions/setActiveWallet.js'
 import { MissingParameterError } from '../../errors/validation.js'
+import { SetActiveWalletError, WalletNotConnectedError } from '../../errors/wallet.js'
 import {
   asOpenfort,
   TEST_ENCRYPTION_SESSION,
@@ -11,11 +12,21 @@ import {
   testWalletConfig,
 } from '../mocks/actionFixtures.js'
 
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((resolvePromise) => {
+    resolve = resolvePromise
+  })
+  return { promise, resolve }
+}
+
 describe('setActiveWallet', () => {
   let client: TestClient
+  let assertCurrent: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     client = testClient()
+    assertCurrent = vi.fn()
   })
 
   function run(account = testAccount(), options: Record<string, unknown> = {}) {
@@ -24,6 +35,7 @@ describe('setActiveWallet', () => {
       walletConfig: testWalletConfig(),
       account,
       options,
+      assertCurrent,
     })
   }
 
@@ -83,9 +95,36 @@ describe('setActiveWallet', () => {
     expect(client.embeddedWallet.recover).not.toHaveBeenCalled()
   })
 
+  it.each([
+    ChainTypeEnum.EVM,
+    ChainTypeEnum.SVM,
+  ])('does not recover on %s when the signer session changes during recovery preparation', async (chainType) => {
+    const encryptionSession = deferred<string>()
+    const getEncryptionSession = vi.fn(() => encryptionSession.promise)
+    let current = true
+    assertCurrent.mockImplementation(() => {
+      if (!current) throw new WalletNotConnectedError('The wallet session changed.')
+    })
+
+    const pending = setActiveWallet({
+      client: asOpenfort(client),
+      walletConfig: testWalletConfig({ getEncryptionSession }),
+      account: testAccount({ chainType }),
+      options: {},
+      assertCurrent,
+    })
+    await vi.waitFor(() => expect(getEncryptionSession).toHaveBeenCalledOnce())
+
+    current = false
+    encryptionSession.resolve(TEST_ENCRYPTION_SESSION)
+
+    await expect(pending).rejects.toBeInstanceOf(WalletNotConnectedError)
+    expect(client.embeddedWallet.recover).not.toHaveBeenCalled()
+  })
+
   it('propagates a rejected recover call', async () => {
     client.embeddedWallet.recover.mockRejectedValue(new Error('recover failed'))
 
-    await expect(run()).rejects.toThrow('recover failed')
+    await expect(run()).rejects.toBeInstanceOf(SetActiveWalletError)
   })
 })

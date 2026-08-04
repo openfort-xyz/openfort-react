@@ -21,6 +21,7 @@ jobs:
     # `publish_results: true` only works from the default branch.
     if: github.event.repository.default_branch == github.ref_name
     permissions:
+      contents: read
       security-events: write # upload the SARIF report to the code-scanning dashboard
       id-token: write        # sign the published results so the badge can be verified
 

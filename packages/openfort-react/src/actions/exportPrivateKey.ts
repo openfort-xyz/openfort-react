@@ -1,4 +1,6 @@
 import type { Openfort } from '@openfort/openfort-js'
+import { asOpenfortError } from '../errors/base.js'
+import { WalletError } from '../errors/wallet.js'
 
 type ExportPrivateKeyParameters = {
   client: Openfort
@@ -11,5 +13,9 @@ type ExportPrivateKeyParameters = {
  * @returns The private key: hex on EVM, base58-encoded secret key on Solana.
  */
 export async function exportPrivateKey(parameters: ExportPrivateKeyParameters): Promise<string> {
-  return await parameters.client.embeddedWallet.exportPrivateKey()
+  try {
+    return await parameters.client.embeddedWallet.exportPrivateKey()
+  } catch (error) {
+    throw asOpenfortError(error, (cause) => new WalletError('Failed to export private key.', { cause }))
+  }
 }

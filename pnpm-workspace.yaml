@@ -8,12 +8,76 @@ packages:
   # The betterauth quickstart is a nested monorepo whose own scripts filter on
   # these package names, so they have to be part of this workspace.
   - "examples/quickstarts/betterauth/apps/*"
+
+# pnpm 10 reads dependency overrides from the workspace manifest. Keeping the
+# graph constraints here makes fresh installs and the compatibility matrix use
+# the same security and peer-version policy recorded in the lockfile.
+overrides:
+  bn.js: '>=5.2.3'
+  axios: '>=1.18.1'
+  react: 18.3.1
+  react-dom: 18.3.1
+  '@types/react': 18.3.1
+  '@types/react-dom': 18.3.1
+  viem: ^2.52.2
+  wagmi: ^3.6.16
+  '@tanstack/react-query': ^5.99.2
+  '@tanstack/query-core': ^5.99.2
+  use-sync-external-store: ^1.6.0
+  typescript: ^5.9.3
+  hono: '>=4.12.27 <5'
+  protobufjs: '>=8.6.0'
+  follow-redirects: '>=1.16.0'
+  '@hono/node-server': '>=1.19.13'
+  cross-spawn: '>=6.0.6'
+  got: '>=11.8.5'
+  esbuild: '>=0.28.1'
+  glob@>=10.3.7 <=11.0.3: '>=11.1.0'
+  body-parser@>=2.2.0 <2.2.1: '>=2.2.1'
+  '@modelcontextprotocol/sdk@<1.25.2': 1.25.2
+  qs@<6.15.2: '>=6.15.2'
+  preact@>=10.28.0 <10.28.2: '>=10.28.2'
+  diff@<8.0.3: '>=8.0.3'
+  h3@<1.15.9: '>=1.15.9'
+  kysely: '>=0.28.17'
+  effect@<3.20.0: '>=3.20.0'
+  lodash@>=4.0.0 <=4.17.23: '>=4.18.0'
+  markdown-it: '>=14.2.0'
+  minimatch: '>=10.2.3'
+  bn.js@<4.12.3: '>=4.12.3'
+  rollup@>=4.0.0 <4.59.0: '>=4.59.0'
+  rollup@<2.80.0: '>=2.80.0'
+  undici@>=7.0.0 <7.28.0: '>=7.28.0 <8'
+  socket.io-parser@>=4.0.0 <4.2.6: '>=4.2.6'
+  picomatch@<2.3.2: '>=2.3.2 <3.0.0'
+  picomatch@>=4.0.0 <4.0.4: '>=4.0.4'
+  yaml@>=2.0.0 <2.8.3: '>=2.8.3'
+  smol-toml@<1.6.1: '>=1.6.1'
+  brace-expansion@<5.0.5: '>=5.0.6'
+  path-to-regexp@<0.1.13: 0.1.13
+  drizzle-orm: '>=0.45.2'
+  defu: '>=6.1.5'
+  uuid@<14.0.0: '>=14.0.0'
+  postcss@<8.5.10: '>=8.5.10'
+  ws: '>=8.21.0'
+  vitest@<4.1.0: '>=4.1.0'
+  shell-quote@>=1.1.0 <=1.8.3: '>=1.8.4'
+  '@grpc/grpc-js@<1.9.16': '>=1.9.16'
+  form-data@>=4.0.0 <4.0.6: '>=4.0.6'
+  vite@<6.4.3: '>=6.4.3'
+  js-yaml@>=4.0.0 <4.3.0: '>=4.3.0 <5'
+  # read-yaml-file 1.1 calls the js-yaml 3 safeLoad API, which 4.x removed, so
+  # this path stays on the 3.x line. 3.15.1 carries the merge-key backport.
+  'read-yaml-file@1.1.0>js-yaml': 3.15.1
+  dompurify@<3.4.11: '>=3.4.11'
+  '@opentelemetry/core@<2.8.0': '>=2.8.0'
+  '@babel/core@<7.29.6': '>=7.29.6 <8'
+
 minimumReleaseAge: 1440
 minimumReleaseAgeExclude:
   - "@openfort/openfort-js"
   - "@openfort/openfort-node"
   - "@openfort/better-auth"
-  - "hono"
 
 # Fail the install if a dependency's npm trust level drops below what it had on
 # an earlier release — for example a package that published with provenance and
@@ -45,6 +109,10 @@ trustPolicyExclude:
   # Pinned by the same @walletconnect/relay-auth, and missing the provenance
   # attestation that earlier @noble/hashes releases carried.
   - "@noble/hashes@1.7.0"
+  # create-openfort's React 19 standalone build resolves @babel/core 7.29.7,
+  # whose exact semver dependency lacks the trust evidence present on earlier
+  # semver releases.
+  - "semver@6.3.1"
 
 # pnpm 10 blocks `preinstall`, `install` and `postinstall` scripts of
 # dependencies unless they are listed here. Keep this allowlist minimal and
@@ -63,28 +131,16 @@ auditConfig:
   # listed here fails the build. Re-check the list whenever the lockfile moves;
   # an entry that no longer matches is dead and should be deleted.
   #
-  # Every entry below reaches the tree through `examples/*` or root
-  # devDependencies. None is reachable from the published `@openfort/react`
-  # runtime dependency graph.
+  # Entries below are either isolated to examples/tooling or carry an explicit
+  # runtime reachability analysis. Runtime exceptions must document why the
+  # vulnerable operation is not invoked and when the exception can be removed.
   ignoreCves:
-    # elliptic — nonce/signature handling uses a risky primitive. Low severity,
-    # pulled in transitively by wallet SDKs that have not shipped a bumped
-    # release; the affected code paths are not used for signing here.
+    # elliptic has no patched 6.x release. It is runtime-reachable through the
+    # core SDK's ethers v5 transaction types, but Openfort React does not call
+    # elliptic's ECDSA signing API; embedded signing is handled by Shield.
+    # Remove this exception when the core SDK drops the ethers v5 dependency.
     - CVE-2025-14505
   ignoreGhsas:
-    # axios <1.18.0 — proxy/prototype-pollution/body-limit cluster. Reached via
-    # `wagmi > @wagmi/connectors > @walletconnect/ethereum-provider > @reown/appkit`
-    # and `@openfort/openfort-node`; both pin axios ranges below the fix.
-    - GHSA-42h9-826w-cgv3
-    - GHSA-xj6q-8x83-jv6g
-    - GHSA-pmv8-rq9r-6j72
-    - GHSA-jqh4-m9w3-8hp9
-    - GHSA-mmx7-hfxf-jppx
-    - GHSA-f4gw-2p7v-4548
-    - GHSA-gcfj-64vw-6mp9
-    - GHSA-hcpx-6fm6-wx23
-    - GHSA-7q8q-rj6j-mhjq
-    - GHSA-mwf2-3pr3-8698
     # websocket-driver <0.7.5 — message corruption and compression resource
     # limits. Reached only via `firebase > @firebase/database > faye-websocket`
     # in the firebase quickstart, which has no release on a patched driver.
@@ -95,10 +151,6 @@ auditConfig:
     # on repo-authored input.
     - GHSA-3jxr-9vmj-r5cp
     - GHSA-mh99-v99m-4gvg
-    # js-yaml <4.3.0 — merge-key chains force quadratic CPU. Reached via
-    # `@changesets/cli > @manypkg/get-packages > read-yaml-file`, which parses
-    # only this repo's own workspace files.
-    - GHSA-52cp-r559-cp3m
     # shell-quote <1.9.0 — quadratic parsing DoS. Reached via the betterauth
     # quickstart's tooling, which quotes only locally constructed commands.
     - GHSA-395f-4hp3-45gv
@@ -109,11 +161,6 @@ auditConfig:
     # body-parser <1.20.6 — request parsing DoS. Reached via a nested Express in
     # the betterauth quickstart server, which is an example, not a deployed service.
     - GHSA-v422-hmwv-36x6
-    # hono <4.12.27 — routing and header handling issues. Reached via root
-    # devDependencies used by the quickstart backends only.
-    - GHSA-xgm2-5f3f-mvvc
-    - GHSA-hvrm-45r6-mjfj
-    - GHSA-w62v-xxxg-mg59
     # @hono/node-server — request smuggling surface. Reached via
     # `better-auth > prisma > @prisma/dev` in the betterauth quickstart.
     - GHSA-frvp-7c67-39w9
@@ -134,6 +181,3 @@ auditConfig:
     # `@tanstack/react-router > @tanstack/router-core` in the playground, which
     # deserializes only its own router state.
     - GHSA-mv8w-475r-vwqw
-    # better-auth <1.6.22 — authentication bypass. Reached only by the
-    # betterauth quickstart, an example app with no production deployment.
-    - GHSA-qq9h-g4jm-xgf3

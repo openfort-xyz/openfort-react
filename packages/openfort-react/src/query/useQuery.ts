@@ -8,6 +8,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query'
 import { hashQueryKey } from './hashQueryKey.js'
+import { withQueryResultOverrides } from './withQueryResultOverrides.js'
 
 /** Options accepted by {@link useQuery}. The hash function is supplied by the wrapper. */
 type UseQueryParameters<
@@ -36,7 +37,6 @@ export function useQuery<
   const result = tanstackUseQuery({
     ...parameters,
     queryKeyHashFn: hashQueryKey,
-  }) as UseQueryReturnType<data, error>
-  result.queryKey = parameters.queryKey
-  return result
+  })
+  return withQueryResultOverrides(result, { queryKey: parameters.queryKey })
 }

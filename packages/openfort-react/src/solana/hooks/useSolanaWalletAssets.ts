@@ -1,13 +1,17 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { openfortKeys } from '../../query/queryKeys.js'
+import { asOpenfortError, type OpenfortError } from '../../errors/base.js'
+import { WalletError } from '../../errors/wallet.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { getOpenfortQueryInputScope, getOpenfortQueryScope, openfortKeys } from '../../query/queryKeys.js'
 import { type UseQueryReturnType, useQuery } from '../../query/useQuery.js'
+import { withQueryResultOverrides } from '../../query/withQueryResultOverrides.js'
 import { useSolanaContext } from '../SolanaContext.js'
 import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet.js'
 
 /** A holding in the connected Solana wallet: native SOL or an SPL token. */
-type SolanaAsset = {
+export type SolanaAsset = {
   /** Mint address, or 'native' for SOL. */
   mint: string
   symbol: string
@@ -82,8 +86,9 @@ async function fetchSolanaAssets(addressStr: string, rpcUrl: string): Promise<So
  * is `null` rather than `undefined` before the first result, and `isIdle`
  * reports that the query is gated off because no wallet or cluster is available.
  */
-type UseSolanaWalletAssetsResult = Omit<UseQueryReturnType<SolanaAsset[], Error>, 'data'> & {
+export type UseSolanaWalletAssetsResult = Omit<UseQueryReturnType<SolanaAsset[], Error>, 'data' | 'error'> & {
   data: SolanaAsset[] | null
+  error: OpenfortError | undefined
   isIdle: boolean
 }
 
@@ -94,24 +99,50 @@ type UseSolanaWalletAssetsResult = Omit<UseQueryReturnType<SolanaAsset[], Error>
  * Solana asset inventory.
  *
  * The result refreshes when balances are invalidated — see `useInvalidateBalance`.
+ *
+ * @example
+ * ```tsx
+ * import { useSolanaWalletAssets } from '@openfort/react/solana'
+ *
+ * function SolanaBalances() {
+ *   const { data, error, isPending } = useSolanaWalletAssets()
+ *   if (isPending) return <p>Loading balances…</p>
+ *   if (error) return <p>{error.shortMessage}</p>
+ *   return <p>{data?.find((asset) => asset.isNative)?.amount ?? 0n} lamports</p>
+ * }
+ * ```
  */
 export function useSolanaWalletAssets(): UseSolanaWalletAssetsResult {
+  const client = useOpenfortCore((state) => state.client)
   const wallet = useSolanaEmbeddedWallet()
   const { rpcUrl } = useSolanaContext()
   const address = wallet.status === 'connected' && wallet.address ? wallet.address : undefined
   const enabled = Boolean(address && rpcUrl)
 
-  const { data, ...query } = useQuery({
+  const query = useQuery({
     queryKey: openfortKeys.walletAssets({
       address: address ?? '',
       chainType: ChainTypeEnum.SVM,
       multiChain: false,
-      rpcUrl,
+      clientScope: getOpenfortQueryScope(client),
+      rpcScope: getOpenfortQueryInputScope(rpcUrl),
     }),
     queryFn: () => (address && rpcUrl ? fetchSolanaAssets(address, rpcUrl) : Promise.resolve([])),
     enabled,
     staleTime: 30_000,
   })
 
-  return { ...query, data: data ?? null, isIdle: !enabled }
+  return withQueryResultOverrides(query, {
+    get data() {
+      return query.data ?? null
+    },
+    get error() {
+      if (!query.error) return undefined
+      return asOpenfortError(
+        query.error,
+        (cause) => new WalletError('Failed to fetch Solana wallet assets.', { cause })
+      )
+    },
+    isIdle: !enabled,
+  })
 }

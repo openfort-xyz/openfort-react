@@ -1,9 +1,10 @@
+import type { Transition } from 'framer-motion'
 import { SpinnerContainer } from './styles.js'
 
 const transition = {
   duration: 0.4,
   ease: [0.175, 0.885, 0.32, 0.98],
-}
+} satisfies Transition
 
 export const Spinner = () => (
   <SpinnerContainer

@@ -1,48 +1,58 @@
-/**
- * Utilities for secure handling of OAuth callback URLs containing tokens.
- *
- * Prevents Referer-header leakage of access tokens and provides robust
- * URL parsing for the OF-1013 workaround (duplicate `?` in redirect URLs).
- */
-
 const REFERRER_META_ID = '__openfort_no_referrer'
+let activeReferrerSuppressions = 0
+let managedReferrerMeta: HTMLMetaElement | null = null
+let managedReferrerMetaWasCreated = false
+let previousReferrerPolicy: string | null = null
 
 /**
- * Injects a `<meta name="referrer" content="no-referrer">` tag so that
- * any subresource request fired before `history.replaceState` strips the
- * tokens will NOT leak the full URL (including access_token) via the
- * Referer header.
- *
- * Call this **synchronously** — before any `await` — when the URL
- * contains sensitive query parameters.
- *
- * @returns A cleanup function that removes the meta tag.
+ * Applies a document-wide no-referrer policy until every active caller restores it.
  */
 export function suppressReferrer(): () => void {
   if (typeof document === 'undefined') return () => {}
 
-  // Avoid duplicates if called more than once
-  if (document.getElementById(REFERRER_META_ID)) return () => {}
+  if (activeReferrerSuppressions === 0) {
+    const existingMeta = document.head.querySelector<HTMLMetaElement>('meta[name="referrer"]')
+    managedReferrerMeta = existingMeta ?? document.createElement('meta')
+    managedReferrerMetaWasCreated = !existingMeta
+    previousReferrerPolicy = existingMeta?.getAttribute('content') ?? null
 
-  const meta = document.createElement('meta')
-  meta.id = REFERRER_META_ID
-  meta.name = 'referrer'
-  meta.content = 'no-referrer'
-  document.head.appendChild(meta)
+    if (managedReferrerMetaWasCreated) {
+      managedReferrerMeta.id = REFERRER_META_ID
+      managedReferrerMeta.name = 'referrer'
+      document.head.appendChild(managedReferrerMeta)
+    }
+    managedReferrerMeta.content = 'no-referrer'
+  }
+
+  activeReferrerSuppressions += 1
+  let restored = false
 
   return () => {
-    meta.remove()
+    if (restored) return
+    restored = true
+    activeReferrerSuppressions -= 1
+    if (activeReferrerSuppressions > 0) return
+
+    const meta = managedReferrerMeta
+    if (meta?.getAttribute('content') === 'no-referrer') {
+      if (managedReferrerMetaWasCreated) {
+        meta.remove()
+      } else if (previousReferrerPolicy === null) {
+        meta.removeAttribute('content')
+      } else {
+        meta.content = previousReferrerPolicy
+      }
+    }
+
+    managedReferrerMeta = null
+    managedReferrerMetaWasCreated = false
+    previousReferrerPolicy = null
   }
 }
 
 /**
- * Parses the current `window.location.href`, fixing the OF-1013 issue
- * where the server redirect produces a URL with a duplicate `?`, e.g.
+ * Parses callback URLs that contain a second query delimiter, such as
  * `https://example.com/callback?existing=1?access_token=xxx&user_id=yyy`.
- *
- * Instead of a fragile `.replace('?access_token=', '&access_token=')`
- * that can mangle values containing the same substring, this finds the
- * *second* `?` (if any) and replaces it with `&`.
  */
 export function parseCallbackUrl(href: string): URL {
   const firstQ = href.indexOf('?')
@@ -51,7 +61,6 @@ export function parseCallbackUrl(href: string): URL {
   const secondQ = href.indexOf('?', firstQ + 1)
   if (secondQ === -1) return new URL(href)
 
-  // Replace only the second `?` with `&`
   const fixed = `${href.slice(0, secondQ)}&${href.slice(secondQ + 1)}`
   return new URL(fixed)
 }

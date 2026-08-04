@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { providersLogos } from '../../assets/logos.js'
 import { ConnectorTypeMismatchError } from '../../errors/connection.js'
+import { useAuthTransitions } from '../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
 import { parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity.js'
@@ -15,12 +16,15 @@ const states = {
   INIT: 'init',
   REDIRECT: 'redirect',
   CONNECTING: 'connecting',
+  CANCELLED: 'cancelled',
   ERROR: 'error',
 }
 
 const ConnectWithOAuth: React.FC = () => {
   const { connector, setRoute, triggerResize } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)
+  const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
+  const updateUser = useOpenfortCore((s) => s.updateUser)
   const user = useOpenfortCore((s) => s.user)
 
   const [status, setStatus] = useState(states.INIT)
@@ -31,13 +35,43 @@ const ConnectWithOAuth: React.FC = () => {
   // reads its other inputs from this ref, which holds the values as of the transition — depending
   // on them would replay a transition whose parameters are already gone. `user`, in particular,
   // lands in the store moments after the credentials are stored.
-  const latestRef = useRef({ connector, user, client, setRoute, triggerResize })
+  const latestRef = useRef({
+    connector,
+    user,
+    client,
+    captureAuthSession,
+    startAuthenticatedMutation,
+    startAuthTransition,
+    updateUser,
+    setRoute,
+    triggerResize,
+  })
   useEffect(() => {
-    latestRef.current = { connector, user, client, setRoute, triggerResize }
+    latestRef.current = {
+      connector,
+      user,
+      client,
+      captureAuthSession,
+      startAuthenticatedMutation,
+      startAuthTransition,
+      updateUser,
+      setRoute,
+      triggerResize,
+    }
   })
 
   useEffect(() => {
-    const { connector, user, client, setRoute, triggerResize } = latestRef.current
+    const {
+      connector,
+      user,
+      client,
+      captureAuthSession,
+      startAuthenticatedMutation,
+      startAuthTransition,
+      updateUser,
+      setRoute,
+      triggerResize,
+    } = latestRef.current
     ;(async () => {
       const win = typeof window !== 'undefined' ? window : null
       const doc = typeof document !== 'undefined' ? document : null
@@ -90,12 +124,27 @@ const ConnectWithOAuth: React.FC = () => {
             return
           }
 
-          await client.auth.storeCredentials({
-            token,
-            userId,
-          })
-
-          setRoute(routes.LOADING)
+          const transition = startAuthTransition(() => client.auth.storeCredentials({ token, userId }))
+          const settleStale = () => {
+            if (transition.isCurrent()) return false
+            setDescription('Authentication changed before this sign-in completed. Please try again.')
+            setStatus(states.CANCELLED)
+            triggerResize()
+            return true
+          }
+          try {
+            await transition.result
+            if (settleStale()) return
+            await updateUser()
+            if (settleStale()) return
+            setRoute(routes.LOADING)
+          } catch (cause) {
+            if (settleStale()) return
+            logger.error('Error storing OAuth credentials:', cause)
+            setDescription('There was an error during authentication. Please try again.')
+            setStatus(states.ERROR)
+            triggerResize()
+          }
           break
         }
         case states.REDIRECT: {
@@ -114,18 +163,27 @@ const ConnectWithOAuth: React.FC = () => {
           // Query params must come before the hash fragment in a valid URL
           const redirectTo = `${baseURL}?${new URLSearchParams(queryParams).toString()}${hash}`
 
+          let linkIsCurrent: (() => boolean) | undefined
           try {
             if (user) {
+              const session = captureAuthSession()
+              linkIsCurrent = session.isCurrent
               const authToken = await client.getAccessToken()
+              if (!linkIsCurrent()) return
               if (!authToken) {
                 logger.error('No auth token found')
                 setRoute(routes.LOADING)
                 return
               }
-              const linkResponse = await client.auth.initLinkOAuth({
-                provider,
-                redirectTo,
-              })
+              const transition = startAuthenticatedMutation(() =>
+                client.auth.initLinkOAuth({
+                  provider,
+                  redirectTo,
+                })
+              )
+              linkIsCurrent = () => session.isCurrent() && transition.isCurrent()
+              const linkResponse = await transition.result
+              if (!linkIsCurrent()) return
               win.location.href = linkResponse
             } else {
               const r = await client.auth.initOAuth({
@@ -135,6 +193,7 @@ const ConnectWithOAuth: React.FC = () => {
               win.location.href = r
             }
           } catch (e) {
+            if (linkIsCurrent && !linkIsCurrent()) return
             logger.error('Error during OAuth initialization:', e)
             setStatus(states.ERROR)
             triggerResize()
@@ -157,7 +216,7 @@ const ConnectWithOAuth: React.FC = () => {
       <Loader
         header={`Connecting with ${connector.id}`}
         icon={providersLogos[connector.id]}
-        isError={status === states.ERROR}
+        isError={status === states.ERROR || status === states.CANCELLED}
         description={description}
         onRetry={() => {
           setStatus(states.INIT)

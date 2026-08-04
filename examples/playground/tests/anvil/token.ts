@@ -8,7 +8,7 @@
 
 import { createPublicClient, createWalletClient, http, parseAbi } from 'viem'
 import { privateKeyToAccount } from 'viem/accounts'
-import { ANVIL_FUNDER_KEY, ANVIL_RPC_URL, FORK_CHAIN, FORK_MINT_CONTRACT } from './fork'
+import { ANVIL_FUNDER_KEY, ANVIL_RPC_URL, FORK_CHAIN, FORK_MINT_CONTRACT } from './fork.js'
 
 const TOKEN_ABI = parseAbi([
   'function mint(address to, uint256 amount)',

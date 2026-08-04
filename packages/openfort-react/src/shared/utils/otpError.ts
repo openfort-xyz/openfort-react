@@ -1,4 +1,4 @@
-import { OpenfortError, toError } from '../../errors/base.js'
+import { asOpenfortError, OpenfortError, toError } from '../../errors/base.js'
 import { OtpRequiredError } from '../../errors/wallet.js'
 
 type HandleOtpErrorResult = {
@@ -12,6 +12,7 @@ type HandleOtpErrorResult = {
  * its own, so the message is the only thing to match on.
  */
 function isOtpRequired(error: unknown): boolean {
+  if (error instanceof OtpRequiredError) return true
   if (!(error instanceof OpenfortError)) return toError(error).message === 'OTP_REQUIRED'
   if (error.shortMessage === 'OTP_REQUIRED') return true
   const match = error.walk((cause) => cause instanceof Error && cause.message === 'OTP_REQUIRED')
@@ -21,8 +22,7 @@ function isOtpRequired(error: unknown): boolean {
 /** Classifies a recovery failure, turning the OTP sentinel into a typed error. */
 export function handleOtpRecoveryError(error: Error | unknown, hasWalletRecoveryOTP: boolean): HandleOtpErrorResult {
   if (!isOtpRequired(error)) {
-    const normalized =
-      error instanceof OpenfortError ? error : new OpenfortError('Wallet recovery failed.', { cause: toError(error) })
+    const normalized = asOpenfortError(error, (cause) => new OpenfortError('Wallet recovery failed.', { cause }))
     return { error: normalized, isOTPRequired: false }
   }
 

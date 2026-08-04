@@ -1,6 +1,7 @@
 import type { ChainTypeEnum, EmbeddedAccount, EmbeddedState, Openfort, User } from '@openfort/openfort-js'
 import { baseSepolia, sepolia } from 'viem/chains'
 import type { OpenfortWalletConfig } from '../components/Openfort/types.js'
+import type { EmbeddedSignerOperationContext } from '../shared/utils/embeddedSignerOperationQueue.js'
 import type { ExternalConnectorProps } from '../wallets/useExternalConnectors.js'
 
 /** Default chain when EVM without Wagmi and walletConfig.ethereum.chainId is missing. Sepolia. */
@@ -30,6 +31,11 @@ export interface ConnectionStrategy {
   getConnectors(): ExternalConnectorProps[]
 
   /** @param chainId - Current chain for EVM; when provided, uses this for fee sponsorship/rpc instead of config default. */
-  initProvider(openfort: Openfort, walletConfig: OpenfortWalletConfig, chainId?: number): Promise<void>
+  initProvider(
+    openfort: Openfort,
+    walletConfig: OpenfortWalletConfig,
+    chainId: number | undefined,
+    operation: EmbeddedSignerOperationContext
+  ): Promise<void>
   disconnect(openfort: Openfort): Promise<void>
 }

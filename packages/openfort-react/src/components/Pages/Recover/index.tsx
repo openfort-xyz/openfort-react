@@ -5,13 +5,23 @@ import { motion } from 'framer-motion'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { EmailIcon, FingerPrintIcon, KeyIcon, LockIcon, PhoneIcon, ShieldIcon } from '../../../assets/icons.js'
+import { AuthenticationError } from '../../../errors/auth.js'
 import { OpenfortError } from '../../../errors/base.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../../../hooks/openfort/walletTypes.js'
 import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { useRecoveryOTP } from '../../../shared/hooks/useRecoveryOTP.js'
 import type { RecoverableWallet } from '../../../shared/types.js'
+import {
+  clearPersistentOperation,
+  getOrCreatePersistentOperation,
+  getPersistentOperation,
+  hasPersistentOperation,
+  type PersistentOperation,
+  PersistentOperationLaneBusyError,
+} from '../../../shared/utils/persistentOperationRegistry.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { truncateEthAddress } from '../../../utils/index.js'
 import { logger } from '../../../utils/logger.js'
@@ -27,7 +37,18 @@ import { routes } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent, type SetOnBackFunction } from '../../PageContent/index.js'
 import { Body, FooterButtonText, FooterTextButton, ResultContainer } from '../EmailOTP/styles.js'
+import { useLatestAsyncAttempt } from '../useLatestAsyncAttempt.js'
 import { recoveryRegistry } from './recoveryRegistry.js'
+
+function useRecoveryOperationScope(wallet: EthereumUserWallet | SolanaUserWallet) {
+  const client = useOpenfortCore((state) => state.client)
+  const { captureAuthSession } = useAuthTransitions()
+  return {
+    client,
+    captureAuthSession,
+    operationPrefix: `wallet-recover:${wallet.chainType}:${wallet.address}`,
+  }
+}
 
 const RecoverPasswordWallet = ({
   wallet,
@@ -46,6 +67,9 @@ const RecoverPasswordWallet = ({
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+  const { active, beginAttempt, isCurrentAttempt } = useLatestAsyncAttempt()
+  const { client, captureAuthSession, operationPrefix } = useRecoveryOperationScope(wallet)
+  const operationKey = `${operationPrefix}:password`
 
   const { isEnabled: otpEnabled, requestOTP } = useRecoveryOTP()
 
@@ -67,19 +91,69 @@ const RecoverPasswordWallet = ({
     [embeddedWallet, setRoute, otpEnabled, requestOTP]
   )
 
-  const handleSubmit = async () => {
-    setLoading(true)
-    try {
-      await recoveryRegistry[chainType].password(wallet as RecoverableWallet, {
-        ...ctx,
-        password: recoveryPhrase,
+  type PasswordRecoveryResult = { route?: Parameters<typeof setRoute>[0]; error: string | false }
+
+  const observeRecovery = useCallback(
+    async (operation: PersistentOperation<PasswordRecoveryResult>, principalIsCurrent: () => boolean) => {
+      setLoading(true)
+      const attempt = beginAttempt()
+      try {
+        const result = await operation.promise
+        if (!principalIsCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
+        clearPersistentOperation(client, operationKey)
+        setRecoveryError(result.error)
+        if (result.route) setRoute(result.route)
+      } catch (err) {
+        if (
+          !principalIsCurrent() ||
+          (!operation.isCurrent() && !(err instanceof PersistentOperationLaneBusyError)) ||
+          !isCurrentAttempt(attempt)
+        )
+          return
+        clearPersistentOperation(client, operationKey)
+        setRecoveryError(err instanceof OpenfortError ? err.message : 'Recovery failed. Please try again.')
+      } finally {
+        if (principalIsCurrent() && isCurrentAttempt(attempt)) setLoading(false)
+      }
+    },
+    [beginAttempt, client, isCurrentAttempt, operationKey, setRoute]
+  )
+
+  const handleSubmit = () => {
+    const authSession = captureAuthSession()
+    const existing = getPersistentOperation<PasswordRecoveryResult>(client, operationKey)
+    const operation =
+      existing ??
+      getOrCreatePersistentOperation({
+        owner: client,
+        key: operationKey,
+        lane: operationPrefix,
+        principalIsCurrent: authSession.isCurrent,
+        start: async () => {
+          const result: PasswordRecoveryResult = { error: false }
+          await recoveryRegistry[chainType].password(wallet as RecoverableWallet, {
+            ...ctx,
+            password: recoveryPhrase,
+            setRoute: (route) => {
+              result.route = route
+            },
+            setError: (error) => {
+              result.error = error
+            },
+          })
+          return result
+        },
       })
-    } catch (err) {
-      setRecoveryError(err instanceof OpenfortError ? err.message : 'Recovery failed. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    void observeRecovery(operation, authSession.isCurrent)
   }
+
+  useEffect(() => {
+    if (!active) return
+    const existing = getPersistentOperation<PasswordRecoveryResult>(client, operationKey)
+    if (!existing) return
+    const authSession = captureAuthSession()
+    void observeRecovery(existing, authSession.isCurrent)
+  }, [active, captureAuthSession, client, observeRecovery, operationKey])
 
   useEffect(() => {
     if (recoveryError) triggerResize()
@@ -126,6 +200,7 @@ const RecoverPasswordWallet = ({
           type="password"
           placeholder="Enter your password"
           autoComplete="off"
+          disabled={loading}
         />
 
         {recoveryError && (
@@ -135,7 +210,7 @@ const RecoverPasswordWallet = ({
             </ModalBody>
           </motion.div>
         )}
-        <Button onClick={handleSubmit} waiting={loading} disabled={loading}>
+        <Button type="submit" waiting={loading} disabled={loading}>
           Recover wallet
         </Button>
       </form>
@@ -158,6 +233,9 @@ const RecoverPasskeyWallet = ({
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+  const { active, beginAttempt, isCurrentAttempt } = useLatestAsyncAttempt()
+  const { client, captureAuthSession, operationPrefix } = useRecoveryOperationScope(wallet)
+  const operationKey = `${operationPrefix}:passkey`
 
   const { isEnabled: otpEnabled, requestOTP } = useRecoveryOTP()
 
@@ -180,19 +258,54 @@ const RecoverPasskeyWallet = ({
   )
 
   const recoverWallet = useCallback(async () => {
+    const attempt = beginAttempt()
+    const session = captureAuthSession()
+    const operation = getOrCreatePersistentOperation({
+      owner: client,
+      key: operationKey,
+      principalIsCurrent: session.isCurrent,
+      start: async () => {
+        const result: { route?: Parameters<typeof setRoute>[0]; error: string | false } = { error: false }
+        await recoveryRegistry[chainType].passkey(wallet as RecoverableWallet, {
+          ...ctx,
+          setRoute: (route) => {
+            result.route = route
+          },
+          setError: (error) => {
+            result.error = error
+          },
+        })
+        return result
+      },
+    })
     try {
-      await recoveryRegistry[chainType].passkey(wallet as RecoverableWallet, ctx)
+      const result = await operation.promise
+      if (!session.isCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
+      clearPersistentOperation(client, operationKey)
+      setRecoveryError(result.error)
+      if (result.route) setRoute(result.route)
     } catch (err) {
+      if (
+        !session.isCurrent() ||
+        (!operation.isCurrent() && !(err instanceof PersistentOperationLaneBusyError)) ||
+        !isCurrentAttempt(attempt)
+      )
+        return
+      clearPersistentOperation(client, operationKey)
       setRecoveryError(err instanceof OpenfortError ? err.message : 'Invalid passkey. Please try again.')
     }
-  }, [chainType, wallet, ctx])
+  }, [beginAttempt, captureAuthSession, chainType, client, wallet, ctx, isCurrentAttempt, operationKey, setRoute])
 
   const shouldRecoverWalletRef = useRef(false)
   useEffect(() => {
+    if (!active) {
+      shouldRecoverWalletRef.current = false
+      return
+    }
     if (shouldRecoverWalletRef.current) return
     shouldRecoverWalletRef.current = true
     recoverWallet()
-  }, [recoverWallet])
+  }, [active, recoverWallet])
 
   useEffect(() => {
     if (recoveryError) triggerResize()
@@ -241,9 +354,31 @@ const RecoverAutomaticWallet = ({
   const [otpStatus, setOtpStatus] = useState<'idle' | 'loading' | 'error' | 'success' | 'sending-otp' | 'send-otp'>(
     'idle'
   )
+  const [canSendOtp, setCanSendOtp] = useState(true)
+  const { active, beginAttempt, isCurrentAttempt } = useLatestAsyncAttempt()
+  const otpOperationRef = useRef<number | null>(null)
+  const otpOperationSequenceRef = useRef(0)
+  const routeTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const errorTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  type AutomaticRecoverySnapshot = {
+    error: string | false
+    needsOTP: boolean
+    otpResponse: Awaited<ReturnType<typeof requestOTP>> | null
+  }
+  type AutomaticRecoveryOperation = {
+    promise: ReturnType<(typeof recoveryRegistry)[typeof chainType]['automatic']>
+    result: AutomaticRecoverySnapshot
+  }
+  const automaticRecoveryRef = useRef<AutomaticRecoveryOperation | null>(null)
+  const otpRecoveryRef = useRef<AutomaticRecoveryOperation | null>(null)
+  const resendOperationRef = useRef<{ promise: ReturnType<typeof requestOTP> } | null>(null)
+  const { client, captureAuthSession, operationPrefix } = useRecoveryOperationScope(wallet)
+  const automaticOperationKey = `${operationPrefix}:automatic`
+  const otpOperationKey = `${operationPrefix}:otp-verify`
+  const resendOperationKey = `${operationPrefix}:otp-resend`
 
-  const baseCtx = useMemo(
-    () => ({
+  const createRecoveryContext = useCallback(
+    (result: AutomaticRecoverySnapshot, otpCode?: string, operationIsCurrent: () => boolean = () => true) => ({
       setActive: (opts: {
         address: string
         password?: string
@@ -251,27 +386,103 @@ const RecoverAutomaticWallet = ({
         otpCode?: string
         passkeyId?: string
       }) => embeddedWallet.setActive(opts as never),
-      setRoute,
-      setError,
-      otp: { isEnabled: isWalletRecoveryOTPEnabled, request: requestOTP },
-      setNeedsOTP,
-      setOtpResponse,
+      setRoute: () => {},
+      setError: (error: string | false) => {
+        result.error = error
+      },
+      otp: {
+        isEnabled: isWalletRecoveryOTPEnabled,
+        request: async () => {
+          if (!operationIsCurrent()) throw new AuthenticationError('Wallet recovery no longer belongs to this session.')
+          const response = await requestOTP()
+          if (!operationIsCurrent()) throw new AuthenticationError('Wallet recovery no longer belongs to this session.')
+          return response
+        },
+      },
+      setNeedsOTP: (needsOTP: boolean) => {
+        result.needsOTP = needsOTP
+      },
+      setOtpResponse: (response: Awaited<ReturnType<typeof requestOTP>> | null) => {
+        result.otpResponse = response
+      },
+      otpCode,
     }),
-    [embeddedWallet, setRoute, isWalletRecoveryOTPEnabled, requestOTP]
+    [embeddedWallet, isWalletRecoveryOTPEnabled, requestOTP]
+  )
+
+  const createAutomaticOperation = useCallback(
+    (key: string, otpCode?: string): AutomaticRecoveryOperation => {
+      const session = captureAuthSession()
+      const persistent = getOrCreatePersistentOperation({
+        owner: client,
+        key,
+        principalIsCurrent: session.isCurrent,
+        start: async ({ isCurrent }) => {
+          const result: AutomaticRecoverySnapshot = { error: false, needsOTP: false, otpResponse: null }
+          const outcome = await recoveryRegistry[chainType].automatic(
+            wallet as RecoverableWallet,
+            createRecoveryContext(result, otpCode, isCurrent)
+          )
+          return { outcome, result }
+        },
+      })
+      const result: AutomaticRecoverySnapshot = { error: false, needsOTP: false, otpResponse: null }
+      return {
+        result,
+        promise: persistent.promise.then((settlement) => {
+          Object.assign(result, settlement.result)
+          return settlement.outcome
+        }),
+      }
+    },
+    [captureAuthSession, chainType, client, wallet, createRecoveryContext]
   )
 
   const recoverWallet = useCallback(async () => {
     if (chainType !== ChainTypeEnum.SVM && embeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
+    const attempt = beginAttempt()
     logger.log('Automatically recovering wallet', wallet.address)
-    await recoveryRegistry[chainType].automatic(wallet as RecoverableWallet, baseCtx)
-  }, [wallet, embeddedState, chainType, baseCtx])
+    const operation = automaticRecoveryRef.current ?? createAutomaticOperation(automaticOperationKey)
+    automaticRecoveryRef.current = operation
+    const outcome = await operation.promise
+    if (!isCurrentAttempt(attempt)) return
+    automaticRecoveryRef.current = null
+    setError(operation.result.error)
+    setNeedsOTP(operation.result.needsOTP)
+    setOtpResponse(operation.result.otpResponse)
+    if (outcome.status === 'otp-required') setCanSendOtp(false)
+    if (outcome.status === 'success') {
+      clearPersistentOperation(client, automaticOperationKey)
+      setRoute(routes.CONNECTED_SUCCESS)
+    } else if (outcome.status === 'error') {
+      clearPersistentOperation(client, automaticOperationKey)
+    }
+  }, [
+    wallet,
+    embeddedState,
+    chainType,
+    beginAttempt,
+    createAutomaticOperation,
+    isCurrentAttempt,
+    setRoute,
+    automaticOperationKey,
+    client,
+  ])
 
   const shouldRecoverWalletRef = useRef(false)
   useEffect(() => {
+    if (!active) {
+      shouldRecoverWalletRef.current = false
+      return
+    }
+    if (needsOTP) {
+      shouldRecoverWalletRef.current = true
+      return
+    }
     if (shouldRecoverWalletRef.current) return
     shouldRecoverWalletRef.current = true
     recoverWallet()
-  }, [recoverWallet])
+  }, [active, needsOTP, recoverWallet])
 
   const identity = useResolvedIdentity({
     address: wallet.address,
@@ -280,60 +491,168 @@ const RecoverAutomaticWallet = ({
   })
   const ensName = identity.status === 'success' ? identity.name : undefined
   const walletDisplay = ensName ?? truncateEthAddress(wallet.address)
-  const [canSendOtp, setCanSendOtp] = useState(true)
-  const mountedRef = useRef(true)
+  useEffect(
+    () => () => {
+      clearTimeout(routeTimeoutRef.current)
+      clearTimeout(errorTimeoutRef.current)
+    },
+    []
+  )
 
   useEffect(() => {
-    mountedRef.current = true
-    return () => {
-      mountedRef.current = false
-    }
-  }, [])
+    if (active) return
+    otpOperationRef.current = null
+    clearTimeout(routeTimeoutRef.current)
+    clearTimeout(errorTimeoutRef.current)
+    setOtpStatus((status) =>
+      status === 'loading' || status === 'sending-otp' || status === 'success' ? 'idle' : status
+    )
+  }, [active])
 
   useEffect(() => {
-    if (canSendOtp) return
+    if (!active || canSendOtp) return
     const timerId = setTimeout(() => setCanSendOtp(true), 10000)
     return () => clearTimeout(timerId)
-  }, [canSendOtp])
+  }, [active, canSendOtp])
 
-  const handleCompleteOtp = useCallback(
-    async (otp: string) => {
+  useEffect(() => {
+    if (!active || otpStatus !== 'error') return
+    clearTimeout(errorTimeoutRef.current)
+    errorTimeoutRef.current = setTimeout(() => {
+      setOtpStatus('idle')
+      setError(false)
+    }, 1000)
+    return () => clearTimeout(errorTimeoutRef.current)
+  }, [active, otpStatus])
+
+  const observeOtpRecovery = useCallback(
+    async (operation: AutomaticRecoveryOperation) => {
+      if (!active || otpOperationRef.current !== null) return
+      const otpOperation = ++otpOperationSequenceRef.current
+      otpOperationRef.current = otpOperation
+      const attempt = beginAttempt()
       setOtpStatus('loading')
       try {
-        await recoveryRegistry[chainType].automatic(wallet as RecoverableWallet, { ...baseCtx, otpCode: otp })
+        const outcome = await operation.promise
+        if (!isCurrentAttempt(attempt)) return
+        otpRecoveryRef.current = null
+        setError(operation.result.error)
+        setNeedsOTP(operation.result.needsOTP || needsOTP)
+        setOtpResponse(operation.result.otpResponse ?? otpResponse)
+        if (outcome.status !== 'success') {
+          if (outcome.status === 'error') clearPersistentOperation(client, otpOperationKey)
+          setOtpStatus(outcome.status === 'error' ? 'error' : 'idle')
+          return
+        }
+        clearPersistentOperation(client, otpOperationKey)
+        clearPersistentOperation(client, automaticOperationKey)
         setOtpStatus('success')
-        setTimeout(() => setRoute(routes.CONNECTED_SUCCESS), 1000)
+        clearTimeout(routeTimeoutRef.current)
+        routeTimeoutRef.current = setTimeout(() => {
+          if (isCurrentAttempt(attempt)) setRoute(routes.CONNECTED_SUCCESS)
+        }, 1000)
       } catch (err) {
+        if (!isCurrentAttempt(attempt)) return
+        otpRecoveryRef.current = null
         setOtpStatus('error')
         setError(err instanceof OpenfortError ? err.message : 'There was an error verifying the OTP. Please try again.')
         logger.log('Error verifying OTP for wallet recovery', err)
-        setTimeout(() => {
-          setOtpStatus('idle')
-          setError(false)
-        }, 1000)
+      } finally {
+        if (otpOperationRef.current === otpOperation) otpOperationRef.current = null
       }
     },
-    [chainType, wallet, baseCtx, setRoute]
+    [
+      active,
+      automaticOperationKey,
+      beginAttempt,
+      client,
+      isCurrentAttempt,
+      needsOTP,
+      otpOperationKey,
+      otpResponse,
+      setRoute,
+    ]
+  )
+
+  const handleCompleteOtp = useCallback(
+    async (otp: string) => {
+      if (!active || otpRecoveryRef.current || otpOperationRef.current !== null || otpStatus !== 'idle') return
+      const operation = createAutomaticOperation(otpOperationKey, otp)
+      otpRecoveryRef.current = operation
+      await observeOtpRecovery(operation)
+    },
+    [active, otpStatus, createAutomaticOperation, observeOtpRecovery, otpOperationKey]
+  )
+
+  useEffect(() => {
+    if (active && !otpRecoveryRef.current && hasPersistentOperation(client, otpOperationKey)) {
+      otpRecoveryRef.current = createAutomaticOperation(otpOperationKey)
+    }
+    if (!active || !otpRecoveryRef.current || otpOperationRef.current !== null) return
+    void observeOtpRecovery(otpRecoveryRef.current)
+  }, [active, client, createAutomaticOperation, observeOtpRecovery, otpOperationKey])
+
+  const observeResend = useCallback(
+    async (operation: { promise: ReturnType<typeof requestOTP> }) => {
+      if (!active || otpOperationRef.current !== null) return
+      const otpOperation = ++otpOperationSequenceRef.current
+      otpOperationRef.current = otpOperation
+      const attempt = beginAttempt()
+      setOtpStatus('sending-otp')
+      try {
+        const response = await operation.promise
+        if (!isCurrentAttempt(attempt)) return
+        resendOperationRef.current = null
+        clearPersistentOperation(client, resendOperationKey)
+        setOtpResponse(response)
+        setOtpStatus('idle')
+      } catch (err) {
+        if (!isCurrentAttempt(attempt)) return
+        resendOperationRef.current = null
+        clearPersistentOperation(client, resendOperationKey)
+        logger.log('Error requesting OTP for wallet recovery', err)
+        setError(err instanceof OpenfortError ? err.message : 'Failed to send recovery code')
+        setOtpStatus('error')
+      } finally {
+        if (otpOperationRef.current === otpOperation) otpOperationRef.current = null
+      }
+    },
+    [active, beginAttempt, client, isCurrentAttempt, resendOperationKey]
   )
 
   const handleResendClick = useCallback(async () => {
-    if (!canSendOtp || otpStatus === 'sending-otp') return
-    setOtpStatus('sending-otp')
-    try {
-      const response = await requestOTP()
-      if (!mountedRef.current) return
-      setOtpResponse(response)
-      setCanSendOtp(false)
-      setOtpStatus('idle')
-    } catch (err) {
-      if (!mountedRef.current) return
-      logger.log('Error requesting OTP for wallet recovery', err)
-      setError(err instanceof OpenfortError ? err.message : 'Failed to send recovery code')
-      setOtpStatus('error')
+    if (
+      !active ||
+      resendOperationRef.current ||
+      otpOperationRef.current !== null ||
+      !canSendOtp ||
+      otpStatus !== 'idle'
+    )
+      return
+    setCanSendOtp(false)
+    const session = captureAuthSession()
+    const operation = {
+      promise: getOrCreatePersistentOperation({
+        owner: client,
+        key: resendOperationKey,
+        principalIsCurrent: session.isCurrent,
+        start: () => requestOTP(),
+      }).promise,
     }
-  }, [canSendOtp, otpStatus, requestOTP])
+    resendOperationRef.current = operation
+    await observeResend(operation)
+  }, [active, canSendOtp, captureAuthSession, client, observeResend, otpStatus, requestOTP, resendOperationKey])
 
-  const isResendDisabled = !canSendOtp || otpStatus === 'sending-otp'
+  useEffect(() => {
+    if (active && !resendOperationRef.current) {
+      const persistent = getPersistentOperation<Awaited<ReturnType<typeof requestOTP>>>(client, resendOperationKey)
+      if (persistent) resendOperationRef.current = { promise: persistent.promise }
+    }
+    if (!active || !resendOperationRef.current || otpOperationRef.current !== null) return
+    void observeResend(resendOperationRef.current)
+  }, [active, client, observeResend, resendOperationKey])
+
+  const isResendDisabled = !canSendOtp || otpStatus !== 'idle'
   const sendButtonText = useMemo(() => {
     if (otpStatus === 'sending-otp') return 'Sending...'
     if (!canSendOtp) return 'Code Sent!'

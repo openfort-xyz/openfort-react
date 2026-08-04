@@ -1,11 +1,13 @@
 'use client'
 
 import type { User } from '@openfort/openfort-js'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { AuthenticationError } from '../../../errors/auth.js'
 import { type OpenfortError, toError } from '../../../errors/base.js'
 import { InvalidEmailError, MissingParameterError } from '../../../errors/validation.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { isValidEmail } from '../../../utils/validation.js'
 import { onError, onSuccess } from '../hookConsistency.js'
@@ -36,10 +38,12 @@ const DEFAULT_EMAIL_OTP_HOOK_OPTIONS: UseEmailOtpHookOptions = {}
 
 export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EMAIL_OTP_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
+  const { startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
   const [status, setStatus] = useState<BaseFlowState | { status: 'requesting' }>({
     status: 'idle',
   })
+  const authInvocationRef = useRef(0)
   const reset = useCallback(() => {
     setStatus({
       status: 'idle',
@@ -50,6 +54,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
 
   const signInEmailOtp = useCallback(
     async (options: LoginWithEmailOtpOptions): Promise<EmailOtpAuthResult> => {
+      let settleStale: (() => boolean) | undefined
       try {
         setStatus({
           status: 'loading',
@@ -81,29 +86,40 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
           })
         }
 
-        const result = await client.auth.logInWithEmailOtp({
-          email: options.email,
-          otp: options.otp,
-        })
+        const transition = startLocalAuthTransition(
+          startAuthTransition,
+          authInvocationRef,
+          () =>
+            client.auth.logInWithEmailOtp({
+              email: options.email,
+              otp: options.otp,
+            }),
+          () => setStatus({ status: 'idle' })
+        )
+        settleStale = transition.settleStale
+        const result = await transition.result
+        if (settleStale()) return authTransitionSupersededResult()
+
+        const user = result.user
+        await updateUser(user)
+        if (settleStale()) return authTransitionSupersededResult()
 
         const { wallet } = await tryUseWallet({
           logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
           recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
         })
+        if (settleStale()) return authTransitionSupersededResult()
 
         setStatus({
           status: 'success',
         })
-        const user = result.user
-
-        await updateUser()
-
         return onSuccess<EmailOtpAuthResult>({
           data: { user, wallet },
           hookOptions,
           options,
         })
       } catch (e) {
+        if (settleStale?.()) return authTransitionSupersededResult()
         const error = new AuthenticationError('Failed to login with email OTP.', { cause: toError(e) })
 
         setStatus({
@@ -118,7 +134,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
         })
       }
     },
-    [client, updateUser, hookOptions, tryUseWallet]
+    [client, startAuthTransition, updateUser, hookOptions, tryUseWallet]
   )
 
   const requestEmailOtp = useCallback(

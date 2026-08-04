@@ -1,4 +1,21 @@
 import type { OpenfortError, OpenfortHookOptions } from '../../types.js'
+import { logger } from '../../utils/logger.js'
+
+/** Invokes a consumer callback without allowing its failure to alter the SDK operation. */
+export function notifyHookCallback<T>(
+  callback: ((value: T) => unknown) | undefined,
+  value: T,
+  callbackName: 'onSuccess' | 'onError'
+): void {
+  if (!callback) return
+  try {
+    void Promise.resolve(callback(value)).catch((error) => {
+      logger.error(`[openfort-hook] ${callbackName} callback rejected`, error)
+    })
+  } catch (error) {
+    logger.error(`[openfort-hook] ${callbackName} callback threw`, error)
+  }
+}
 
 /** Runs the hook-level then the per-call success callback and passes the data through. */
 export const onSuccess = <T>({
@@ -10,8 +27,8 @@ export const onSuccess = <T>({
   options?: OpenfortHookOptions<T>
   data: T
 }) => {
-  hookOptions?.onSuccess?.(data)
-  options?.onSuccess?.(data)
+  notifyHookCallback(hookOptions?.onSuccess, data, 'onSuccess')
+  notifyHookCallback(options?.onSuccess, data, 'onSuccess')
 
   return data
 }
@@ -30,8 +47,8 @@ export const onError = <T>({
   options?: OpenfortHookOptions<T>
   error: OpenfortError
 }) => {
-  hookOptions?.onError?.(error)
-  options?.onError?.(error)
+  notifyHookCallback(hookOptions?.onError, error, 'onError')
+  notifyHookCallback(options?.onError, error, 'onError')
 
   return { error }
 }

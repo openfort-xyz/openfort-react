@@ -106,22 +106,18 @@ const CreateWalletButton = ({ ethereum }: { ethereum: EthereumWalletState }) => 
     setCreatingMethod(recoveryMethod)
     setStep('idle')
     setSelectedAccountType(null)
-    try {
-      const options = {
-        accountType,
-        ...(accountType !== AccountTypeEnum.EOA && activeChainId != null && { chainId: activeChainId }),
-        ...(recoveryMethod === RecoveryMethod.PASSWORD && {
-          recoveryMethod: RecoveryMethod.PASSWORD,
-          password: 'example-password',
-        }),
-        ...(recoveryMethod === RecoveryMethod.PASSKEY && { recoveryMethod: RecoveryMethod.PASSKEY }),
-      }
-      await create(options)
-      setCreatingMethod(null)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create wallet')
-      setCreatingMethod(null)
+    const options = {
+      accountType,
+      ...(accountType !== AccountTypeEnum.EOA && activeChainId != null && { chainId: activeChainId }),
+      ...(recoveryMethod === RecoveryMethod.PASSWORD && {
+        recoveryMethod: RecoveryMethod.PASSWORD,
+        password: 'example-password',
+      }),
+      ...(recoveryMethod === RecoveryMethod.PASSKEY && { recoveryMethod: RecoveryMethod.PASSKEY }),
     }
+    const result = await create(options)
+    setCreatingMethod(null)
+    if (result.error) setError(result.error.message)
   }
 
   return (

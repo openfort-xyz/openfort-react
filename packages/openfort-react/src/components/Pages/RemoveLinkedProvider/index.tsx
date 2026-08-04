@@ -3,6 +3,7 @@
 import type { OAuthProvider } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
 import type { Hex } from 'viem'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import styled from '../../../styles/styled/index.js'
 import { logger } from '../../../utils/logger.js'
@@ -32,6 +33,7 @@ const RemoveLinkedProvider: React.FC = () => {
   const { route, triggerResize, onBack, setOnBack, setRouteHistory, setRoute } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)
   const updateUser = useOpenfortCore((s) => s.updateUser)
+  const { captureAuthSession, startAuthenticatedMutation } = useAuthTransitions()
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
 
@@ -46,9 +48,14 @@ const RemoveLinkedProvider: React.FC = () => {
     if (error) triggerResize()
   }, [error, triggerResize])
 
-  useEffect(() => {
-    if (isSuccess) {
-      updateUser()
+  const handleRemove = async () => {
+    if (!provider) return
+    const errorMsg = 'Failed to remove linked provider. Please try again.'
+    const session = captureAuthSession()
+    let mutationIsCurrent: (() => boolean) | undefined
+    const isCurrent = () => session.isCurrent() && (mutationIsCurrent?.() ?? true)
+    const showSuccess = () => {
+      setIsSuccess(true)
       triggerResize()
       setOnBack(() => () => {
         setRouteHistory((prev) => {
@@ -61,37 +68,48 @@ const RemoveLinkedProvider: React.FC = () => {
         })
       })
     }
-  }, [isSuccess, updateUser, triggerResize, setOnBack, setRouteHistory, setRoute])
-
-  const handleRemove = async () => {
-    if (!provider) return
-    const errorMsg = 'Failed to remove linked provider. Please try again.'
     if (provider.provider === 'siwe' || provider.provider === 'wallet') {
       try {
-        const result = await client.auth.unlinkWallet({
-          address: provider.accountId as Hex,
-          chainId: Number(provider.chainId ?? 0),
-        })
+        const transition = startAuthenticatedMutation(() =>
+          client.auth.unlinkWallet({
+            address: provider.accountId as Hex,
+            chainId: Number(provider.chainId ?? 0),
+          })
+        )
+        mutationIsCurrent = transition.isCurrent
+        const result = await transition.result
+        if (!isCurrent()) return
         if (!result.success) {
           setError(errorMsg)
         } else {
-          setIsSuccess(true)
+          await updateUser()
+          if (!isCurrent()) return
+          showSuccess()
         }
       } catch (e) {
+        if (!isCurrent()) return
         logger.error('Unexpected error removing linked provider:', e)
         setError(errorMsg)
       }
     } else {
       try {
-        const result = await client.auth.unlinkOAuth({
-          provider: provider.provider as OAuthProvider,
-        })
+        const transition = startAuthenticatedMutation(() =>
+          client.auth.unlinkOAuth({
+            provider: provider.provider as OAuthProvider,
+          })
+        )
+        mutationIsCurrent = transition.isCurrent
+        const result = await transition.result
+        if (!isCurrent()) return
         if (!result.status) {
           setError(errorMsg)
         } else {
-          setIsSuccess(true)
+          await updateUser()
+          if (!isCurrent()) return
+          showSuccess()
         }
       } catch (e) {
+        if (!isCurrent()) return
         logger.error('Unexpected error removing linked provider:', e)
         setError(errorMsg)
       }

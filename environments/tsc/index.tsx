@@ -49,4 +49,4 @@ export const isAuthenticatedSelector = selectIsAuthenticated
 export const userQueryOptions: UserQueryOptions = getUserQueryOptions(
   null as unknown as Parameters<typeof getUserQueryOptions>[0]
 )
-export const userQueryKey: readonly ['openfort', 'user'] = userQueryOptions.queryKey
+export const userQueryKey: readonly ['openfort', 'user', ...string[]] = userQueryOptions.queryKey

@@ -4,6 +4,11 @@ import { EmbeddedState, type Openfort, RecoveryMethod } from '@openfort/openfort
 import { useEffect, useRef } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
 import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import {
+  captureEmbeddedSignerSession,
+  isEmbeddedSignerOperationInvalidationError,
+  runEmbeddedSignerOperation,
+} from '../../shared/utils/embeddedSignerOperationQueue.js'
 import { buildRecoveryParams } from '../../shared/utils/recovery.js'
 import { logger } from '../../utils/logger.js'
 import type { OpenfortStore } from '../store.js'
@@ -36,14 +41,13 @@ export function useAutoRecovery({
   walletConfig,
   store,
 }: Params): void {
-  const autoRecoverInProgressRef = useRef(false)
+  const attemptGenerationRef = useRef(0)
+  const attemptTailRef = useRef<Promise<void>>(Promise.resolve())
 
   useEffect(() => {
     if (storeEmbeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
     if (!storeActiveEmbeddedAddress) return
     if (!openfort || !walletConfig) return
-    if (autoRecoverInProgressRef.current) return
-
     const accounts = store.getState().embeddedAccounts
     if (!accounts?.length) return
 
@@ -55,8 +59,8 @@ export function useAutoRecovery({
 
     // Reset any stale error from a previous attempt before starting fresh.
     store.getState().setRecoveryError(null)
-    autoRecoverInProgressRef.current = true
-    let cancelled = false
+    const generation = ++attemptGenerationRef.current
+    const isCurrentAttempt = () => attemptGenerationRef.current === generation
 
     logger.log('[auto-recover] starting', {
       address: account.address,
@@ -64,6 +68,8 @@ export function useAutoRecovery({
     })
 
     const run = async () => {
+      if (!isCurrentAttempt()) return
+      const signerSession = captureEmbeddedSignerSession(openfort)
       // Stage 1: build recovery params (may trigger a passkey prompt for PASSKEY method).
       logger.log('[auto-recover] building recovery params...')
       let recoveryParams: Awaited<ReturnType<typeof buildRecoveryParams>>
@@ -80,25 +86,33 @@ export function useAutoRecovery({
             getUserId: async () => (await openfort.user.get())?.id,
           }
         )
+        signerSession.assertCurrent()
       } catch (err) {
-        if (cancelled) return
+        if (!isCurrentAttempt()) return
+        if (isEmbeddedSignerOperationInvalidationError(err)) return
         const error = err instanceof Error ? err : new Error(String(err))
         logger.error('[auto-recover] failed to build recovery params', error)
         store.getState().setRecoveryError(error)
         return
       }
 
-      if (cancelled) return
+      if (!isCurrentAttempt()) return
 
       // Stage 2: configure the embedded signer.
       logger.log('[auto-recover] configuring signer...')
       try {
-        await openfort.embeddedWallet.recover({ account: account.id, recoveryParams })
-        if (cancelled) return
+        await runEmbeddedSignerOperation(openfort, async ({ assertCurrent }) => {
+          if (!isCurrentAttempt()) return
+          signerSession.assertCurrent()
+          assertCurrent()
+          await openfort.embeddedWallet.recover({ account: account.id, recoveryParams })
+        })
+        if (!isCurrentAttempt()) return
+        store.getState().setEmbeddedState(EmbeddedState.READY)
         logger.log('[auto-recover] succeeded — signer ready', { address: account.address })
-        // recoveryError clears automatically in the store subscriber when embeddedState → READY.
       } catch (err) {
-        if (cancelled) return
+        if (!isCurrentAttempt()) return
+        if (isEmbeddedSignerOperationInvalidationError(err)) return
         const error = err instanceof Error ? err : new Error(String(err))
         logger.error(
           '[auto-recover] recover() failed — signer could not be configured. ' +
@@ -110,12 +124,14 @@ export function useAutoRecovery({
       }
     }
 
-    run().finally(() => {
-      autoRecoverInProgressRef.current = false
-    })
+    const queuedAttempt = attemptTailRef.current.then(run, run)
+    attemptTailRef.current = queuedAttempt.then(
+      () => undefined,
+      () => undefined
+    )
 
     return () => {
-      cancelled = true
+      if (isCurrentAttempt()) attemptGenerationRef.current += 1
     }
   }, [storeEmbeddedState, storeActiveEmbeddedAddress, openfort, walletConfig, store])
 }

@@ -1,7 +1,9 @@
 'use client'
 
 import type React from 'react'
-import { useChainId } from 'wagmi'
+// wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
+// namespace import rather than named bindings.
+import * as wagmi from 'wagmi'
 import { DisconnectIcon } from '../../../assets/icons.js'
 import Button from '../../../components/Common/Button/index.js'
 import { OrDivider } from '../../../components/Common/Modal/index.js'
@@ -13,7 +15,7 @@ import { useSwitchChainFiltered } from '../../useSwitchChainFiltered.js'
 import ChainSelectList from '../ChainSelectList/index.js'
 
 const SwitchNetworks: React.FC = () => {
-  const chainId = useChainId()
+  const chainId = wagmi.useChainId()
   const { chains } = useSwitchChainFiltered()
   const logout = useOpenfortCore((s) => s.logout)
   const locales = useLocales({})

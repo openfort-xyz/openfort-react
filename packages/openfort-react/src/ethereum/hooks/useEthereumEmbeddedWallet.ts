@@ -14,6 +14,7 @@ import type {
 } from '../../shared/hooks/createEmbeddedWalletHook.js'
 import { createEmbeddedWalletHook, rejectUnreadyProvider } from '../../shared/hooks/createEmbeddedWalletHook.js'
 import type { CreateEmbeddedWalletOptions, WalletStatus } from '../../shared/types.js'
+import { serializeEmbeddedEthereumProvider } from '../../shared/utils/serializeEmbeddedEthereumProvider.js'
 import { logger } from '../../utils/logger.js'
 import type {
   ConnectedEmbeddedEthereumWallet,
@@ -60,25 +61,34 @@ function buildConnectedWallet(
 
 async function buildEthereumProvider({
   client,
+  account,
   ethereumRpcUrls,
+  assertCurrent,
 }: {
   client: Openfort
+  account: EmbeddedAccount
   ethereumRpcUrls:
     | NonNullable<NonNullable<ReturnType<typeof useOpenfortConfig>['walletConfig']>['ethereum']>['rpcUrls']
     | undefined
+  assertCurrent: () => void
 }): Promise<OpenfortEmbeddedEthereumWalletProvider> {
   // Provider construction can race the strategy initialization during wallet
   // creation. Pass configured RPCs here because openfort-js memoizes the first
   // provider it creates for the session.
   const provider = await client.embeddedWallet.getEthereumProvider({
     chains: ethereumRpcUrls,
+    announceProvider: false,
   })
-  // Ensure the current account is authorized on the provider.
-  // Without this, signing after password recovery can fail with
-  // "Unauthorized - call eth_requestAccounts first" because the provider
-  // was obtained before initProvider ran with proper config.
+  // Password-recovery providers require explicit account authorization before
+  // they can sign requests.
+  assertCurrent()
   await provider.request({ method: 'eth_requestAccounts' })
-  return provider as OpenfortEmbeddedEthereumWalletProvider
+  assertCurrent()
+  return serializeEmbeddedEthereumProvider(
+    provider as OpenfortEmbeddedEthereumWalletProvider,
+    client,
+    account.address as `0x${string}`
+  )
 }
 
 function buildEthereumWallets({
@@ -115,6 +125,10 @@ function buildEthereumConnectingStatus(wallet: ConnectedEmbeddedEthereumWallet):
   return { status: 'connecting', address: wallet.address }
 }
 
+function blocksWalletSync(status: WalletStatus): boolean {
+  return status === 'connecting' || status === 'reconnecting' || status === 'creating' || status === 'needs-recovery'
+}
+
 function useEthereumChainBindings(options?: UseEmbeddedEthereumWalletOptions): EmbeddedWalletChainBindings {
   const { walletConfig } = useOpenfortConfig()
   const strategy = useConnectionStrategy()
@@ -148,6 +162,8 @@ function useSyncEthereumWallet(parameters: EthereumSyncParameters): void {
     routedChainType,
     state,
     setState,
+    setActiveInProgressRef,
+    runSignerOperation,
     getProvider,
     setActiveEmbeddedAddress,
   } = parameters
@@ -173,8 +189,8 @@ function useSyncEthereumWallet(parameters: EthereumSyncParameters): void {
       return undefined
     }
 
-    // Don't interrupt in-progress operations
-    if (s.status === 'connecting' || s.status === 'reconnecting' || s.status === 'creating') {
+    // Preserve explicit operation and recovery states until their owning action resolves.
+    if (blocksWalletSync(s.status)) {
       return undefined
     }
 
@@ -203,9 +219,11 @@ function useSyncEthereumWallet(parameters: EthereumSyncParameters): void {
 
       syncInProgressRef.current = accountByAddress.address.toLowerCase()
       let cancelled = false
-      getProvider(accountByAddress)
+      runSignerOperation((context) => getProvider(accountByAddress, context))
         .then(async (provider) => {
           if (cancelled) return
+          if (setActiveInProgressRef.current) return
+          if (blocksWalletSync(stateRef.current.status)) return
 
           // The provider signs with the account in the core SDK's storage, which
           // can differ from `activeEmbeddedAddress` when the latter was seeded from
@@ -223,6 +241,8 @@ function useSyncEthereumWallet(parameters: EthereumSyncParameters): void {
           const resolved =
             (realAddr && accounts.find((acc) => acc.address.toLowerCase() === realAddr)) || accountByAddress
           if (cancelled) return
+          if (setActiveInProgressRef.current) return
+          if (blocksWalletSync(stateRef.current.status)) return
 
           const connectedWallet = buildConnectedWallet(resolved, accounts.indexOf(resolved), async () => provider, {
             isActive: true,
@@ -270,8 +290,10 @@ function useSyncEthereumWallet(parameters: EthereumSyncParameters): void {
     isLoadingAccounts,
     routedChainType,
     getProvider,
+    setActiveInProgressRef,
     setActiveEmbeddedAddress,
     setState,
+    runSignerOperation,
   ])
 }
 

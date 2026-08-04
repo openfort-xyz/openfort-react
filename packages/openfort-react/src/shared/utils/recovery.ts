@@ -5,6 +5,7 @@ import { OpenfortConfigError, WalletConfigNotFoundError } from '../../errors/con
 import { UnsupportedOperationError } from '../../errors/operation.js'
 import { MissingParameterError } from '../../errors/validation.js'
 import { OtpRequiredError, RecoveryError } from '../../errors/wallet.js'
+import { fetchRecoveryRequest } from './recoveryRequest.js'
 
 type RecoveryOptions = {
   recoveryMethod?: RecoveryMethod
@@ -95,11 +96,15 @@ async function getEncryptionSession(params: {
   }
 
   if (walletConfig.createEncryptedSessionEndpoint) {
-    const response = await fetch(walletConfig.createEncryptedSessionEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ user_id: userId, otp_code: otpCode }),
-    })
+    const response = await fetchRecoveryRequest(
+      walletConfig.createEncryptedSessionEndpoint,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: userId, otp_code: otpCode }),
+      },
+      'Create wallet recovery encryption session'
+    )
 
     type SessionResponse = { error?: string; message?: string; session?: string }
     let data: SessionResponse
