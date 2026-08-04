@@ -124,20 +124,23 @@ export function useBalance(options: UseBalanceOptions): BalanceState {
     return { status: 'idle', refetch }
   }
 
-  if (isLoading) {
-    return { status: 'loading', refetch }
-  }
-
   if (error) {
     return { status: 'error', error, refetch }
   }
 
+  // Report the absence of data as 'loading', never as a successful zero. A
+  // query paused offline is pending without fetching, so `isLoading` alone is
+  // false there and the defaults below would read as a real zero balance.
+  if (isLoading || !data) {
+    return { status: 'loading', refetch }
+  }
+
   return {
     status: 'success',
-    value: data?.value ?? BigInt(0),
-    formatted: data?.formatted ?? '0',
-    symbol: data?.symbol ?? '',
-    decimals: data?.decimals ?? 18,
+    value: data.value,
+    formatted: data.formatted,
+    symbol: data.symbol,
+    decimals: data.decimals,
     refetch,
   }
 }

@@ -96,7 +96,9 @@ type UseEmailHookOptions = {
  * }
  * ```
  */
-export const useEmailAuth = (hookOptions: UseEmailHookOptions = {}) => {
+const DEFAULT_EMAIL_HOOK_OPTIONS: UseEmailHookOptions = {}
+
+export const useEmailAuth = (hookOptions: UseEmailHookOptions = DEFAULT_EMAIL_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)

@@ -18,6 +18,7 @@ import { getWalletAssetsQueryScope } from '../../query/queryOptions.js'
 import { type UseQueryReturnType, useQuery } from '../../query/useQuery.js'
 import { withQueryResultOverrides } from '../../query/withQueryResultOverrides.js'
 import { getDefaultEthereumRpcUrl } from '../../utils/rpc.js'
+import { useEthereumBridge } from '../OpenfortEthereumBridgeContext.js'
 import { useEthereumEmbeddedWallet } from './useEthereumEmbeddedWallet.js'
 
 type UseEthereumWalletAssetsOptions = {
@@ -266,19 +267,31 @@ export const useEthereumWalletAssets = ({
     return allAssets
   }, [walletConfig?.ethereum?.assets, hookCustomAssets, chainId])
 
-  const singleChainRpcUrl =
-    multiChain || chainId == null
-      ? undefined
-      : (walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId))
+  // Same precedence the embedded signer uses (EthereumBridgeStrategy): an
+  // explicit walletConfig entry, then whatever transport the app configured in
+  // wagmi, and only then the public default. Without the middle step an app
+  // that set `transports` in wagmi still had its balances read off a public
+  // endpoint, which rate-limits under real traffic.
+  const bridge = useEthereumBridge()
+
+  const resolveRpcUrl = useCallback(
+    (targetChainId: number) =>
+      walletConfig?.ethereum?.rpcUrls?.[targetChainId] ??
+      bridge?.config.getClient({ chainId: targetChainId }).transport?.url ??
+      getDefaultEthereumRpcUrl(targetChainId),
+    [walletConfig?.ethereum?.rpcUrls, bridge]
+  )
+
+  const singleChainRpcUrl = multiChain || chainId == null ? undefined : resolveRpcUrl(chainId)
   const fallbackChains = useMemo(() => {
     if (!multiChain) return []
     return chains.map((configuredChain) => ({
       chainId: configuredChain.id,
       assets:
         multiChainAssetsByChain?.find(({ chainId: assetChainId }) => assetChainId === configuredChain.id)?.assets ?? [],
-      rpcUrl: walletConfig?.ethereum?.rpcUrls?.[configuredChain.id] ?? getDefaultEthereumRpcUrl(configuredChain.id),
+      rpcUrl: resolveRpcUrl(configuredChain.id),
     }))
-  }, [chains, multiChain, multiChainAssetsByChain, walletConfig?.ethereum?.rpcUrls])
+  }, [chains, multiChain, multiChainAssetsByChain, resolveRpcUrl])
 
   const { queryKey, enabled } = getWalletAssetsQueryScope({
     client,
@@ -564,14 +577,22 @@ export const useEthereumWalletAssets = ({
     staleTime,
   })
 
+  // Memoized: asOpenfortError builds a new instance for any error that is not
+  // already an OpenfortError, so reading `error` twice would otherwise yield
+  // two different objects and re-fire a consumer effect keyed on it.
+  const mappedError = useMemo(
+    () =>
+      query.error
+        ? asOpenfortError(query.error, (cause) => new OpenfortError('Failed to fetch wallet assets.', { cause }))
+        : undefined,
+    [query.error]
+  )
+
   return withQueryResultOverrides(query, {
     get data() {
       return query.data ?? null
     },
-    get error() {
-      if (!query.error) return undefined
-      return asOpenfortError(query.error, (cause) => new OpenfortError('Failed to fetch wallet assets.', { cause }))
-    },
+    error: mappedError,
     multiChain,
     isIdle: !isConnected || !enabled,
   }) as UseEthereumWalletAssetsResult

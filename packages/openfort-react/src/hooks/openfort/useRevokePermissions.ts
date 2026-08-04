@@ -55,11 +55,16 @@ type RevokePermissionsHookOptions = OpenfortHookOptions<RevokePermissionsHookRes
  * };
  * ```
  */
-export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = {}) => {
+const DEFAULT_REVOKE_HOOK_OPTIONS: RevokePermissionsHookOptions = {}
+
+export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = DEFAULT_REVOKE_HOOK_OPTIONS) => {
   const { chains } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)
   const ethereum = useEthereumEmbeddedWallet()
   const chainId = ethereum.chainId ?? DEFAULT_TESTNET_CHAIN_ID
+  // The embedded-wallet hook returns a fresh object every render, so depend on
+  // the one value read from it rather than on the whole result.
+  const connectedEmbeddedAddress = ethereum.status === 'connected' ? ethereum.address : undefined
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
@@ -69,7 +74,7 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
       { sessionKey }: RevokePermissionsRequest,
       options: RevokePermissionsHookOptions = {}
     ): Promise<RevokePermissionsHookResult> => {
-      const intendedEmbeddedAddress = ethereum.status === 'connected' ? ethereum.address : undefined
+      const intendedEmbeddedAddress = connectedEmbeddedAddress
       try {
         const chain = chains.find((c) => c.id === chainId)
         if (!chain) {
@@ -145,7 +150,7 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
         })
       }
     },
-    [chains, chainId, client, ethereum, hookOptions]
+    [chains, chainId, client, connectedEmbeddedAddress, hookOptions]
   )
 
   return {

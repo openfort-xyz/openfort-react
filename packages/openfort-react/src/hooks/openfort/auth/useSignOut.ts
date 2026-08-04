@@ -34,7 +34,9 @@ import { type BaseFlowState, mapStatus } from './status.js'
  * }
  * ```
  */
-export function useSignOut(hookOptions: OpenfortHookOptions = {}) {
+const DEFAULT_SIGN_OUT_HOOK_OPTIONS: OpenfortHookOptions = {}
+
+export function useSignOut(hookOptions: OpenfortHookOptions = DEFAULT_SIGN_OUT_HOOK_OPTIONS) {
   const logout = useOpenfortCore((s) => s.logout)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
