@@ -1,6 +1,4 @@
-import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from './base.js'
-
-type AuthErrorOptions = Omit<OpenfortErrorOptions, 'type'>
+import { OpenfortError, type OpenfortErrorOptions } from './base.js'
 
 /**
  * An authentication flow (login, signup, link, verify, sign out) failed.
@@ -16,8 +14,8 @@ type AuthErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 export class AuthenticationError extends OpenfortError {
   override name = 'AuthenticationError'
 
-  constructor(shortMessage: string, options: AuthErrorOptions = {}) {
-    super(shortMessage, { ...options, type: OpenfortReactErrorType.AUTHENTICATION_ERROR })
+  constructor(shortMessage: string, options: OpenfortErrorOptions = {}) {
+    super(shortMessage, options)
   }
 }
 
@@ -35,7 +33,7 @@ export class AuthenticationError extends OpenfortError {
 export class NotAuthenticatedError extends AuthenticationError {
   override name = 'NotAuthenticatedError'
 
-  constructor(shortMessage = 'Not authenticated.', options: AuthErrorOptions = {}) {
+  constructor(shortMessage = 'Not authenticated.', options: OpenfortErrorOptions = {}) {
     super(shortMessage, {
       metaMessages: ['Sign the user in before calling this action.'],
       ...options,

@@ -1,2 +1,2 @@
 // Client creation and configuration
-export { createOpenfortClient, setDefaultClient } from './client.js'
+export { createOpenfortClient } from './client.js'

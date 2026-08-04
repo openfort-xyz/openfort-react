@@ -2,7 +2,7 @@
 
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { motion } from 'framer-motion'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { FingerPrintIcon, KeyIcon, LockIcon, PlusIcon, ShieldIcon } from '../../../assets/icons.js'
 import Logos from '../../../assets/logos.js'
@@ -25,19 +25,23 @@ import Input from '../../Common/Input/index.js'
 import Loader from '../../Common/Loading/index.js'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
 import TickList from '../../Common/TickList/index.js'
+import { withPageLoading } from '../../ConnectModal/pageLoading.js'
 import { FloatingGraphic } from '../../FloatingGraphic/index.js'
 import { LinkWalletOnSignUpOption, routes } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent, type SetOnBackFunction } from '../../PageContent/index.js'
 import { PasswordStrengthIndicator } from '../../PasswordStrength/PasswordStrengthIndicator.js'
 import { getPasswordStrength, MEDIUM_SCORE_THRESHOLD } from '../../PasswordStrength/password-utility.js'
-import Connectors from '../Connectors/index.js'
 import { ProviderIcon, ProviderLabel, ProvidersButton } from '../Providers/styles.js'
 import { useLatestAsyncAttempt } from '../useLatestAsyncAttempt.js'
 import AutomaticRecoveryOtpPage from './AutomaticRecoveryOtpPage.js'
 import SolanaCreateWallet from './SolanaCreateWallet.js'
 import { OtherMethodButton } from './styles.js'
 import { useAutomaticRecovery } from './useAutomaticRecovery.js'
+
+// External wallet connection is a config-dependent branch most sessions never
+// reach, and it is the only wagmi-backed page routed to from here.
+const LazyConnectors = lazy(() => import('../../../wagmi/components/Connectors/index.js'))
 
 const OtherMethod = ({
   currentMethod,
@@ -565,7 +569,7 @@ const EthereumCreateWallet: React.FC = () => {
     uiConfig.linkWalletOnSignUp === LinkWalletOnSignUpOption.REQUIRED ||
     (!walletConfig && uiConfig.linkWalletOnSignUp !== LinkWalletOnSignUpOption.DISABLED)
   ) {
-    return <Connectors logoutOnBack={true} />
+    return withPageLoading(<LazyConnectors logoutOnBack={true} />)
   }
 
   return <CreateEmbeddedWallet onBack={routes.PROVIDERS} logoutOnBack />

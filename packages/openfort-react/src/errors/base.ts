@@ -1,19 +1,5 @@
 import { OPENFORT_VERSION } from '../version.js'
 
-/**
- * Coarse category attached to every Openfort error.
- *
- * @deprecated Narrow on `error.name` (or `instanceof`) instead — the concrete
- * error classes carry far more information than these five buckets.
- */
-export enum OpenfortReactErrorType {
-  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
-  WALLET_ERROR = 'WALLET_ERROR',
-  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  UNEXPECTED_ERROR = 'UNEXPECTED_ERROR',
-}
-
 export type OpenfortErrorOptions = {
   /** Underlying error this one wraps. Always surfaced as `error.cause`. */
   cause?: Error | undefined
@@ -23,8 +9,6 @@ export type OpenfortErrorOptions = {
   docsPath?: string | undefined
   /** Extra lines rendered between the short message and the docs link. */
   metaMessages?: string[] | undefined
-  /** Overrides the category a subclass would otherwise report. */
-  type?: OpenfortReactErrorType | undefined
 }
 
 /**
@@ -43,8 +27,6 @@ export class OpenfortError extends Error {
   metaMessages?: string[] | undefined
   /** The message passed to the constructor, without the composed context. */
   shortMessage: string
-  /** Coarse category, kept for consumers switching on {@link OpenfortReactErrorType}. */
-  type: OpenfortReactErrorType
 
   override name = 'OpenfortError'
 
@@ -82,7 +64,6 @@ export class OpenfortError extends Error {
     this.docsPath = docsPath
     this.metaMessages = options.metaMessages
     this.shortMessage = shortMessage
-    this.type = options.type ?? OpenfortReactErrorType.UNEXPECTED_ERROR
   }
 
   /**

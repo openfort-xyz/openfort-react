@@ -1,6 +1,5 @@
 import { RecoveryMethod } from '@openfort/openfort-js'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { OpenfortReactErrorType } from '../../errors/index.js'
 import { handleOtpRecoveryError } from '../../shared/utils/otpError.js'
 import { buildRecoveryParams } from '../../shared/utils/recovery.js'
 
@@ -12,11 +11,10 @@ const BASE_CONFIG = {
 
 describe('buildRecoveryParams', () => {
   describe('PASSWORD method', () => {
-    it('throws VALIDATION_ERROR when password is missing', async () => {
+    it('throws MissingParameterError when password is missing', async () => {
       await expect(buildRecoveryParams({ recoveryMethod: RecoveryMethod.PASSWORD }, BASE_CONFIG)).rejects.toMatchObject(
         {
           name: 'MissingParameterError',
-          type: OpenfortReactErrorType.VALIDATION_ERROR,
         }
       )
     })
@@ -56,7 +54,7 @@ describe('buildRecoveryParams', () => {
       })
     })
 
-    it('throws WALLET_ERROR when data.session is missing', async () => {
+    it('throws RecoveryError when data.session is missing', async () => {
       mockFetch.mockResolvedValue(new Response(JSON.stringify({ other: 'field' }), { status: 200 }))
 
       await expect(
@@ -65,12 +63,12 @@ describe('buildRecoveryParams', () => {
           { ...BASE_CONFIG, walletConfig: walletConfig as never }
         )
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.WALLET_ERROR,
+        name: 'RecoveryError',
         shortMessage: 'Invalid encryption session response.',
       })
     })
 
-    it('throws WALLET_ERROR when data.session is empty string', async () => {
+    it('throws RecoveryError when data.session is empty string', async () => {
       mockFetch.mockResolvedValue(new Response(JSON.stringify({ session: '' }), { status: 200 }))
 
       await expect(
@@ -79,7 +77,7 @@ describe('buildRecoveryParams', () => {
           { ...BASE_CONFIG, walletConfig: walletConfig as never }
         )
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.WALLET_ERROR,
+        name: 'RecoveryError',
       })
     })
 
@@ -93,13 +91,12 @@ describe('buildRecoveryParams', () => {
 
       await expect(operation).rejects.toMatchObject({
         name: 'OtpRequiredError',
-        type: OpenfortReactErrorType.WALLET_ERROR,
       })
       const error = await operation.catch((cause: unknown) => cause)
       expect(handleOtpRecoveryError(error, true)).toMatchObject({ isOTPRequired: true })
     })
 
-    it('throws WALLET_ERROR on other non-ok responses', async () => {
+    it('throws RecoveryError on other non-ok responses', async () => {
       mockFetch.mockResolvedValue(new Response(JSON.stringify({ error: 'INTERNAL_ERROR' }), { status: 500 }))
 
       await expect(
@@ -108,15 +105,15 @@ describe('buildRecoveryParams', () => {
           { ...BASE_CONFIG, walletConfig: walletConfig as never }
         )
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.WALLET_ERROR,
+        name: 'RecoveryError',
       })
     })
 
-    it('throws CONFIGURATION_ERROR when no encryption config', async () => {
+    it('throws OpenfortConfigError when no encryption config', async () => {
       await expect(
         buildRecoveryParams({ recoveryMethod: RecoveryMethod.AUTOMATIC }, { ...BASE_CONFIG, walletConfig: {} as never })
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.CONFIGURATION_ERROR,
+        name: 'OpenfortConfigError',
       })
     })
   })
@@ -142,7 +139,7 @@ describe('buildRecoveryParams', () => {
       })
     })
 
-    it('throws WALLET_ERROR when callback returns undefined', async () => {
+    it('throws RecoveryError when callback returns undefined', async () => {
       const walletConfig = {
         getEncryptionSession: vi.fn().mockResolvedValue(undefined),
       }
@@ -153,12 +150,12 @@ describe('buildRecoveryParams', () => {
           { ...BASE_CONFIG, walletConfig: walletConfig as never }
         )
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.WALLET_ERROR,
+        name: 'RecoveryError',
         shortMessage: '`getEncryptionSession` returned an invalid session.',
       })
     })
 
-    it('throws WALLET_ERROR when callback returns empty string', async () => {
+    it('throws RecoveryError when callback returns empty string', async () => {
       const walletConfig = {
         getEncryptionSession: vi.fn().mockResolvedValue(''),
       }
@@ -169,30 +166,30 @@ describe('buildRecoveryParams', () => {
           { ...BASE_CONFIG, walletConfig: walletConfig as never }
         )
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.WALLET_ERROR,
+        name: 'RecoveryError',
       })
     })
   })
 
   describe('AUTOMATIC method — missing auth', () => {
-    it('throws AUTHENTICATION_ERROR when access token is null', async () => {
+    it('throws NotAuthenticatedError when access token is null', async () => {
       BASE_CONFIG.getAccessToken.mockResolvedValue(null)
 
       await expect(
         buildRecoveryParams({ recoveryMethod: RecoveryMethod.AUTOMATIC }, { ...BASE_CONFIG, walletConfig: {} as never })
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.AUTHENTICATION_ERROR,
+        name: 'NotAuthenticatedError',
       })
     })
 
-    it('throws AUTHENTICATION_ERROR when userId is undefined', async () => {
+    it('throws NotAuthenticatedError when userId is undefined', async () => {
       BASE_CONFIG.getAccessToken.mockResolvedValue('token')
       BASE_CONFIG.getUserId.mockResolvedValue(undefined)
 
       await expect(
         buildRecoveryParams({ recoveryMethod: RecoveryMethod.AUTOMATIC }, { ...BASE_CONFIG, walletConfig: {} as never })
       ).rejects.toMatchObject({
-        type: OpenfortReactErrorType.AUTHENTICATION_ERROR,
+        name: 'NotAuthenticatedError',
       })
     })
   })

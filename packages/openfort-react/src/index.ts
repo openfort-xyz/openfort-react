@@ -85,27 +85,6 @@ export {
   NotAuthenticatedError,
   OpenfortConfigError,
   OpenfortError,
-  /**
-   * @deprecated This is an alias of `OpenfortReactErrorType`. Prefer
-   * `error.name` or `instanceof` for precise error handling.
-   *
-   * @example
-   * ```ts
-   * import { OpenfortErrorType, WalletError } from '@openfort/react'
-   *
-   * const error = new WalletError('Wallet unavailable.')
-   * if (error.type === OpenfortErrorType.WALLET_ERROR) {
-   *   console.error(error.shortMessage)
-   * }
-   * ```
-   */
-  OpenfortReactErrorType as OpenfortErrorType,
-  /**
-   * @deprecated Narrow on `error.name` (or `instanceof`) instead. The concrete
-   * error classes carry far more information than these five buckets. Every
-   * SDK error exposes one of these values on its `type` field.
-   */
-  OpenfortReactErrorType,
   OtpRequiredError,
   ProviderNotFoundError,
   ProviderNotReadyError,
@@ -168,36 +147,7 @@ export { useUI } from './hooks/openfort/useUI.js'
 export { useUser } from './hooks/openfort/useUser.js'
 export type { UserWallet } from './hooks/openfort/walletTypes.js'
 export { useInvalidateBalance } from './hooks/useBalance.js'
-// ── Deprecated store internals ──────────────────────────────────────────────
-export type {
-  /** @deprecated import from `@openfort/react/internal` instead */
-  OpenfortStore,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  OpenfortStoreState,
-} from './internal/index.js'
-export {
-  /** @deprecated import from `@openfort/react/internal` instead */
-  StoreContext,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  selectActiveAddress,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  selectChainType,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  selectEmbeddedState,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  selectIsAuthenticated,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  selectIsLoading,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  selectUser,
-  /** @deprecated import from `@openfort/react/internal` instead */
-  selectWalletStatus,
-} from './internal/index.js'
-export {
-  useOpenfortCore as useOpenfort,
-  /** @deprecated use `useOpenfort` instead */
-  useOpenfortCore,
-} from './openfort/useOpenfort.js'
+export { useOpenfortCore as useOpenfort } from './openfort/useOpenfort.js'
 export type {
   EmbeddedAccountsQueryKey,
   EmbeddedAccountsQueryOptions,

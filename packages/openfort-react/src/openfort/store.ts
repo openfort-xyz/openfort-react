@@ -16,7 +16,7 @@ export type OpenfortStoreState = {
   needsRecovery: boolean
   /**
    * Set when auto-recovery fails. Null on success or when cleared by a new auth session.
-   * Consumers can read this from `useOpenfortCore()` to show recovery error UI.
+   * Consumers can read this from `useOpenfort()` to show recovery error UI.
    */
   recoveryError: Error | null
 }

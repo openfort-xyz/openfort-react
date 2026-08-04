@@ -117,7 +117,7 @@ export function useAutoRecovery({
         logger.error(
           '[auto-recover] recover() failed — signer could not be configured. ' +
             'This typically happens on a new device or after local storage was cleared. ' +
-            'Read `recoveryError` from useOpenfortCore() and prompt the user to create a new wallet.',
+            'Read `recoveryError` from useOpenfort() and prompt the user to create a new wallet.',
           error
         )
         store.getState().setRecoveryError(error)

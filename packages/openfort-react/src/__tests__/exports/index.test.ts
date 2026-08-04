@@ -31,10 +31,8 @@ test('exports', () => {
       "OpenfortButton",
       "OpenfortConfigError",
       "OpenfortError",
-      "OpenfortErrorType",
       "OpenfortEvents",
       "OpenfortProvider",
-      "OpenfortReactErrorType",
       "OtpRequiredError",
       "ProviderNotFoundError",
       "ProviderNotReadyError",
@@ -44,7 +42,6 @@ test('exports', () => {
       "SetActiveWalletError",
       "SiweMessageError",
       "SolanaClusterNotSupportedError",
-      "StoreContext",
       "ThirdPartyOAuthProvider",
       "UnsupportedOperationError",
       "ValidationError",
@@ -62,13 +59,6 @@ test('exports', () => {
       "getUserQueryOptions",
       "openfortEvents",
       "openfortKeys",
-      "selectActiveAddress",
-      "selectChainType",
-      "selectEmbeddedState",
-      "selectIsAuthenticated",
-      "selectIsLoading",
-      "selectUser",
-      "selectWalletStatus",
       "use7702Authorization",
       "useAuthCallback",
       "useEmailAuth",
@@ -79,7 +69,6 @@ test('exports', () => {
       "useInvalidateBalance",
       "useOAuth",
       "useOpenfort",
-      "useOpenfortCore",
       "usePhoneOtpAuth",
       "useRevokePermissions",
       "useSignMessage",
@@ -88,8 +77,4 @@ test('exports', () => {
       "useUser",
     ]
   `)
-})
-
-test('keeps the legacy error category export as an alias', () => {
-  expect(index.OpenfortErrorType).toBe(index.OpenfortReactErrorType)
 })

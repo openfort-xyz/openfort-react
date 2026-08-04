@@ -1,6 +1,4 @@
-import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from './base.js'
-
-type ConfigErrorOptions = Omit<OpenfortErrorOptions, 'type'>
+import { OpenfortError, type OpenfortErrorOptions } from './base.js'
 
 /**
  * The SDK was given an incomplete or contradictory configuration.
@@ -16,8 +14,8 @@ type ConfigErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 export class OpenfortConfigError extends OpenfortError {
   override name = 'OpenfortConfigError'
 
-  constructor(shortMessage: string, options: ConfigErrorOptions = {}) {
-    super(shortMessage, { ...options, type: OpenfortReactErrorType.CONFIGURATION_ERROR })
+  constructor(shortMessage: string, options: OpenfortErrorOptions = {}) {
+    super(shortMessage, options)
   }
 }
 
@@ -35,7 +33,7 @@ export class OpenfortConfigError extends OpenfortError {
 export class WalletConfigNotFoundError extends OpenfortConfigError {
   override name = 'WalletConfigNotFoundError'
 
-  constructor(options: ConfigErrorOptions = {}) {
+  constructor(options: OpenfortErrorOptions = {}) {
     super('Wallet config not found.', {
       metaMessages: ['Pass `walletConfig` to `OpenfortProvider` to enable embedded wallets.'],
       ...options,
@@ -57,7 +55,7 @@ export class WalletConfigNotFoundError extends OpenfortConfigError {
 export class ClientNotInitializedError extends OpenfortConfigError {
   override name = 'ClientNotInitializedError'
 
-  constructor(options: ConfigErrorOptions = {}) {
+  constructor(options: OpenfortErrorOptions = {}) {
     super('Openfort client is not initialized.', {
       metaMessages: ['Render this hook inside `OpenfortProvider` and wait for `isReady` before calling it.'],
       ...options,
@@ -79,7 +77,7 @@ export class ClientNotInitializedError extends OpenfortConfigError {
 export class ChainNotConfiguredError extends OpenfortConfigError {
   override name = 'ChainNotConfiguredError'
 
-  constructor({ chainId, ...options }: ConfigErrorOptions & { chainId?: number | undefined } = {}) {
+  constructor({ chainId, ...options }: OpenfortErrorOptions & { chainId?: number | undefined } = {}) {
     super(chainId === undefined ? 'No chain configured.' : `Chain ${chainId} is not configured.`, {
       metaMessages: ['Add the chain to the `chains` passed to your Wagmi config.'],
       ...options,
@@ -101,7 +99,7 @@ export class ChainNotConfiguredError extends OpenfortConfigError {
 export class RpcUrlNotConfiguredError extends OpenfortConfigError {
   override name = 'RpcUrlNotConfiguredError'
 
-  constructor({ chainId, ...options }: ConfigErrorOptions & { chainId: number }) {
+  constructor({ chainId, ...options }: OpenfortErrorOptions & { chainId: number }) {
     super(`No RPC URL configured for chain ${chainId}.`, {
       metaMessages: [`Set \`walletConfig.ethereum.rpcUrls[${chainId}]\` on \`OpenfortProvider\`.`],
       ...options,
@@ -123,7 +121,7 @@ export class RpcUrlNotConfiguredError extends OpenfortConfigError {
 export class SolanaClusterNotSupportedError extends OpenfortConfigError {
   override name = 'SolanaClusterNotSupportedError'
 
-  constructor({ cluster, ...options }: ConfigErrorOptions & { cluster: string }) {
+  constructor({ cluster, ...options }: OpenfortErrorOptions & { cluster: string }) {
     super(`Unknown Solana cluster "${cluster}".`, {
       metaMessages: ['Provide `rpcUrls` in `walletConfig.solana` for this cluster.'],
       ...options,

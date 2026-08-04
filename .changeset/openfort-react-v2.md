@@ -12,11 +12,15 @@ Typed action results, a TanStack Query data layer, and a narrower supported runt
 - Embedded-wallet actions resolve instead of rejecting: create and import return `{ account } | { error }`, activation `{ needsRecovery } | { error }`, recovery `{} | { error }` and export `{ privateKey } | { error }`. Branch on `error` before advancing a success path.
 - Removed `OpenfortHookOptions.throwOnError`, `invalidateBalance()` (use the `useInvalidateBalance()` hook) and the `openfort:balance-invalidate` event.
 - `openfortKeys` factories take a single parameters object. `useEthereumWalletAssets`, `useSolanaWalletAssets` and `useFundingChains` return the full TanStack query result, renaming `loading` to `isLoading`.
+- Removed the `OpenfortReactErrorType` enum, its `OpenfortErrorType` alias and the `type` field on every error. Narrow with `instanceof` or `error.name` against the exported error classes instead — `error.type === OpenfortErrorType.WALLET_ERROR` becomes `error instanceof WalletError`.
+- Store internals (`StoreContext`, `OpenfortStore`, `OpenfortStoreState` and the `select*` selectors) are only available from `@openfort/react/internal`; the root re-exports are gone.
+- Removed the `useOpenfortCore` alias (use `useOpenfort`), the `wallets` alias in `@openfort/react/wagmi` (use `getDefaultConnectors`), the no-op `setDefaultClient()` and the ignored `sessionKey` option on `useGrantPermissions`.
+- The external-wallet `Connectors` page moved to `@openfort/react/wagmi` and is now code-split, so embedded-wallet-only apps no longer load it.
 
 **Added**
 
 - 28 exported error classes with composed messages, `cause` traversal and a version footer.
-- `@openfort/react/internal` entry point for store internals, re-exported from the root as deprecated for one release.
+- `@openfort/react/internal` entry point for store internals.
 - `"use client"` on every client-only module, preserved through the build and guarded by tests.
 
 **Fixed**

@@ -1,9 +1,5 @@
 export { default as getDefaultConfig } from './defaultConfig.js'
-export {
-  default as getDefaultConnectors,
-  /** @deprecated use `getDefaultConnectors` instead */
-  default as wallets,
-} from './defaultConnectors.js'
+export { default as getDefaultConnectors } from './defaultConnectors.js'
 export { embeddedWalletConnector, setEmbeddedWalletProvider } from './embeddedConnector.js'
 export { OpenfortWagmiBridge } from './OpenfortWagmiBridge.js'
 export { useChainIsSupported } from './useChainIsSupported.js'

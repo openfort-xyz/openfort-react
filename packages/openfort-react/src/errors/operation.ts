@@ -1,6 +1,4 @@
-import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from './base.js'
-
-type OperationErrorOptions = Omit<OpenfortErrorOptions, 'type'>
+import { OpenfortError, type OpenfortErrorOptions } from './base.js'
 
 /**
  * The SDK reached a branch it has no implementation for, such as an unknown asset or transaction format.
@@ -16,8 +14,8 @@ type OperationErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 export class UnsupportedOperationError extends OpenfortError {
   override name = 'UnsupportedOperationError'
 
-  constructor({ operation, ...options }: OperationErrorOptions & { operation: string }) {
-    super(`${operation} is not supported.`, { ...options, type: OpenfortReactErrorType.UNEXPECTED_ERROR })
+  constructor({ operation, ...options }: OpenfortErrorOptions & { operation: string }) {
+    super(`${operation} is not supported.`, options)
   }
 }
 
@@ -48,7 +46,7 @@ export class ApiRequestError extends OpenfortError {
     status,
     body,
     ...options
-  }: OperationErrorOptions & {
+  }: OpenfortErrorOptions & {
     operation: string
     status?: number | undefined
     body?: string | undefined
@@ -56,7 +54,6 @@ export class ApiRequestError extends OpenfortError {
     super(status === undefined ? `${operation} failed.` : `${operation} failed (${status}).`, {
       ...options,
       ...(body ? { details: body } : {}),
-      type: OpenfortReactErrorType.UNEXPECTED_ERROR,
     })
     this.status = status
     this.body = body

@@ -16,7 +16,6 @@ test('exports', () => {
       "useChains",
       "useConnectWithSiwe",
       "useWalletAuth",
-      "wallets",
     ]
   `)
 })

@@ -13,7 +13,6 @@ let mockClient: MockOpenfortClient
 
 vi.mock('../../openfort/core', () => ({
   createOpenfortClient: () => mockClient,
-  setDefaultClient: () => {},
 }))
 
 // Stable references to prevent referential-identity churn from re-firing memos/effects.

@@ -1,6 +1,4 @@
-import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from './base.js'
-
-type WalletErrorOptions = Omit<OpenfortErrorOptions, 'type'>
+import { OpenfortError, type OpenfortErrorOptions } from './base.js'
 
 /** The chain family a wallet error happened on, used to build its message. */
 export type WalletChain = 'Ethereum' | 'Solana'
@@ -19,8 +17,8 @@ export type WalletChain = 'Ethereum' | 'Solana'
 export class WalletError extends OpenfortError {
   override name = 'WalletError'
 
-  constructor(shortMessage: string, options: WalletErrorOptions = {}) {
-    super(shortMessage, { ...options, type: OpenfortReactErrorType.WALLET_ERROR })
+  constructor(shortMessage: string, options: OpenfortErrorOptions = {}) {
+    super(shortMessage, options)
   }
 }
 
@@ -38,7 +36,7 @@ export class WalletError extends OpenfortError {
 export class WalletCreationError extends WalletError {
   override name = 'WalletCreationError'
 
-  constructor({ chain, ...options }: WalletErrorOptions & { chain: WalletChain }) {
+  constructor({ chain, ...options }: OpenfortErrorOptions & { chain: WalletChain }) {
     super(`Failed to create ${chain} wallet.`, options)
   }
 }
@@ -57,7 +55,7 @@ export class WalletCreationError extends WalletError {
 export class WalletImportError extends WalletError {
   override name = 'WalletImportError'
 
-  constructor({ chain, ...options }: WalletErrorOptions & { chain: WalletChain }) {
+  constructor({ chain, ...options }: OpenfortErrorOptions & { chain: WalletChain }) {
     super(`Failed to import ${chain} wallet.`, options)
   }
 }
@@ -76,7 +74,7 @@ export class WalletImportError extends WalletError {
 export class SetActiveWalletError extends WalletError {
   override name = 'SetActiveWalletError'
 
-  constructor({ chain, ...options }: WalletErrorOptions & { chain: WalletChain }) {
+  constructor({ chain, ...options }: OpenfortErrorOptions & { chain: WalletChain }) {
     super(`Failed to set active ${chain} wallet.`, options)
   }
 }
@@ -95,7 +93,7 @@ export class SetActiveWalletError extends WalletError {
 export class WalletNotFoundError extends WalletError {
   override name = 'WalletNotFoundError'
 
-  constructor(shortMessage = 'Wallet not found.', options: WalletErrorOptions = {}) {
+  constructor(shortMessage = 'Wallet not found.', options: OpenfortErrorOptions = {}) {
     super(shortMessage, options)
   }
 }
@@ -114,7 +112,7 @@ export class WalletNotFoundError extends WalletError {
 export class WalletNotConnectedError extends WalletError {
   override name = 'WalletNotConnectedError'
 
-  constructor(shortMessage = 'Wallet not connected.', options: WalletErrorOptions = {}) {
+  constructor(shortMessage = 'Wallet not connected.', options: OpenfortErrorOptions = {}) {
     super(shortMessage, {
       metaMessages: ['Connect a wallet before calling this action.'],
       ...options,
@@ -136,7 +134,7 @@ export class WalletNotConnectedError extends WalletError {
 export class ProviderNotReadyError extends WalletError {
   override name = 'ProviderNotReadyError'
 
-  constructor(shortMessage = 'Provider not ready yet.', options: WalletErrorOptions = {}) {
+  constructor(shortMessage = 'Provider not ready yet.', options: OpenfortErrorOptions = {}) {
     super(shortMessage, options)
   }
 }
@@ -155,7 +153,7 @@ export class ProviderNotReadyError extends WalletError {
 export class RecoveryError extends WalletError {
   override name = 'RecoveryError'
 
-  constructor(shortMessage: string, options: WalletErrorOptions = {}) {
+  constructor(shortMessage: string, options: OpenfortErrorOptions = {}) {
     super(shortMessage, options)
   }
 }
@@ -177,7 +175,7 @@ export class RecoveryError extends WalletError {
 export class OtpRequiredError extends RecoveryError {
   override name = 'OtpRequiredError'
 
-  constructor({ canRequestOtp, ...options }: WalletErrorOptions & { canRequestOtp: boolean }) {
+  constructor({ canRequestOtp, ...options }: OpenfortErrorOptions & { canRequestOtp: boolean }) {
     super('OTP code is required to recover the wallet.', {
       ...(canRequestOtp
         ? {}

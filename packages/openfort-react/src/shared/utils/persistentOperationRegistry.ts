@@ -1,4 +1,4 @@
-import { OpenfortError, OpenfortReactErrorType } from '../../errors/base.js'
+import { WalletError } from '../../errors/wallet.js'
 
 type OperationOwner = object
 
@@ -69,13 +69,11 @@ function removeEntry(owner: OperationOwner, key: string, entry: OperationEntry<u
   registry.operations.delete(key)
 }
 
-export class PersistentOperationLaneBusyError extends OpenfortError {
+export class PersistentOperationLaneBusyError extends WalletError {
   override readonly name = 'PersistentOperationLaneBusyError'
 
   constructor() {
-    super('Another wallet operation is already in progress.', {
-      type: OpenfortReactErrorType.WALLET_ERROR,
-    })
+    super('Another wallet operation is already in progress.')
   }
 }
 

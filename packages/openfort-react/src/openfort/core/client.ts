@@ -18,20 +18,3 @@ import { Openfort as OpenfortClient, type OpenfortSDKConfiguration } from '@open
 export function createOpenfortClient(config: OpenfortSDKConfiguration): OpenfortClient {
   return new OpenfortClient(config)
 }
-
-/**
- * Deprecated no-op. `OpenfortProvider` creates and provides the active client
- * through React context.
- *
- * @param client - Ignored. Pass configuration to `OpenfortProvider` instead.
- * @deprecated This function has no effect and will be removed in a future major release.
- *
- * @example
- * ```ts
- * const client = createOpenfortClient({ baseConfiguration: { publishableKey: 'pk_test_123' } });
- * setDefaultClient(client);
- * ```
- */
-export function setDefaultClient(_client: OpenfortClient): void {
-  // The active client is provided by CoreOpenfortProvider.
-}

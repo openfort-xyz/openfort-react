@@ -21,7 +21,6 @@ const mockClientsByPublishableKey = new Map<string, MockOpenfortClient>()
 vi.mock('../../openfort/core', () => ({
   createOpenfortClient: (config: { baseConfiguration: { publishableKey: string } }) =>
     mockClientsByPublishableKey.get(config.baseConfiguration.publishableKey) ?? mockClient,
-  setDefaultClient: () => {},
 }))
 
 // Mock heavy dependencies to avoid importing the entire component tree

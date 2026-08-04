@@ -1,8 +1,6 @@
 import type { OpenfortErrorOptions } from './base.js'
 import { WalletError } from './wallet.js'
 
-type ConnectionErrorOptions = Omit<OpenfortErrorOptions, 'type'>
-
 /**
  * A connector was requested by id that is absent from the wagmi config.
  *
@@ -17,7 +15,7 @@ type ConnectionErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 export class ConnectorNotFoundError extends WalletError {
   override name = 'ConnectorNotFoundError'
 
-  constructor({ connectorId, ...options }: ConnectionErrorOptions & { connectorId?: string | undefined } = {}) {
+  constructor({ connectorId, ...options }: OpenfortErrorOptions & { connectorId?: string | undefined } = {}) {
     super(connectorId ? `Connector "${connectorId}" not found.` : 'Connector not found.', options)
   }
 }
@@ -40,7 +38,7 @@ export class ConnectorTypeMismatchError extends WalletError {
     expected,
     received,
     ...options
-  }: ConnectionErrorOptions & { expected: string; received?: string | undefined }) {
+  }: OpenfortErrorOptions & { expected: string; received?: string | undefined }) {
     super(`Expected a "${expected}" connector but received ${received ? `"${received}"` : 'none'}.`, options)
   }
 }
@@ -59,7 +57,7 @@ export class ConnectorTypeMismatchError extends WalletError {
 export class ProviderNotFoundError extends WalletError {
   override name = 'ProviderNotFoundError'
 
-  constructor(shortMessage = 'Provider not found.', options: ConnectionErrorOptions = {}) {
+  constructor(shortMessage = 'Provider not found.', options: OpenfortErrorOptions = {}) {
     super(shortMessage, options)
   }
 }
@@ -78,7 +76,7 @@ export class ProviderNotFoundError extends WalletError {
 export class SiweMessageError extends WalletError {
   override name = 'SiweMessageError'
 
-  constructor(shortMessage = 'SIWE message creation failed.', options: ConnectionErrorOptions = {}) {
+  constructor(shortMessage = 'SIWE message creation failed.', options: OpenfortErrorOptions = {}) {
     super(shortMessage, {
       metaMessages: ['SIWE requires a browser environment with `window` available.'],
       ...options,

@@ -5,7 +5,6 @@ export {
 export {
   OpenfortError,
   type OpenfortErrorOptions,
-  OpenfortReactErrorType,
 } from './base.js'
 export {
   ChainNotConfiguredError,

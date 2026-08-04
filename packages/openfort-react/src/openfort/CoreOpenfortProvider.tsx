@@ -54,17 +54,14 @@ import { mapBridgeConnectorsToWalletProps } from '../wallets/useExternalConnecto
 import { AuthTransitionContext, type AuthTransitionContextValue } from './authTransitionContext.js'
 import type { ConnectCallbackProps } from './connectCallbackTypes.js'
 import { StoreContext } from './context.js'
-import { createOpenfortClient, setDefaultClient } from './core/index.js'
+import { createOpenfortClient } from './core/index.js'
 import { useActiveAddressSync } from './hooks/useActiveAddressSync.js'
 import { useAutoRecovery } from './hooks/useAutoRecovery.js'
 import { useEmbeddedStateMachine } from './hooks/useEmbeddedStateMachine.js'
 import type { OpenfortStore } from './store.js'
 import { createOpenfortStore } from './store.js'
 
-/**
- * Public return type for useOpenfortCore(). Matches the store shape.
- * Kept as a named type for backward compatibility with consumers that import it.
- */
+/** Public return type for `useOpenfort()`. Matches the store shape. */
 export type OpenfortCoreContextValue = OpenfortStore
 
 function ConnectLifecycleEffect({ onConnect, onDisconnect }: ConnectCallbackProps) {
@@ -181,10 +178,10 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   bridgeRef.current = bridge
 
   // ---- Openfort instance ----
-  // The client is a per-provider singleton: it owns the embedded-signer session, is published
-  // as the module-level default client, and its identity gates the store, the embedded-state
-  // watcher subscription and every callback below. Consumers pass `openfortConfig` as an object
-  // literal, so depending on it would rebuild the client on every render and drop the session.
+  // The client is a per-provider singleton: it owns the embedded-signer session, and its identity
+  // gates the store, the embedded-state watcher subscription and every callback below. Consumers
+  // pass `openfortConfig` as an object literal, so depending on it would rebuild the client on
+  // every render and drop the session.
   // Contract: credentials are read once per provider mount — to switch `publishableKey` or
   // `shieldConfiguration` at runtime, remount the provider (e.g. give it a React `key`).
   // biome-ignore lint/correctness/useExhaustiveDependencies: openfortConfig is read once at mount by design, see above
@@ -203,10 +200,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
       }
     }
 
-    const newClient = createOpenfortClient({ ...openfortConfig, shieldConfiguration: resolvedShieldConfig })
-
-    setDefaultClient(newClient)
-    return newClient
+    return createOpenfortClient({ ...openfortConfig, shieldConfiguration: resolvedShieldConfig })
   }, [])
   const openfortQueryScope = getOpenfortQueryScope(openfort)
 

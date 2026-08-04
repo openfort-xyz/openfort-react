@@ -1,7 +1,5 @@
-import { OpenfortError, type OpenfortErrorOptions, OpenfortReactErrorType } from './base.js'
+import { OpenfortError, type OpenfortErrorOptions } from './base.js'
 import { OpenfortConfigError } from './config.js'
-
-type FundingErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 
 /**
  * A funding action ran without the funding service being pointed at a host.
@@ -17,7 +15,7 @@ type FundingErrorOptions = Omit<OpenfortErrorOptions, 'type'>
 export class FundingNotConfiguredError extends OpenfortConfigError {
   override name = 'FundingNotConfiguredError'
 
-  constructor(options: FundingErrorOptions = {}) {
+  constructor(options: OpenfortErrorOptions = {}) {
     super('Funding is not configured.', {
       metaMessages: ['Set `uiConfig.fundingBaseUrl` on `OpenfortProvider`.'],
       ...options,
@@ -39,7 +37,7 @@ export class FundingNotConfiguredError extends OpenfortConfigError {
 export class FundingError extends OpenfortError {
   override name = 'FundingError'
 
-  constructor(shortMessage: string, options: FundingErrorOptions = {}) {
-    super(shortMessage, { ...options, type: OpenfortReactErrorType.UNEXPECTED_ERROR })
+  constructor(shortMessage: string, options: OpenfortErrorOptions = {}) {
+    super(shortMessage, options)
   }
 }

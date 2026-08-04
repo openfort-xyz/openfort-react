@@ -1,7 +1,7 @@
 import { expect, test, vi } from 'vitest'
 
 import { AuthenticationError, NotAuthenticatedError } from './auth.js'
-import { asOpenfortError, OpenfortError, OpenfortReactErrorType, toError } from './base.js'
+import { asOpenfortError, OpenfortError, toError } from './base.js'
 import {
   ChainNotConfiguredError,
   ClientNotInitializedError,
@@ -171,55 +171,43 @@ test('asOpenfortError passes through Openfort errors and wraps everything else',
 })
 
 test.each([
-  [new OpenfortError('x'), 'OpenfortError', OpenfortReactErrorType.UNEXPECTED_ERROR],
-  [new AuthenticationError('x'), 'AuthenticationError', OpenfortReactErrorType.AUTHENTICATION_ERROR],
-  [new NotAuthenticatedError(), 'NotAuthenticatedError', OpenfortReactErrorType.AUTHENTICATION_ERROR],
-  [new OpenfortConfigError('x'), 'OpenfortConfigError', OpenfortReactErrorType.CONFIGURATION_ERROR],
-  [new WalletConfigNotFoundError(), 'WalletConfigNotFoundError', OpenfortReactErrorType.CONFIGURATION_ERROR],
-  [new ClientNotInitializedError(), 'ClientNotInitializedError', OpenfortReactErrorType.CONFIGURATION_ERROR],
-  [new ChainNotConfiguredError({ chainId: 1 }), 'ChainNotConfiguredError', OpenfortReactErrorType.CONFIGURATION_ERROR],
-  [
-    new RpcUrlNotConfiguredError({ chainId: 1 }),
-    'RpcUrlNotConfiguredError',
-    OpenfortReactErrorType.CONFIGURATION_ERROR,
-  ],
-  [
-    new SolanaClusterNotSupportedError({ cluster: 'nope' }),
-    'SolanaClusterNotSupportedError',
-    OpenfortReactErrorType.CONFIGURATION_ERROR,
-  ],
-  [new FundingNotConfiguredError(), 'FundingNotConfiguredError', OpenfortReactErrorType.CONFIGURATION_ERROR],
-  [new ValidationError('x'), 'ValidationError', OpenfortReactErrorType.VALIDATION_ERROR],
-  [new MissingParameterError({ params: ['email'] }), 'MissingParameterError', OpenfortReactErrorType.VALIDATION_ERROR],
-  [new InvalidEmailError(), 'InvalidEmailError', OpenfortReactErrorType.VALIDATION_ERROR],
-  [new WalletError('x'), 'WalletError', OpenfortReactErrorType.WALLET_ERROR],
-  [new WalletCreationError({ chain: 'Ethereum' }), 'WalletCreationError', OpenfortReactErrorType.WALLET_ERROR],
-  [new WalletImportError({ chain: 'Solana' }), 'WalletImportError', OpenfortReactErrorType.WALLET_ERROR],
-  [new SetActiveWalletError({ chain: 'Ethereum' }), 'SetActiveWalletError', OpenfortReactErrorType.WALLET_ERROR],
-  [new WalletNotFoundError(), 'WalletNotFoundError', OpenfortReactErrorType.WALLET_ERROR],
-  [new WalletNotConnectedError(), 'WalletNotConnectedError', OpenfortReactErrorType.WALLET_ERROR],
-  [new ProviderNotReadyError(), 'ProviderNotReadyError', OpenfortReactErrorType.WALLET_ERROR],
-  [new RecoveryError('x'), 'RecoveryError', OpenfortReactErrorType.WALLET_ERROR],
-  [new OtpRequiredError({ canRequestOtp: true }), 'OtpRequiredError', OpenfortReactErrorType.WALLET_ERROR],
-  [new ConnectorNotFoundError(), 'ConnectorNotFoundError', OpenfortReactErrorType.WALLET_ERROR],
+  [new OpenfortError('x'), 'OpenfortError', OpenfortError],
+  [new AuthenticationError('x'), 'AuthenticationError', AuthenticationError],
+  [new NotAuthenticatedError(), 'NotAuthenticatedError', AuthenticationError],
+  [new OpenfortConfigError('x'), 'OpenfortConfigError', OpenfortConfigError],
+  [new WalletConfigNotFoundError(), 'WalletConfigNotFoundError', OpenfortConfigError],
+  [new ClientNotInitializedError(), 'ClientNotInitializedError', OpenfortConfigError],
+  [new ChainNotConfiguredError({ chainId: 1 }), 'ChainNotConfiguredError', OpenfortConfigError],
+  [new RpcUrlNotConfiguredError({ chainId: 1 }), 'RpcUrlNotConfiguredError', OpenfortConfigError],
+  [new SolanaClusterNotSupportedError({ cluster: 'nope' }), 'SolanaClusterNotSupportedError', OpenfortConfigError],
+  [new FundingNotConfiguredError(), 'FundingNotConfiguredError', OpenfortConfigError],
+  [new ValidationError('x'), 'ValidationError', ValidationError],
+  [new MissingParameterError({ params: ['email'] }), 'MissingParameterError', ValidationError],
+  [new InvalidEmailError(), 'InvalidEmailError', ValidationError],
+  [new WalletError('x'), 'WalletError', WalletError],
+  [new WalletCreationError({ chain: 'Ethereum' }), 'WalletCreationError', WalletError],
+  [new WalletImportError({ chain: 'Solana' }), 'WalletImportError', WalletError],
+  [new SetActiveWalletError({ chain: 'Ethereum' }), 'SetActiveWalletError', WalletError],
+  [new WalletNotFoundError(), 'WalletNotFoundError', WalletError],
+  [new WalletNotConnectedError(), 'WalletNotConnectedError', WalletError],
+  [new ProviderNotReadyError(), 'ProviderNotReadyError', WalletError],
+  [new RecoveryError('x'), 'RecoveryError', WalletError],
+  [new OtpRequiredError({ canRequestOtp: true }), 'OtpRequiredError', WalletError],
+  [new ConnectorNotFoundError(), 'ConnectorNotFoundError', WalletError],
   [
     new ConnectorTypeMismatchError({ expected: 'oauth', received: 'injected' }),
     'ConnectorTypeMismatchError',
-    OpenfortReactErrorType.WALLET_ERROR,
+    WalletError,
   ],
-  [new ProviderNotFoundError(), 'ProviderNotFoundError', OpenfortReactErrorType.WALLET_ERROR],
-  [new SiweMessageError(), 'SiweMessageError', OpenfortReactErrorType.WALLET_ERROR],
-  [new FundingError('x'), 'FundingError', OpenfortReactErrorType.UNEXPECTED_ERROR],
-  [
-    new UnsupportedOperationError({ operation: 'x' }),
-    'UnsupportedOperationError',
-    OpenfortReactErrorType.UNEXPECTED_ERROR,
-  ],
-  [new ApiRequestError({ operation: 'x' }), 'ApiRequestError', OpenfortReactErrorType.UNEXPECTED_ERROR],
-])('%s reports its name and legacy type', (error, name, type) => {
+  [new ProviderNotFoundError(), 'ProviderNotFoundError', WalletError],
+  [new SiweMessageError(), 'SiweMessageError', WalletError],
+  [new FundingError('x'), 'FundingError', OpenfortError],
+  [new UnsupportedOperationError({ operation: 'x' }), 'UnsupportedOperationError', OpenfortError],
+  [new ApiRequestError({ operation: 'x' }), 'ApiRequestError', OpenfortError],
+])('%s reports its name and category base class', (error, name, base) => {
   expect(error).toBeInstanceOf(OpenfortError)
   expect(error.name).toBe(name)
-  expect(error.type).toBe(type)
+  expect(error).toBeInstanceOf(base)
   expect(error.message).toContain('Version: @openfort/react@x.y.z')
 })
 

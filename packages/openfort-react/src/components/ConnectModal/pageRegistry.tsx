@@ -1,14 +1,12 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { lazy, Suspense } from 'react'
-import { Spinner } from '../Common/Spinner/index.js'
+import { lazy } from 'react'
 import { routes } from '../Openfort/types.js'
 import AssetInventory from '../Pages/AssetInventory/index.js'
 import { SolanaAssetInventory } from '../Pages/AssetInventory/SolanaAssetInventory.js'
 import Connected from '../Pages/Connected/index.js'
 import ConnectedSuccess from '../Pages/ConnectedSuccess/index.js'
-import Connectors from '../Pages/Connectors/index.js'
 import CreateGuestUserPage from '../Pages/CreateGuestUserPage/index.js'
 import CreateWallet from '../Pages/CreateWallet/index.js'
 import DownloadApp from '../Pages/DownloadApp/index.js'
@@ -35,6 +33,7 @@ import SignMessage from '../Pages/SignMessage/index.js'
 import SocialProviders from '../Pages/SocialProviders/index.js'
 import ConnectUsing from './ConnectUsing.js'
 import ConnectWithMobile from './ConnectWithMobile.js'
+import { withPageLoading } from './pageLoading.js'
 
 type ValueOf<T> = T[keyof T]
 
@@ -42,8 +41,9 @@ type ValueOf<T> = T[keyof T]
 type RoutePages = Partial<Record<ValueOf<typeof routes>, React.ReactNode>>
 
 // Code-split page groups a session may never visit: the funding, transfer, key
-// export and marketing screens. Each is a static specifier so every bundler can
-// resolve and split it; see the note on the lazy imports in OpenfortProvider.
+// export, marketing and external-wallet screens. Each is a static specifier so
+// every bundler can resolve and split it; see the note on the lazy imports in
+// OpenfortProvider.
 const LazyAbout = lazy(() => import('../Pages/About/index.js'))
 const LazyBuy = lazy(() => import('../Pages/Buy/index.js'))
 const LazyBuyComplete = lazy(() => import('../Pages/BuyComplete/index.js'))
@@ -58,6 +58,7 @@ const LazyExportKey = lazy(() => import('../Pages/ExportKey/index.js'))
 const LazySelectToken = lazy(() => import('../Pages/SelectToken/index.js'))
 const LazySend = lazy(() => import('../Pages/Send/index.js'))
 const LazySendConfirmation = lazy(() => import('../Pages/SendConfirmation/index.js'))
+const LazyConnectors = lazy(() => import('../../wagmi/components/Connectors/index.js'))
 const LazySwitchNetworks = lazy(() => import('../../wagmi/components/SwitchNetworks/index.js'))
 const LazySolanaSelectToken = lazy(() =>
   import('../Pages/SelectToken/SolanaSelectToken.js').then((m) => ({ default: m.SolanaSelectToken }))
@@ -66,26 +67,6 @@ const LazySolanaSend = lazy(() => import('../Pages/Send/SolanaSend.js').then((m)
 const LazySolanaSendConfirmation = lazy(() =>
   import('../Pages/SendConfirmation/SolanaSendConfirmation.js').then((m) => ({ default: m.SolanaSendConfirmation }))
 )
-
-/**
- * Placeholder shown while a code-split page's chunk arrives. It matches the
- * standard page width so the modal does not snap to zero and back while loading.
- */
-const PageLoading = () => (
-  <div
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      width: 295,
-      height: 180,
-    }}
-  >
-    <Spinner />
-  </div>
-)
-
-const withPageLoading = (page: React.ReactNode) => <Suspense fallback={<PageLoading />}>{page}</Suspense>
 
 /** Pages available on every chain type. */
 export const sharedPages: RoutePages = {
@@ -105,7 +86,7 @@ export const sharedPages: RoutePages = {
   createWallet: <CreateWallet />,
   recoverWallets: <RecoverPage />,
   download: <DownloadApp />,
-  connectors: <Connectors />,
+  connectors: withPageLoading(<LazyConnectors />),
   mobileConnectors: <MobileConnectors />,
   selectWalletToRecover: <SelectWalletToRecover />,
   providers: <Providers />,
@@ -147,7 +128,7 @@ export const chainPrefixedPages: Record<ChainTypeEnum, RoutePages> = {
     'eth:send': withPageLoading(<LazySend />),
     'eth:receive': <Receive />,
     'eth:buy': withPageLoading(<LazyBuy />),
-    'eth:connectors': <Connectors />,
+    'eth:connectors': withPageLoading(<LazyConnectors />),
   },
   [ChainTypeEnum.SVM]: {
     'sol:connected': <Connected />,

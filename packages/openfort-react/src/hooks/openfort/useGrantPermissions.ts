@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import type { Chain, Hex } from 'viem'
+import type { Chain } from 'viem'
 import { createWalletClient, custom } from 'viem'
 import { erc7715Actions, type GrantPermissionsParameters, type GrantPermissionsReturnType } from 'viem/experimental'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
@@ -24,8 +24,6 @@ import { onError, onSuccess } from './hookConsistency.js'
 
 type GrantPermissionsRequest = {
   request: GrantPermissionsParameters
-  /** @deprecated The signer is fully described by `request`; this value is ignored. */
-  sessionKey?: Hex
 }
 
 type GrantPermissionsResult = {
