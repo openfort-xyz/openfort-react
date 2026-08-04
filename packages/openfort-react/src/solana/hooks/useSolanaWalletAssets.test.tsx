@@ -19,9 +19,15 @@ vi.mock('../../query/useQuery.js', () => ({
   useQuery: () => h.query,
 }))
 
-vi.mock('../SolanaContext.js', () => ({
-  useSolanaContext: () => ({ rpcUrl: 'https://rpc.example' }),
-}))
+vi.mock('../SolanaContext.js', async () => {
+  const { createContext } = await import('react')
+  // A real context with a default value, so the hook reads the RPC URL the same
+  // way it does under a provider.
+  return {
+    SolanaContext: createContext<{ rpcUrl: string } | null>({ rpcUrl: 'https://rpc.example' }),
+    useSolanaContext: () => ({ rpcUrl: 'https://rpc.example' }),
+  }
+})
 
 vi.mock('./useSolanaEmbeddedWallet.js', () => ({
   useSolanaEmbeddedWallet: () => ({ status: 'connected', address: 'solana-address' }),

@@ -24,6 +24,7 @@ type Kit = typeof import('@solana/kit')
 /** The System program id — the "token" for a native SOL transfer through Kora. */
 const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
 const SEND_TIMEOUT_MS = 60_000
+const POLL_INTERVAL_MS = 1_000
 
 /** Decimal SOL → lamports, without floating-point loss. */
 /** @internal Exported for focused validation tests; not part of a package entry point. */
@@ -171,6 +172,65 @@ type SendSplTokenParams = {
   commitment?: 'processed' | 'confirmed' | 'finalized'
 }
 
+/** Token program ids whose accounts must never be used as a transfer recipient. */
+const TOKEN_PROGRAM_OWNERS = new Set([
+  'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA',
+  'TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb',
+])
+
+/**
+ * Reads which token program owns a mint.
+ *
+ * Token-2022 mints live under a different program than legacy SPL ones, and the
+ * asset list surfaces both. Deriving the associated token account under the
+ * wrong program yields an address that does not exist, so the transfer fails on
+ * simulation with an error that says nothing useful.
+ */
+export async function resolveTokenProgram(
+  rpc: { getAccountInfo: (address: never, config?: never) => { send: () => Promise<{ value: unknown }> } },
+  mint: string,
+  fallback: string
+): Promise<string> {
+  try {
+    const { value } = await rpc.getAccountInfo(mint as never, { encoding: 'base64' } as never).send()
+    const owner = (value as { owner?: string } | null)?.owner
+    return owner && TOKEN_PROGRAM_OWNERS.has(owner) ? owner : fallback
+  } catch {
+    return fallback
+  }
+}
+
+/**
+ * Rejects a recipient that is itself a token account.
+ *
+ * Deriving an associated token account for one produces an address nobody can
+ * sign for, so the transfer would confirm and the tokens would be unspendable
+ * forever. Pasting a token account off an explorer is an easy mistake to make,
+ * and nothing on-chain reports it as an error.
+ */
+export async function assertTransferableRecipient(
+  rpc: { getAccountInfo: (address: never, config?: never) => { send: () => Promise<{ value: unknown }> } },
+  recipient: string,
+  tokenProgram: string
+): Promise<void> {
+  let owner: string | undefined
+  try {
+    const { value } = await rpc.getAccountInfo(recipient as never, { encoding: 'base64' } as never).send()
+    owner = (value as { owner?: string } | null)?.owner
+  } catch {
+    // A read failure is not evidence of a bad recipient; let the send proceed
+    // and surface any real problem from the transaction itself.
+    return
+  }
+
+  if (owner && TOKEN_PROGRAM_OWNERS.has(owner)) {
+    throw new ValidationError(
+      'This address is a token account, not a wallet. Send to the owner’s wallet address instead.',
+      { details: `Recipient ${recipient} is owned by the token program ${tokenProgram}.` }
+    )
+  }
+}
+
 /**
  * Build, sign, and broadcast an SPL token transfer. Creates the recipient's
  * associated token account if it doesn't exist yet (idempotent — a no-op when it
@@ -198,14 +258,18 @@ export async function sendSplToken({
   const rpcSubscriptions = kit.createSolanaRpcSubscriptions(deriveWssUrl(rpcUrl))
   const signer = createEmbeddedSigner(kit, provider, fromAddress)
 
+  await assertTransferableRecipient(rpc, toAddress, token.TOKEN_PROGRAM_ADDRESS)
+
+  const tokenProgram = kit.address(await resolveTokenProgram(rpc, mintAddress, token.TOKEN_PROGRAM_ADDRESS))
+
   const [sourceAta] = await token.findAssociatedTokenPda({
     owner: fromAddress,
-    tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+    tokenProgram,
     mint: mintAddress,
   })
   const [destinationAta] = await token.findAssociatedTokenPda({
     owner: toAddress,
-    tokenProgram: token.TOKEN_PROGRAM_ADDRESS,
+    tokenProgram,
     mint: mintAddress,
   })
 
@@ -223,15 +287,19 @@ export async function sendSplToken({
             ata: destinationAta,
             owner: toAddress,
             mint: mintAddress,
+            tokenProgram,
           }),
-          token.getTransferCheckedInstruction({
-            source: sourceAta,
-            mint: mintAddress,
-            destination: destinationAta,
-            authority: signer,
-            amount,
-            decimals,
-          }),
+          token.getTransferCheckedInstruction(
+            {
+              source: sourceAta,
+              mint: mintAddress,
+              destination: destinationAta,
+              authority: signer,
+              amount,
+              decimals,
+            },
+            { programAddress: tokenProgram }
+          ),
         ],
         tx
       )
@@ -274,6 +342,9 @@ type KoraTransferParams = {
   publishableKey: string
   /** Openfort API base URL. Defaults to the SDK configuration. */
   backendUrl?: string
+  /** Read endpoint used to confirm the broadcast transaction. */
+  rpcUrl?: string
+  commitment?: 'processed' | 'confirmed' | 'finalized'
 }
 
 /**
@@ -291,6 +362,8 @@ async function sendViaKora({
   cluster,
   publishableKey,
   backendUrl,
+  rpcUrl,
+  commitment = 'confirmed',
 }: KoraTransferParams): Promise<string> {
   // Kora's request takes a JS number; fail loudly rather than silently corrupt
   // an amount that can't be represented exactly.
@@ -351,14 +424,56 @@ async function sendViaKora({
   })) as unknown as Record<string, unknown>
 
   const direct = response.signature as string | undefined
-  if (direct) return direct
   const signedTxB64 = response.signed_transaction as string | undefined
-  if (signedTxB64) {
+  let signatureOut: string
+  if (direct) {
+    signatureOut = direct
+  } else if (signedTxB64) {
     // Wire format: [sigCount(1)][signature(64)]... — the first signature is the tx id.
     const wireBytes = Uint8Array.from(atob(signedTxB64), (c) => c.charCodeAt(0))
-    return kit.getBase58Decoder().decode(wireBytes.slice(1, 65))
+    signatureOut = kit.getBase58Decoder().decode(wireBytes.slice(1, 65))
+  } else {
+    throw new ApiRequestError({ operation: 'Kora transaction signature extraction' })
   }
-  throw new ApiRequestError({ operation: 'Kora transaction signature extraction' })
+
+  // 6. Confirm before reporting success. Kora returning a signature only means
+  // the transaction was broadcast; the non-sponsored paths wait for the same
+  // commitment, and claiming success on a dropped transaction is worse here
+  // because the balance never moves and the explorer link 404s.
+  await confirmSignature(kit, signatureOut, rpcUrl, commitment)
+
+  return signatureOut
+}
+
+/** Polls until the signature reaches `commitment`, or the send timeout elapses. */
+async function confirmSignature(
+  kit: Kit,
+  signature: string,
+  rpcUrl: string | undefined,
+  commitment: 'processed' | 'confirmed' | 'finalized'
+): Promise<void> {
+  if (!rpcUrl) return
+
+  const rpc = kit.createSolanaRpc(rpcUrl)
+  const acceptable =
+    commitment === 'processed'
+      ? ['processed', 'confirmed', 'finalized']
+      : commitment === 'confirmed'
+        ? ['confirmed', 'finalized']
+        : ['finalized']
+
+  const deadline = SEND_TIMEOUT_MS / POLL_INTERVAL_MS
+  for (let attempt = 0; attempt < deadline; attempt++) {
+    const { value } = await rpc.getSignatureStatuses([signature as never]).send()
+    const status = value?.[0]
+    if (status?.err) {
+      throw new WalletError('The sponsored transaction failed on-chain.')
+    }
+    if (status?.confirmationStatus && acceptable.includes(status.confirmationStatus)) return
+    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
+  }
+
+  throw new WalletError('The sponsored transaction was not confirmed in time.')
 }
 
 type SendSolGaslessParams = {
@@ -371,6 +486,9 @@ type SendSolGaslessParams = {
   publishableKey: string
   /** Openfort API base URL. Defaults to the SDK configuration. */
   backendUrl?: string
+  /** Read endpoint used to confirm the broadcast transaction. */
+  rpcUrl?: string
+  commitment?: 'processed' | 'confirmed' | 'finalized'
 }
 
 /** Send a native SOL transfer with fees sponsored by the Openfort paymaster (Kora). */
@@ -382,6 +500,8 @@ export async function sendSolGasless({
   cluster,
   publishableKey,
   backendUrl,
+  rpcUrl,
+  commitment,
 }: SendSolGaslessParams): Promise<string> {
   return sendViaKora({
     from,
@@ -392,6 +512,8 @@ export async function sendSolGasless({
     cluster,
     publishableKey,
     backendUrl,
+    rpcUrl,
+    commitment,
   })
 }
 
@@ -408,6 +530,9 @@ type SendSplTokenGaslessParams = {
   publishableKey: string
   /** Openfort API base URL. Defaults to the SDK configuration. */
   backendUrl?: string
+  /** Read endpoint used to confirm the broadcast transaction. */
+  rpcUrl?: string
+  commitment?: 'processed' | 'confirmed' | 'finalized'
 }
 
 /** Send an SPL token transfer with fees sponsored by the Openfort paymaster (Kora). */
@@ -420,6 +545,8 @@ export async function sendSplTokenGasless({
   cluster,
   publishableKey,
   backendUrl,
+  rpcUrl,
+  commitment,
 }: SendSplTokenGaslessParams): Promise<string> {
   return sendViaKora({
     from,
@@ -430,6 +557,8 @@ export async function sendSplTokenGasless({
     cluster,
     publishableKey,
     backendUrl,
+    rpcUrl,
+    commitment,
   })
 }
 

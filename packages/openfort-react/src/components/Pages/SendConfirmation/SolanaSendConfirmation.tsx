@@ -48,6 +48,10 @@ export const SolanaSendConfirmation = () => {
   const provider = wallet.status === 'connected' ? wallet.provider : undefined
   const cluster = wallet.cluster ?? 'devnet'
   const rpcUrl = wallet.rpcUrl
+  // walletConfig.solana.commitment is documented as the level transactions are
+  // confirmed at; honour it here rather than letting the transfer helpers fall
+  // back to their own default.
+  const commitment = walletConfig?.solana?.commitment ?? 'confirmed'
   const clientScope = getOpenfortQueryScope(client)
   const rpcScope = getOpenfortQueryInputScope(rpcUrl)
 
@@ -117,6 +121,8 @@ export const SolanaSendConfirmation = () => {
               provider,
               cluster,
               publishableKey,
+              rpcUrl: rpcUrl ?? undefined,
+              commitment,
             })
           : await sendSplToken({
               from: address,
@@ -126,6 +132,7 @@ export const SolanaSendConfirmation = () => {
               decimals,
               provider,
               rpcUrl: rpcUrl ?? '',
+              commitment,
             })
       } else {
         sig = isSponsored
@@ -136,8 +143,17 @@ export const SolanaSendConfirmation = () => {
               provider,
               cluster,
               publishableKey,
+              rpcUrl: rpcUrl ?? undefined,
+              commitment,
             })
-          : await sendSol({ from: address, to: recipient, amountSol: amountNum, provider, rpcUrl: rpcUrl ?? '' })
+          : await sendSol({
+              from: address,
+              to: recipient,
+              amountSol: amountNum,
+              provider,
+              rpcUrl: rpcUrl ?? '',
+              commitment,
+            })
       }
       setSignature(sig)
     } catch (err) {

@@ -1,13 +1,14 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
+import { useContext, useMemo } from 'react'
 import { asOpenfortError, type OpenfortError } from '../../errors/base.js'
 import { WalletError } from '../../errors/wallet.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { getOpenfortQueryInputScope, getOpenfortQueryScope, openfortKeys } from '../../query/queryKeys.js'
 import { type UseQueryReturnType, useQuery } from '../../query/useQuery.js'
 import { withQueryResultOverrides } from '../../query/withQueryResultOverrides.js'
-import { useSolanaContext } from '../SolanaContext.js'
+import { SolanaContext } from '../SolanaContext.js'
 import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet.js'
 
 /** A holding in the connected Solana wallet: native SOL or an SPL token. */
@@ -115,7 +116,12 @@ export type UseSolanaWalletAssetsResult = Omit<UseQueryReturnType<SolanaAsset[],
 export function useSolanaWalletAssets(): UseSolanaWalletAssetsResult {
   const client = useOpenfortCore((state) => state.client)
   const wallet = useSolanaEmbeddedWallet()
-  const { rpcUrl } = useSolanaContext()
+  // Read the context directly rather than through useSolanaContext(): that
+  // throws when `walletConfig.solana` is absent, which would take down the tree
+  // of a consumer who simply called this hook without configuring Solana. With
+  // no cluster there is nothing to read, so the hook stays idle instead.
+  const solana = useContext(SolanaContext)
+  const rpcUrl = solana?.rpcUrl
   const address = wallet.status === 'connected' && wallet.address ? wallet.address : undefined
   const enabled = Boolean(address && rpcUrl)
 
@@ -132,17 +138,22 @@ export function useSolanaWalletAssets(): UseSolanaWalletAssetsResult {
     staleTime: 30_000,
   })
 
+  // Memoized: asOpenfortError builds a new instance for any error that is not
+  // already an OpenfortError, so reading `error` twice would otherwise yield
+  // two different objects and re-fire a consumer effect keyed on it.
+  const mappedError = useMemo(
+    () =>
+      query.error
+        ? asOpenfortError(query.error, (cause) => new WalletError('Failed to fetch Solana wallet assets.', { cause }))
+        : undefined,
+    [query.error]
+  )
+
   return withQueryResultOverrides(query, {
     get data() {
       return query.data ?? null
     },
-    get error() {
-      if (!query.error) return undefined
-      return asOpenfortError(
-        query.error,
-        (cause) => new WalletError('Failed to fetch Solana wallet assets.', { cause })
-      )
-    },
+    error: mappedError,
     isIdle: !enabled,
   })
 }
