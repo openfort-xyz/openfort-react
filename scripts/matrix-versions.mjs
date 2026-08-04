@@ -14,6 +14,7 @@
  */
 
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
 const MANIFEST = "pnpm-workspace.yaml";
@@ -26,13 +27,49 @@ assert.ok(reactVersion, "REACT_VERSION is required.");
 assert.ok(viemVersion, "VIEM_VERSION is required.");
 assert.ok(tanstackVersion, "TANSTACK_VERSION is required.");
 
+/** Ascending semver comparison for release versions. */
+function compareVersions(a, b) {
+  const left = a.split(".").map(Number);
+  const right = b.split(".").map(Number);
+  for (let i = 0; i < 3; i++) {
+    if (left[i] !== right[i]) return left[i] - right[i];
+  }
+  return 0;
+}
+
+/**
+ * Newest published version matching a range, so overrides can be written as exact
+ * versions.
+ *
+ * An open range the committed lockfile already satisfies would otherwise leave the
+ * pinned lower bound in place and silently test it twice. Resolving here keeps the
+ * re-resolution inside the lockfile: `pnpm update` would do it by rewriting every
+ * workspace manifest, including the shipped CLI templates whose declared ranges are
+ * part of what the release asserts.
+ */
+function resolveExact(name, range) {
+  if (/^\d+\.\d+\.\d+$/.test(range)) return range;
+  const output = execFileSync("npm", ["view", `${name}@${range}`, "version", "--json"], {
+    encoding: "utf8",
+  });
+  const parsed = JSON.parse(output);
+  // `npm view` lists matches in publish order, and an older line can be patched
+  // after a newer one, so pick the highest version rather than the last printed.
+  const matches = (Array.isArray(parsed) ? parsed : [parsed]).filter(
+    (version) => version && !version.includes("-"),
+  );
+  const version = matches.sort(compareVersions).at(-1);
+  assert.ok(version, `No published ${name} matches "${range}".`);
+  return version;
+}
+
 /** Override keys exactly as they appear in the manifest, quotes included. */
 const selected = new Map([
-  ["react", reactVersion],
-  ["react-dom", reactVersion],
-  ["'@types/react'", reactVersion],
-  ["'@types/react-dom'", reactVersion],
-  ["viem", viemVersion],
+  ["react", resolveExact("react", reactVersion)],
+  ["react-dom", resolveExact("react-dom", reactVersion)],
+  ["'@types/react'", resolveExact("@types/react", reactVersion)],
+  ["'@types/react-dom'", resolveExact("@types/react-dom", reactVersion)],
+  ["viem", resolveExact("viem", viemVersion)],
   ["'@tanstack/react-query'", tanstackVersion],
   ["'@tanstack/query-core'", tanstackVersion],
 ]);
@@ -59,7 +96,8 @@ function apply() {
 
   writeFileSync(MANIFEST, workspace);
   console.log(
-    `Pinned React ${reactVersion}, viem ${viemVersion}, TanStack Query ${tanstackVersion}.`,
+    "Pinned exact versions:",
+    JSON.stringify(Object.fromEntries(selected)),
   );
 }
 

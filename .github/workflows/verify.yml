@@ -205,11 +205,6 @@ jobs:
         run: |
           node scripts/matrix-versions.mjs apply
           pnpm install --no-frozen-lockfile
-          # An override the committed lockfile already satisfies leaves that
-          # version in place, so an open range such as `2` would silently reuse
-          # the pinned lower bound and this axis would test it twice. Re-resolving
-          # moves each dependency to the newest release its override allows.
-          pnpm update --recursive react react-dom @types/react @types/react-dom viem
           node scripts/matrix-versions.mjs verify
 
       - name: Check types
