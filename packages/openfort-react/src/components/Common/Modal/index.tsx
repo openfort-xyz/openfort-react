@@ -38,6 +38,16 @@ import {
 } from './styles.js'
 import { useContentBounds } from './useContentBounds.js'
 
+/**
+ * Marks a subtree inert while it finishes exiting.
+ *
+ * React 18 types `inert` as a string and React 19 types it as a boolean, so a
+ * literal fails to type-check against one of them. An index-signature record
+ * spreads cleanly under both, and the empty string sets the attribute in either
+ * runtime.
+ */
+const INERT_PROPS: Record<string, unknown> = { inert: '' }
+
 const InfoIcon = ({ ...props }) => (
   <svg
     aria-hidden="true"
@@ -267,7 +277,7 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
         >
           <div
             aria-hidden={pageActive ? undefined : true}
-            {...(pageActive ? {} : { inert: '' })}
+            {...(pageActive ? {} : INERT_PROPS)}
             style={{ display: 'contents' }}
           >
             <PageActivityProvider active={pageActive}>{page}</PageActivityProvider>
