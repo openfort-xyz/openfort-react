@@ -3,7 +3,7 @@
   "version": "1.0.1",
   "description": "Create Openfort applications with embedded wallets",
   "license": "Apache-2.0",
-  "author": "Openfort (https://www.openfort.xyz)",
+  "author": "Openfort (https://www.openfort.io)",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/openfort-xyz/openfort-react.git",

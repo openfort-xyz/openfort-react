@@ -117,7 +117,7 @@ export const ActionsCard = () => {
           <strong>Warning: Transactions are not sponsored.</strong> Minting may fail because transactions are not being
           sponsored. To sponsor transactions, go to the{' '}
           <a
-            href="https://dashboard.openfort.xyz/policies"
+            href="https://dashboard.openfort.io/policies"
             target="_blank"
             rel="noopener noreferrer"
             className="underline"

@@ -86,7 +86,7 @@ export const runCli = async (): Promise<CliResults> => {
       "afterAll",
       `\n Learn more about Openfort at ${chalk
         .hex("#5B87F5")
-        .bold("https://www.openfort.xyz")} \n`,
+        .bold("https://www.openfort.io")} \n`,
     )
     .parse(process.argv);
 

@@ -52,5 +52,5 @@ export const logNextSteps = async ({
     logger.info(`  ${chalk.cyan('git commit -m "initial commit"')}`);
   }
 
-  logger.info(`\n${chalk.blue("Learn more at https://www.openfort.xyz/docs")}`);
+  logger.info(`\n${chalk.blue("Learn more at https://www.openfort.io/docs")}`);
 };

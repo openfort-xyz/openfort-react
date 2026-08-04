@@ -143,6 +143,7 @@ export const useAuthCallback = ({
     const callbackEmail = url.searchParams.get('email')
     const userId = url.searchParams.get('user_id')
     const token = url.searchParams.get('access_token')
+    const callbackErrorCode = url.searchParams.get('error')
 
     try {
       for (const key of [
@@ -153,6 +154,7 @@ export const useAuthCallback = ({
         'player_id',
         'state',
         'email',
+        'error',
       ]) {
         url.searchParams.delete(key)
       }
@@ -165,6 +167,13 @@ export const useAuthCallback = ({
     const reportCallbackError = (error: OpenfortError) => {
       setCallbackError(error)
       notifyHookCallback(callbacks.onError, error, 'onError')
+    }
+
+    // A failed verification redirects back to this same URL with `error` appended, so a callback
+    // carrying one must fail even though it is otherwise shaped exactly like a success.
+    if (callbackErrorCode) {
+      reportCallbackError(new AuthenticationError(describeCallbackError(callbackErrorCode)))
+      return
     }
 
     if (!rawProvider || !validProviders.has(rawProvider)) {
