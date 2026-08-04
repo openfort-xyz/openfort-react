@@ -1,4 +1,4 @@
-import type { CreateConfigParameters } from '@wagmi/core'
+import type { CreateConfigParameters } from 'wagmi'
 import { http } from 'wagmi'
 import { arbitrum, mainnet, optimism, polygon } from 'wagmi/chains'
 import type { CoinbaseWalletParameters } from 'wagmi/connectors'

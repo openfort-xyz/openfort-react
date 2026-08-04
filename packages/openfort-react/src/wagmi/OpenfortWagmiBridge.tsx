@@ -1,10 +1,5 @@
 'use client'
 
-import {
-  getEnsAddress as getEnsAddressAction,
-  getEnsAvatar as getEnsAvatarAction,
-  getEnsName as getEnsNameAction,
-} from '@wagmi/core'
 import type React from 'react'
 import { createElement, type PropsWithChildren, useCallback, useMemo, useRef } from 'react'
 import { normalize } from 'viem/ens'
@@ -20,6 +15,11 @@ import {
   useSwitchChain,
   useWalletClient,
 } from 'wagmi'
+import {
+  getEnsAddress as getEnsAddressAction,
+  getEnsAvatar as getEnsAvatarAction,
+  getEnsName as getEnsNameAction,
+} from 'wagmi/actions'
 import { ConnectorNotFoundError, ProviderNotFoundError } from '../errors/connection.js'
 import {
   type OpenfortEthereumBridgeConnector,

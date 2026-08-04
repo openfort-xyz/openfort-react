@@ -71,7 +71,7 @@
   "scripts": {
     "start": "rollup --config rollup.config.dev.js -w",
     "dev": "rollup --config rollup.config.dev.js -w",
-    "build": "rollup --config rollup.config.prod.js",
+    "build": "rm -rf build && rollup --config rollup.config.prod.js",
     "format": "biome format --write .",
     "size": "size-limit",
     "test": "vitest run",
@@ -114,6 +114,7 @@
     "@solana/kit": "^2.0.0 || ^5.0.0",
     "@solana/kora": "^0.1.1",
     "@tanstack/react-query": ">=5.99.2 <6",
+    "@wagmi/core": "3.x",
     "@walletconnect/ethereum-provider": "^2.21.1",
     "react": ">=18.3.1 <20",
     "react-dom": ">=18.3.1 <20",
@@ -160,6 +161,9 @@
       "optional": true
     },
     "wagmi": {
+      "optional": true
+    },
+    "@wagmi/core": {
       "optional": true
     },
     "@coinbase/wallet-sdk": {
