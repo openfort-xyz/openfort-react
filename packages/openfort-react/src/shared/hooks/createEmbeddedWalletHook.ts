@@ -201,6 +201,13 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     const embeddedState = useOpenfortCore((s) => s.embeddedState)
     const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
     const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+    // Actions below run long after the render that created them. Reading the
+    // active account through refs keeps `setActive` followed by `exportKey` in
+    // one handler from asserting against the account that was active before.
+    const latestAccountsRef = useRef(embeddedAccounts)
+    const latestActiveAddressRef = useRef(activeEmbeddedAddress)
+    latestAccountsRef.current = embeddedAccounts
+    latestActiveAddressRef.current = activeEmbeddedAddress
     const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
     const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
     const setEmbeddedState = useOpenfortCore((s) => s.setEmbeddedState)
@@ -489,7 +496,11 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
 
     const setRecovery = useCallback(
       async (recoveryOptions: SetRecoveryOptions): Promise<SetRecoveryResult> => {
-        const intendedAccount = captureActiveAccountIdentity(embeddedAccounts, activeEmbeddedAddress, chainType)
+        const intendedAccount = captureActiveAccountIdentity(
+          latestAccountsRef.current,
+          latestActiveAddressRef.current,
+          chainType
+        )
         try {
           await runSignerOperation(async ({ assertCurrent }) => {
             const currentAccount = await client.embeddedWallet.get()
@@ -508,17 +519,20 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
           return result
         } catch (err) {
           const error = asOpenfortError(err, (cause) => new RecoveryError('Failed to set recovery method.', { cause }))
-          setState((s) => ({ ...s, status: 'error', error: error.message }))
           notifyConsumer(recoveryOptions.onError, error)
           return { error }
         }
       },
-      [client, embeddedAccounts, activeEmbeddedAddress, updateEmbeddedAccounts, runSignerOperation]
+      [client, updateEmbeddedAccounts, runSignerOperation]
     )
 
     const exportKey = useCallback(
       async (exportOptions?: ExportPrivateKeyOptions): Promise<ExportPrivateKeyResult> => {
-        const intendedAccount = captureActiveAccountIdentity(embeddedAccounts, activeEmbeddedAddress, chainType)
+        const intendedAccount = captureActiveAccountIdentity(
+          latestAccountsRef.current,
+          latestActiveAddressRef.current,
+          chainType
+        )
         try {
           const privateKey = await runSignerOperation(async ({ assertCurrent }) => {
             const currentAccount = await client.embeddedWallet.get()
@@ -532,12 +546,11 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
           return result
         } catch (err) {
           const error = asOpenfortError(err, (cause) => new WalletError('Failed to export private key.', { cause }))
-          setState((s) => ({ ...s, status: 'error', error: error.message }))
           notifyConsumer(exportOptions?.onError, error)
           return { error }
         }
       },
-      [client, embeddedAccounts, activeEmbeddedAddress, runSignerOperation]
+      [client, runSignerOperation]
     )
 
     const actions = useMemo(

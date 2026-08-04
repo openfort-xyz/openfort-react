@@ -601,7 +601,9 @@ describe('useEthereumEmbeddedWallet – create', () => {
       ).resolves.toEqual({ error: expect.anything() })
     })
 
-    expect(result.current.status).toBe('error')
+    // Changing a recovery method does not own the connection: a rejected
+    // password must not leave the wallet reading as disconnected.
+    expect(result.current.status).not.toBe('error')
     expect(onError).toHaveBeenCalledWith(expect.anything())
   })
 
@@ -614,7 +616,8 @@ describe('useEthereumEmbeddedWallet – create', () => {
       await expect(result.current.exportPrivateKey({ onError })).resolves.toEqual({ error: expect.anything() })
     })
 
-    expect(result.current.status).toBe('error')
+    // A declined export leaves the wallet exactly as connected as it was.
+    expect(result.current.status).not.toBe('error')
     expect(onError).toHaveBeenCalledWith(expect.anything())
   })
 

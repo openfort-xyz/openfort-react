@@ -540,7 +540,11 @@ const RecoverAutomaticWallet = ({
         setNeedsOTP(operation.result.needsOTP || needsOTP)
         setOtpResponse(operation.result.otpResponse ?? otpResponse)
         if (outcome.status !== 'success') {
-          if (outcome.status === 'error') clearPersistentOperation(client, otpOperationKey)
+          // Clear on every non-success outcome, not just 'error'. A rejected
+          // code settles as 'otp-required', and leaving that entry cached makes
+          // the next submission replay the stale result instead of verifying
+          // the code the user just typed.
+          clearPersistentOperation(client, otpOperationKey)
           setOtpStatus(outcome.status === 'error' ? 'error' : 'idle')
           return
         }

@@ -307,11 +307,6 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
     [openfort]
   )
 
-  const invalidateSession = useCallback(() => {
-    invalidateSessionWork()
-    invalidateEmbeddedSignerOperations(openfort)
-  }, [invalidateSessionWork, openfort])
-
   const startAuthTransition = useCallback(
     <T,>(mutation: () => Promise<T>) => {
       const transition = reserveAuthTransition(openfort, mutation)
@@ -363,8 +358,13 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   const publishAuthenticatedUser = useCallback(
     (user: User): User => {
       const state = store.getState()
-      if (state.user?.id !== user.id) {
-        invalidateSession()
+      // Any publication supersedes an older user fetch still in flight.
+      invalidateSessionWork()
+      // Only a genuine change of principal discards the wallet: the first
+      // publication merely learns who the user is, and cancelling there would
+      // abort the provider initialisation already running for this session.
+      if (state.user !== null && state.user.id !== user.id) {
+        invalidateEmbeddedSignerOperations(openfort)
         state.setLinkedAccounts([])
         state.setActiveEmbeddedAddress(undefined)
         state.setEmbeddedAccounts(undefined)
@@ -380,7 +380,7 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
       queryClient.setQueryData(openfortKeys.user(openfortQueryScope), user)
       return user
     },
-    [invalidateSession, openfortQueryScope, queryClient, store]
+    [invalidateSessionWork, openfort, openfortQueryScope, queryClient, store]
   )
 
   const updateUser = useCallback(
