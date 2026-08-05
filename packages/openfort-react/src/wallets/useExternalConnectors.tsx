@@ -1,4 +1,4 @@
-import { createElement } from 'react'
+import { createElement, useEffect, useState } from 'react'
 import { useConnectionStrategy } from '../core/ConnectionStrategyContext'
 import type {
   OpenfortEthereumBridgeConnector,
@@ -102,6 +102,39 @@ export function useExternalConnectors(): ExternalConnectorProps[] {
   const strategy = useConnectionStrategy()
   if (!strategy) return []
   return strategy.getConnectors()
+}
+
+/**
+ * Ids of connectors whose provider is actually reachable right now. Targeted
+ * injected connectors (metaMask, phantom) are registered whether or not the
+ * extension exists, so `isInstalled`/list presence proves nothing — only
+ * `getProvider()` does. Returns null until the probe resolves.
+ */
+export function useDetectedProviders(): Set<string> | null {
+  const strategy = useConnectionStrategy()
+  const [detected, setDetected] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    if (!strategy) return
+    let cancelled = false
+    const connectors = strategy.getConnectors()
+    Promise.all(
+      connectors.map(async (c) => {
+        try {
+          return (await c.connector.getProvider?.()) ? c.id : null
+        } catch {
+          return null
+        }
+      })
+    ).then((ids) => {
+      if (!cancelled) setDetected(new Set(ids.filter((id): id is string => id !== null)))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [strategy])
+
+  return detected
 }
 
 /** Single connector by id. */

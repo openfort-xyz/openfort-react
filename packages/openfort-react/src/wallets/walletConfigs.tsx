@@ -179,8 +179,9 @@ export const walletConfigs: {
       return `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`
     },
   },
-  'app.phantom': {
+  'phantom, app.phantom': {
     name: 'Phantom',
+    icon: <Logos.Phantom background />,
     iconShape: 'squircle',
   },
   'me.rainbow': {
