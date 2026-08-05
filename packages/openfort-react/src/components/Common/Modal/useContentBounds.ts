@@ -1,7 +1,6 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import ResizeObserver from 'resize-observer-polyfill'
 
 /** How long pointer input stays blocked after a page swap, covering its animation. */
 const transitionBlockMs = 360

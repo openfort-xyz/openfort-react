@@ -1,16 +1,21 @@
 import { act, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-const observer = vi.hoisted(() => ({ disconnect: vi.fn() }))
+const observer = { disconnect: vi.fn() }
 
-vi.mock('resize-observer-polyfill', () => ({
-  default: class ResizeObserverMock {
+// Overrides the inert stub from the vitest setup: this suite asserts that the
+// hook disconnects its observer on unmount.
+Object.defineProperty(globalThis, 'ResizeObserver', {
+  value: class ResizeObserverMock {
     observe() {}
+    unobserve() {}
     disconnect() {
       observer.disconnect()
     }
   },
-}))
+  configurable: true,
+  writable: true,
+})
 
 const { useContentBounds } = await import('./useContentBounds.js')
 

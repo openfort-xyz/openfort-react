@@ -3,7 +3,6 @@
 // https://github.com/saltycrane/use-fit-text
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import ResizeObserver from 'resize-observer-polyfill'
 
 type TOptions = {
   maxFontSize?: number

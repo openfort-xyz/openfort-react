@@ -36,20 +36,12 @@ vi.mock('../../ethereum/OpenfortEthereumBridgeContext.js', () => ({ useEthereumB
 vi.mock('../../components/Common/FitText/index.js', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }))
-// The polyfill drives a refresh loop that never settles under jsdom
-vi.mock('resize-observer-polyfill', () => ({
-  default: class {
-    observe() {}
-    disconnect() {}
-  },
-}))
-
 const { default: Modal } = await import('../../components/Common/Modal/index.js')
 
 const pages = {
   [routes.PROVIDERS]: <div>providers page</div>,
   [routes.CONNECTORS]: <div>connectors page</div>,
-  [routes.ABOUT]: <div>about page</div>,
+  [routes.PROFILE]: <div>profile page</div>,
 }
 
 function deferred() {
@@ -80,7 +72,7 @@ describe('Modal page mounting', () => {
 
     await screen.findByText('providers page')
     expect(screen.queryByText('connectors page')).toBeNull()
-    expect(screen.queryByText('about page')).toBeNull()
+    expect(screen.queryByText('profile page')).toBeNull()
   })
 
   it('keeps the outgoing page mounted while it animates out, then drops it', async () => {
@@ -91,7 +83,7 @@ describe('Modal page mounting', () => {
 
     expect(screen.getByText('connectors page')).toBeTruthy()
     expect(screen.getByText('providers page')).toBeTruthy()
-    expect(screen.queryByText('about page')).toBeNull()
+    expect(screen.queryByText('profile page')).toBeNull()
 
     await waitFor(() => expect(screen.queryByText('providers page')).toBeNull())
     expect(screen.getByText('connectors page')).toBeTruthy()
@@ -162,6 +154,6 @@ describe('Modal page mounting', () => {
     render(<Modal open pages={pages} pageId="missingRoute" />)
 
     await waitFor(() => expect(screen.queryAllByText('providers page')).toHaveLength(1))
-    expect(screen.queryByText('about page')).toBeNull()
+    expect(screen.queryByText('profile page')).toBeNull()
   })
 })

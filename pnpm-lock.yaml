@@ -973,18 +973,12 @@ importers:
       react-international-phone:
         specifier: ^4.6.0
         version: 4.8.0(react@18.3.1)
-      react-is:
-        specifier: ^19.2.7
-        version: 19.2.7
       react-transition-state:
         specifier: ^1.1.4
         version: 1.1.5(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       react-use-measure:
         specifier: ^2.1.1
         version: 2.1.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      resize-observer-polyfill:
-        specifier: ^1.5.1
-        version: 1.5.1
       styled-components:
         specifier: ^5.3.5
         version: 5.3.11(@babel/core@7.29.7)(react-dom@18.3.1(react@18.3.1))(react-is@19.2.7)(react@18.3.1)
@@ -6753,9 +6747,6 @@ packages:
 
   require-main-filename@2.0.0:
     resolution: {integrity: sha512-NKN5kMDylKuldxYLSUfrbo5Tuzh4hd+2E8NPPX02mZtn1VuREQToYe/ZdlJy+J3uCpfaiGF05e7B8W0iXbQHmg==}
-
-  resize-observer-polyfill@1.5.1:
-    resolution: {integrity: sha512-LwZrotdHOo12nQuZlHEmtuXdqGoOD0OhaxopaNFxWzInpEgaLWoVuAMbTzixuosCx2nEG58ngzW3vxdWoxIgdg==}
 
   resolve-from@5.0.0:
     resolution: {integrity: sha512-qYg9KP24dD5qka9J47d0aVky0N+b4fTU89LN9iDnjB5waksiC49rvMB0PrUJQGoTmH50XPiqOvAjDfaijGxYZw==}
@@ -15307,8 +15298,6 @@ snapshots:
   require-from-string@2.0.2: {}
 
   require-main-filename@2.0.0: {}
-
-  resize-observer-polyfill@1.5.1: {}
 
   resolve-from@5.0.0: {}
 

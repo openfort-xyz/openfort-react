@@ -33,9 +33,6 @@ export const routes = {
   EMAIL_VERIFICATION: 'emailVerification',
   LINK_EMAIL: 'linkEmail',
 
-  ONBOARDING: 'onboarding',
-  ABOUT: 'about',
-
   CONNECTORS: 'connectors',
   MOBILECONNECTORS: 'mobileConnectors',
   CONNECT_WITH_MOBILE: 'connectWithMobile',
@@ -43,7 +40,6 @@ export const routes = {
   CONNECT: 'connect',
   DOWNLOAD: 'download',
   CONNECTED: 'connected',
-  SWITCHNETWORKS: 'switchNetworks',
   LINKED_PROVIDER: 'linkedProvider',
   LINKED_PROVIDERS: 'linkedProviders',
   REMOVE_LINKED_PROVIDER: 'removeLinkedProvider',
@@ -64,7 +60,6 @@ export const routes = {
   BUY_SELECT_PROVIDER: 'buySelectProvider',
   BUY_PROCESSING: 'buyProcessing',
   BUY_COMPLETE: 'buyComplete',
-  BUY_PROVIDER_SELECT: 'buyProviderSelect',
 
   ETH_CONNECTED: 'eth:connected',
   ETH_CREATE_WALLET: 'eth:createWallet',
@@ -84,8 +79,6 @@ export const routes = {
   SOL_RECEIVE: 'sol:receive',
   SOL_ASSET_INVENTORY: 'sol:assetInventory',
   SOL_WALLETS: 'sol:wallets',
-
-  WALLET_OVERVIEW: 'walletOverview',
 } as const
 
 type AllRoutes = (typeof routes)[keyof typeof routes]
@@ -93,8 +86,6 @@ type AllRoutes = (typeof routes)[keyof typeof routes]
 export const notStoredInHistoryRoutes: AllRoutes[] = [
   routes.LOADING,
   routes.CONNECTED_SUCCESS,
-  routes.ONBOARDING,
-  routes.ABOUT,
   routes.LOAD_WALLETS,
   routes.CREATE_GUEST_USER,
 ]

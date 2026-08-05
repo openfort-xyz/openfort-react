@@ -21,7 +21,6 @@ import Loading from '../Pages/Loading/index.js'
 import LoadWallets from '../Pages/LoadWallets/index.js'
 import MobileConnectors from '../Pages/MobileConnectors/index.js'
 import NoAssetsAvailable from '../Pages/NoAssetsAvailable/index.js'
-import Onboarding from '../Pages/Onboarding/index.js'
 import PhoneOTP from '../Pages/PhoneOTP/index.js'
 import Profile from '../Pages/Profile/index.js'
 import Providers from '../Pages/Providers/index.js'
@@ -41,14 +40,12 @@ type ValueOf<T> = T[keyof T]
 type RoutePages = Partial<Record<ValueOf<typeof routes>, React.ReactNode>>
 
 // Code-split page groups a session may never visit: the funding, transfer, key
-// export, marketing and external-wallet screens. Each is a static specifier so
+// export and external-wallet screens. Each is a static specifier so
 // every bundler can resolve and split it; see the note on the lazy imports in
 // OpenfortProvider.
-const LazyAbout = lazy(() => import('../Pages/About/index.js'))
 const LazyBuy = lazy(() => import('../Pages/Buy/index.js'))
 const LazyBuyComplete = lazy(() => import('../Pages/BuyComplete/index.js'))
 const LazyBuyProcessing = lazy(() => import('../Pages/BuyProcessing/index.js'))
-const LazyBuyProviderSelect = lazy(() => import('../Pages/BuyProviderSelect/index.js'))
 const LazyBuySelectProvider = lazy(() => import('../Pages/BuySelectProvider/index.js'))
 const LazyDeposit = lazy(() => import('../Pages/Deposit/index.js'))
 const LazyDepositCex = lazy(() => import('../Pages/DepositCex/index.js'))
@@ -70,8 +67,6 @@ const LazySolanaSendConfirmation = lazy(() =>
 
 /** Pages available on every chain type. */
 export const sharedPages: RoutePages = {
-  onboarding: <Onboarding />,
-  about: withPageLoading(<LazyAbout />),
   loading: <Loading />,
   loadWallets: <LoadWallets />,
   connectedSuccess: <ConnectedSuccess />,
@@ -106,7 +101,6 @@ export const sharedPages: RoutePages = {
   buySelectProvider: withPageLoading(<LazyBuySelectProvider />),
   buyProcessing: withPageLoading(<LazyBuyProcessing />),
   buyComplete: withPageLoading(<LazyBuyComplete />),
-  buyProviderSelect: withPageLoading(<LazyBuyProviderSelect />),
   receive: <Receive />,
   buy: withPageLoading(<LazyBuy />),
   deposit: withPageLoading(<LazyDeposit />),
@@ -115,7 +109,6 @@ export const sharedPages: RoutePages = {
   depositCex: withPageLoading(<LazyDepositCex />),
   exportKey: withPageLoading(<LazyExportKey />),
   signMessage: <SignMessage />,
-  walletOverview: <Connected />,
 }
 
 /** Pages reached through a chain-prefixed route, keyed by the active chain type. */

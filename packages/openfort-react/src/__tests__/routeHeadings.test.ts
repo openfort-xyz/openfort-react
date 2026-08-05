@@ -7,7 +7,6 @@ const noConnector = { showsQrCode: false }
 
 describe('getRouteHeading', () => {
   it('translates the routes that carry a title', () => {
-    expect(getRouteHeading(routes.ABOUT, enUS, noConnector)).toBe(enUS.aboutScreen_heading)
     expect(getRouteHeading(routes.EMAIL_LOGIN, enUS, noConnector)).toBe(enUS.emailLoginScreen_heading)
     expect(getRouteHeading(routes.FORGOT_PASSWORD, enUS, noConnector)).toBe(enUS.forgotPasswordScreen_heading)
     expect(getRouteHeading(routes.EMAIL_VERIFICATION, enUS, noConnector)).toBe(enUS.emailVerificationScreen_heading)

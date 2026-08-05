@@ -20,8 +20,6 @@ type HeadingConnector = {
  */
 export function getRouteHeading(route: string, locales: LocaleProps, connector: HeadingConnector): string {
   switch (route) {
-    case routes.ABOUT:
-      return locales.aboutScreen_heading
     case routes.EMAIL_LOGIN:
       return locales.emailLoginScreen_heading
     case routes.FORGOT_PASSWORD:
@@ -39,9 +37,6 @@ export function getRouteHeading(route: string, locales: LocaleProps, connector: 
       return locales.mobileConnectorsScreen_heading
     case routes.DOWNLOAD:
       return locales.downloadAppScreen_heading
-    case routes.ONBOARDING:
-      return locales.onboardingScreen_heading
-    case routes.SWITCHNETWORKS:
     case routes.ETH_SWITCH_NETWORK:
       return locales.switchNetworkScreen_heading
     case routes.SIGN_MESSAGE:

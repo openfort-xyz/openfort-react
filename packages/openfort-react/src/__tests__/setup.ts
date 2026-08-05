@@ -36,6 +36,21 @@ class MemoryStorage {
   }
 }
 
+// jsdom ships no ResizeObserver. The SDK uses the browser global rather than a
+// polyfill, so tests need an inert stand-in; a test that cares about observer
+// behaviour installs its own over this one.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    value: class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+    configurable: true,
+    writable: true,
+  })
+}
+
 for (const name of ['localStorage', 'sessionStorage'] as const) {
   const existing = (globalThis as Record<string, unknown>)[name] as Storage | undefined
   if (!existing || typeof existing.clear !== 'function') {
