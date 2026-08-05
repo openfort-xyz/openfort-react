@@ -6,7 +6,6 @@ import {
   type SDKOverrides,
   type ThirdPartyAuthConfiguration,
 } from '@openfort/openfort-js'
-import { Buffer } from 'buffer'
 import type React from 'react'
 import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { DEFAULT_DEV_CHAIN_ID } from '../../core/ConnectionStrategy.js'
@@ -225,9 +224,17 @@ export const OpenfortProvider = ({
     return { ...merged, authProviders, walletRecovery }
   }, [defaultUIOptions, uiConfig, hasExternalWallets, allowAutomaticRecovery])
 
+  // Imported on demand rather than at module scope: a static import puts the
+  // ~50 kB shim in every consumer's bundle, including the majority whose
+  // bundler needs no polyfill at all.
   useEffect(() => {
-    if (typeof window !== 'undefined' && safeUiConfig.bufferPolyfill && !window.Buffer) {
-      window.Buffer = Buffer
+    if (typeof window === 'undefined' || !safeUiConfig.bufferPolyfill || window.Buffer) return
+    let cancelled = false
+    void import('buffer').then(({ Buffer }) => {
+      if (!cancelled && !window.Buffer) window.Buffer = Buffer
+    })
+    return () => {
+      cancelled = true
     }
   }, [safeUiConfig.bufferPolyfill])
 

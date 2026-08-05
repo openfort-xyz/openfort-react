@@ -3,6 +3,14 @@ import React from 'react'
 import { formatWithDynamicDecimals } from '../components/Pages/Buy/utils.js'
 import { truncateEthAddress, truncateSolanaAddress } from './format.js'
 
+/**
+ * Renders a balance for display: full precision below 10,000, compact above it.
+ *
+ * The suffix is lower-cased because that is how this SDK has always rendered it
+ * (`1.5k`, not `1.5K`). Above 1e15 `Intl` keeps scaling `t` rather than moving
+ * to `p`/`e`, so a quadrillion reads `1000t` — closer to what a reader can
+ * actually parse than a peta prefix.
+ */
 const nFormatter = (num: number, digits: number = 2) => {
   // Handle zero case
   if (num === 0) return '0.00'
@@ -11,22 +19,13 @@ const nFormatter = (num: number, digits: number = 2) => {
   if (num > 0 && num < 0.000001) return '<0.000001'
 
   if (num < 10000) return formatWithDynamicDecimals(num)
-  const lookup = [
-    { value: 1, symbol: '' },
-    { value: 1e3, symbol: 'k' },
-    { value: 1e6, symbol: 'm' },
-    { value: 1e9, symbol: 'b' },
-    { value: 1e12, symbol: 't' },
-    { value: 1e15, symbol: 'p' },
-    { value: 1e18, symbol: 'e' },
-  ]
 
-  const rx = /\.0+$|(\.[0-9]*[1-9])0+$/
-  var item = lookup
-    .slice()
-    .reverse()
-    .find((item) => num >= item.value)
-  return item ? (num / item.value).toFixed(digits).replace(rx, '$1') + item.symbol : '0'
+  return new Intl.NumberFormat('en-US', {
+    notation: 'compact',
+    maximumFractionDigits: digits,
+  })
+    .format(num)
+    .toLowerCase()
 }
 
 const detectBrowser = () => {

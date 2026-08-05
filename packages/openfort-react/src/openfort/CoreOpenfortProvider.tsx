@@ -47,7 +47,6 @@ import {
   runEmbeddedSignerOperation,
 } from '../shared/utils/embeddedSignerOperationQueue.js'
 import { invalidatePersistentOperations } from '../shared/utils/persistentOperationRegistry.js'
-import { showInitBanner } from '../utils/banner.js'
 import { logger } from '../utils/logger.js'
 import { handleOAuthConfigError } from '../utils/oauthErrorHandler.js'
 import { mapBridgeConnectorsToWalletProps } from '../wallets/useExternalConnectors.js'
@@ -249,7 +248,6 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
 
   // ---- Embedded state ----
   useEffect(() => {
-    showInitBanner()
     if (!openfort) return
     const unwatch = openfort.embeddedWallet.watchEmbeddedState({
       onChange: (state, prevState) => {
