@@ -60,12 +60,23 @@ function isSupportedVersion(version: ParsedVersion): boolean {
   return compareVersions(version, minimumNode22) >= 0;
 }
 
+/**
+ * Raised when the runtime is too old to scaffold on.
+ *
+ * A distinct class so the entry point can abort without reporting telemetry:
+ * this check runs before any network work precisely so an unsupported runtime
+ * touches nothing.
+ */
+export class UnsupportedNodeError extends Error {
+  override readonly name = "UnsupportedNodeError";
+}
+
 /** Stops scaffolding before network or filesystem work on unsupported Node runtimes. */
 export function assertSupportedNode(version = process.versions.node): void {
   const parsedVersion = parseVersion(version);
   if (parsedVersion && isSupportedVersion(parsedVersion)) return;
 
-  throw new Error(
+  throw new UnsupportedNodeError(
     `create-openfort requires Node.js ${SUPPORTED_NODE_RANGE}. Current version: ${version}.`,
   );
 }

@@ -92,6 +92,17 @@ export const runCli = async (): Promise<CliResults> => {
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional sanitization of control chars to prevent log injection
   const cliProvidedName = program.args[0]?.replace(/[\r\n\x00-\x1f]/g, "");
+
+  // The interactive prompt runs `validateAppName`, but supplying the name as an
+  // argument skips the prompt entirely — so `../../elsewhere` scaffolded outside
+  // the working directory.
+  if (cliProvidedName) {
+    const nameProblem = validateAppName(cliProvidedName);
+    if (nameProblem) {
+      logger.error(nameProblem);
+      process.exit(1);
+    }
+  }
   const opts = program.opts();
 
   // Disable debug logging
@@ -116,7 +127,16 @@ export const runCli = async (): Promise<CliResults> => {
   // Handle CI mode
   if (cliResults.flags!.CI) {
     // In CI mode, use provided options or defaults
-    cliResults.template = (opts.template as OpenfortTemplate) || "openfort-ui";
+    // `--template` joins into a filesystem path, so an unlisted value such as
+    // `../../src` would copy whatever sits there into the new project.
+    const requestedTemplate = (opts.template as string) || "openfort-ui";
+    if (!availableTemplates.includes(requestedTemplate as OpenfortTemplate)) {
+      logger.error(
+        `Unknown template "${requestedTemplate}". Available: ${availableTemplates.join(", ")}.`,
+      );
+      process.exit(1);
+    }
+    cliResults.template = requestedTemplate as OpenfortTemplate;
     cliResults.theme = opts.theme as OpenfortTheme;
     cliResults.createBackend = false;
 

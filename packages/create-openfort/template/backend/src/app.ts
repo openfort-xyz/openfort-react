@@ -12,7 +12,10 @@ app.use(express.json());
 // Only your own front-end may call this server. Without an explicit origin an
 // open `cors()` lets any page on the internet mint encryption sessions from a
 // visitor's browser.
-const allowedOrigins = (process.env.ALLOWED_ORIGINS ?? 'http://localhost:5173')
+// `||`, not `??`: an ALLOWED_ORIGINS set to an empty string is what a `.env`
+// copied from the example and then blanked looks like, and `??` passes that
+// through — leaving the allowlist empty so the server blocks its own front end.
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);

@@ -7,7 +7,10 @@ import { createProject } from "~/helpers/createProject.js";
 import { initializeGit } from "~/helpers/git.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { logger } from "~/utils/logger.js";
-import { assertSupportedNode } from "~/utils/nodeVersion.js";
+import {
+  assertSupportedNode,
+  UnsupportedNodeError,
+} from "~/utils/nodeVersion.js";
 import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
 import { renderTitle } from "~/utils/renderTitle.js";
 import { getVersion } from "./utils/getVersion.js";
@@ -116,13 +119,16 @@ main().catch((err) => {
     );
   }
 
-  // Send error telemetry
-  telemetry.send({
-    status: "error",
-    properties: {
-      error: err instanceof Error ? err.message : String(err),
-    },
-  });
+  // An unsupported-runtime abort reports nothing: the version check runs first
+  // so that this path touches neither the network nor the filesystem.
+  if (!(err instanceof UnsupportedNodeError)) {
+    telemetry.send({
+      status: "error",
+      properties: {
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
+  }
 
   process.exit(1);
 });
