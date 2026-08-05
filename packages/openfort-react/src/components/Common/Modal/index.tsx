@@ -197,7 +197,11 @@ const Modal: React.FC<ModalProps> = ({
   const rendered = state === 'preEnter' || state !== 'exiting'
 
   const route = context.route.route
-  const currentDepth = route === routes.PROVIDERS ? 0 : route === routes.DOWNLOAD ? 2 : 1
+  // Depth = position in the route-history stack, so forward navigation plays the
+  // push pair (incoming rises from 0.85) and back plays the pop pair (outgoing
+  // grows to 1.1). The old hardcoded table put every page below PROVIDERS at the
+  // same depth, which made every forward step play the backwards animation.
+  const currentDepth = context.routeHistory.length
   const prevDepth = usePrevious(currentDepth, currentDepth)
   // useEffect(() => {
   //   console.log('route changed!', { currentDepth, prevDepth, state, pageId, route: route })

@@ -216,8 +216,12 @@ export const BackgroundOverlay = styled(motion.div)<{
   right: 0;
   bottom: 0;
   background: var(--ck-overlay-background, rgba(71, 88, 107, 0.24));
-  backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, blur(2px))')};
-  -webkit-backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, blur(2px))')};
+  /* No blur by default (upstream parity): a full-viewport backdrop-filter forces
+     Safari to re-composite the blurred backdrop on every frame of any animation
+     above it, which starves the page cross-fade of frames. Opt in via the blur
+     prop or --ck-overlay-backdrop-filter. */
+  backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, none)')};
+  -webkit-backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, none)')};
   opacity: 0;
   animation: ${(props) => (props.$active ? FadeIn : FadeOut)} 150ms ease-out
     both;
@@ -359,7 +363,13 @@ export const PageContainer = styled(motion.div)`
   justify-content: center;
   align-items: center;
   transform-origin: center center;
-  animation: 200ms var(--ck-ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both;
+  /* Keep the enter/exit keyframes (opacity+transform only) on the compositor:
+     mounting the incoming page stalls the main thread right as the cross-fade
+     starts, and without a layer Safari paints the whole animation as a single
+     snapped frame. Upstream's plain ease also spreads the motion through the
+     middle of the run, so it survives a slow first frame better than ease-out. */
+  will-change: transform, opacity;
+  animation: 200ms ease both;
 
   &.active {
     animation-name: ${FadeInScaleDown};
