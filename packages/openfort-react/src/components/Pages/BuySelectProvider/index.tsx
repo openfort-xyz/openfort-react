@@ -12,6 +12,7 @@ import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
+import { reserveBuyPopup } from '../Buy/buyPopup'
 import { isCoinbaseSupported } from '../Buy/coinbaseApi'
 import type { OnrampQuote } from '../Buy/onrampApi'
 import { getAllQuotes, resolveOnrampNetwork } from '../Buy/onrampApi'
@@ -174,6 +175,10 @@ const BuySelectProvider = () => {
   }
 
   const handleContinue = () => {
+    // Reserve the provider window here, inside the click handler, while the browser
+    // still treats this as user-activated. BuyProcessing navigates it once the onramp
+    // session resolves — by then the activation has expired and window.open is blocked.
+    reserveBuyPopup()
     setRoute(routes.BUY_PROCESSING)
   }
 
