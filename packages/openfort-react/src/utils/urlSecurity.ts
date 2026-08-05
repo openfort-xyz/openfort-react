@@ -53,18 +53,64 @@ export function suppressReferrer(): () => void {
 }
 
 /**
+ * Every parameter an auth callback can carry, stripped from the address bar
+ * once it has been read.
+ *
+ * One list, because two call sites strip these and the copy that omitted
+ * `refresh_token` left it sitting in the URL, the session history and the next
+ * request's `Referer`. Anything the callback can carry belongs here, whether or
+ * not the stripping site happens to read it.
+ */
+export const CALLBACK_URL_PARAMS = [
+  'openfortAuthProvider',
+  'openfortAuthProviderUI',
+  'openfortEmailVerificationUI',
+  'openfortForgotPasswordUI',
+  'access_token',
+  'refresh_token',
+  'user_id',
+  'player_id',
+  'state',
+  'email',
+  'error',
+] as const
+
+/** Removes every callback parameter from `url`, in place. */
+export function stripCallbackParams(url: URL): void {
+  for (const key of CALLBACK_URL_PARAMS) url.searchParams.delete(key)
+}
+
+/**
  * Parses callback URLs that contain a second query delimiter, such as
  * `https://example.com/callback?existing=1?access_token=xxx&user_id=yyy`.
+ *
+ * Only the part before the fragment is repaired. A hash router puts its own
+ * `?` inside the fragment (`#/dashboard?tab=1`), and rewriting that one to `&`
+ * corrupts the host application's route — which then gets written back to the
+ * address bar by the `replaceState` that follows.
  */
 export function parseCallbackUrl(href: string): URL {
-  const firstQ = href.indexOf('?')
+  const hashAt = href.indexOf('#')
+  const beforeFragment = hashAt === -1 ? href : href.slice(0, hashAt)
+  const fragment = hashAt === -1 ? '' : href.slice(hashAt)
+
+  const firstQ = beforeFragment.indexOf('?')
   if (firstQ === -1) return new URL(href)
 
-  const secondQ = href.indexOf('?', firstQ + 1)
+  const secondQ = beforeFragment.indexOf('?', firstQ + 1)
   if (secondQ === -1) return new URL(href)
 
-  const fixed = `${href.slice(0, secondQ)}&${href.slice(secondQ + 1)}`
+  const fixed = `${beforeFragment.slice(0, secondQ)}&${beforeFragment.slice(secondQ + 1)}${fragment}`
   return new URL(fixed)
+}
+
+/** True when `value` parses as an https URL, so it is safe to put in an `href`. */
+export function isHttpsUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 /**

@@ -1,76 +1,18 @@
+import { isSensitiveKey, REDACTED, redactSensitiveText } from './redact.js'
+
 const PREFIX = '[Openfort-React]'
-const REDACTED = '[REDACTED]'
 const TRUNCATED = '[TRUNCATED]'
 const UNSERIALIZABLE = '[UNSERIALIZABLE]'
 const FUNCTION = '[FUNCTION]'
+const ACCESSOR = '[ACCESSOR]'
 const MAX_DEPTH = 12
 
-const SENSITIVE_KEYS = new Set([
-  'authorization',
-  'proxyauthorization',
-  'cookie',
-  'setcookie',
-  'token',
-  'accesstoken',
-  'refreshtoken',
-  'idtoken',
-  'password',
-  'recoverypassword',
-  'encryptionsession',
-  'recoveryshare',
-  'shieldencryptionkey',
-  'passkeykey',
-  'privatekey',
-  'secretkey',
-  'encryptionkey',
-  'passkeyderivedkey',
-  'clientsecret',
-  'apikey',
-])
-
-const normalizedKey = (key: string) => key.toLowerCase().replaceAll(/[^a-z0-9]/g, '')
-
-const isSensitiveKey = (key: unknown): key is string =>
-  typeof key === 'string' && SENSITIVE_KEYS.has(normalizedKey(key))
-
-const SERIALIZED_SENSITIVE_VALUE =
-  /((?:["']?)(?:(?:access|refresh|id)[_-]?token|token|private[_-]?key|client[_-]?secret|api[_-]?key|encryption[_-]?session|recovery[_-]?share|shield[_-]?encryption[_-]?key|passkey[_-]?(?:derived[_-]?)?key|password|recovery[_-]?password|encryption[_-]?key|secret[_-]?key)(?:["']?)\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,;)\]}&]+)/gi
-
 /**
- * Matches a header name and its value in serialized text. The key may be quoted
- * — `toError` JSON-stringifies non-Error rejections, so these most often arrive
- * as `"set-cookie":"…"` rather than the bare `Set-Cookie: …` header form.
+ * Rebuilds `value` with every credential removed, so nothing reaches the
+ * console that the redaction rules would have caught in a string.
  */
-const SERIALIZED_AUTH_HEADER =
-  /((?:["']?)(?:set[_-]?cookie|(?:proxy[_-]?)?authorization|cookie)(?:["']?)\s*[:=]\s*)("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\r\n)\]}]+)/gi
-const NETWORK_URL = /\b(?:https?|wss?):\/\/[^\s,;)}"']+/gi
-
-function sanitizeUrl(value: string): string {
-  try {
-    const url = new URL(value)
-    const hasSensitiveLocation =
-      url.username !== '' || url.password !== '' || url.pathname !== '/' || url.search !== '' || url.hash !== ''
-    return hasSensitiveLocation ? `${url.origin}/${REDACTED}` : url.origin
-  } catch {
-    return REDACTED
-  }
-}
-
-/** Replaces the value that follows a matched key, keeping the quoting it arrived with. */
-function redactCredentialAfterPrefix(_match: string, prefix: string, credential: string): string {
-  const quote = credential.startsWith('"') ? '"' : credential.startsWith("'") ? "'" : ''
-  return `${prefix}${quote}${REDACTED}${quote}`
-}
-
-const sanitizeString = (value: string) =>
-  value
-    .replaceAll(NETWORK_URL, (url: string) => sanitizeUrl(url))
-    .replaceAll(/\bBearer\s+[^\s,;)\]}"']+/gi, 'Bearer [REDACTED]')
-    .replaceAll(SERIALIZED_AUTH_HEADER, redactCredentialAfterPrefix)
-    .replaceAll(SERIALIZED_SENSITIVE_VALUE, redactCredentialAfterPrefix)
-
 function sanitizeForLogging(value: unknown, seen = new WeakMap<object, unknown>(), depth = 0): unknown {
-  if (typeof value === 'string') return sanitizeString(value)
+  if (typeof value === 'string') return redactSensitiveText(value)
   if (typeof value === 'function') return FUNCTION
   if (value === null || typeof value !== 'object') return value
   if (depth >= MAX_DEPTH) return TRUNCATED
@@ -109,7 +51,32 @@ function sanitizeForLogging(value: unknown, seen = new WeakMap<object, unknown>(
   const sanitized: Record<PropertyKey, unknown> | Error = value instanceof Error ? new Error() : {}
   seen.set(value, sanitized)
 
+  // `name`, `message` and `stack` are how a console renders an error and how a
+  // reporter groups it. V8 exposes `stack` as an own accessor, so the generic
+  // branch below would replace it with a placeholder and leave the error
+  // unreadable. Reading the property invokes that accessor deliberately — safe
+  // on a real Error, and guarded for a subclass that swaps in a thrower.
+  if (value instanceof Error) {
+    for (const key of ['name', 'message', 'stack'] as const) {
+      try {
+        const text = value[key]
+        if (typeof text === 'string') {
+          Object.defineProperty(sanitized, key, {
+            configurable: true,
+            enumerable: false,
+            writable: true,
+            value: redactSensitiveText(text),
+          })
+        }
+      } catch {
+        // A getter that throws tells us nothing; leave the Error's own default.
+      }
+    }
+  }
+
   for (const key of Reflect.ownKeys(value)) {
+    if (value instanceof Error && (key === 'name' || key === 'message' || key === 'stack')) continue
+
     const descriptor = Object.getOwnPropertyDescriptor(value, key)
     if (!descriptor) continue
 
@@ -117,7 +84,7 @@ function sanitizeForLogging(value: unknown, seen = new WeakMap<object, unknown>(
       ? REDACTED
       : 'value' in descriptor
         ? sanitizeForLogging(descriptor.value, seen, depth + 1)
-        : '[ACCESSOR]'
+        : ACCESSOR
 
     Object.defineProperty(sanitized, key, {
       configurable: true,

@@ -84,7 +84,7 @@ const explorerRegistry: Record<ChainTypeEnum, ExplorerUrlBuilder> = {
   },
   [ChainTypeEnum.SVM]: (options) => {
     if (!options.cluster) {
-      logger.warn('No cluster provided; defaulting to the Solana mainnet explorer.')
+      warnOnceForExplorer('solana-cluster-missing', 'No cluster provided; defaulting to the Solana mainnet explorer.')
       return appendPath(SOLANA_EXPLORER_BASE, options)
     }
     const clusterParam =

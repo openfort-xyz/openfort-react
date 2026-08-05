@@ -345,12 +345,13 @@ const PROVIDER_ERROR_CODES = new Map<number, TransactionErrorDetails>([
 /**
  * Codes that carry no classification of their own.
  *
- * openfort-js wraps every unrecognised provider failure as `-32603`, putting the
- * real reason in the message instead. Consulting these before the text rules
- * would report "Network error" for an out-of-gas wallet, so they are only used
- * once nothing more specific has matched.
+ * openfort-js wraps every unrecognised provider failure as `-32603`, and nodes
+ * reuse `-32000` as a generic server error, both putting the real reason in the
+ * message instead. Consulting these before the text rules would report "Network
+ * error" for an out-of-gas wallet, so they are only used once nothing more
+ * specific has matched.
  */
-const AMBIGUOUS_PROVIDER_CODES: ReadonlySet<number> = new Set([-32603])
+const AMBIGUOUS_PROVIDER_CODES: ReadonlySet<number> = new Set([-32603, -32000])
 
 /**
  * Phrases matched on text because no class or code reaches this function for them.
@@ -382,33 +383,94 @@ const TEXT_RULES: readonly { pattern: RegExp; details: TransactionErrorDetails }
     },
   },
   {
-    pattern: /execution reverted|reverted with reason|transfer amount exceeds/i,
+    pattern: /execution reverted|transaction reverted|reverted with reason|transfer amount exceeds/i,
     details: {
       title: 'Transaction failed',
       message: 'The transaction was rejected by the contract.',
       action: 'Check the transaction details and try again.',
     },
   },
+  {
+    pattern: /nonce too low|nonce conflict|transaction with this nonce|already known/i,
+    details: {
+      title: 'Transaction pending',
+      message: 'An earlier transaction from this wallet has not confirmed yet.',
+      action: 'Wait for it to confirm, then try again.',
+    },
+  },
+  {
+    pattern: /replacement transaction underpriced|fee too low|max fee per gas less than block/i,
+    details: {
+      title: 'Gas fee too low',
+      message: 'The gas fee is below what the network is currently accepting.',
+      action: 'Try again to price the transaction at the current rate.',
+    },
+  },
+  {
+    pattern: /ran out of gas|out of gas|gas required exceeds|intrinsic gas too low/i,
+    details: {
+      title: 'Gas limit error',
+      message: 'The transaction needs more gas than its limit allowed.',
+      action: 'Try again, or reduce what the transaction does.',
+    },
+  },
 ]
 
-/** Reads the EIP-1193 error code off `error` or the first cause that carries one. */
+/**
+ * Reads the most specific EIP-1193 code carried by `error` or anything nested
+ * under its `cause` or `data`.
+ *
+ * A wrapper's own code is usually the vaguest one present: openfort-js stamps
+ * `-32603` on the outside while the wallet's real `4001` sits in the cause, and
+ * MetaMask nests the revert code under `data`. Returning the first code found
+ * would surface the wrapper every time, so an ambiguous code is only used when
+ * the whole chain offers nothing better.
+ */
 function providerErrorCode(error: unknown): number | undefined {
-  let current: unknown = error
-  for (let depth = 0; current != null && depth < 10; depth++) {
+  const queue: unknown[] = [error]
+  const seen = new Set<unknown>()
+  let ambiguous: number | undefined
+
+  while (queue.length > 0 && seen.size < 20) {
+    const current = queue.shift()
+    if (current == null || typeof current !== 'object' || seen.has(current)) continue
+    seen.add(current)
+
     const code = (current as { code?: unknown }).code
-    if (typeof code === 'number' && PROVIDER_ERROR_CODES.has(code)) return code
-    current = (current as { cause?: unknown }).cause
+    if (typeof code === 'number' && PROVIDER_ERROR_CODES.has(code)) {
+      if (!AMBIGUOUS_PROVIDER_CODES.has(code)) return code
+      ambiguous ??= code
+    }
+
+    queue.push((current as { cause?: unknown }).cause, (current as { data?: unknown }).data)
   }
-  return undefined
+
+  return ambiguous
 }
 
-/** True when `error` or any of its causes has a message matching `pattern`. */
+/**
+ * True when `error`, or anything nested under its `cause` or `data`, carries a
+ * message matching `pattern`.
+ *
+ * A JSON-RPC failure often arrives as a plain object rather than an `Error`, so
+ * matching only `Error` instances would skip the very payloads these rules
+ * exist to classify.
+ */
 function messageMatches(error: unknown, pattern: RegExp): boolean {
-  let current: unknown = error
-  for (let depth = 0; current != null && depth < 10; depth++) {
-    if (current instanceof Error && pattern.test(current.message)) return true
-    current = (current as { cause?: unknown }).cause
+  const queue: unknown[] = [error]
+  const seen = new Set<unknown>()
+
+  while (queue.length > 0 && seen.size < 20) {
+    const current = queue.shift()
+    if (current == null || typeof current !== 'object' || seen.has(current)) continue
+    seen.add(current)
+
+    const message = (current as { message?: unknown }).message
+    if (typeof message === 'string' && pattern.test(message)) return true
+
+    queue.push((current as { cause?: unknown }).cause, (current as { data?: unknown }).data)
   }
+
   return false
 }
 
