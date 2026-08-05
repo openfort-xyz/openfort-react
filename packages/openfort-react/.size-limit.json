@@ -105,5 +105,26 @@
       "viem",
       "wagmi"
     ]
+  },
+  {
+    "name": "@openfort/react (single named import \u2014 tree-shaking ratchet)",
+    "path": "build/index.js",
+    "import": "{ formatAddress }",
+    "limit": "245 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
   }
 ]

@@ -19,7 +19,7 @@ const EVM_LIVE_SPECS = ['evm-integration.spec.ts']
 const EVM_REFRESH_SPECS = ['refresh-persistence.spec.ts']
 const SOLANA_LIVE_SPECS = ['wallets-create-new.spec.ts']
 const UNAUTHENTICATED_SPECS = ['auth.spec.ts']
-const SMOKE_SPECS = ['offline.smoke.spec.ts', 'offline.security.spec.ts']
+const SMOKE_SPECS = ['offline.smoke.spec.ts', 'offline.security.spec.ts', 'offline.review.spec.ts']
 const IS_SMOKE_RUN = process.env.PLAYGROUND_SMOKE === '1'
 
 /** Fail configuration loading when a suite can silently fall outside every project. */
