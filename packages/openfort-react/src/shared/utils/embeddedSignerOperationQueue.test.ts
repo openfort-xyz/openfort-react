@@ -186,3 +186,55 @@ it('lets a running operation guard its synchronous commit after awaited work', a
 it('does not classify ordinary wallet connection failures as queue invalidation', () => {
   expect(isEmbeddedSignerOperationInvalidationError(new WalletNotConnectedError())).toBe(false)
 })
+
+it('releases the auth-transition barrier even when the transition never settles', async () => {
+  vi.useFakeTimers()
+  try {
+    const client = {} as never
+    // A wallet prompt the user simply walks away from.
+    holdEmbeddedSignerOperationsDuringAuthTransition(client, new Promise(() => {}))
+
+    let settled = false
+    const queued = runEmbeddedSignerOperation(client, async () => 'done').then(
+      (value) => {
+        settled = true
+        return value
+      },
+      () => {
+        settled = true
+      }
+    )
+
+    await vi.advanceTimersByTimeAsync(10 * 60_000)
+    await queued
+
+    expect(settled).toBe(true)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+it('stops a timed-out operation publishing after the queue has moved on', async () => {
+  vi.useFakeTimers()
+  try {
+    const client = {} as never
+    let captured: { assertCurrent: () => void } | undefined
+
+    const abandoned = runEmbeddedSignerOperation(client, async (context) => {
+      captured = context
+      // Never settles: the bound fires and the queue advances without it.
+      await new Promise(() => {})
+      return 'never'
+    })
+    const rejection = abandoned.catch((error: unknown) => error)
+
+    await vi.advanceTimersByTimeAsync(6 * 60_000)
+    await rejection
+
+    // The work is still running and still holds its context. It must not be
+    // able to convince itself it is the current operation.
+    expect(() => captured?.assertCurrent()).toThrow(WalletNotConnectedError)
+  } finally {
+    vi.useRealTimers()
+  }
+})

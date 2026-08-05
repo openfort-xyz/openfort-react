@@ -14,11 +14,15 @@ class EmbeddedSignerOperationTimeoutError extends WalletNotConnectedError {}
  * Upper bound on a single queued operation.
  *
  * The queue is strictly serial, so an operation that never settles would
- * otherwise hold every later one for the lifetime of the page. This sits above
- * openfort-js's own 90s iframe timeouts so a signer request reports its real
- * error rather than being pre-empted here.
+ * otherwise hold every later one for the lifetime of the page.
+ *
+ * Sized above the slowest real operation rather than the iframe's own limits: a
+ * sponsored send chains a 30s intent, a 90s signature and a 120s on-chain
+ * confirmation, and a recovery change can drive two WebAuthn ceremonies a human
+ * has to answer. A bound under that turns a slow success into a spurious
+ * failure, which is worse than waiting.
  */
-const OPERATION_TIMEOUT_MS = 120_000
+const OPERATION_TIMEOUT_MS = 300_000
 
 /** Identifies the bounded-wait failure so callers can offer a retry. */
 export function isEmbeddedSignerOperationTimeoutError(error: unknown): error is EmbeddedSignerOperationTimeoutError {
@@ -80,7 +84,15 @@ export function isEmbeddedSignerOperationInvalidationError(
   return error instanceof EmbeddedSignerOperationInvalidatedError
 }
 
-/** Prevents signer operations reserved in the current session from starting. */
+/**
+ * Prevents signer operations reserved in the current session from starting.
+ *
+ * Deliberately leaves the publication generation alone. The publication token
+ * gates the caller's own `onError` as well as state writes, so retiring it here
+ * would swallow the invalidation error the operation still owes whoever started
+ * it. Keeping a stale success out of a later session is the state layer's job,
+ * not the queue's.
+ */
 export function invalidateEmbeddedSignerOperations(client: Openfort): void {
   operationGenerations.set(client, (operationGenerations.get(client) ?? 0) + 1)
 }
@@ -103,10 +115,23 @@ export function holdEmbeddedSignerOperationsDuringAuthTransition(client: Openfor
     () => invalidateEmbeddedSignerOperations(client),
     () => invalidateEmbeddedSignerOperations(client)
   )
-  void Promise.all([previous, transitionSettled]).then(() => {
-    release()
-    if (operationTails.get(client) === reservedTail) operationTails.delete(client)
-  })
+
+  // Bounded like any other queued work. The transition is often a wallet prompt
+  // the user can simply walk away from, and an unbounded barrier would hold
+  // every later signer operation for the lifetime of the page — the exact wedge
+  // the queue exists to prevent.
+  void withOperationTimeout(Promise.all([previous, transitionSettled]))
+    .catch(() => {
+      // The barrier gave up while the transition is still running. Work queued
+      // behind it captured the generation from *after* the hold, so releasing
+      // alone would let it run — and publish — alongside a live credential
+      // change. Bump again so those reservations are invalid too.
+      invalidateEmbeddedSignerOperations(client)
+    })
+    .then(() => {
+      release()
+      if (operationTails.get(client) === reservedTail) operationTails.delete(client)
+    })
 }
 
 /**
@@ -131,11 +156,27 @@ export function runEmbeddedSignerOperation<T>(
 
   const result = (previous ?? Promise.resolve()).then(async () => {
     assertOperationGeneration(client, generation, 'The wallet session changed before the operation could run.')
-    const context = captureEmbeddedSignerSession(client)
+
+    // A timeout releases the queue slot but cannot cancel the work already in
+    // flight. Without this flag the abandoned operation keeps a context whose
+    // generation is unchanged, so it passes `assertCurrent()` and can still
+    // write state — behind whichever operation the queue has since started.
+    let abandoned = false
+    const session = captureEmbeddedSignerSession(client)
+    const context: EmbeddedSignerOperationContext = {
+      assertCurrent: () => {
+        if (abandoned) {
+          throw new EmbeddedSignerOperationTimeoutError('The wallet operation did not complete in time. Try again.')
+        }
+        session.assertCurrent()
+      },
+    }
+
     let value: T
     try {
       value = await withOperationTimeout(operation(context))
     } catch (error) {
+      if (isEmbeddedSignerOperationTimeoutError(error)) abandoned = true
       // A session change explains the failure, but it does not replace it —
       // keep the original as the cause so the caller can still see why.
       if (!isEmbeddedSignerOperationTimeoutError(error) && (operationGenerations.get(client) ?? 0) !== generation) {

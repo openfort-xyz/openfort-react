@@ -103,7 +103,11 @@ describe('embedded permission signer serialization', () => {
 
     act(() => {
       permissionRequest = result.current.grantPermissions({
-        request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+        request: {
+          permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+          expiry: 1,
+          signer: { type: 'account' },
+        } as never,
       })
     })
 
@@ -148,7 +152,11 @@ describe('embedded permission signer serialization', () => {
     })
     const { result } = renderHook(() => useGrantPermissions())
     const permissionRequest = result.current.grantPermissions({
-      request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+      request: {
+        permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+        expiry: 1,
+        signer: { type: 'account' },
+      } as never,
     })
     await vi.waitFor(() => expect(providerRequest).toHaveBeenCalledWith({ method: 'eth_accounts' }))
 
@@ -189,7 +197,11 @@ describe('embedded permission signer serialization', () => {
 
     act(() => {
       permissionRequest = result.current.grantPermissions({
-        request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+        request: {
+          permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+          expiry: 1,
+          signer: { type: 'account' },
+        } as never,
       })
     })
 
@@ -239,7 +251,11 @@ describe('embedded permission signer serialization', () => {
 
     act(() => {
       permissionRequest = result.current.grantPermissions({
-        request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+        request: {
+          permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+          expiry: 1,
+          signer: { type: 'account' },
+        } as never,
       })
     })
 
@@ -269,7 +285,11 @@ describe('embedded permission signer serialization', () => {
 
     act(() => {
       permissionRequest = result.current.grantPermissions({
-        request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+        request: {
+          permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+          expiry: 1,
+          signer: { type: 'account' },
+        } as never,
       })
     })
 
@@ -299,7 +319,11 @@ describe('embedded permission signer serialization', () => {
 
     act(() => {
       permissionRequest = result.current.grantPermissions({
-        request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+        request: {
+          permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+          expiry: 1,
+          signer: { type: 'account' },
+        } as never,
       })
     })
 
@@ -326,7 +350,11 @@ describe('embedded permission signer serialization', () => {
     const blocker = runEmbeddedSignerOperation(client as never, () => gate.promise)
 
     const permissionRequest = result.current.grantPermissions({
-      request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+      request: {
+        permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+        expiry: 1,
+        signer: { type: 'account' },
+      } as never,
     })
 
     await expect(permissionRequest).resolves.toMatchObject({
@@ -352,7 +380,11 @@ describe('embedded permission signer serialization', () => {
     const blocker = runEmbeddedSignerOperation(client as never, () => gate.promise)
 
     const permissionRequest = result.current.grantPermissions({
-      request: { permissions: [], expiry: 1, signer: { type: 'account' } } as never,
+      request: {
+        permissions: [{ type: 'contract-call', data: { address: '0x1' } }],
+        expiry: 1,
+        signer: { type: 'account' },
+      } as never,
     })
 
     await expect(permissionRequest).resolves.toMatchObject({
