@@ -1,8 +1,8 @@
 import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import * as p from "@clack/prompts";
-import fs from "fs-extra";
 import { afterEach, describe, expect, test, vi } from "vitest";
 
 import { initializeGit } from "~/helpers/git.js";
@@ -22,28 +22,28 @@ const temporaryDirectories: string[] = [];
 afterEach(() => {
   vi.restoreAllMocks();
   for (const directory of temporaryDirectories.splice(0)) {
-    fs.removeSync(directory);
+    rmSync(directory, { recursive: true, force: true });
   }
 });
 
 describe("initializeGit", () => {
   test("preserves an existing repository when confirmation is cancelled", async () => {
-    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
+    const projectDir = mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
     temporaryDirectories.push(projectDir);
     execFileSync("git", ["init"], { cwd: projectDir });
     const sentinel = path.join(projectDir, ".git", "openfort-sentinel");
-    fs.writeFileSync(sentinel, "preserve me");
+    writeFileSync(sentinel, "preserve me");
     vi.mocked(p.confirm).mockResolvedValue(Symbol("cancel"));
 
     await initializeGit(projectDir);
 
-    expect(fs.readFileSync(sentinel, "utf8")).toBe("preserve me");
+    expect(readFileSync(sentinel, "utf8")).toBe("preserve me");
   });
 
   test("refuses to stage an unignored environment variant", async () => {
-    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
+    const projectDir = mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
     temporaryDirectories.push(projectDir);
-    fs.writeFileSync(path.join(projectDir, ".env.production"), "SECRET=fake");
+    writeFileSync(path.join(projectDir, ".env.production"), "SECRET=fake");
 
     await expect(initializeGit(projectDir)).rejects.toThrow(
       "Refusing to stage generated credentials",
@@ -51,14 +51,14 @@ describe("initializeGit", () => {
   });
 
   test("stages a scaffold when environment variants are ignored and the example is retained", async () => {
-    const projectDir = fs.mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
+    const projectDir = mkdtempSync(path.join(os.tmpdir(), "openfort-git-"));
     temporaryDirectories.push(projectDir);
-    fs.writeFileSync(
+    writeFileSync(
       path.join(projectDir, ".gitignore"),
       ".env*\n!.env.example\n",
     );
-    fs.writeFileSync(path.join(projectDir, ".env.production"), "SECRET=fake");
-    fs.writeFileSync(
+    writeFileSync(path.join(projectDir, ".env.production"), "SECRET=fake");
+    writeFileSync(
       path.join(projectDir, ".env.example"),
       "PUBLISHABLE_KEY=example",
     );

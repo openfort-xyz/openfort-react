@@ -1,6 +1,6 @@
 #!/usr/bin/env node
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import fs from "fs-extra";
 import type { PackageJson } from "type-fest";
 import { runCli } from "~/cli/index.js";
 import { createProject } from "~/helpers/createProject.js";
@@ -80,17 +80,17 @@ const main = async () => {
     ? path.join(projectDir, "frontend", "package.json")
     : path.join(projectDir, "package.json");
 
-  if (fs.existsSync(pkgJsonPath)) {
-    const pkgJson = fs.readJSONSync(pkgJsonPath) as OpenfortPackageJSON;
+  if (existsSync(pkgJsonPath)) {
+    const pkgJson = JSON.parse(
+      readFileSync(pkgJsonPath, "utf8"),
+    ) as OpenfortPackageJSON;
     pkgJson.name = scopedAppName;
     pkgJson.openfortMetadata = {
       initVersion: getVersion(),
       template,
     };
 
-    fs.writeJSONSync(pkgJsonPath, pkgJson, {
-      spaces: 2,
-    });
+    writeFileSync(pkgJsonPath, `${JSON.stringify(pkgJson, null, 2)}\n`);
   }
 
   if (!noGit) {

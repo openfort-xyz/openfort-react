@@ -1,5 +1,11 @@
+import {
+  cpSync,
+  existsSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
-import fs from "fs-extra";
 import ora from "ora";
 
 import { PKG_ROOT } from "~/consts.js";
@@ -29,20 +35,18 @@ export const createBackend = async ({
     const backendDir = path.join(projectDir, "backend");
 
     // Copy backend template
-    fs.copySync(backendTemplateDir, backendDir);
+    cpSync(backendTemplateDir, backendDir, { recursive: true });
     const npmSafeGitignore = path.join(backendDir, "gitignore");
-    if (fs.existsSync(npmSafeGitignore)) {
-      fs.moveSync(npmSafeGitignore, path.join(backendDir, ".gitignore"), {
-        overwrite: true,
-      });
+    if (existsSync(npmSafeGitignore)) {
+      renameSync(npmSafeGitignore, path.join(backendDir, ".gitignore"));
     }
 
     // Read .env.example
     const envExamplePath = path.join(backendDir, ".env.example");
     const envPath = path.join(backendDir, ".env");
 
-    if (fs.existsSync(envExamplePath)) {
-      const envContent = fs.readFileSync(envExamplePath, "utf-8");
+    if (existsSync(envExamplePath)) {
+      const envContent = readFileSync(envExamplePath, "utf-8");
 
       // Replace environment variables
       const updatedEnvContent = envContent
@@ -64,7 +68,7 @@ export const createBackend = async ({
         )
         .replace(/PORT=.*/g, `PORT=${port}`);
 
-      fs.writeFileSync(envPath, updatedEnvContent);
+      writeFileSync(envPath, updatedEnvContent);
     }
 
     await new Promise((resolve) => setTimeout(resolve, 250)); // UX

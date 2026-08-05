@@ -1,9 +1,9 @@
 import { execSync } from "node:child_process";
+import { existsSync, readdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
 import { execa } from "execa";
-import fs from "fs-extra";
 import ora from "ora";
 
 import { logger } from "~/utils/logger.js";
@@ -19,7 +19,7 @@ const isGitInstalled = (dir: string): boolean => {
 
 /** @returns Whether or not the provided directory has a `.git` subdirectory in it. */
 export const isRootGitRepo = (dir: string): boolean => {
-  return fs.existsSync(path.join(dir, ".git"));
+  return existsSync(path.join(dir, ".git"));
 };
 
 /** @returns Whether or not this directory or a parent directory has a `.git` directory. */
@@ -88,7 +88,7 @@ export const initializeGit = async (projectDir: string) => {
       return;
     }
     // Deleting the .git folder
-    fs.removeSync(path.join(projectDir, ".git"));
+    rmSync(path.join(projectDir, ".git"), { recursive: true, force: true });
   } else if (isInside && !isRoot) {
     // Dir is inside a git worktree
     spinner.stop();
@@ -129,7 +129,7 @@ export const initializeGit = async (projectDir: string) => {
     }
     const secretFiles: string[] = [];
     const collectSecretFiles = (directory: string) => {
-      for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
+      for (const entry of readdirSync(directory, { withFileTypes: true })) {
         if (entry.name === ".git" || entry.name === "node_modules") continue;
         const absolutePath = path.join(directory, entry.name);
         if (entry.isDirectory()) {

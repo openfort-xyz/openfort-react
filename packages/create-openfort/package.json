@@ -54,13 +54,9 @@
     "chalk": "5.2.0",
     "commander": "^10.0.1",
     "execa": "^7.2.0",
-    "fs-extra": "^11.2.0",
-    "gradient-string": "^2.0.2",
     "ora": "6.3.1"
   },
   "devDependencies": {
-    "@types/fs-extra": "^11.0.4",
-    "@types/gradient-string": "^1.1.6",
     "@types/node": "^25.9.2",
     "tsup": "^8.3.5",
     "type-fest": "^3.13.1",
