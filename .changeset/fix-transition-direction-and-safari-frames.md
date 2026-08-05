@@ -1,0 +1,5 @@
+---
+"@openfort/react": patch
+---
+
+Fix modal page transitions playing the backwards animation on forward navigation. The transition direction is chosen from a route depth, but the depth table only knew about two routes, so nearly every forward step (wallet list → connecting, Connected → Add funds → Buy, Send) played the pop pair — the incoming page shrank down from 1.1× instead of rising from 0.85×. Depth now derives from the route-history stack: forward pushes play the push animation, back steps play the pop, including pages whose back buttons navigate directly instead of popping history. Also for Safari frame delivery: the modal overlay no longer applies a backdrop blur by default (upstream parity — a full-viewport backdrop-filter forces Safari to re-composite the backdrop on every animation frame; opt in via the `blur` prop or `--ck-overlay-backdrop-filter`), and the animating page container is promoted to a compositor layer with upstream's `ease` timing so the cross-fade keeps rendering while the incoming page mounts.

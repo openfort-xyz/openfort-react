@@ -197,7 +197,11 @@ const Modal: React.FC<ModalProps> = ({
   const rendered = state === 'preEnter' || state !== 'exiting'
 
   const route = context.route.route
-  const currentDepth = route === routes.PROVIDERS ? 0 : route === routes.DOWNLOAD ? 2 : 1
+  // Depth = position in the route-history stack, so forward navigation plays the
+  // push pair (incoming rises from 0.85) and back plays the pop pair (outgoing
+  // grows to 1.1). The old hardcoded table put every page below PROVIDERS at the
+  // same depth, which made every forward step play the backwards animation.
+  const currentDepth = context.routeHistory.length
   const prevDepth = usePrevious(currentDepth, currentDepth)
   // useEffect(() => {
   //   console.log('route changed!', { currentDepth, prevDepth, state, pageId, route: route })
@@ -209,7 +213,10 @@ const Modal: React.FC<ModalProps> = ({
 
   useEffect(() => {
     setOpen(open)
-    if (open) setInTransition(undefined)
+    if (open) {
+      setInTransition(undefined)
+      hasAttachedPageRef.current = false
+    }
   }, [open])
 
   const [dimensions, setDimensions] = useState<{
@@ -221,44 +228,48 @@ const Modal: React.FC<ModalProps> = ({
   })
   const [inTransition, setInTransition] = useState<boolean | undefined>(undefined)
 
-  // Calculate new content bounds
+  // Calculate new content bounds. Bail out (return the previous state object)
+  // when the size hasn't changed: this measure runs from ref attachment, a
+  // ResizeObserver, and several effects, and an unconditional fresh object
+  // would re-render the whole modal tree — every mounted page — each time.
   const updateBounds = (node: any) => {
-    const bounds = {
-      width: node?.offsetWidth,
-      height: node?.offsetHeight,
-    }
-    setDimensions({
-      width: `${bounds?.width}px`,
-      height: `${bounds?.height}px`,
-    })
+    const width = `${node?.offsetWidth}px`
+    const height = `${node?.offsetHeight}px`
+    setDimensions((prev) => (prev.width === width && prev.height === height ? prev : { width, height }))
   }
 
-  let blockTimeout: ReturnType<typeof setTimeout>
-  const contentRef = useCallback(
-    (node: any) => {
-      if (!node) return
-      ref.current = node
+  // Identity-stable page ref. If this callback were recreated per render (its
+  // old deps included the inTransition state it sets itself), React would
+  // detach/re-attach it on every mounted page after each state flip — each
+  // re-attach re-measuring, re-observing, and scheduling another 360ms
+  // inTransition(false) which recreated the callback again: a permanent
+  // 360ms re-render oscillation for as long as the modal stayed open.
+  const blockTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const hasAttachedPageRef = useRef(false)
+  const contentRef = useCallback((node: any) => {
+    if (!node) return
+    ref.current = node
 
-      // Avoid transition mixups
-      setInTransition(inTransition !== undefined)
-      clearTimeout(blockTimeout)
-      blockTimeout = setTimeout(() => setInTransition(false), 360)
+    // First page after open lands without a transition; later pages block
+    // interaction for the 360ms the cross-fade runs.
+    setInTransition(hasAttachedPageRef.current)
+    hasAttachedPageRef.current = true
+    clearTimeout(blockTimeoutRef.current)
+    blockTimeoutRef.current = setTimeout(() => setInTransition(false), 360)
 
-      // Calculate new content bounds
-      updateBounds(node)
+    // Calculate new content bounds
+    updateBounds(node)
 
-      // Auto-fit: re-measure whenever the active page's content size changes, so
-      // every page — and any new one — sizes the modal correctly without having
-      // to call triggerResize() itself.
-      resizeObserverRef.current?.disconnect()
-      const observer = new ResizeObserver(() => {
-        if (ref.current === node) updateBounds(node)
-      })
-      observer.observe(node)
-      resizeObserverRef.current = observer
-    },
-    [open, inTransition]
-  )
+    // Auto-fit: re-measure whenever the active page's content size changes, so
+    // every page — and any new one — sizes the modal correctly without having
+    // to call triggerResize() itself.
+    resizeObserverRef.current?.disconnect()
+    const observer = new ResizeObserver(() => {
+      if (ref.current === node) updateBounds(node)
+    })
+    observer.observe(node)
+    resizeObserverRef.current = observer
+  }, [])
 
   // Update layout on chain/network switch to avoid clipping
   const strategy = useConnectionStrategy()
@@ -511,7 +522,10 @@ const Modal: React.FC<ModalProps> = ({
                   >
                     <PageContents
                       key={`inner-${key}`}
-                      ref={contentRef}
+                      // Only the ACTIVE page drives the modal size. With the ref
+                      // on every mounted page, the exiting page attached last in
+                      // iteration order could overwrite the measured dimensions.
+                      ref={key === pageId ? contentRef : undefined}
                       style={{
                         pointerEvents: key === pageId && rendered ? 'auto' : 'none',
                       }}
