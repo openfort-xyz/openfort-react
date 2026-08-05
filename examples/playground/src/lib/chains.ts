@@ -21,10 +21,13 @@ const BASE_EVM_CHAINS: PlaygroundEvmChain[] = [
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
-    // polygon.technology's public Amoy endpoint went dark (empty replies) and the
-    // SDK's provider init retries detectNetwork against it forever, so the wallet
-    // never connects — publicnode matches the other chains' endpoints here.
-    rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com',
+    // Third Amoy endpoint in this slot: polygon.technology went dark (empty
+    // replies) and publicnode now answers 503 "no available nodes found for
+    // platform polygon-amoy-bor". The SDK's provider init retries detectNetwork
+    // forever against a dead endpoint, so the wallet never connects and every
+    // EVM live test times out. drpc is not a candidate — its free tier refuses
+    // `eth_blockNumber`.
+    rpcUrl: 'https://polygon-amoy.gateway.tenderly.co',
     explorerUrl: 'https://amoy.polygonscan.com',
     viemChain: polygonAmoy,
   },
