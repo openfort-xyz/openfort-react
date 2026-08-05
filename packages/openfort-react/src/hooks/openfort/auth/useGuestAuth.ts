@@ -51,6 +51,11 @@ type GuestHookOptions = OpenfortHookOptions<GuestHookResult> & CreateWalletPostA
 const DEFAULT_GUEST_HOOK_OPTIONS: GuestHookOptions = {}
 
 export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_OPTIONS) => {
+  // Held in a ref rather than a dependency: a consumer passing an inline
+  // options object would otherwise give every action a new identity on each
+  // render, so an effect depending on one would re-fire forever.
+  const hookOptionsRef = useRef(hookOptions)
+  hookOptionsRef.current = hookOptions
   const client = useOpenfortCore((s) => s.client)
   const { startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
@@ -101,8 +106,9 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_
 
         logger.log('Guest signup: calling tryUseWallet()')
         const { wallet } = await tryUseWallet({
-          logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
-          recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
+          logoutOnError: options.logoutOnError ?? hookOptionsRef.current.logoutOnError,
+          recoverWalletAutomatically:
+            options.recoverWalletAutomatically ?? hookOptionsRef.current.recoverWalletAutomatically,
         })
         if (settleStale()) return authTransitionSupersededResult()
 
@@ -117,7 +123,7 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_
 
         logger.log('Guest signup: success', wallet ? '(wallet created)' : '(no wallet)')
         return onSuccess({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           data: { user, wallet },
         })
@@ -132,13 +138,13 @@ export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error: openfortError,
         })
       }
     },
-    [client, startAuthTransition, updateUser, updateEmbeddedAccounts, tryUseWallet, hookOptions]
+    [client, startAuthTransition, updateUser, updateEmbeddedAccounts, tryUseWallet]
   )
 
   return {

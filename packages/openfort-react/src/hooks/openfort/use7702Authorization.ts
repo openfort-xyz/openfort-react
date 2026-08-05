@@ -5,7 +5,7 @@ import { type AuthorizationRequest, type Hex, parseSignature, type SignedAuthori
 import { hashAuthorization } from 'viem/utils'
 import { asOpenfortError, type OpenfortError } from '../../errors/base.js'
 import { ClientNotInitializedError } from '../../errors/config.js'
-import { MissingParameterError } from '../../errors/validation.js'
+import { MissingParameterError, ValidationError } from '../../errors/validation.js'
 import { WalletError, WalletNotConnectedError } from '../../errors/wallet.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { assertEmbeddedEthereumAccount } from '../../shared/utils/assertEmbeddedEthereumAccount.js'
@@ -53,6 +53,12 @@ type SignAuthorizationSuccess = Extract<SignAuthorizationResult, { status: 'succ
 export type SignAuthorizationOptions = OpenfortHookOptions<SignAuthorizationSuccess> & {
   hashMessage?: boolean
   arrayifyMessage?: boolean
+  /**
+   * Permits `chainId: 0`, which authorises the delegation on every EIP-7702
+   * chain and never expires. Off by default: it is signed once and cannot be
+   * narrowed afterwards.
+   */
+  allowAllChains?: boolean
 }
 
 /**
@@ -129,9 +135,28 @@ export function use7702Authorization(hookOptions: Use7702AuthorizationOptions = 
           throw new ClientNotInitializedError()
         }
 
-        const authorization = { ...parameters }
-        if (!authorization.contractAddress) {
+        // viem types the delegate as `OneOf<{ address } | { contractAddress }>`,
+        // and `signAuthorization(await prepareAuthorization(...))` — the canonical
+        // flow — produces `address`. Reading only one of the two type-checked and
+        // then threw at runtime.
+        const delegate = parameters.contractAddress ?? parameters.address
+        if (!delegate) {
           throw new MissingParameterError({ params: ['authorization.contractAddress'] })
+        }
+        const { address: _address, ...rest } = parameters as { address?: `0x${string}` }
+        const authorization = { ...rest, contractAddress: delegate } as Parameters<typeof hashAuthorization>[0]
+
+        // chainId 0 authorises the delegation on every chain, forever. It is a
+        // valid EIP-7702 value but almost never what an application means, so it
+        // has to be asked for rather than fallen into.
+        // `!chainId`, not `=== 0`: viem encodes an absent chainId exactly as it
+        // encodes 0, so a payload that simply omits it produces the same
+        // every-chain delegation this gate exists to refuse.
+        if (!authorization.chainId && !options.allowAllChains) {
+          throw new ValidationError('Refusing to sign an authorization valid on every chain.', {
+            details:
+              'chainId 0 makes this delegation replayable on any EIP-7702 chain. Pass a specific chainId, or set `allowAllChains` if that is genuinely intended.',
+          })
         }
 
         const hash = hashAuthorization(authorization)

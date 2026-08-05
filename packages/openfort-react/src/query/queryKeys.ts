@@ -146,6 +146,21 @@ type GasEstimateKeyParams = {
   rpcScope: QueryInputScope
 }
 
+/**
+ * Renders the transfer amount as a string.
+ *
+ * A query key ends up in whatever the host application does with its cache, and
+ * `OpenfortProvider` reuses the application's `QueryClient` when one is in
+ * scope. A raw `bigint` there makes `JSON.stringify` throw, so a consumer using
+ * `persistQueryClient` loses persistence for its own queries too.
+ */
+function sanitizeGasEstimateKeyParams(
+  params: GasEstimateKeyParams
+): Omit<GasEstimateKeyParams, 'value'> & { value?: string } {
+  const { value, ...safeParams } = params
+  return { ...safeParams, ...(value === undefined ? {} : { value: value.toString() }) }
+}
+
 function sanitizeFundingChainsKeyParams(params: FundingChainsKeyParams): Omit<FundingChainsKeyParams, 'baseUrl'> {
   const { baseUrl, ...safeParams } = params
   if (baseUrl === undefined || safeParams.baseScope !== undefined) return safeParams
@@ -187,7 +202,7 @@ export const openfortKeys = {
   solanaFee: (params?: SolanaFeeKeyParams) => [...openfortKeys.all, 'solanaFee', ...(params ? [params] : [])] as const,
 
   gasEstimate: (params?: GasEstimateKeyParams) =>
-    [...openfortKeys.all, 'gasEstimate', ...(params ? [params] : [])] as const,
+    [...openfortKeys.all, 'gasEstimate', ...(params ? [sanitizeGasEstimateKeyParams(params)] : [])] as const,
 
   identity: (params?: IdentityKeyParams) =>
     [...openfortKeys.all, 'identity', ...(params ? [sanitizeIdentityKeyParams(params)] : [])] as const,

@@ -165,7 +165,7 @@ describe('useAuthCallback credential cleanup', () => {
     expect(onError).toHaveBeenCalledOnce()
   })
 
-  it('signals success for a verification callback that carries no state and no error', () => {
+  it('reports a verification callback with no state as unconfirmed', () => {
     const onSuccess = vi.fn()
     window.history.replaceState({}, '', '/callback?openfortAuthProvider=email&email=user%40example.com')
 
@@ -174,7 +174,34 @@ describe('useAuthCallback credential cleanup', () => {
     expect(result.current.isSuccess).toBe(true)
     expect(result.current.email).toBe('user@example.com')
     expect(h.verifyEmail).not.toHaveBeenCalled()
-    expect(onSuccess).toHaveBeenCalledWith({ email: 'user@example.com', type: 'verifyEmail' })
+    // No token was exchanged, so anyone able to open the URL could reproduce
+    // this. The consumer has to be able to tell that apart from a real receipt.
+    expect(onSuccess).toHaveBeenCalledWith({ email: 'user@example.com', type: 'verifyEmail', confirmed: false })
+  })
+
+  it('reports a verification callback that carried a state token as confirmed', async () => {
+    const onSuccess = vi.fn()
+    const verification = deferred<unknown>()
+    h.verifyEmail.mockReturnValueOnce(verification.promise)
+    window.history.replaceState(
+      {},
+      '',
+      '/callback?openfortAuthProvider=email&state=verification-secret&email=user%40example.com'
+    )
+
+    renderHook(() => useAuthCallback({ onSuccess }))
+
+    // `verifyEmail` is mocked wholesale here, so it never runs the callbacks it
+    // is handed. Drive the one it was given to see what the consumer receives.
+    const passedOptions = h.verifyEmail.mock.calls[0]?.[0] as { onSuccess: (data: unknown) => void }
+    passedOptions.onSuccess({ email: 'user@example.com' })
+
+    expect(onSuccess).toHaveBeenCalledWith(expect.objectContaining({ type: 'verifyEmail', confirmed: true }))
+
+    await act(async () => {
+      verification.resolve({})
+      await verification.promise
+    })
   })
 
   it('removes an access token when the callback is missing its user id', async () => {

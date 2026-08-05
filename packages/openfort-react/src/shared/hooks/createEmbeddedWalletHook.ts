@@ -213,7 +213,14 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
     const setEmbeddedState = useOpenfortCore((s) => s.setEmbeddedState)
     const setWalletStatus = useOpenfortCore((s) => s.setWalletStatus)
     const { walletConfig } = useOpenfortConfig()
-    const ethereumRpcUrls = walletConfig?.ethereum?.rpcUrls
+    // Keyed on contents, not identity. `walletConfig` is a prop, and an inline
+    // object literal — what the shipped templates pass — has a new identity every
+    // render. It reaches `getProvider`, a dependency of the sync effect, so
+    // without this each parent render cancels the in-flight sync and restarts it.
+    const rawEthereumRpcUrls = walletConfig?.ethereum?.rpcUrls
+    const ethereumRpcUrlsKey = rawEthereumRpcUrls ? JSON.stringify(rawEthereumRpcUrls) : ''
+    // biome-ignore lint/correctness/useExhaustiveDependencies: the serialized key is the value identity
+    const ethereumRpcUrls = useMemo(() => rawEthereumRpcUrls, [ethereumRpcUrlsKey])
     const { chainType: routedChainType } = useOpenfortRouting()
 
     const { buildAccountRequest, resultProps } = useChainBindings(options)

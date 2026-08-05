@@ -37,6 +37,11 @@ type UseEmailOtpHookOptions = OpenfortHookOptions<EmailOtpAuthResult> & CreateWa
 const DEFAULT_EMAIL_OTP_HOOK_OPTIONS: UseEmailOtpHookOptions = {}
 
 export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EMAIL_OTP_HOOK_OPTIONS) => {
+  // Held in a ref rather than a dependency: a consumer passing an inline
+  // options object would otherwise give every action a new identity on each
+  // render, so an effect depending on one would re-fire forever.
+  const hookOptionsRef = useRef(hookOptions)
+  hookOptionsRef.current = hookOptions
   const client = useOpenfortCore((s) => s.client)
   const { startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
@@ -67,7 +72,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
             error,
           })
           return onError<EmailOtpAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -80,7 +85,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
             error,
           })
           return onError<EmailOtpAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -105,8 +110,9 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
         if (settleStale()) return authTransitionSupersededResult()
 
         const { wallet } = await tryUseWallet({
-          logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
-          recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
+          logoutOnError: options.logoutOnError ?? hookOptionsRef.current.logoutOnError,
+          recoverWalletAutomatically:
+            options.recoverWalletAutomatically ?? hookOptionsRef.current.recoverWalletAutomatically,
         })
         if (settleStale()) return authTransitionSupersededResult()
 
@@ -115,7 +121,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
         })
         return onSuccess<EmailOtpAuthResult>({
           data: { user, wallet },
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -128,13 +134,13 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, startAuthTransition, updateUser, hookOptions, tryUseWallet]
+    [client, startAuthTransition, updateUser, tryUseWallet]
   )
 
   const requestEmailOtp = useCallback(
@@ -151,7 +157,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
             error,
           })
           return onError<EmailOtpAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -164,7 +170,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
             error,
           })
           return onError<EmailOtpAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -179,7 +185,7 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
         })
         return onSuccess<EmailOtpAuthResult>({
           data: {},
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -191,13 +197,13 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = DEFAULT_EM
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, hookOptions]
+    [client]
   )
 
   return {

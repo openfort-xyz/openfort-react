@@ -36,6 +36,11 @@ type UsePhoneHookOptions = OpenfortHookOptions<PhoneAuthResult> & CreateWalletPo
 const DEFAULT_PHONE_OTP_HOOK_OPTIONS: UsePhoneHookOptions = {}
 
 export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE_OTP_HOOK_OPTIONS) => {
+  // Held in a ref rather than a dependency: a consumer passing an inline
+  // options object would otherwise give every action a new identity on each
+  // render, so an effect depending on one would re-fire forever.
+  const hookOptionsRef = useRef(hookOptions)
+  hookOptionsRef.current = hookOptions
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
@@ -66,7 +71,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
             error,
           })
           return onError<PhoneAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -91,8 +96,9 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         if (settleStale()) return authTransitionSupersededResult()
 
         const { wallet } = await tryUseWallet({
-          logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
-          recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
+          logoutOnError: options.logoutOnError ?? hookOptionsRef.current.logoutOnError,
+          recoverWalletAutomatically:
+            options.recoverWalletAutomatically ?? hookOptionsRef.current.recoverWalletAutomatically,
         })
         if (settleStale()) return authTransitionSupersededResult()
 
@@ -101,7 +107,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         })
         return onSuccess<PhoneAuthResult>({
           data: { user, wallet },
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -114,13 +120,13 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, startAuthTransition, updateUser, hookOptions, tryUseWallet]
+    [client, startAuthTransition, updateUser, tryUseWallet]
   )
 
   const requestPhoneOtp = useCallback(
@@ -137,7 +143,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
             error,
           })
           return onError<PhoneAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -152,7 +158,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         })
         return onSuccess<PhoneAuthResult>({
           data: {},
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -164,13 +170,13 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, hookOptions]
+    [client]
   )
 
   const linkPhoneOtp = useCallback(
@@ -188,7 +194,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
             error,
           })
           return onError<PhoneAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -223,7 +229,7 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
 
         return onSuccess<PhoneAuthResult>({
           data: { user },
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -236,13 +242,13 @@ export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [captureAuthSession, client, startAuthenticatedMutation, updateUser, hookOptions]
+    [captureAuthSession, client, startAuthenticatedMutation, updateUser]
   )
 
   return {

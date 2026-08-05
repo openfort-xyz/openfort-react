@@ -12,7 +12,12 @@ function useFocusTrap() {
 
   const handleFocus = useCallback((e: KeyboardEvent) => {
     if (!elRef.current) return
-    var focusableEls = elRef.current.querySelectorAll<HTMLElement>(`
+    // The outgoing page renders before the incoming one and is made inert while
+    // it animates out, so without the `[inert]` exclusion the first match is a
+    // control that cannot take focus: `.focus()` no-ops while `preventDefault()`
+    // still runs, and the Tab is swallowed.
+    var focusableEls = Array.from(
+        elRef.current.querySelectorAll<HTMLElement>(`
         a[href]:not(:disabled),
         button:not(:disabled),
         textarea:not(:disabled),
@@ -20,7 +25,8 @@ function useFocusTrap() {
         input[type="radio"]:not(:disabled),
         input[type="checkbox"]:not(:disabled),
         select:not(:disabled)
-      `),
+      `)
+      ).filter((el) => !el.closest('[inert]')),
       firstFocusableEl = focusableEls[0],
       lastFocusableEl = focusableEls[focusableEls.length - 1]
 

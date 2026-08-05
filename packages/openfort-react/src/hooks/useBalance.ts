@@ -124,7 +124,11 @@ export function useBalance(options: UseBalanceOptions): BalanceState {
     return { status: 'idle', refetch }
   }
 
-  if (error) {
+  // A failed background refetch must not discard a balance already known to be
+  // good. Reporting `error` over cached data blanks the figure and, worse,
+  // leaves callers computing an undefined balance — which is how the send
+  // screen stopped blocking an amount larger than the wallet holds.
+  if (error && !data) {
     return { status: 'error', error, refetch }
   }
 

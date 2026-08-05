@@ -13,7 +13,7 @@ const identity = (state: OpenfortCoreContextValue) => state
  * re-renders on every state change. Pass a selector to subscribe to one slice:
  *
  * ```tsx
- * const user = useOpenfortCore((s) => s.user)
+ * const user = useOpenfort((s) => s.user)
  * ```
  *
  * A selector returning a fresh object or tuple needs `useShallow` from

@@ -6,7 +6,7 @@ import { AuthenticationError } from '../../../errors/auth.js'
 import { type OpenfortError, toError } from '../../../errors/base.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
-import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity.js'
+import { parseCallbackUrl, stripCallbackParams, suppressReferrer } from '../../../utils/urlSecurity.js'
 import { notifyHookCallback } from '../hookConsistency.js'
 import type { CreateWalletPostAuthOptions } from './useConnectToWalletPostAuth.js'
 import { type EmailVerificationResult, useEmailAuth } from './useEmailAuth.js'
@@ -18,6 +18,16 @@ type CallbackResult =
     })
   | (EmailVerificationResult & {
       type: 'verifyEmail'
+      /**
+       * Whether the SDK confirmed the verification itself.
+       *
+       * `true` when the callback carried a `state` token the SDK exchanged.
+       * `false` when the link arrived with no token at all — the endpoint
+       * signals success by the *absence* of an `error` parameter, which anyone
+       * who can open a URL can reproduce. Re-check server-side before granting
+       * anything on the strength of a `false` result.
+       */
+      confirmed: boolean
     })
 
 type UseAuthCallbackOptions = {
@@ -25,16 +35,23 @@ type UseAuthCallbackOptions = {
 } & OpenfortHookOptions<CallbackResult> &
   CreateWalletPostAuthOptions
 
-/** Error codes the verification endpoint appends to the callback URL when it rejects a link. */
-const CALLBACK_ERROR_MESSAGES: Record<string, string> = {
-  TOKEN_EXPIRED: 'This verification link has expired. Request a new one.',
-  INVALID_TOKEN: 'This verification link is not valid. Request a new one.',
-  USER_NOT_FOUND: 'No account matches this verification link.',
-  INVALID_USER: 'This verification link belongs to a different account.',
-}
+/**
+ * Error codes the verification endpoint appends to the callback URL when it
+ * rejects a link.
+ *
+ * A `Map`, not an object literal: the code comes from the URL, so a lookup for
+ * `__proto__` on a plain object returns `Object.prototype` rather than falling
+ * through to the default message.
+ */
+const CALLBACK_ERROR_MESSAGES = new Map<string, string>([
+  ['TOKEN_EXPIRED', 'This verification link has expired. Request a new one.'],
+  ['INVALID_TOKEN', 'This verification link is not valid. Request a new one.'],
+  ['USER_NOT_FOUND', 'No account matches this verification link.'],
+  ['INVALID_USER', 'This verification link belongs to a different account.'],
+])
 
 function describeCallbackError(code: string): string {
-  return CALLBACK_ERROR_MESSAGES[code] ?? `Authentication callback failed (${code}).`
+  return CALLBACK_ERROR_MESSAGES.get(code) ?? `Authentication callback failed (${code}).`
 }
 
 /**
@@ -158,18 +175,7 @@ export const useAuthCallback = ({
     const callbackErrorCode = url.searchParams.get('error')
 
     try {
-      for (const key of [
-        'openfortAuthProvider',
-        'access_token',
-        'refresh_token',
-        'user_id',
-        'player_id',
-        'state',
-        'email',
-        'error',
-      ]) {
-        url.searchParams.delete(key)
-      }
+      stripCallbackParams(url)
       window.history.replaceState(window.history.state, document.title, url.toString())
     } finally {
       restoreReferrer()
@@ -206,7 +212,7 @@ export const useAuthCallback = ({
           // State present — verify client-side as well
           const options: OpenfortHookOptions<Omit<CallbackResult, 'type'>> = {
             onSuccess: (data) => {
-              notifyHookCallback(callbacks.onSuccess, { ...data, type: 'verifyEmail' }, 'onSuccess')
+              notifyHookCallback(callbacks.onSuccess, { ...data, type: 'verifyEmail', confirmed: true }, 'onSuccess')
             },
             onError: callbacks.onError,
           }
@@ -214,7 +220,9 @@ export const useAuthCallback = ({
           await runVerifyEmail({ email: callbackEmail, state, ...options })
           setEmail(callbackEmail)
         } else if (callbackEmail) {
-          // No state — backend already verified the email, just signal success
+          // No state token to exchange, so the only signal is that the endpoint
+          // redirected without an `error`. That is reproducible by anyone who
+          // can open the URL, so it is reported as unconfirmed.
           setEmail(callbackEmail)
           setAlreadyVerified(true)
           notifyHookCallback(
@@ -222,6 +230,7 @@ export const useAuthCallback = ({
             {
               email: callbackEmail,
               type: 'verifyEmail',
+              confirmed: false,
             },
             'onSuccess'
           )

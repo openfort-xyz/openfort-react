@@ -255,6 +255,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = DEFAULT_EMAIL_HO
             callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
             provider: 'password',
             isOpen,
+            uiParam: 'openfortForgotPasswordUI',
           }),
         })
 

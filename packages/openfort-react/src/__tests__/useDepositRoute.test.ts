@@ -72,7 +72,7 @@ describe('useDepositRoute', () => {
     mockSolWallet.status = 'connected'
     mockSolWallet.address = 'SoLAddr'
 
-    const { result } = renderHook(() => useDepositRoute('crypto'))
+    const { result } = renderHook(() => useDepositRoute())
     expect(result.current.address).toBe('0xEthAddr')
   })
 
@@ -83,7 +83,7 @@ describe('useDepositRoute', () => {
     mockSolWallet.status = 'connected'
     mockSolWallet.address = 'SoLAddr'
 
-    const { result } = renderHook(() => useDepositRoute('crypto'))
+    const { result } = renderHook(() => useDepositRoute())
     expect(result.current.address).toBe('SoLAddr')
   })
 
@@ -91,7 +91,7 @@ describe('useDepositRoute', () => {
     mockChainType = ChainTypeEnum.SVM
     mockSolWallet.status = 'disconnected'
 
-    const { result } = renderHook(() => useDepositRoute('crypto'))
+    const { result } = renderHook(() => useDepositRoute())
     expect(result.current.address).toBeUndefined()
   })
 
@@ -100,17 +100,17 @@ describe('useDepositRoute', () => {
     mockEthWallet.address = '0xEthAddr'
     // Smart account deployed only on Polygon Amoy; the EVM funding target is Base (8453).
     mockEthWallet.activeWallet = { accountType: AccountTypeEnum.SMART_ACCOUNT, accounts: [{ id: 'a', chainId: 80002 }] }
-    expect(renderHook(() => useDepositRoute('crypto')).result.current.accountUnusableOnTarget).toBe(true)
+    expect(renderHook(() => useDepositRoute()).result.current.accountUnusableOnTarget).toBe(true)
 
     // Deployed on the target chain → usable.
     mockEthWallet.activeWallet = { accountType: AccountTypeEnum.SMART_ACCOUNT, accounts: [{ id: 'a', chainId: 8453 }] }
-    expect(renderHook(() => useDepositRoute('crypto')).result.current.accountUnusableOnTarget).toBe(false)
+    expect(renderHook(() => useDepositRoute()).result.current.accountUnusableOnTarget).toBe(false)
   })
 
   it('never blocks an EOA — it shares one address across EVM chains', () => {
     mockEthWallet.status = 'connected'
     mockEthWallet.address = '0xEthAddr'
     mockEthWallet.activeWallet = { accountType: AccountTypeEnum.EOA, accounts: [] }
-    expect(renderHook(() => useDepositRoute('crypto')).result.current.accountUnusableOnTarget).toBe(false)
+    expect(renderHook(() => useDepositRoute()).result.current.accountUnusableOnTarget).toBe(false)
   })
 })

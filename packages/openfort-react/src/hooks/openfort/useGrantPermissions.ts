@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { Chain } from 'viem'
 import { createWalletClient, custom } from 'viem'
 import { erc7715Actions, type GrantPermissionsParameters, type GrantPermissionsReturnType } from 'viem/experimental'
@@ -10,6 +10,7 @@ import { DEFAULT_TESTNET_CHAIN_ID } from '../../core/ConnectionStrategy.js'
 import { type OpenfortError, toError } from '../../errors/base.js'
 import { ChainNotConfiguredError } from '../../errors/config.js'
 import { ConnectorNotFoundError } from '../../errors/connection.js'
+import { ValidationError } from '../../errors/validation.js'
 import { WalletError, WalletNotConnectedError } from '../../errors/wallet.js'
 import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
@@ -80,8 +81,19 @@ function getEmbeddedWalletClientWithErc7715(
  *           type: 'account',
  *           data: { id: '0x1111111111111111111111111111111111111111' },
  *         },
+ *         // Seconds from now, not a timestamp.
  *         expiry: 86_400,
- *         permissions: [],
+ *         // An empty list means no destination check at all — scope it.
+ *         permissions: [
+ *           {
+ *             type: 'contract-call',
+ *             data: {
+ *               address: '0x2222222222222222222222222222222222222222',
+ *               calls: ['transfer(address,uint256)'],
+ *             },
+ *             policies: [{ type: 'gas-limit', data: { limit: 1_000_000n } }],
+ *           },
+ *         ],
  *       },
  *     })
  *     if (result.error) return
@@ -92,9 +104,17 @@ function getEmbeddedWalletClientWithErc7715(
  * }
  * ```
  */
+/** Anything longer is far likelier to be a timestamp than an intended lifetime. */
+const TEN_YEARS_IN_SECONDS = 10 * 365 * 24 * 60 * 60
+
 const DEFAULT_GRANT_HOOK_OPTIONS: GrantPermissionsHookOptions = {}
 
 export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = DEFAULT_GRANT_HOOK_OPTIONS) => {
+  // Held in a ref rather than a dependency: a consumer passing an inline
+  // options object would otherwise give every action a new identity on each
+  // render, so an effect depending on one would re-fire forever.
+  const hookOptionsRef = useRef(hookOptions)
+  hookOptionsRef.current = hookOptions
   const bridge = useEthereumBridge()
   const { chains } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)
@@ -108,11 +128,27 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = D
     status: 'idle',
   })
   const [data, setData] = useState<GrantPermissionsResult | null>(null)
+  // A second click before the first settles would mint a second session
+  // key. The button's disabled state is not enough: the click can land
+  // before React re-renders.
+  const inFlightRef = useRef(false)
+
   const grantPermissions = useCallback(
     async (
       { request }: GrantPermissionsRequest,
       options: GrantPermissionsHookOptions = {}
     ): Promise<GrantPermissionsHookResult> => {
+      if (inFlightRef.current) {
+        // Routed through onError like every other failure: a consumer driving
+        // its UI from callbacks alone would otherwise never learn the call was
+        // refused. The first call's status is left untouched.
+        return onError({
+          hookOptions: hookOptionsRef.current,
+          options,
+          error: new ValidationError('A grant is already in progress.'),
+        })
+      }
+      inFlightRef.current = true
       try {
         const intendedEmbeddedAddress =
           connectedEmbeddedAddress ??
@@ -127,6 +163,26 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = D
               : 'unknown'
 
         logger.log('Granting permissions')
+
+        // An empty list is not "no restrictions to add" — the backend skips the
+        // destination check entirely when the whitelist is empty, so the key
+        // becomes callable on any contract. Refuse rather than silently grant it.
+        if (Array.isArray(request.permissions) && request.permissions.length === 0) {
+          throw new ValidationError('Refusing to grant a session key with no permissions.', {
+            details:
+              'An empty `permissions` array places no restriction on what the key may call. List the contract calls the key is allowed to make.',
+          })
+        }
+
+        // `expiry` is a duration in seconds, not a timestamp. Passing a
+        // timestamp (the shape viem's re-exported type documents) yields a key
+        // valid for roughly the age of the epoch — decades rather than the hour
+        // that was meant.
+        if (typeof request.expiry === 'number' && request.expiry > TEN_YEARS_IN_SECONDS) {
+          throw new ValidationError('The session-key expiry looks like a timestamp, not a duration.', {
+            details: `\`expiry\` is the number of seconds the key stays valid. Received ${request.expiry}, which would keep it alive for over ten years.`,
+          })
+        }
 
         const chain = chains.find((c) => c.id === chainId)
         if (!chain) {
@@ -212,7 +268,7 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = D
         })
 
         return onSuccess({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           data,
         })
@@ -223,8 +279,12 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = D
         const message = hasProviderErrorCode(error, UNSUPPORTED_METHOD_CODE)
           ? 'Session keys (grantPermissions) are not supported by the embedded wallet provider. Use an external wallet for this flow.'
           : undefined
+        // Wrapped, because "failed to grant permissions" is context the caller
+        // does not otherwise have — except for the refusals raised above, whose
+        // class is the whole point: a consumer branches on ValidationError to
+        // tell "you asked for something unsafe" from "the wallet failed".
         const openfortError =
-          error instanceof ConnectorNotFoundError
+          error instanceof ValidationError || error instanceof ConnectorNotFoundError
             ? error
             : new WalletError(message ?? 'Failed to grant permissions.', { cause: toError(error) })
 
@@ -234,13 +294,15 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = D
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error: openfortError,
         })
+      } finally {
+        inFlightRef.current = false
       }
     },
-    [bridge, chains, chainId, client, connectedEmbeddedAddress, hookOptions]
+    [bridge, chains, chainId, client, connectedEmbeddedAddress]
   )
 
   return {

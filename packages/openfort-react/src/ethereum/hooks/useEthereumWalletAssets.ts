@@ -344,7 +344,7 @@ export const useEthereumWalletAssets = ({
           for (const c of chains) {
             const tokens = (multiChainAssetsByChain?.find(({ chainId: assetChainId }) => assetChainId === c.id)
               ?.assets ?? []) as `0x${string}`[]
-            const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[c.id] ?? getDefaultEthereumRpcUrl(c.id)
+            const rpcUrl = resolveRpcUrl(c.id)
             const rpcAssets = await readEvmAssetsViaRpc({ address: address as `0x${string}`, chain: c, rpcUrl, tokens })
             for (const a of rpcAssets) out.push({ ...a, chainId: c.id })
           }
@@ -416,7 +416,7 @@ export const useEthereumWalletAssets = ({
         const testnetChains = chains.filter((c) => c.testnet === true)
         const rpcNatives = await Promise.all(
           testnetChains.map(async (c) => {
-            const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[c.id] ?? getDefaultEthereumRpcUrl(c.id)
+            const rpcUrl = resolveRpcUrl(c.id)
             const read = await readEvmAssetsViaRpc({ address: address as `0x${string}`, chain: c, rpcUrl, tokens: [] })
             const native = read.find((a) => a.type === 'native')
             return native ? ({ ...native, chainId: c.id } as MultiChainAsset) : null
@@ -540,7 +540,7 @@ export const useEthereumWalletAssets = ({
         // "no assets" while the multi-chain inventory shows the balance. Read the
         // native straight from RPC and upsert it to keep the two consistent.
         if (chain.testnet === true) {
-          const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+          const rpcUrl = resolveRpcUrl(chainId)
           const read = await readEvmAssetsViaRpc({ address: address as `0x${string}`, chain, rpcUrl, tokens: [] })
           const native = read.find((a) => a.type === 'native')
           if (native) {
@@ -552,7 +552,7 @@ export const useEthereumWalletAssets = ({
 
         if (mergedAssets.length === 0 && customAssetsToFetch.length > 0) {
           // Proxy succeeded but returned nothing while we expect tokens — read direct.
-          const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+          const rpcUrl = resolveRpcUrl(chainId)
           const fb = await readEvmAssetsViaRpc({
             address: address as `0x${string}`,
             chain,
@@ -564,7 +564,7 @@ export const useEthereumWalletAssets = ({
         return mergedAssets as readonly Asset[]
       } catch {
         // ERC-7811 asset proxy failed — fall back to direct chain-RPC balance reads.
-        const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+        const rpcUrl = resolveRpcUrl(chainId)
         return (await readEvmAssetsViaRpc({
           address: address as `0x${string}`,
           chain,

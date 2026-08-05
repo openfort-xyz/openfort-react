@@ -4,11 +4,18 @@ export const buildCallbackUrl = ({
   callbackUrl,
   provider,
   isOpen,
+  uiParam = 'openfortEmailVerificationUI',
 }: {
   email?: string
   callbackUrl?: string
   provider: string
   isOpen: boolean
+  /**
+   * The parameter the modal routes on when the link is opened. A password
+   * reset must land on the reset form, so it cannot share the email-verification
+   * flag — that routes the reset token to `verifyEmail` instead.
+   */
+  uiParam?: 'openfortEmailVerificationUI' | 'openfortForgotPasswordUI'
 }) => {
   if (callbackUrl && !callbackUrl.startsWith('http')) {
     callbackUrl = `${window.location.origin}${callbackUrl.startsWith('/') ? '' : '/'}${callbackUrl}`
@@ -27,7 +34,7 @@ export const buildCallbackUrl = ({
     redirectUrl.searchParams.append('email', email)
   }
   if (isOpen) {
-    redirectUrl.searchParams.append('openfortEmailVerificationUI', 'true')
+    redirectUrl.searchParams.append(uiParam, 'true')
   }
 
   return redirectUrl.toString()
