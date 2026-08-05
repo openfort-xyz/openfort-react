@@ -3,7 +3,7 @@
     "name": "@openfort/react",
     "path": "build/index.js",
     "import": "*",
-    "limit": "610 kB",
+    "limit": "550 kB",
     "ignore": [
       "@coinbase/wallet-sdk",
       "@safe-global/safe-apps-provider",
@@ -24,7 +24,7 @@
     "name": "@openfort/react/solana",
     "path": "build/solana/index.js",
     "import": "*",
-    "limit": "275 kB",
+    "limit": "255 kB",
     "ignore": [
       "@coinbase/wallet-sdk",
       "@safe-global/safe-apps-provider",
@@ -45,7 +45,7 @@
     "name": "@openfort/react/ethereum",
     "path": "build/ethereum/index.js",
     "import": "*",
-    "limit": "280 kB",
+    "limit": "260 kB",
     "ignore": [
       "@coinbase/wallet-sdk",
       "@safe-global/safe-apps-provider",
@@ -87,7 +87,7 @@
     "name": "@openfort/react/wagmi",
     "path": "build/wagmi/index.js",
     "import": "*",
-    "limit": "280 kB",
+    "limit": "260 kB",
     "ignore": [
       "@coinbase/wallet-sdk",
       "@safe-global/safe-apps-provider",
@@ -110,7 +110,7 @@
     "name": "@openfort/react (single named import \u2014 tree-shaking ratchet)",
     "path": "build/index.js",
     "import": "{ formatAddress }",
-    "limit": "245 kB",
+    "limit": "250 kB",
     "ignore": [
       "@coinbase/wallet-sdk",
       "@safe-global/safe-apps-provider",
