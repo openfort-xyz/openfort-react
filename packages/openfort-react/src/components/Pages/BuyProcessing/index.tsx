@@ -182,6 +182,12 @@ const BuyProcessing = () => {
       cancelled = true
       sessionStartedRef.current = false
       closeReservedPopup()
+      // The monitor treats a closed popup as the user finishing at the provider.
+      // This cleanup also runs when `address` briefly goes undefined mid-purchase
+      // (a recovery retry, an iframe reload), so leaving the state behind made
+      // the effect's own teardown look like a completed purchase.
+      setPopupWindow(null)
+      popupNavigatedRef.current = false
     }
   }, [pageActive, address, network])
 

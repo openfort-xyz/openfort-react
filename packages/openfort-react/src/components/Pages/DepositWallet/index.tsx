@@ -8,6 +8,7 @@ import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeConte
 import useIsMobile from '../../../hooks/useIsMobile.js'
 import styled from '../../../styles/styled/index.js'
 import { isIOS } from '../../../utils/index.js'
+import { isHttpsUrl } from '../../../utils/urlSecurity.js'
 import { TextLinkButton } from '../../Common/Button/styles.js'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
 import { ScrollArea } from '../../Common/ScrollArea/index.js'
@@ -96,7 +97,7 @@ const PRESETS = [10, 25, 50]
 const DepositWallet = () => {
   const { triggerResize, uiConfig } = useOpenfort()
   const isMobile = useIsMobile()
-  const route = useDepositRoute('crypto')
+  const route = useDepositRoute()
   // The desktop send path goes through the wagmi bridge (browser-extension wallets).
   // In Solana-only mode there's no wagmi provider, so fall back to the open-dApp
   // deeplinks for EVM sources too — otherwise the wallet list renders empty.
@@ -147,8 +148,13 @@ const DepositWallet = () => {
         })
       : null
 
-  const allDeeplinks = route.pm?.deeplinks?.length
-    ? route.pm.deeplinks
+  // The funding service supplies these, and they are the one funding link that
+  // does not go through `getTrustedFundingProviderUrl` — the destinations are
+  // third-party wallet domains, so an origin allowlist cannot cover them. An
+  // https-only check still rules out `javascript:` and `data:`.
+  const serverDeeplinks = (route.pm?.deeplinks ?? []).filter((deeplink) => isHttpsUrl(deeplink.url))
+  const allDeeplinks = serverDeeplinks.length
+    ? serverDeeplinks
     : pageUrl
       ? buildOpenDappLinks(pageUrl, (route.activeChain?.vmType as VmType) ?? 'evm')
       : []

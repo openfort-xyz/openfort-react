@@ -16,6 +16,7 @@ import type { CustomTheme } from '../../../types.js'
 import { flattenChildren, isMobile } from '../../../utils/index.js'
 import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import { PageErrorBoundary } from '../../ConnectModal/pageLoading.js'
 import { routes } from '../../Openfort/types.js'
 import { useOpenfortConfig, useOpenfortRouting } from '../../Openfort/useOpenfort.js'
 import FitText from '../FitText/index.js'
@@ -290,7 +291,12 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
           style={{ pointerEvents: pageActive ? 'auto' : 'none' }}
         >
           <InertWhenInactive active={pageActive}>
-            <PageActivityProvider active={pageActive}>{page}</PageActivityProvider>
+            {/* Every page, not only the code-split ones. A render-time throw in a
+                directly-imported page would otherwise unwind past OpenfortProvider
+                and blank the host application. */}
+            <PageActivityProvider active={pageActive}>
+              <PageErrorBoundary>{page}</PageErrorBoundary>
+            </PageActivityProvider>
           </InertWhenInactive>
         </PageContents>
       </Page>

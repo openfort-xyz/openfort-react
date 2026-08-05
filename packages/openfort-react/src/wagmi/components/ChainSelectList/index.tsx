@@ -76,10 +76,13 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
   // `code`, which isn't part of SwitchChainErrorType, so the property is
   // narrowed before it's read.
   const isUnsupported = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4902
-  // Any other rejection is a failure of this one switch — a user rejection, an
-  // unreachable RPC, a backend refusal. Reporting only 4902 left every one of
-  // those silent: the spinner cleared and the chain simply never changed.
-  const switchFailed = !!bridgeError && !isUnsupported
+  // 4001 is the user declining the wallet prompt. That is a choice, not a
+  // failure, and painting an alert for it tells someone their own action broke.
+  const isUserRejection = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4001
+  // Anything else is a real failure of this one switch — an unreachable RPC, a
+  // backend refusal. Reporting only 4902 left every one of those silent: the
+  // spinner cleared and the chain simply never changed.
+  const switchFailed = !!bridgeError && !isUnsupported && !isUserRejection
   const disabled = isUnsupported || !switchChainFn
 
   const handleSwitchNetwork = (chainId: number) => {

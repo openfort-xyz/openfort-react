@@ -33,7 +33,7 @@ type PageErrorBoundaryState = { hasError: boolean }
  * `Suspense` does not catch that, so without a boundary here the rejection
  * unwinds past `OpenfortProvider` into the host application.
  */
-class PageErrorBoundary extends Component<{ children: ReactNode }, PageErrorBoundaryState> {
+export class PageErrorBoundary extends Component<{ children: ReactNode }, PageErrorBoundaryState> {
   override state: PageErrorBoundaryState = { hasError: false }
 
   static getDerivedStateFromError(): PageErrorBoundaryState {
@@ -50,6 +50,7 @@ class PageErrorBoundary extends Component<{ children: ReactNode }, PageErrorBoun
         <ErrorFallbackPage
           header="Something went wrong"
           description="This screen could not be loaded. Check your connection, or reload the page if it was recently updated."
+          onReload={() => window.location.reload()}
         />
       )
     }

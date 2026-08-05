@@ -4,7 +4,7 @@ import React, { useEffect } from 'react'
 import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { logger } from '../../../utils/logger.js'
-import { parseCallbackUrl, suppressReferrer } from '../../../utils/urlSecurity.js'
+import { parseCallbackUrl, stripCallbackParams, suppressReferrer } from '../../../utils/urlSecurity.js'
 import Button from '../../Common/Button/index.js'
 import FitText from '../../Common/FitText/index.js'
 import Input from '../../Common/Input/index.js'
@@ -220,9 +220,7 @@ const ForgotPassword: React.FC = () => {
       email: url.searchParams.get('email'),
       state: url.searchParams.get('state'),
     }
-    for (const param of ['openfortForgotPasswordUI', 'state', 'email']) {
-      url.searchParams.delete(param)
-    }
+    stripCallbackParams(url)
 
     return { ...request, sanitizedUrl: url.toString() }
   })

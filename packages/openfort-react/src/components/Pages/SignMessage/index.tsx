@@ -48,6 +48,17 @@ function DataNode({ value }: { value: unknown }) {
   return <>{String(value)}</>
 }
 
+/** Normalises an EIP-712 `domain.chainId`, which arrives as a number, bigint or string. */
+function toChainId(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined
+  if (typeof value === 'bigint') return Number(value)
+  if (typeof value === 'string' && value.trim() !== '') {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : undefined
+  }
+  return undefined
+}
+
 const SignMessage = () => {
   const { signRequest, setSignRequest, setOpen, uiConfig, triggerResize } = useOpenfort()
   const chainType = useOpenfortCore((s) => s.chainType)
@@ -117,7 +128,17 @@ const SignMessage = () => {
         signed = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
           const provider = await client.embeddedWallet.getEthereumProvider({ announceProvider: false })
           assertCurrent()
-          await assertEmbeddedEthereumAccount(provider, intendedAddress)
+          // The typed-data domain names the chain the signature is valid on, so
+          // signing it while connected elsewhere produces a signature that is
+          // good on a chain the user is not on. Grant and revoke already pin the
+          // chain this way.
+          // viem types `domain.chainId` as `number | bigint`, and the payload
+          // arrives as `Record<string, unknown>`, so hex and decimal strings
+          // show up too. Matching only `number` skipped every one of them —
+          // the cases the check exists for.
+          const intendedChainId =
+            request.kind === 'typedData' ? toChainId(request.typedData.domain?.chainId) : undefined
+          await assertEmbeddedEthereumAccount(provider, intendedAddress, intendedChainId)
           assertCurrent()
           return request.kind === 'message'
             ? client.embeddedWallet.signMessage(request.message)

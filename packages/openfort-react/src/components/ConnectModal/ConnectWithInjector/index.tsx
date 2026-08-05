@@ -242,7 +242,15 @@ const ConnectWithInjector: React.FC<{
       logger.log('[ConnectWithInjector] Connect type is:', props.connectType)
       await handleConnectSettled(wallet, connectResult)
     } catch (err: unknown) {
-      logger.error('[ConnectWithInjector] Connection error', err instanceof Error ? err.message : err)
+      // 4001 is the user closing the wallet prompt. `logger.error` always emits
+      // now, so reporting a deliberate choice would put a line in every
+      // consumer's console and error pipeline for normal use.
+      const isUserRejection = !!err && typeof err === 'object' && 'code' in err && err.code === 4001
+      if (isUserRejection) {
+        logger.log('[ConnectWithInjector] Connection declined by the user')
+      } else {
+        logger.error('[ConnectWithInjector] Connection error', err instanceof Error ? err.message : err)
+      }
       handleConnectError(
         err && typeof err === 'object' && 'code' in err
           ? (err as { code?: number; message?: string })

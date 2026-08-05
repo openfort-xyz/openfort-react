@@ -335,6 +335,10 @@ const CreateWalletPasswordRecovery = ({
             password: recoveryPhrase,
           }),
       })
+    // The phrase has been handed to the SDK; holding it in component state (and
+    // therefore in the DOM) past that point serves nothing and keeps recovery
+    // material alive for as long as the page is open.
+    setRecoveryPhrase('')
     void observeCreation(operation, authSession.isCurrent)
   }
 

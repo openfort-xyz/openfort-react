@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 import { EmailIcon } from '../../../assets/icons.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { logger } from '../../../utils/logger.js'
+import { stripCallbackParams } from '../../../utils/urlSecurity.js'
 import Button from '../../Common/Button/index.js'
 import { TextLinkButton } from '../../Common/Button/styles.js'
 import Loader from '../../Common/Loading/index.js'
@@ -20,13 +21,20 @@ type VerificationResponse = {
   error?: string
 }
 
-/** Error codes the verification endpoint appends to the callback URL when it rejects a link. */
-const EMAIL_VERIFICATION_ERRORS: Record<string, string> = {
-  TOKEN_EXPIRED: 'This verification link has expired. Request a new one.',
-  INVALID_TOKEN: 'This verification link is not valid. Request a new one.',
-  USER_NOT_FOUND: 'No account matches this verification link.',
-  INVALID_USER: 'This verification link belongs to a different account.',
-}
+/**
+ * Error codes the verification endpoint appends to the callback URL when it
+ * rejects a link.
+ *
+ * A `Map`, not an object literal: the code comes from the URL, so a lookup for
+ * `__proto__` on a plain object returns `Object.prototype` — a truthy value
+ * that React then throws on when it is rendered as a child.
+ */
+const EMAIL_VERIFICATION_ERRORS = new Map<string, string>([
+  ['TOKEN_EXPIRED', 'This verification link has expired. Request a new one.'],
+  ['INVALID_TOKEN', 'This verification link is not valid. Request a new one.'],
+  ['USER_NOT_FOUND', 'No account matches this verification link.'],
+  ['INVALID_USER', 'This verification link belongs to a different account.'],
+])
 
 const EmailVerification: React.FC = () => {
   const { setRoute, emailInput, setEmailInput } = useOpenfort()
@@ -56,9 +64,7 @@ const EmailVerification: React.FC = () => {
     const errorCode = url.searchParams.get('error')
 
     const removeParams = () => {
-      ;['state', 'openfortEmailVerificationUI', 'email', 'openfortAuthProvider', 'error'].forEach((key) => {
-        url.searchParams.delete(key)
-      })
+      stripCallbackParams(url)
       window.history.replaceState({}, document.title, url.toString())
     }
     logger.log('Starting email verification')
@@ -68,7 +74,7 @@ const EmailVerification: React.FC = () => {
     if (errorCode) {
       setVerificationResponse({
         success: false,
-        error: EMAIL_VERIFICATION_ERRORS[errorCode] ?? 'There was an error verifying your email. Please try again.',
+        error: EMAIL_VERIFICATION_ERRORS.get(errorCode) ?? 'There was an error verifying your email. Please try again.',
       })
       removeParams()
       setLoading(false)

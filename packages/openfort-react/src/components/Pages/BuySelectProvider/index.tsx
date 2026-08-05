@@ -175,7 +175,15 @@ const BuySelectProvider = () => {
   }
 
   const formattedFiat = fiatAmount !== null ? currencyFormatter.format(fiatAmount) : null
-  const step2Disabled = !address || isLoadingQuote
+
+  // `providerId` defaults to Coinbase, so Continue has to check the selected
+  // provider can actually serve this token; otherwise the next screen fails with
+  // an untrue "Failed to create payment session".
+  const selectedProviderUnavailable =
+    buyForm.providerId === 'coinbase'
+      ? !isCoinbaseSupported(selectedToken) || !!coinbaseError
+      : !isStripeSupported(selectedToken) || !!stripeError
+  const step2Disabled = !address || isLoadingQuote || selectedProviderUnavailable
 
   const providers = getProviders()
 

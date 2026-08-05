@@ -6,7 +6,12 @@ import { ConnectorTypeMismatchError } from '../../errors/connection.js'
 import { useAuthTransitions } from '../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { logger } from '../../utils/logger.js'
-import { assertNavigableRedirect, parseCallbackUrl, suppressReferrer } from '../../utils/urlSecurity.js'
+import {
+  assertNavigableRedirect,
+  parseCallbackUrl,
+  stripCallbackParams,
+  suppressReferrer,
+} from '../../utils/urlSecurity.js'
 import Loader from '../Common/Loading/index.js'
 import { routes } from '../Openfort/types.js'
 import { useOpenfort } from '../Openfort/useOpenfort.js'
@@ -96,10 +101,7 @@ const ConnectWithOAuth: React.FC = () => {
           const token = url.searchParams.get('access_token')
           const error = url.searchParams.get('error')
 
-          // Remove specified keys from the URL
-          ;['openfortAuthProviderUI', 'access_token', 'user_id', 'error'].forEach((key) => {
-            url.searchParams.delete(key)
-          })
+          stripCallbackParams(url)
           win.history.replaceState({}, doc.title, url.toString())
           restoreReferrer()
 

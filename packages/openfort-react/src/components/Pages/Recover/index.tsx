@@ -484,6 +484,15 @@ const RecoverAutomaticWallet = ({
     recoverWallet()
   }, [active, needsOTP, recoverWallet])
 
+  // The effect above runs once per mount, so without this the only control on a
+  // failed recovery is Back. Resets the one-shot guard and starts over.
+  const retryRecovery = useCallback(() => {
+    setError(false)
+    setOtpStatus('idle')
+    shouldRecoverWalletRef.current = true
+    recoverWallet()
+  }, [recoverWallet])
+
   const identity = useResolvedIdentity({
     address: wallet.address,
     chainType,
@@ -545,7 +554,11 @@ const RecoverAutomaticWallet = ({
           // the next submission replay the stale result instead of verifying
           // the code the user just typed.
           clearPersistentOperation(client, otpOperationKey)
-          setOtpStatus(outcome.status === 'error' ? 'error' : 'idle')
+          // Reaching here after a submission means the code was not accepted,
+          // whichever outcome the SDK classified it as. 'error' is what surfaces
+          // the message and clears the digits, so the user can type a new code.
+          setOtpStatus('error')
+          setError(operation.result.error || 'That code was not accepted. Try again.')
           return
         }
         clearPersistentOperation(client, otpOperationKey)
@@ -711,6 +724,7 @@ const RecoverAutomaticWallet = ({
         <ModalBody style={{ textAlign: 'center' }} $error>
           <FitText>{error}</FitText>
         </ModalBody>
+        <Button onClick={retryRecovery}>Try again</Button>
       </PageContent>
     )
   }
