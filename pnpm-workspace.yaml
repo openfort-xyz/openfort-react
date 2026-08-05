@@ -73,11 +73,19 @@ overrides:
   '@opentelemetry/core@<2.8.0': '>=2.8.0'
   '@babel/core@<7.29.6': '>=7.29.6 <8'
 
-minimumReleaseAge: 1440
+# Seven days. A compromised publish is usually caught and unpublished within
+# hours to days, so waiting a week means the registry has almost always sorted
+# itself out before a release can reach this workspace.
+minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@openfort/openfort-js"
   - "@openfort/openfort-node"
   - "@openfort/better-auth"
+  # The `hono: '>=4.12.34 <5'` override above is a security floor, and 4.12.34 is
+  # newer than the delay window — the two policies cannot both hold. Taking a
+  # known-vulnerable version to satisfy the delay would be the worse trade, so
+  # the floor wins here. Drop this entry once the floor is older than the window.
+  - "hono"
 
 # Fail the install if a dependency's npm trust level drops below what it had on
 # an earlier release — for example a package that published with provenance and

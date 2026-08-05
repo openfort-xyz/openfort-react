@@ -38,6 +38,27 @@ function compareVersions(a, b) {
 }
 
 /**
+ * The publish delay the workspace enforces, in milliseconds.
+ *
+ * Read from the manifest rather than duplicated, so raising or removing the
+ * policy moves this with it.
+ */
+function minimumReleaseAgeMs() {
+  const match = readFileSync(MANIFEST, "utf8").match(/^minimumReleaseAge:\s*(\d+)/m);
+  return match ? Number(match[1]) * 60_000 : 0;
+}
+
+const MINIMUM_RELEASE_AGE_MS = minimumReleaseAgeMs();
+
+/** Publish timestamp per version, as `npm view <name> time` reports it. */
+function publishTimes(name) {
+  const output = execFileSync("npm", ["view", name, "time", "--json"], {
+    encoding: "utf8",
+  });
+  return JSON.parse(output);
+}
+
+/**
  * Newest published version matching a range, so overrides can be written as exact
  * versions.
  *
@@ -46,6 +67,12 @@ function compareVersions(a, b) {
  * re-resolution inside the lockfile: `pnpm update` would do it by rewriting every
  * workspace manifest, including the shipped CLI templates whose declared ranges are
  * part of what the release asserts.
+ *
+ * Only releases old enough to satisfy `minimumReleaseAge` are considered. Picking
+ * the newest regardless would hand pnpm a version its own supply-chain delay then
+ * refuses to install, so the cell fails during install and type-checks nothing —
+ * which is what happened every time viem published within a day of a CI run. The
+ * matrix still tracks the latest release, a publish delay behind it.
  */
 function resolveExact(name, range) {
   if (/^\d+\.\d+\.\d+$/.test(range)) return range;
@@ -58,8 +85,20 @@ function resolveExact(name, range) {
   const matches = (Array.isArray(parsed) ? parsed : [parsed]).filter(
     (version) => version && !version.includes("-"),
   );
-  const version = matches.sort(compareVersions).at(-1);
-  assert.ok(version, `No published ${name} matches "${range}".`);
+
+  const times = MINIMUM_RELEASE_AGE_MS > 0 ? publishTimes(name) : {};
+  const cutoff = Date.now() - MINIMUM_RELEASE_AGE_MS;
+  const mature = matches.filter((version) => {
+    if (MINIMUM_RELEASE_AGE_MS === 0) return true;
+    const published = Date.parse(times[version]);
+    return Number.isFinite(published) && published <= cutoff;
+  });
+
+  const version = mature.sort(compareVersions).at(-1);
+  assert.ok(
+    version,
+    `No published ${name} matches "${range}" and is older than the ${MINIMUM_RELEASE_AGE_MS / 60_000}-minute minimumReleaseAge.`,
+  );
   return version;
 }
 
