@@ -21,6 +21,7 @@ Typed action results, a TanStack Query data layer, and a narrower supported runt
 - `getDefaultConfig` sets wagmi's `ssr: true`, so `useAccount()` reports `reconnecting` on the first render instead of `connected`. Gate on `isConnected === false && status !== 'reconnecting'` before showing a signed-out view.
 - `setEmbeddedWalletProvider` (`@openfort/react/wagmi`) takes the Openfort client as a second argument.
 - `@wagmi/core` is a new optional peer dependency, installed automatically alongside `wagmi`.
+- `uiConfig.bufferPolyfill` still defaults to `true`, but the shim is now loaded on demand rather than statically, so `window.Buffer` is assigned a tick later and the ~50 kB module stays out of the bundles of applications whose bundler needs no polyfill. Code that reads `window.Buffer` immediately after `OpenfortProvider` mounts should await it.
 - `walletConfig.createEncryptedSessionEndpoint` now receives an `Authorization: Bearer <access token>` header. Endpoints that reject unknown headers, or that were relying on being callable anonymously, need updating — see the hardened `create-openfort` backend template.
 - The external-wallet `Connectors` page moved to `@openfort/react/wagmi` and is now code-split, so embedded-wallet-only apps no longer load it.
 - Calls that were previously accepted are now rejected, because each could produce an unrecoverable result:
