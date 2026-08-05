@@ -14,10 +14,12 @@
 
 import { SDKConfiguration } from '@openfort/openfort-js'
 import type { Address, SignatureBytes, SignatureDictionary, TransactionSigner } from '@solana/kit'
+import { toError } from '../errors/base.js'
 import { ApiRequestError } from '../errors/operation.js'
 import { ValidationError } from '../errors/validation.js'
 import { WalletError } from '../errors/wallet.js'
-import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster } from './types.js'
+import { getDefaultSolanaRpcUrl } from '../utils/rpc.js'
+import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster, SolanaCommitment } from './types.js'
 
 type Kit = typeof import('@solana/kit')
 
@@ -101,7 +103,7 @@ type SendSolParams = {
   amountSol: number
   provider: OpenfortEmbeddedSolanaWalletProvider
   rpcUrl: string
-  commitment?: 'processed' | 'confirmed' | 'finalized'
+  commitment?: SolanaCommitment
 }
 
 /**
@@ -125,7 +127,12 @@ export async function sendSol({
   const rpcSubscriptions = kit.createSolanaRpcSubscriptions(deriveWssUrl(rpcUrl))
   const signer = createEmbeddedSigner(kit, provider, fromAddress)
 
-  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+  // SOL sent to a mint or a program-owned account is unrecoverable. A token
+  // account can at least be closed by its owner, but it is never the intended
+  // destination for a plain transfer either.
+  await assertTransferableRecipient(rpc, to, commitment)
+
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment }).send()
 
   const message = kit.pipe(
     kit.createTransactionMessage({ version: 0 }),
@@ -144,6 +151,12 @@ export async function sendSol({
 
   const signedTransaction = await kit.signTransactionMessageWithSigners(message)
 
+  // Derived before the send so a confirmation timeout can still name it. The
+  // transaction may land after we stop waiting, and a user who cannot see the
+  // signature has no way to check before retrying — which is how one transfer
+  // gets sent twice.
+  const signature = kit.getSignatureFromTransaction(signedTransaction)
+
   const sendAndConfirm = kit.sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
   const abortController = new AbortController()
   const timeout = setTimeout(() => abortController.abort(), SEND_TIMEOUT_MS)
@@ -152,11 +165,23 @@ export async function sendSol({
       commitment,
       abortSignal: abortController.signal,
     })
+  } catch (cause) {
+    // Only the confirmation bound gets relabelled. Everything else — a failed
+    // preflight, a rejected transaction, an unreachable node — has its own real
+    // reason, and calling those "not confirmed in time" would send the user to
+    // an explorer that has nothing to show and imply a retry might double-send.
+    if (abortController.signal.aborted) {
+      throw new WalletError('The transaction was broadcast but not confirmed in time.', {
+        cause: toError(cause),
+        details: `Signature ${signature}. Check it on an explorer before sending again.`,
+      })
+    }
+    throw cause
   } finally {
     clearTimeout(timeout)
   }
 
-  return kit.getSignatureFromTransaction(signedTransaction)
+  return signature
 }
 
 type SendSplTokenParams = {
@@ -169,7 +194,7 @@ type SendSplTokenParams = {
   decimals: number
   provider: OpenfortEmbeddedSolanaWalletProvider
   rpcUrl: string
-  commitment?: 'processed' | 'confirmed' | 'finalized'
+  commitment?: SolanaCommitment
 }
 
 /** Token program ids whose accounts must never be used as a transfer recipient. */
@@ -189,10 +214,11 @@ const TOKEN_PROGRAM_OWNERS = new Set([
 export async function resolveTokenProgram(
   rpc: { getAccountInfo: (address: never, config?: never) => { send: () => Promise<{ value: unknown }> } },
   mint: string,
-  fallback: string
+  fallback: string,
+  commitment?: SolanaCommitment
 ): Promise<string> {
   try {
-    const { value } = await rpc.getAccountInfo(mint as never, { encoding: 'base64' } as never).send()
+    const { value } = await rpc.getAccountInfo(mint as never, { encoding: 'base64', commitment } as never).send()
     const owner = (value as { owner?: string } | null)?.owner
     return owner && TOKEN_PROGRAM_OWNERS.has(owner) ? owner : fallback
   } catch {
@@ -211,11 +237,11 @@ export async function resolveTokenProgram(
 export async function assertTransferableRecipient(
   rpc: { getAccountInfo: (address: never, config?: never) => { send: () => Promise<{ value: unknown }> } },
   recipient: string,
-  tokenProgram: string
+  commitment?: SolanaCommitment
 ): Promise<void> {
   let owner: string | undefined
   try {
-    const { value } = await rpc.getAccountInfo(recipient as never, { encoding: 'base64' } as never).send()
+    const { value } = await rpc.getAccountInfo(recipient as never, { encoding: 'base64', commitment } as never).send()
     owner = (value as { owner?: string } | null)?.owner
   } catch {
     // A read failure is not evidence of a bad recipient; let the send proceed
@@ -226,7 +252,10 @@ export async function assertTransferableRecipient(
   if (owner && TOKEN_PROGRAM_OWNERS.has(owner)) {
     throw new ValidationError(
       'This address is a token account, not a wallet. Send to the owner’s wallet address instead.',
-      { details: `Recipient ${recipient} is owned by the token program ${tokenProgram}.` }
+      // The owner read off-chain, not the program the caller happened to expect:
+      // a Token-2022 account reported as a classic one sends the reader looking
+      // in the wrong place.
+      { details: `Recipient ${recipient} is owned by the token program ${owner}.` }
     )
   }
 }
@@ -258,9 +287,9 @@ export async function sendSplToken({
   const rpcSubscriptions = kit.createSolanaRpcSubscriptions(deriveWssUrl(rpcUrl))
   const signer = createEmbeddedSigner(kit, provider, fromAddress)
 
-  await assertTransferableRecipient(rpc, toAddress, token.TOKEN_PROGRAM_ADDRESS)
+  await assertTransferableRecipient(rpc, toAddress, commitment)
 
-  const tokenProgram = kit.address(await resolveTokenProgram(rpc, mintAddress, token.TOKEN_PROGRAM_ADDRESS))
+  const tokenProgram = kit.address(await resolveTokenProgram(rpc, mintAddress, token.TOKEN_PROGRAM_ADDRESS, commitment))
 
   const [sourceAta] = await token.findAssociatedTokenPda({
     owner: fromAddress,
@@ -273,7 +302,7 @@ export async function sendSplToken({
     mint: mintAddress,
   })
 
-  const { value: latestBlockhash } = await rpc.getLatestBlockhash().send()
+  const { value: latestBlockhash } = await rpc.getLatestBlockhash({ commitment }).send()
 
   const message = kit.pipe(
     kit.createTransactionMessage({ version: 0 }),
@@ -307,6 +336,12 @@ export async function sendSplToken({
 
   const signedTransaction = await kit.signTransactionMessageWithSigners(message)
 
+  // Derived before the send so a confirmation timeout can still name it. The
+  // transaction may land after we stop waiting, and a user who cannot see the
+  // signature has no way to check before retrying — which is how one transfer
+  // gets sent twice.
+  const signature = kit.getSignatureFromTransaction(signedTransaction)
+
   const sendAndConfirm = kit.sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
   const abortController = new AbortController()
   const timeout = setTimeout(() => abortController.abort(), SEND_TIMEOUT_MS)
@@ -315,11 +350,23 @@ export async function sendSplToken({
       commitment,
       abortSignal: abortController.signal,
     })
+  } catch (cause) {
+    // Only the confirmation bound gets relabelled. Everything else — a failed
+    // preflight, a rejected transaction, an unreachable node — has its own real
+    // reason, and calling those "not confirmed in time" would send the user to
+    // an explorer that has nothing to show and imply a retry might double-send.
+    if (abortController.signal.aborted) {
+      throw new WalletError('The transaction was broadcast but not confirmed in time.', {
+        cause: toError(cause),
+        details: `Signature ${signature}. Check it on an explorer before sending again.`,
+      })
+    }
+    throw cause
   } finally {
     clearTimeout(timeout)
   }
 
-  return kit.getSignatureFromTransaction(signedTransaction)
+  return signature
 }
 
 /** The Openfort Solana paymaster (Kora) endpoint for a cluster. */
@@ -344,7 +391,7 @@ type KoraTransferParams = {
   backendUrl?: string
   /** Read endpoint used to confirm the broadcast transaction. */
   rpcUrl?: string
-  commitment?: 'processed' | 'confirmed' | 'finalized'
+  commitment?: SolanaCommitment
 }
 
 /**
@@ -353,6 +400,46 @@ type KoraTransferParams = {
  * co-signs + broadcasts. Requires a `sponsorSolTransaction` policy on the
  * project. Returns the transaction signature (base58).
  */
+/**
+ * Refuses a sponsored transaction whose instructions mention an account the
+ * caller never asked about.
+ *
+ * Kora is the fee payer through a noop signer, so the user's signature is the
+ * transaction's only authority — whatever comes back is what gets signed. The
+ * accounts a legitimate transfer touches are all derivable from the request, so
+ * an unexpected one means the response does not describe the transfer that was
+ * asked for.
+ */
+export function assertKoraInstructionsAreExpected(
+  instructions: readonly { accounts?: readonly { address?: string }[] }[],
+  request: { from: string; acceptableDestinations: readonly string[] }
+): void {
+  const mentioned = new Set<string>()
+  for (const instruction of instructions) {
+    for (const account of instruction.accounts ?? []) {
+      if (account.address) mentioned.add(account.address)
+    }
+  }
+  if (mentioned.size === 0) return
+
+  // An SPL `transferChecked` names the destination *token account*, not the
+  // wallet — the wallet address only appears when Kora also has to create the
+  // ATA. Both spellings of the destination are therefore acceptable, and
+  // requiring the wallet alone rejects every send to a recipient who already
+  // holds the token.
+  if (!request.acceptableDestinations.some((destination) => mentioned.has(destination))) {
+    throw new WalletError('The paymaster returned a transaction for a different recipient.', {
+      details: `Expected one of ${request.acceptableDestinations.join(', ')} among the transaction accounts.`,
+    })
+  }
+
+  if (!mentioned.has(request.from)) {
+    throw new WalletError('The paymaster returned a transaction for a different sender.', {
+      details: `Expected ${request.from} among the transaction accounts.`,
+    })
+  }
+}
+
 async function sendViaKora({
   from,
   to,
@@ -374,6 +461,14 @@ async function sendViaKora({
   const kit = await import('@solana/kit')
   const { KoraClient } = await import('@solana/kora')
 
+  // Kora derives the destination's associated token account server-side, so a
+  // token-account recipient is just as unrecoverable here as on the unsponsored
+  // path — and sponsored native SOL is no different. Fall back to the cluster's
+  // public endpoint rather than skip the check: an app that never configured an
+  // RPC still deserves the guard.
+  const readUrl = rpcUrl || getDefaultSolanaRpcUrl(cluster)
+  await assertTransferableRecipient(kit.createSolanaRpc(readUrl), to, commitment)
+
   const client = new KoraClient({ rpcUrl: koraRpcUrl(cluster, backendUrl), apiKey: `Bearer ${publishableKey}` })
 
   // 1. Kora's fee-payer signer.
@@ -388,6 +483,28 @@ async function sendViaKora({
     destination: to,
     signer_key: signer_address,
   })
+
+  // For SPL the transfer names the destination ATA; the wallet address appears
+  // only when Kora also creates it. Accept either.
+  const acceptableDestinations = [to]
+  if (tokenMint !== SYSTEM_PROGRAM_ID) {
+    const token = await import('@solana-program/token')
+    const tokenProgram = kit.address(
+      await resolveTokenProgram(
+        kit.createSolanaRpc(rpcUrl || getDefaultSolanaRpcUrl(cluster)),
+        tokenMint,
+        token.TOKEN_PROGRAM_ADDRESS,
+        commitment
+      )
+    )
+    const [destinationAta] = await token.findAssociatedTokenPda({
+      owner: kit.address(to),
+      tokenProgram,
+      mint: kit.address(tokenMint),
+    })
+    acceptableDestinations.push(destinationAta)
+  }
+  assertKoraInstructionsAreExpected(instructions, { from, acceptableDestinations })
 
   // 3. Build the message with Kora as fee payer.
   const { blockhash } = await client.getBlockhash()
@@ -488,7 +605,7 @@ type SendSolGaslessParams = {
   backendUrl?: string
   /** Read endpoint used to confirm the broadcast transaction. */
   rpcUrl?: string
-  commitment?: 'processed' | 'confirmed' | 'finalized'
+  commitment?: SolanaCommitment
 }
 
 /** Send a native SOL transfer with fees sponsored by the Openfort paymaster (Kora). */
@@ -532,7 +649,7 @@ type SendSplTokenGaslessParams = {
   backendUrl?: string
   /** Read endpoint used to confirm the broadcast transaction. */
   rpcUrl?: string
-  commitment?: 'processed' | 'confirmed' | 'finalized'
+  commitment?: SolanaCommitment
 }
 
 /** Send an SPL token transfer with fees sponsored by the Openfort paymaster (Kora). */
