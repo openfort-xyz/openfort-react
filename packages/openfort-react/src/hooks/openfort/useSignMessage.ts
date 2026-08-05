@@ -6,6 +6,7 @@ import { useOpenfortRouting, useOpenfortSignRequest } from '../../components/Ope
 import type { OpenfortError } from '../../errors/base.js'
 import { WalletError } from '../../errors/wallet.js'
 import type { OpenfortHookOptions } from '../../types.js'
+import { useLatest } from '../useLatest.js'
 import { onError, onSuccess } from './hookConsistency.js'
 
 type SignArgs = { kind: 'message'; message: string } | { kind: 'typedData'; typedData: SignTypedDataPayload }
@@ -72,8 +73,7 @@ export function useSignMessage(hookOptions: UseSignMessageOptions = DEFAULT_SIGN
   const [error, setError] = useState<OpenfortError | null>(null)
   const mountedRef = useRef(false)
   const activeRequestRef = useRef<SignRequest | null>(null)
-  const hookOptionsRef = useRef(hookOptions)
-  hookOptionsRef.current = hookOptions
+  const hookOptionsRef = useLatest(hookOptions)
 
   useEffect(() => {
     mountedRef.current = true

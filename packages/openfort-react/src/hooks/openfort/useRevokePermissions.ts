@@ -17,6 +17,7 @@ import { assertEmbeddedEthereumAccount } from '../../shared/utils/assertEmbedded
 import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
 import type { OpenfortHookOptions } from '../../types.js'
 import { logger } from '../../utils/logger.js'
+import { useLatest } from '../useLatest.js'
 import { type BaseFlowState, mapStatus } from './auth/status.js'
 import { onError, onSuccess } from './hookConsistency.js'
 
@@ -59,11 +60,7 @@ type RevokePermissionsHookOptions = OpenfortHookOptions<RevokePermissionsHookRes
 const DEFAULT_REVOKE_HOOK_OPTIONS: RevokePermissionsHookOptions = {}
 
 export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = DEFAULT_REVOKE_HOOK_OPTIONS) => {
-  // Held in a ref rather than a dependency: a consumer passing an inline
-  // options object would otherwise give every action a new identity on each
-  // render, so an effect depending on one would re-fire forever.
-  const hookOptionsRef = useRef(hookOptions)
-  hookOptionsRef.current = hookOptions
+  const hookOptionsRef = useLatest(hookOptions)
   const { chains } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)
   const ethereum = useEthereumEmbeddedWallet()
@@ -75,9 +72,9 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
     status: 'idle',
   })
   const [data, setData] = useState<RevokePermissionsResult | null>(null)
-  // A second click before the first settles would mint a second session
-  // key. The button's disabled state is not enough: the click can land
-  // before React re-renders.
+  // A second click before the first settles would fire a second revoke against
+  // a key the first call is already retiring. The button's disabled state is
+  // not enough: the click can land before React re-renders.
   const inFlightRef = useRef(false)
 
   const revokePermissions = useCallback(

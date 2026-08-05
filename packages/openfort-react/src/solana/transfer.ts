@@ -28,6 +28,44 @@ const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
 const SEND_TIMEOUT_MS = 60_000
 const POLL_INTERVAL_MS = 1_000
 
+/**
+ * Broadcasts `signedTransaction` and waits for confirmation, bounded.
+ *
+ * The signature is derived before the send so a confirmation timeout can still
+ * name it: the transaction may land after we stop waiting, and a user who
+ * cannot see the signature has no way to check before retrying — which is how
+ * one transfer gets sent twice.
+ */
+async function sendAndConfirmBounded(
+  kit: Kit,
+  rpc: Parameters<Kit['sendAndConfirmTransactionFactory']>[0]['rpc'],
+  rpcSubscriptions: Parameters<Kit['sendAndConfirmTransactionFactory']>[0]['rpcSubscriptions'],
+  signedTransaction: Awaited<ReturnType<Kit['signTransactionMessageWithSigners']>>,
+  commitment: SolanaCommitment
+): Promise<string> {
+  const signature = kit.getSignatureFromTransaction(signedTransaction)
+  const sendAndConfirm = kit.sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
+  const abortSignal = AbortSignal.timeout(SEND_TIMEOUT_MS)
+
+  try {
+    await sendAndConfirm(signedTransaction as Parameters<typeof sendAndConfirm>[0], { commitment, abortSignal })
+  } catch (cause) {
+    // Only the confirmation bound gets relabelled. Everything else — a failed
+    // preflight, a rejected transaction, an unreachable node — has its own real
+    // reason, and calling those "not confirmed in time" would send the user to
+    // an explorer that has nothing to show and imply a retry might double-send.
+    if (abortSignal.aborted) {
+      throw new WalletError('The transaction was broadcast but not confirmed in time.', {
+        cause: toError(cause),
+        details: `Signature ${signature}. Check it on an explorer before sending again.`,
+      })
+    }
+    throw cause
+  }
+
+  return signature
+}
+
 /** Decimal SOL → lamports, without floating-point loss. */
 /** @internal Exported for focused validation tests; not part of a package entry point. */
 export function solToLamports(amountSol: number): bigint {
@@ -151,37 +189,7 @@ export async function sendSol({
 
   const signedTransaction = await kit.signTransactionMessageWithSigners(message)
 
-  // Derived before the send so a confirmation timeout can still name it. The
-  // transaction may land after we stop waiting, and a user who cannot see the
-  // signature has no way to check before retrying — which is how one transfer
-  // gets sent twice.
-  const signature = kit.getSignatureFromTransaction(signedTransaction)
-
-  const sendAndConfirm = kit.sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
-  const abortController = new AbortController()
-  const timeout = setTimeout(() => abortController.abort(), SEND_TIMEOUT_MS)
-  try {
-    await sendAndConfirm(signedTransaction as Parameters<typeof sendAndConfirm>[0], {
-      commitment,
-      abortSignal: abortController.signal,
-    })
-  } catch (cause) {
-    // Only the confirmation bound gets relabelled. Everything else — a failed
-    // preflight, a rejected transaction, an unreachable node — has its own real
-    // reason, and calling those "not confirmed in time" would send the user to
-    // an explorer that has nothing to show and imply a retry might double-send.
-    if (abortController.signal.aborted) {
-      throw new WalletError('The transaction was broadcast but not confirmed in time.', {
-        cause: toError(cause),
-        details: `Signature ${signature}. Check it on an explorer before sending again.`,
-      })
-    }
-    throw cause
-  } finally {
-    clearTimeout(timeout)
-  }
-
-  return signature
+  return sendAndConfirmBounded(kit, rpc, rpcSubscriptions, signedTransaction, commitment)
 }
 
 type SendSplTokenParams = {
@@ -336,37 +344,7 @@ export async function sendSplToken({
 
   const signedTransaction = await kit.signTransactionMessageWithSigners(message)
 
-  // Derived before the send so a confirmation timeout can still name it. The
-  // transaction may land after we stop waiting, and a user who cannot see the
-  // signature has no way to check before retrying — which is how one transfer
-  // gets sent twice.
-  const signature = kit.getSignatureFromTransaction(signedTransaction)
-
-  const sendAndConfirm = kit.sendAndConfirmTransactionFactory({ rpc, rpcSubscriptions })
-  const abortController = new AbortController()
-  const timeout = setTimeout(() => abortController.abort(), SEND_TIMEOUT_MS)
-  try {
-    await sendAndConfirm(signedTransaction as Parameters<typeof sendAndConfirm>[0], {
-      commitment,
-      abortSignal: abortController.signal,
-    })
-  } catch (cause) {
-    // Only the confirmation bound gets relabelled. Everything else — a failed
-    // preflight, a rejected transaction, an unreachable node — has its own real
-    // reason, and calling those "not confirmed in time" would send the user to
-    // an explorer that has nothing to show and imply a retry might double-send.
-    if (abortController.signal.aborted) {
-      throw new WalletError('The transaction was broadcast but not confirmed in time.', {
-        cause: toError(cause),
-        details: `Signature ${signature}. Check it on an explorer before sending again.`,
-      })
-    }
-    throw cause
-  } finally {
-    clearTimeout(timeout)
-  }
-
-  return signature
+  return sendAndConfirmBounded(kit, rpc, rpcSubscriptions, signedTransaction, commitment)
 }
 
 /** The Openfort Solana paymaster (Kora) endpoint for a cluster. */
@@ -466,8 +444,8 @@ async function sendViaKora({
   // path — and sponsored native SOL is no different. Fall back to the cluster's
   // public endpoint rather than skip the check: an app that never configured an
   // RPC still deserves the guard.
-  const readUrl = rpcUrl || getDefaultSolanaRpcUrl(cluster)
-  await assertTransferableRecipient(kit.createSolanaRpc(readUrl), to, commitment)
+  const readRpc = kit.createSolanaRpc(rpcUrl || getDefaultSolanaRpcUrl(cluster))
+  await assertTransferableRecipient(readRpc, to, commitment)
 
   const client = new KoraClient({ rpcUrl: koraRpcUrl(cluster, backendUrl), apiKey: `Bearer ${publishableKey}` })
 
@@ -490,12 +468,7 @@ async function sendViaKora({
   if (tokenMint !== SYSTEM_PROGRAM_ID) {
     const token = await import('@solana-program/token')
     const tokenProgram = kit.address(
-      await resolveTokenProgram(
-        kit.createSolanaRpc(rpcUrl || getDefaultSolanaRpcUrl(cluster)),
-        tokenMint,
-        token.TOKEN_PROGRAM_ADDRESS,
-        commitment
-      )
+      await resolveTokenProgram(readRpc, tokenMint, token.TOKEN_PROGRAM_ADDRESS, commitment)
     )
     const [destinationAta] = await token.findAssociatedTokenPda({
       owner: kit.address(to),

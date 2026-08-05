@@ -9,6 +9,7 @@ import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
+import { useLatest } from '../../useLatest.js'
 import { onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { type BaseFlowState, mapStatus } from './status.js'
@@ -36,11 +37,7 @@ type UsePhoneHookOptions = OpenfortHookOptions<PhoneAuthResult> & CreateWalletPo
 const DEFAULT_PHONE_OTP_HOOK_OPTIONS: UsePhoneHookOptions = {}
 
 export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE_OTP_HOOK_OPTIONS) => {
-  // Held in a ref rather than a dependency: a consumer passing an inline
-  // options object would otherwise give every action a new identity on each
-  // render, so an effect depending on one would re-fire forever.
-  const hookOptionsRef = useRef(hookOptions)
-  hookOptionsRef.current = hookOptions
+  const hookOptionsRef = useLatest(hookOptions)
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)

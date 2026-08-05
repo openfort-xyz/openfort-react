@@ -11,6 +11,7 @@ import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { assertEmbeddedEthereumAccount } from '../../shared/utils/assertEmbeddedEthereumAccount.js'
 import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
 import type { OpenfortHookOptions } from '../../types.js'
+import { useLatest } from '../useLatest.js'
 import { type BaseFlowState, mapStatus } from './auth/status.js'
 import { onError, onSuccess } from './hookConsistency.js'
 
@@ -115,10 +116,9 @@ export function use7702Authorization(hookOptions: Use7702AuthorizationOptions = 
   // biome-ignore lint/correctness/useHookAtTopLevel: use7702Authorization is a valid hook name
   const [data, setData] = useState<SignAuthorizationReturnType | null>(null)
   // biome-ignore lint/correctness/useHookAtTopLevel: use7702Authorization is a valid hook name
-  const hookOptionsRef = useRef(hookOptions)
+  const hookOptionsRef = useLatest(hookOptions)
   // biome-ignore lint/correctness/useHookAtTopLevel: use7702Authorization is a valid hook name
   const latestInvocationRef = useRef(0)
-  hookOptionsRef.current = hookOptions
 
   // biome-ignore lint/correctness/useHookAtTopLevel: use7702Authorization is a valid hook name
   const signAuthorization = useCallback(

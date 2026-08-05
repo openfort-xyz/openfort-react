@@ -38,23 +38,17 @@ const SENSITIVE_KEY_FRAGMENTS = [
   'credential',
 ]
 
-/**
- * Matched only at the end of a key.
- *
- * `accessToken`, `refreshToken`, `sessionToken` and `x-access-token` are all
- * credentials; `tokenMint`, `tokenAddress`, `tokenProgram` and `tokenId` are
- * public identifiers this SDK logs constantly. A substring rule would redact
- * both and quietly destroy the more useful half.
- */
-const SENSITIVE_KEY_SUFFIXES = ['token']
-
 const normalizedKey = (key: string) => key.toLowerCase().replaceAll(/[^a-z0-9]/g, '')
 
 export const isSensitiveKey = (key: unknown): key is string => {
   if (typeof key !== 'string') return false
   const normalized = normalizedKey(key)
   if (SENSITIVE_KEYS.has(normalized)) return true
-  if (SENSITIVE_KEY_SUFFIXES.some((suffix) => normalized.endsWith(suffix))) return true
+  // `token` matches only as a suffix. `accessToken`, `refreshToken`,
+  // `sessionToken` and `x-access-token` are all credentials; `tokenMint`,
+  // `tokenAddress`, `tokenProgram` and `tokenId` are public identifiers this SDK
+  // logs constantly, and a substring rule would destroy the more useful half.
+  if (normalized.endsWith('token')) return true
   return SENSITIVE_KEY_FRAGMENTS.some((fragment) => normalized.includes(fragment))
 }
 

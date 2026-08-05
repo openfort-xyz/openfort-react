@@ -426,23 +426,34 @@ const TEXT_RULES: readonly { pattern: RegExp; details: TransactionErrorDetails }
  * would surface the wrapper every time, so an ambiguous code is only used when
  * the whole chain offers nothing better.
  */
-function providerErrorCode(error: unknown): number | undefined {
+/**
+ * Yields `error` and everything nested under its `cause` or `data`, breadth
+ * first. Cycles are skipped and the walk is capped, because a provider is free
+ * to hand back a self-referential object.
+ */
+function* nestedErrors(error: unknown): Generator<Record<string, unknown>> {
   const queue: unknown[] = [error]
   const seen = new Set<unknown>()
-  let ambiguous: number | undefined
 
   while (queue.length > 0 && seen.size < 20) {
     const current = queue.shift()
     if (current == null || typeof current !== 'object' || seen.has(current)) continue
     seen.add(current)
 
-    const code = (current as { code?: unknown }).code
+    yield current as Record<string, unknown>
+    queue.push((current as { cause?: unknown }).cause, (current as { data?: unknown }).data)
+  }
+}
+
+function providerErrorCode(error: unknown): number | undefined {
+  let ambiguous: number | undefined
+
+  for (const current of nestedErrors(error)) {
+    const code = current.code
     if (typeof code === 'number' && PROVIDER_ERROR_CODES.has(code)) {
       if (!AMBIGUOUS_PROVIDER_CODES.has(code)) return code
       ambiguous ??= code
     }
-
-    queue.push((current as { cause?: unknown }).cause, (current as { data?: unknown }).data)
   }
 
   return ambiguous
@@ -457,18 +468,8 @@ function providerErrorCode(error: unknown): number | undefined {
  * exist to classify.
  */
 function messageMatches(error: unknown, pattern: RegExp): boolean {
-  const queue: unknown[] = [error]
-  const seen = new Set<unknown>()
-
-  while (queue.length > 0 && seen.size < 20) {
-    const current = queue.shift()
-    if (current == null || typeof current !== 'object' || seen.has(current)) continue
-    seen.add(current)
-
-    const message = (current as { message?: unknown }).message
-    if (typeof message === 'string' && pattern.test(message)) return true
-
-    queue.push((current as { cause?: unknown }).cause, (current as { data?: unknown }).data)
+  for (const current of nestedErrors(error)) {
+    if (typeof current.message === 'string' && pattern.test(current.message)) return true
   }
 
   return false

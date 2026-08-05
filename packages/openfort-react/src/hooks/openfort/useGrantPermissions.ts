@@ -20,6 +20,7 @@ import { assertEmbeddedEthereumAccount } from '../../shared/utils/assertEmbedded
 import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
 import type { OpenfortHookOptions } from '../../types.js'
 import { logger } from '../../utils/logger.js'
+import { useLatest } from '../useLatest.js'
 import { type BaseFlowState, mapStatus } from './auth/status.js'
 import { onError, onSuccess } from './hookConsistency.js'
 
@@ -110,11 +111,7 @@ const TEN_YEARS_IN_SECONDS = 10 * 365 * 24 * 60 * 60
 const DEFAULT_GRANT_HOOK_OPTIONS: GrantPermissionsHookOptions = {}
 
 export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = DEFAULT_GRANT_HOOK_OPTIONS) => {
-  // Held in a ref rather than a dependency: a consumer passing an inline
-  // options object would otherwise give every action a new identity on each
-  // render, so an effect depending on one would re-fire forever.
-  const hookOptionsRef = useRef(hookOptions)
-  hookOptionsRef.current = hookOptions
+  const hookOptionsRef = useLatest(hookOptions)
   const bridge = useEthereumBridge()
   const { chains } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)
