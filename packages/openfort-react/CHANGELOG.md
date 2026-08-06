@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.6.5
+
+### Patch Changes
+
+- [#324](https://github.com/openfort-xyz/openfort-react/pull/324) [`af3dc34`](https://github.com/openfort-xyz/openfort-react/commit/af3dc345e4237924389d1477ad9e2599569d3a0b) Thanks [@joalavedra](https://github.com/joalavedra)! - External wallet list: on mobile, wallets render as square tiles in a horizontal strip (the layout the fork inherited but had disabled), with the WalletConnect entry as an "Other" tile that opens the WalletConnect modal; the Deposit "Transfer from wallet" picker uses the same tiles. Rabby is added as a targeted injected connector (extension detection on desktop, WalletConnect on mobile), and injected wallets whose provider isn't actually present are hidden when WalletConnect isn't configured. MetaMask and Phantom are registered as targeted injected connectors whether or not the extension exists, and without WalletConnect there is no QR/modal fallback — clicking them dead-ended on "Wallet connections unavailable". The list now probes each connector's provider and only shows undetected injected wallets when WalletConnect can take over. Also: the Phantom row now renders its logo (the wallet config was keyed on the EIP-6963 rdns only, never matching the targeted connector id, and had no icon), and the recently-used wallet is hoisted to the top of the list again (the sorted list was computed but never rendered).
+
+  The WalletConnect modal no longer renders underneath the Openfort modal: the z-index bump was injected as a style tag, which CSP style-src silently drops in hardened apps; it now uses a constructed stylesheet (CSSOM, exempt from CSP). Auth modal copy: the main page always surfaces at least one social provider (the rest stay behind "Other socials"), the heading reads "Log in or sign up", the wallet button "Connect your wallet", the email placeholder "your@email.com", and the connect status "Successfully connected".
+
 ## 1.6.4
 
 ### Patch Changes

@@ -22,7 +22,7 @@ test.describe('auth screen renders correctly', () => {
       await landingCard.getByRole('button', { name: /^connect wallet$/i }).click()
 
       // The widget modal opens with the configured sign-in options
-      await expect(page.getByPlaceholder('Enter your email')).toBeVisible({ timeout: 30_000 })
+      await expect(page.getByPlaceholder('your@email.com')).toBeVisible({ timeout: 30_000 })
       await expect(page.getByRole('button', { name: /^guest$/i })).toBeVisible({ timeout: 30_000 })
     })
   }

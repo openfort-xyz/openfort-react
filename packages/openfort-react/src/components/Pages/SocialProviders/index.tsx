@@ -13,7 +13,7 @@ const SocialProviders: React.FC = () => {
 
   return (
     <PageContent>
-      <ModalHeading>Other socials</ModalHeading>
+      <ModalHeading>Log in or sign up</ModalHeading>
       <ScrollArea mobileDirection={'horizontal'}>
         {remainingSocialProviders.map((auth) => (
           <ProviderButton key={auth} provider={auth} />
