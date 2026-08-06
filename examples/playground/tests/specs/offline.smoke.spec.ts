@@ -17,6 +17,6 @@ test('renders provider controls and opens the SDK modal without external service
   await expect(landingCard).toBeVisible()
   await landingCard.getByRole('button', { name: /^connect wallet$/i }).click()
 
-  await expect(page.getByPlaceholder('Enter your email')).toBeVisible()
+  await expect(page.getByPlaceholder('your@email.com')).toBeVisible()
   await expect(page.getByRole('button', { name: /^guest$/i })).toBeVisible()
 })

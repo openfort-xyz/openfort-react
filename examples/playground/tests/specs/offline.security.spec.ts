@@ -200,10 +200,11 @@ test('modal navigation makes the outgoing page hidden and inert immediately', as
     .filter({ hasText: /connect to start/i })
     .first()
   await landingCard.getByRole('button', { name: /^connect wallet$/i }).click()
-  const email = page.getByPlaceholder('Enter your email')
+  const email = page.getByPlaceholder('your@email.com')
   await expect(email).toBeVisible()
 
-  await page.getByRole('button', { name: /^social providers$/i }).click()
+  // Any in-modal navigation will do; the wallet list is the one reachable without network.
+  await page.getByRole('button', { name: /^connect your wallet$/i }).click()
 
   const outgoing = email.locator('xpath=ancestor::*[@aria-hidden="true" and @inert][1]')
   await expect(outgoing).toHaveCount(1)
@@ -218,9 +219,10 @@ test('rapid modal reversal restores the active page Back ownership', async ({ pa
     .first()
   await landingCard.getByRole('button', { name: /^connect wallet$/i }).click()
 
-  const email = page.getByPlaceholder('Enter your email')
+  const email = page.getByPlaceholder('your@email.com')
   await expect(email).toBeVisible()
-  await page.getByRole('button', { name: /^social providers$/i }).click()
+  // Any in-modal navigation will do; the wallet list is the one reachable without network.
+  await page.getByRole('button', { name: /^connect your wallet$/i }).click()
 
   const back = page.getByRole('button', { name: /^back$/i })
   await expect(back).toBeVisible()
