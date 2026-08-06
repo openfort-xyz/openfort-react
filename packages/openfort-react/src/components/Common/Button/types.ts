@@ -14,7 +14,7 @@ export type ButtonProps = {
   download?: boolean
   href?: string
   style?: React.CSSProperties
-  onClick?: (e: any) => void
+  onClick?: (e: React.MouseEvent<HTMLElement>) => void
   textAlign?: 'center' | 'flex-start' | 'flex-end' | 'space-between' | 'space-around' | 'space-evenly'
   title?: string
   fitText?: boolean

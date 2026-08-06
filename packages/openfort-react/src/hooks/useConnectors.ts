@@ -1,5 +1,7 @@
-import type { OpenfortEthereumBridgeConnector } from '../ethereum/OpenfortEthereumBridgeContext'
-import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext'
+'use client'
+
+import type { OpenfortEthereumBridgeConnector } from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
 
 function useConnectors(): OpenfortEthereumBridgeConnector[] {
   const bridge = useEthereumBridge()

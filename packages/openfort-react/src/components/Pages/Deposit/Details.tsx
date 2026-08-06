@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
-import type { PaymentMethod } from '../../../hooks/openfort/useFunding'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { chevron, detailsBox, detailsLabel, detailsRow, detailsToggle, detailsValue } from './formStyles'
+import type { PaymentMethod } from '../../../hooks/openfort/fundingClient.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { chevron, detailsBox, detailsLabel, detailsRow, detailsToggle, detailsValue } from './formStyles.js'
 
 type SourceCurrency = { symbol: string; decimals: number }
 
@@ -44,6 +44,7 @@ export function DepositDetails({
   const [open, setOpen] = useState(true)
   const { triggerResize } = useOpenfort()
   // Grow/shrink the modal to fit the expanded rows.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `open` is the trigger, not an input
   useEffect(() => {
     triggerResize()
   }, [open, triggerResize])

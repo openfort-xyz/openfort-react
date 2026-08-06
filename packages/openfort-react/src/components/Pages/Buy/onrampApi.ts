@@ -1,11 +1,13 @@
-import { ChainTypeEnum, SDKConfiguration } from '@openfort/openfort-js'
-import type { Asset } from '../../Openfort/types'
-import { getAssetSymbol } from '../Send/utils'
+import { ChainTypeEnum } from '@openfort/openfort-js'
+import { MissingParameterError } from '../../../errors/validation.js'
+import type { Asset } from '../../Openfort/types.js'
+import { getAssetSymbol } from '../Send/utils.js'
+import { postOnramp } from './onrampRequest.js'
 
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
+/** Backend endpoint every provider opens its onramp session against. */
+export const ONRAMP_SESSIONS_PATH = '/v1/onramp/sessions'
+
+const ONRAMP_QUOTES_PATH = '/v1/onramp/quotes'
 
 // Generic quote response type (matches backend OnrampQuoteResponse)
 export type OnrampQuote = {
@@ -64,7 +66,7 @@ export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQu
   const { token, network, publishableKey, sourceCurrency, sourceAmount } = params
 
   if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
+    throw new MissingParameterError({ params: ['publishableKey'] })
   }
 
   // Build request body WITHOUT provider to get all quotes
@@ -75,21 +77,12 @@ export const getAllQuotes = async (params: GetAllQuotesParams): Promise<OnrampQu
     sourceAmount,
   }
 
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
+  const data = await postOnramp<OnrampQuote | OnrampQuote[]>({
+    path: ONRAMP_QUOTES_PATH,
+    body: requestBody,
+    publishableKey,
+    operation: 'Onramp quote lookup',
   })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to fetch quotes')
-  }
-
-  const data = await response.json()
 
   // Backend returns array when provider is not specified
   return Array.isArray(data) ? data : [data]

@@ -1,6 +1,6 @@
 'use client'
 
-import { orLine, orRow, orText } from './formStyles'
+import { orLine, orRow, orText } from './formStyles.js'
 
 /** Separates the scan-QR / copy-address path from the open-wallet / open-exchange path. */
 export function OrDivider() {

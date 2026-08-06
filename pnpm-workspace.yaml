@@ -1,9 +1,191 @@
 packages:
   - "packages/**"
-  - "examples/**"
-minimumReleaseAge: 1440
+  - "environments/*"
+  # Listed explicitly because `examples/**` also matches `examples/quickstarts`
+  # itself, which is a plain directory with no package.json.
+  - "examples/playground"
+  - "examples/quickstarts/*"
+  # The betterauth quickstart is a nested monorepo whose own scripts filter on
+  # these package names, so they have to be part of this workspace.
+  - "examples/quickstarts/betterauth/apps/*"
+
+# pnpm 10 reads dependency overrides from the workspace manifest. Keeping the
+# graph constraints here makes fresh installs and the compatibility matrix use
+# the same security and peer-version policy recorded in the lockfile.
+overrides:
+  bn.js: '>=5.2.3'
+  axios: '>=1.18.1'
+  react: 18.3.1
+  react-dom: 18.3.1
+  '@types/react': 18.3.1
+  '@types/react-dom': 18.3.1
+  viem: ^2.52.2
+  wagmi: ^3.6.16
+  '@tanstack/react-query': ^5.99.2
+  '@tanstack/query-core': ^5.99.2
+  use-sync-external-store: ^1.6.0
+  typescript: ^5.9.3
+  hono: '>=4.12.34 <5'
+  protobufjs: '>=8.6.0'
+  follow-redirects: '>=1.16.0'
+  '@hono/node-server': '>=1.19.13'
+  cross-spawn: '>=6.0.6'
+  got: '>=11.8.5'
+  esbuild: '>=0.28.1'
+  glob@>=10.3.7 <=11.0.3: '>=11.1.0'
+  body-parser@>=2.2.0 <2.2.1: '>=2.2.1'
+  '@modelcontextprotocol/sdk@<1.25.2': 1.25.2
+  qs@<6.15.2: '>=6.15.2'
+  preact@>=10.28.0 <10.28.2: '>=10.28.2'
+  diff@<8.0.3: '>=8.0.3'
+  h3@<1.15.9: '>=1.15.9'
+  kysely: '>=0.28.17'
+  effect@<3.20.0: '>=3.20.0'
+  lodash@>=4.0.0 <=4.17.23: '>=4.18.0'
+  markdown-it: '>=14.2.0'
+  minimatch: '>=10.2.3'
+  bn.js@<4.12.3: '>=4.12.3'
+  rollup@>=4.0.0 <4.59.0: '>=4.59.0'
+  rollup@<2.80.0: '>=2.80.0'
+  undici@>=7.0.0 <7.29.0: '>=7.29.0 <8'
+  socket.io-parser@>=4.0.0 <4.2.6: '>=4.2.6'
+  picomatch@<2.3.2: '>=2.3.2 <3.0.0'
+  picomatch@>=4.0.0 <4.0.4: '>=4.0.4'
+  yaml@>=2.0.0 <2.8.3: '>=2.8.3'
+  smol-toml@<1.6.1: '>=1.6.1'
+  brace-expansion@<5.0.9: '>=5.0.9'
+  path-to-regexp@<0.1.13: 0.1.13
+  drizzle-orm: '>=0.45.2'
+  defu: '>=6.1.5'
+  uuid@<14.0.0: '>=14.0.0'
+  postcss@<8.5.23: '>=8.5.23'
+  ws: '>=8.21.0'
+  vitest@<4.1.0: '>=4.1.0'
+  shell-quote@>=1.1.0 <=1.8.3: '>=1.8.4'
+  '@grpc/grpc-js@<1.9.16': '>=1.9.16'
+  form-data@>=4.0.0 <4.0.6: '>=4.0.6'
+  vite@<6.4.3: '>=6.4.3'
+  js-yaml@>=4.0.0 <4.3.0: '>=4.3.0 <5'
+  # read-yaml-file 1.1 calls the js-yaml 3 safeLoad API, which 4.x removed, so
+  # this path stays on the 3.x line. 3.15.1 carries the merge-key backport.
+  'read-yaml-file@1.1.0>js-yaml': 3.15.1
+  dompurify@<3.4.11: '>=3.4.11'
+  '@opentelemetry/core@<2.8.0': '>=2.8.0'
+  '@babel/core@<7.29.6': '>=7.29.6 <8'
+
+# Seven days. A compromised publish is usually caught and unpublished within
+# hours to days, so waiting a week means the registry has almost always sorted
+# itself out before a release can reach this workspace.
+minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
   - "@openfort/openfort-js"
   - "@openfort/openfort-node"
   - "@openfort/better-auth"
+  # The `hono: '>=4.12.34 <5'` override above is a security floor, and 4.12.34 is
+  # newer than the delay window — the two policies cannot both hold. Taking a
+  # known-vulnerable version to satisfy the delay would be the worse trade, so
+  # the floor wins here. Drop this entry once the floor is older than the window.
   - "hono"
+
+# Fail the install if a dependency's npm trust level drops below what it had on
+# an earlier release — for example a package that published with provenance and
+# suddenly stops. Catches a compromised publish pipeline that version pinning
+# alone would let through.
+trustPolicy: no-downgrade
+
+# Versions that `trustPolicy: no-downgrade` rejects even though the lockfile
+# pins them deliberately. Each one published without trust evidence after an
+# earlier release carried some, which stops every install that runs the
+# resolution step — adding a dependency, bumping one, or any Dependabot PR.
+# The exclusion is scoped to the exact version, so a future release re-enters
+# the trust check and a genuinely tampered publish still fails the install.
+# Drop an entry as soon as the chain that pulls it moves to a signed release.
+trustPolicyExclude:
+  # The SDK's Rollup 2 build remains pinned to its final release. That release
+  # predates npm provenance used by later Rollup versions, so resolution-only
+  # lockfile updates otherwise fail the no-downgrade policy.
+  - "rollup@2.80.0"
+  # wagmi > @wagmi/connectors > @walletconnect/ethereum-provider >
+  # @walletconnect/logger > pino. Earlier slow-redact releases used a trusted
+  # publisher; 0.3.2 has none.
+  - "slow-redact@0.3.2"
+  # wagmi > @wagmi/connectors > @walletconnect/ethereum-provider >
+  # @walletconnect/utils > @walletconnect/relay-auth, which pins this exact
+  # version. Earlier @noble/curves releases carried a provenance attestation;
+  # 1.8.0 has none.
+  - "@noble/curves@1.8.0"
+  # Pinned by the same @walletconnect/relay-auth, and missing the provenance
+  # attestation that earlier @noble/hashes releases carried.
+  - "@noble/hashes@1.7.0"
+  # create-openfort's React 19 standalone build resolves @babel/core 7.29.7,
+  # whose exact semver dependency lacks the trust evidence present on earlier
+  # semver releases.
+  - "semver@6.3.1"
+
+# pnpm 10 blocks `preinstall`, `install` and `postinstall` scripts of
+# dependencies unless they are listed here. Keep this allowlist minimal and
+# greppable so every dependency with install-time code is explicit.
+# Adding an entry grants that package arbitrary code execution at install time,
+# so add one only for a package that genuinely cannot ship prebuilt artifacts,
+# and pin it to the exact versions that were reviewed.
+onlyBuiltDependencies:
+  # Better Auth's SQLite driver is used by the full-stack quickstart and ships
+  # a native binding that must be installed before the sample can start.
+  - better-sqlite3
+
+auditConfig:
+  # Advisories whose fix is not reachable from this repo. `pnpm audit` runs as a
+  # blocking CI gate, so this list is the known-debt baseline: anything NOT
+  # listed here fails the build. Re-check the list whenever the lockfile moves;
+  # an entry that no longer matches is dead and should be deleted.
+  #
+  # Entries below are either isolated to examples/tooling or carry an explicit
+  # runtime reachability analysis. Runtime exceptions must document why the
+  # vulnerable operation is not invoked and when the exception can be removed.
+  ignoreCves:
+    # elliptic has no patched 6.x release. It is runtime-reachable through the
+    # core SDK's ethers v5 transaction types, but Openfort React does not call
+    # elliptic's ECDSA signing API; embedded signing is handled by Shield.
+    # Remove this exception when the core SDK drops the ethers v5 dependency.
+    - CVE-2025-14505
+  ignoreGhsas:
+    # websocket-driver <0.7.5 — message corruption and compression resource
+    # limits. Reached only via `firebase > @firebase/database > faye-websocket`
+    # in the firebase quickstart, which has no release on a patched driver.
+    - GHSA-mp7j-qc5w-4988
+    - GHSA-xv26-6w52-cph6
+    # brace-expansion — quadratic and unbounded expansion DoS. Reached via
+    # `typedoc > minimatch` in the playground; both are build-time only and run
+    # on repo-authored input.
+    - GHSA-3jxr-9vmj-r5cp
+    - GHSA-mh99-v99m-4gvg
+    # shell-quote <1.9.0 — quadratic parsing DoS. Reached via the betterauth
+    # quickstart's tooling, which quotes only locally constructed commands.
+    - GHSA-395f-4hp3-45gv
+    # protobufjs — prototype pollution during decoding. Reached via
+    # `posthog-js > @opentelemetry/exporter-logs-otlp-http` in the playground.
+    - GHSA-jfj6-75fj-8934
+    - GHSA-j3f2-48v5-ccww
+    # body-parser <1.20.6 — request parsing DoS. Reached via a nested Express in
+    # the betterauth quickstart server, which is an example, not a deployed service.
+    - GHSA-v422-hmwv-36x6
+    # @hono/node-server — request smuggling surface. Reached via
+    # `better-auth > prisma > @prisma/dev` in the betterauth quickstart.
+    - GHSA-frvp-7c67-39w9
+    - GHSA-9mqv-5hh9-4cgg
+    # linkify-it <5.0.2 — ReDoS on crafted link text. Reached via the
+    # playground's markdown rendering of repo-authored content.
+    - GHSA-v245-v573-v5vm
+    # dompurify <3.4.12 — sanitizer bypass. Reached via `posthog-js` in the
+    # playground; the playground does not render untrusted HTML.
+    - GHSA-c2j3-45gr-mqc4
+    # postcss <8.5.18 — source-map path traversal. Reached via `vite` in the
+    # playground at build time, over this repo's own stylesheets.
+    - GHSA-r28c-9q8g-f849
+    # valibot <1.4.2 — schema validation bypass. Reached via the betterauth
+    # quickstart server's transitive dependencies.
+    - GHSA-5qjj-4xww-7phc
+    # seroval <1.5.3 — deserialization type confusion. Reached via
+    # `@tanstack/react-router > @tanstack/router-core` in the playground, which
+    # deserializes only its own router state.
+    - GHSA-mv8w-475r-vwqw

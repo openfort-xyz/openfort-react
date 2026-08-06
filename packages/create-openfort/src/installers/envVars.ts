@@ -1,5 +1,5 @@
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import fs from "fs-extra";
 
 interface FillEnvOptions {
   projectDir: string;
@@ -21,7 +21,7 @@ export const fillEnvVariables = ({
   const envExamplePath = path.join(projectDir, ".env.example");
   const envPath = path.join(projectDir, ".env");
 
-  if (!fs.existsSync(envExamplePath)) {
+  if (!existsSync(envExamplePath)) {
     // If no .env.example exists, create a basic one
     const basicEnv = createBasicEnv({
       openfortPublishableKey,
@@ -30,12 +30,12 @@ export const fillEnvVariables = ({
       walletConnectProjectId,
       theme,
     });
-    fs.writeFileSync(envPath, basicEnv);
+    writeFileSync(envPath, basicEnv);
     return;
   }
 
   // Read .env.example
-  const envExample = fs.readFileSync(envExamplePath, "utf-8");
+  const envExample = readFileSync(envExamplePath, "utf-8");
 
   // Fill in the values
   let envContent = envExample;
@@ -106,7 +106,7 @@ export const fillEnvVariables = ({
       .replace(/OPENFORT_THEME=.*/g, `OPENFORT_THEME=${theme}`);
   }
 
-  fs.writeFileSync(envPath, envContent);
+  writeFileSync(envPath, envContent);
 };
 
 const createBasicEnv = ({

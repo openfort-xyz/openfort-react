@@ -1,9 +1,9 @@
-import type { CreateConfigParameters } from '@wagmi/core'
+import type { CreateConfigParameters } from 'wagmi'
 import { http } from 'wagmi'
 import { arbitrum, mainnet, optimism, polygon } from 'wagmi/chains'
 import type { CoinbaseWalletParameters } from 'wagmi/connectors'
 
-import defaultConnectors from './defaultConnectors'
+import defaultConnectors from './defaultConnectors.js'
 
 type DefaultConfigProps = {
   appName: string
@@ -43,6 +43,10 @@ const defaultConfig = ({
     })
 
   return {
+    // Wagmi otherwise hydrates its external store during render. SDK bridge
+    // subscribers can then be updated while Hydrate is rendering, which React
+    // correctly reports as a render-phase update.
+    ssr: true,
     ...rest,
     chains,
     connectors,

@@ -1,0 +1,9 @@
+# pnpm
+.pnpm-store/
+
+dist
+
+node_modules/
+
+.env*
+!.env.example

@@ -67,5 +67,9 @@ test.describe('Wallets - create new wallet', () => {
 
     const finalCount = await walletRowLocator.count()
     expect(finalCount).toBeGreaterThanOrEqual(2)
+
+    if (m === 'svm') {
+      await dashboardPage.signMessage(`Solana browser gate ${Date.now()}`, m)
+    }
   })
 })

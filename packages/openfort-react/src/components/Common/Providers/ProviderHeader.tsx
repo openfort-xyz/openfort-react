@@ -2,15 +2,15 @@
 
 import { useEffect, useState } from 'react'
 import type { Hex } from 'viem'
-import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useUser } from '../../../hooks/openfort/useUser'
-import { truncateEthAddress } from '../../../utils'
-import { logger } from '../../../utils/logger'
-import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
-import type { LinkedAccount } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { LinkedProviderText } from '../../Pages/LinkedProviders/styles'
+import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import { truncateEthAddress } from '../../../utils/index.js'
+import { logger } from '../../../utils/logger.js'
+import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import type { LinkedAccount } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { LinkedProviderText } from '../../Pages/LinkedProviders/styles.js'
 
 export const WalletDisplay = ({ walletAddress }: { walletAddress: string }) => {
   const strategy = useConnectionStrategy()

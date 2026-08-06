@@ -2,18 +2,18 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect } from 'react'
-import Logos from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton'
-import CustomQRCode from '../../Common/CustomQRCode'
-import { ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { AddressField, AddressRow, AddressSection, Label, NetworkInfo, QRWrapper, ReceiveContent } from './styles'
+import Logos from '../../../assets/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton.js'
+import CustomQRCode from '../../Common/CustomQRCode/index.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { AddressField, AddressRow, AddressSection, Label, NetworkInfo, QRWrapper, ReceiveContent } from './styles.js'
 
 function formatSolanaCluster(cluster: string): string {
   if (cluster === 'mainnet-beta') return 'Mainnet'
@@ -25,7 +25,7 @@ const Receive = () => {
   const { route, chains } = context
   const currentRoute = route?.route ?? ''
   const isSolanaRoute = currentRoute.startsWith('sol:')
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const bridge = useEthereumBridge()
@@ -66,6 +66,7 @@ const Receive = () => {
     return <Logos.Openfort />
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `address` is the trigger — a resolved address renders the QR code and the copy row, changing the page height
   useEffect(() => {
     const timer = setTimeout(() => context.triggerResize(), 100)
     return () => clearTimeout(timer)

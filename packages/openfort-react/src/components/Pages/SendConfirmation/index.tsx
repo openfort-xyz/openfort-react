@@ -11,42 +11,50 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Abi, Address } from 'viem'
 import { createPublicClient, encodeFunctionData, erc20Abi, http, isAddress, parseUnits } from 'viem'
-import { TickIcon } from '../../../assets/icons'
-import { chainLogoUrl } from '../../../constants/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useBalance } from '../../../hooks/useBalance'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData'
-import { getExplorerUrl } from '../../../shared/utils/explorer'
-import { truncateEthAddress } from '../../../utils'
-import { parseTransactionError } from '../../../utils/errorHandling'
-import { logger } from '../../../utils/logger'
-import { getChainName, getDefaultEthereumRpcUrl } from '../../../utils/rpc'
-import Button from '../../Common/Button'
-import Loader from '../../Common/Loading'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { TickIcon } from '../../../assets/icons.js'
+import { chainLogoUrl } from '../../../constants/logos.js'
+import { WalletNotConnectedError } from '../../../errors/wallet.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import { useBalance } from '../../../hooks/useBalance.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { getOpenfortQueryInputScope, getOpenfortQueryScope, openfortKeys } from '../../../query/queryKeys.js'
+import { useQuery } from '../../../query/useQuery.js'
+import { assertEmbeddedEthereumAccount } from '../../../shared/utils/assertEmbeddedEthereumAccount.js'
+import { runEmbeddedSignerOperation } from '../../../shared/utils/embeddedSignerOperationQueue.js'
+import { getExplorerUrl } from '../../../shared/utils/explorer.js'
+import { parseTransactionError } from '../../../utils/errorHandling.js'
+import { truncateEthAddress } from '../../../utils/index.js'
+import { logger } from '../../../utils/logger.js'
+import { getChainName, getDefaultEthereumRpcUrl } from '../../../utils/rpc.js'
+import Button from '../../Common/Button/index.js'
+import Loader from '../../Common/Loading/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 import {
   formatBalanceWithSymbol,
   getAssetDecimals,
   getAssetSymbol,
   isSameToken,
   sanitizeForParsing,
-} from '../Send/utils'
-import { ConfirmationSummary } from './ConfirmationSummary'
-import { EstimatedFees } from './EstimatedFees'
-import { ButtonRow, ErrorAction, ErrorContainer, ErrorMessage, ErrorTitle, FeesValue, StatusMessage } from './styles'
+} from '../Send/utils.js'
+import { ConfirmationSummary } from './ConfirmationSummary.js'
+import { EstimatedFees } from './EstimatedFees.js'
+import { ButtonRow, ErrorAction, ErrorContainer, ErrorMessage, ErrorTitle, FeesValue, StatusMessage } from './styles.js'
 
 const SendConfirmation = () => {
   const wallet = useEthereumEmbeddedWallet()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
+  const client = useOpenfortCore((s) => s.client)
   const { sendForm, setRoute, triggerResize, walletConfig, chains } = useOpenfort()
 
   const address = wallet.status === 'connected' ? (wallet.address as `0x${string}`) : undefined
   const chainId = wallet.status === 'connected' ? wallet.chainId : undefined
+  const rpcUrl = chainId ? (walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)) : undefined
+  const clientScope = getOpenfortQueryScope(client)
+  const rpcScope = getOpenfortQueryInputScope(rpcUrl)
 
   const blockExplorerUrl = chainId ? getExplorerUrl(ChainTypeEnum.EVM, { chainId }) : undefined
 
@@ -74,13 +82,17 @@ const SendConfirmation = () => {
 
   const refetchNativeBalance = nativeBalance.refetch
 
-  // ERC20 balance using viem publicClient directly (skipped when native send; no placeholder address)
-  const erc20Balance = useAsyncData({
-    queryKey: ['erc20-balance', address, token.type === 'erc20' ? token.address : null, chainId],
+  const erc20BalanceKey =
+    address && token.type === 'erc20' && chainId && rpcScope
+      ? openfortKeys.erc20Balance({ clientScope, address, token: token.address, chainId, rpcScope })
+      : openfortKeys.erc20Balance()
+  const erc20Balance = useQuery({
+    queryKey: erc20BalanceKey,
     queryFn: async () => {
-      if (!isErc20 || !address || !chainId) return { value: BigInt(0), decimals: 18, symbol: 'ERC20' }
+      if (!isErc20 || !address || !chainId || !rpcUrl) {
+        return { value: BigInt(0), decimals: 18, symbol: 'ERC20' }
+      }
       try {
-        const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
         const publicClient = createPublicClient({ transport: http(rpcUrl) })
         const balance = await publicClient.readContract({
           address: token.address as `0x${string}`,
@@ -115,11 +127,13 @@ const SendConfirmation = () => {
       logger.log('INVALID - recipientAddress:', recipientAddress, 'parsedAmount:', parsedAmount)
       // setRoute(routes.SEND)
     }
-  }, [recipientAddress, parsedAmount, setRoute])
+  }, [recipientAddress, parsedAmount])
 
   // Get current balance value from discriminated unions
   const nativeBalanceValue = nativeBalance.status === 'success' ? nativeBalance.value : undefined
-  const erc20BalanceValue = erc20Balance.data && !erc20Balance.error ? erc20Balance.data?.value : undefined
+  // Cached data wins over a failed refetch, matching the native path: a known
+  // stale balance still blocks an over-balance send, an unknown one cannot.
+  const erc20BalanceValue = erc20Balance.data?.value
   const currentBalance = isErc20 ? erc20BalanceValue : nativeBalanceValue
   const nativeSymbol = nativeBalance.status === 'success' ? nativeBalance.symbol : 'ETH'
 
@@ -132,7 +146,7 @@ const SendConfirmation = () => {
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
   const submittingRef = useRef(false)
 
-  // Inline transaction state management (replaces useEthereumSendTransaction + useEthereumWriteContract)
+  // Transaction submission state is kept local so this page owns re-entry protection.
   const [nativeTxHash, setNativeTxHash] = useState<`0x${string}` | undefined>(undefined)
   const [isNativePending, setIsNativePending] = useState(false)
   const [nativeError, setNativeError] = useState<Error | null>(null)
@@ -143,22 +157,28 @@ const SendConfirmation = () => {
 
   const transactionHash = nativeTxHash ?? erc20TxHash
 
-  const sendTransactionAsync = async (params: { to: `0x${string}`; value: bigint; chainId?: number }) => {
+  const sendTransactionAsync = async (params: { to: `0x${string}`; value: bigint; chainId: number }) => {
     setIsNativePending(true)
     setNativeError(null)
     try {
-      if (!wallet.activeWallet) throw new Error('Wallet not available')
-      const provider = await wallet.activeWallet.getProvider()
-      const hash = (await provider.request({
-        method: 'eth_sendTransaction',
-        params: [
-          {
-            from: address,
-            to: params.to,
-            value: `0x${params.value.toString(16)}`,
-          },
-        ],
-      })) as `0x${string}`
+      if (wallet.status !== 'connected' || !address) throw new WalletNotConnectedError('Wallet not available.')
+      const intendedAddress = address
+      const hash = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+        const provider = await client.embeddedWallet.getEthereumProvider({ announceProvider: false })
+        assertCurrent()
+        await assertEmbeddedEthereumAccount(provider, intendedAddress, params.chainId)
+        assertCurrent()
+        return (await provider.request({
+          method: 'eth_sendTransaction',
+          params: [
+            {
+              from: intendedAddress,
+              to: params.to,
+              value: `0x${params.value.toString(16)}`,
+            },
+          ],
+        })) as `0x${string}`
+      })
       setNativeTxHash(hash)
       return hash
     } catch (error) {
@@ -175,22 +195,28 @@ const SendConfirmation = () => {
     address: `0x${string}`
     functionName: string
     args: unknown[]
-    chainId?: number
+    chainId: number
   }) => {
     setIsTokenPending(true)
     setErc20Error(null)
     try {
-      if (!wallet.activeWallet) throw new Error('Wallet not available')
-      const provider = await wallet.activeWallet.getProvider()
+      if (wallet.status !== 'connected' || !address) throw new WalletNotConnectedError('Wallet not available.')
+      const intendedAddress = address
       const data = encodeFunctionData({
         abi: params.abi as Abi,
         functionName: params.functionName,
         args: params.args,
       })
-      const hash = (await provider.request({
-        method: 'eth_sendTransaction',
-        params: [{ from: address, to: params.address, data }],
-      })) as `0x${string}`
+      const hash = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+        const provider = await client.embeddedWallet.getEthereumProvider({ announceProvider: false })
+        assertCurrent()
+        await assertEmbeddedEthereumAccount(provider, intendedAddress, params.chainId)
+        assertCurrent()
+        return (await provider.request({
+          method: 'eth_sendTransaction',
+          params: [{ from: intendedAddress, to: params.address, data }],
+        })) as `0x${string}`
+      })
       setErc20TxHash(hash)
       return hash
     } catch (error) {
@@ -213,13 +239,15 @@ const SendConfirmation = () => {
         : undefined
       : undefined
 
-  // Wait for transaction receipt using viem publicClient directly
-  const receiptState = useAsyncData({
-    queryKey: ['tx-receipt', transactionHash, chainId],
+  const receiptKey =
+    transactionHash && chainId && rpcScope
+      ? openfortKeys.transactionReceipt({ clientScope, hash: transactionHash, chainId, rpcScope })
+      : openfortKeys.transactionReceipt()
+  const receiptState = useQuery({
+    queryKey: receiptKey,
     queryFn: async () => {
-      if (!transactionHash || !chainId) return null
+      if (!transactionHash || !chainId || !rpcUrl) return null
       try {
-        const rpcUrl = getDefaultEthereumRpcUrl(chainId)
         const publicClient = createPublicClient({ transport: http(rpcUrl) })
         const receipt = await publicClient.waitForTransactionReceipt({ hash: transactionHash })
         return receipt
@@ -287,11 +315,10 @@ const SendConfirmation = () => {
   }, [isPollingBalance, currentBalance])
 
   const handleConfirm = async () => {
-    // Block re-entry while submitting, and never submit when a tx already
-    // exists for this send — a second `eth_sendTransaction` is the duplicate
-    // transaction the customer hit after the wallet was slow to respond.
+    // A resolved transaction hash permanently closes this confirmation attempt.
     if (submittingRef.current || transactionHash) return
-    if (!recipientAddress || !parsedAmount || parsedAmount <= BigInt(0) || insufficientBalance) return
+    if (!recipientAddress || !parsedAmount || parsedAmount <= BigInt(0) || chainId === undefined || insufficientBalance)
+      return
 
     submittingRef.current = true
     try {
@@ -345,6 +372,7 @@ const SendConfirmation = () => {
     }
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — an error, an insufficient-balance warning or a receipt link each change the page height
   useEffect(() => {
     setTimeout(triggerResize, 10) // delay required here for modal to resize
   }, [errorDetails, insufficientBalance, receipt?.transactionHash, isLoading, triggerResize])
@@ -445,6 +473,7 @@ const SendConfirmation = () => {
                 !recipientAddress ||
                 !parsedAmount ||
                 parsedAmount <= BigInt(0) ||
+                chainId === undefined ||
                 insufficientBalance
           }
           waiting={isLoading}

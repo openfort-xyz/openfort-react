@@ -2,15 +2,15 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
-import { logger } from '../../utils/logger'
-import { useExternalConnector } from '../../wallets/useExternalConnectors'
-import Alert from '../Common/Alert'
-import { contentVariants } from '../Common/Modal'
-import { routes } from '../Openfort/types'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import ConnectWithInjector from './ConnectWithInjector'
-import ConnectWithOAuth from './ConnectWithOAuth'
-import ConnectWithQRCode from './ConnectWithQRCode'
+import { logger } from '../../utils/logger.js'
+import { useExternalConnector } from '../../wallets/useExternalConnectors.js'
+import Alert from '../Common/Alert/index.js'
+import { contentVariants } from '../Common/Modal/index.js'
+import { routes } from '../Openfort/types.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import ConnectWithInjector from './ConnectWithInjector/index.js'
+import ConnectWithOAuth from './ConnectWithOAuth.js'
+import ConnectWithQRCode from './ConnectWithQRCode.js'
 
 const states = {
   QRCODE: 'qrcode',
@@ -40,21 +40,28 @@ const ConnectUsing = () => {
     }
   }, [isConnectorAccountId, context])
 
+  const { connector, triggerResize } = context
+
+  // Fall back to the QR flow whenever the selected connector turns out to have no injected
+  // provider. Re-running after the fallback is a no-op because `status` is no longer INJECTOR.
   useEffect(() => {
-    const connector = context.connector
     logger.log('ConnectUsing', { status, isQrCode, isOauth, connector })
 
-    if (isOauth) return
-    // if no provider, change to qrcode
+    if (isOauth || status !== states.INJECTOR) return
+
+    let cancelled = false
     const checkProvider = async () => {
       const res = await wallet?.connector?.getProvider?.()
-      if (!res) {
-        setStatus(states.QRCODE)
-        setTimeout(context.triggerResize, 10) // delay required here for modal to resize
-      }
+      if (cancelled || res) return
+      setStatus(states.QRCODE)
+      setTimeout(triggerResize, 10) // delay required here for modal to resize
     }
-    if (status === states.INJECTOR) checkProvider()
-  }, [])
+    checkProvider()
+
+    return () => {
+      cancelled = true
+    }
+  }, [status, isQrCode, isOauth, connector, wallet, triggerResize])
 
   if (isConnectorAccountId) return null
   if (isOauth) return <ConnectWithOAuth />
@@ -83,7 +90,6 @@ const ConnectUsing = () => {
         >
           <ConnectWithInjector
             switchConnectMethod={(_id?: string) => {
-              //if (id) setId(id);
               setStatus(states.QRCODE)
               setTimeout(context.triggerResize, 10) // delay required here for modal to resize
             }}

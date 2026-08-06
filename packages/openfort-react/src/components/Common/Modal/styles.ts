@@ -1,40 +1,8 @@
 import { motion } from 'framer-motion'
 import { keyframes } from 'styled-components'
-import defaultTheme from '../../../constants/defaultTheme'
-import styled from '../../../styles/styled'
-import { PageContentStyle } from '../../PageContent/styles'
-
-const _ErrorMessage = styled(motion.div)`
-  z-index: -1;
-  pointer-events: auto;
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: var(--width);
-  top: 64px;
-  color: #fff;
-  font-size: 14px;
-  line-height: 20px;
-  font-weight: 500;
-  background: var(--ck-body-color-danger);
-  border-radius: 20px;
-  padding: 24px 46px 82px 24px;
-  transition: width var(--duration) var(--ease);
-  a {
-    font-weight: 700;
-    text-decoration: underline;
-  }
-  code {
-    font-size: 0.9em;
-    display: inline-block;
-    font-family: monospace;
-    margin: 1px;
-    padding: 0 4px;
-    border-radius: 8px;
-    font-weight: bold;
-    background: rgba(255, 255, 255, 0.1);
-  }
-`
+import defaultTheme from '../../../constants/defaultTheme.js'
+import styled from '../../../styles/styled/index.js'
+import { PageContentStyle } from '../../PageContent/styles.js'
 
 const FadeIn = keyframes`
 from { opacity: 0; }
@@ -193,18 +161,6 @@ export const ModalBody = styled.div<{
   }
 `
 
-const _ModalBodySmall = styled.div`
-  padding: 0 12px;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 16px;
-  color: var(--ck-body-color-muted);
-  strong {
-    font-weight: 500;
-    color: var(--ck-body-color);
-  }
-`
-
 export const BackgroundOverlay = styled(motion.div)<{
   $active: boolean
   $blur?: number
@@ -322,7 +278,6 @@ export const ControllerContainer = styled(motion.div)`
   width: var(--width);
   transition: 0.2s ease width;
   pointer-events: auto;
-  //border-bottom: 1px solid var(--ck-body-divider);
 `
 
 export const InnerContainer = styled(motion.div)`
@@ -346,7 +301,6 @@ export const InnerContainer = styled(motion.div)`
   transition: 0.2s ease height;
   @media only screen and (max-width: ${defaultTheme.mobileWidth}px) {
     transition: 0ms height cubic-bezier(0.15, 1.15, 0.6, 1);
-    /* animation-delay: 34ms; */
   }
 `
 
@@ -357,8 +311,6 @@ export const PageContainer = styled(motion.div)`
   left: 50%;
   margin-left: calc(var(--width) / -2);
   width: var(--width);
-  /* left: 0; */
-  /* width: 100%; */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -381,24 +333,16 @@ export const PageContainer = styled(motion.div)`
     z-index: 1;
     pointer-events: none;
     position: absolute;
-    /* top: 0; */
-    /* left: 0; */
     animation-name: ${FadeOutScaleDown};
   }
   &.exit {
     z-index: 1;
     pointer-events: none;
     position: absolute;
-    /* top: 0; */
-    /* left: 0; */
-    /* left: 50%; */
-    /* transform: translateX(-50%); */
     animation-name: ${FadeOutScaleUp};
     animation-delay: 16.6667ms;
   }
   @media only screen and (max-width: ${defaultTheme.mobileWidth}px) {
-    /* animation: 0ms ease both; */
-    /* animation-delay: 35ms; */
     animation: 0ms cubic-bezier(0.15, 1.15, 0.6, 1) both;
 
     &.active {
@@ -469,7 +413,6 @@ export const CloseButton = styled(motion.button)`
   color: var(--ck-body-action-color);
   background: var(--ck-body-background);
   transition: background-color 200ms ease, transform 100ms ease-out;
-  /* will-change: transform; */
   svg {
     display: block;
   }
@@ -479,37 +422,6 @@ export const CloseButton = styled(motion.button)`
   }
   &:active {
     transform: scale(var(--ck-press-scale, 0.97));
-  }
-`
-
-const _SiweButton = styled(motion.button)`
-  z-index: 3;
-  position: absolute;
-  inset: 0;
-  width: 100%; // FireFox fix
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  padding: 0;
-  margin: 0;
-  color: var(--ck-body-action-color);
-  background: var(--ck-body-background);
-  transition: background-color 200ms ease, transform 100ms ease-out;
-  /* will-change: transform; */
-  svg {
-    display: block;
-    position: relative;
-  }
-
-  &:enabled {
-    cursor: pointer;
-    &:hover {
-      background: var(--ck-body-background-secondary);
-    }
-    &:active {
-      transform: scale(var(--ck-press-scale, 0.97));
-    }
   }
 `
 
@@ -527,7 +439,6 @@ export const BackButton = styled(motion.button)`
   color: var(--ck-body-action-color);
   background: var(--ck-body-background);
   transition: background-color 200ms ease, transform 100ms ease-out;
-  /* will-change: transform; */
   svg {
     display: block;
     position: relative;
@@ -560,7 +471,6 @@ export const InfoButton = styled(motion.button)`
   color: var(--ck-body-action-color);
   background: var(--ck-body-background);
   transition: background-color 200ms ease, transform 100ms ease-out;
-  /* will-change: transform; */
   svg {
     display: block;
     position: relative;
@@ -621,8 +531,6 @@ export const Container = styled(motion.div)`
     ${ModalContent} {
       gap: 12px;
     }
-    ${ModalBody} {
-    }
     ${PageContents} {
       width: 100%;
       padding: 31px 24px;
@@ -656,98 +564,6 @@ export const Container = styled(motion.div)`
       svg {
         transform: scale(0.8) !important;
       }
-    }
-  }
-`
-
-const Disclaimer = styled(motion.div)`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 16px -24px -24px -24px;
-  padding: 15px 40px 18px;
-  font-size: var(--ck-body-disclaimer-font-size, 13px);
-  font-weight: var(--ck-body-disclaimer-font-weight, 400);
-  text-align: center;
-  line-height: 19px;
-  color: var(--ck-body-disclaimer-color, var(--ck-body-color-muted, inherit));
-
-  & a {
-    color: var(--ck-body-disclaimer-link-color, inherit);
-    font-weight: var(--ck-body-disclaimer-font-weight, 400);
-    text-decoration: none;
-    transition: color 200ms ease;
-    &:hover {
-      color: var(--ck-body-disclaimer-link-hover-color, inherit);
-    }
-  }
-
-  @media only screen and (max-width: ${defaultTheme.mobileWidth}px) {
-    margin: 24px -24px -26px -24px;
-    padding: 20px 42px 22px 42px;
-  }
-`
-
-const _DisclaimerBackground = styled(motion.div)`
-  pointer-events: all;
-  z-index: 9;
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: var(--width);
-  backface-visibility: hidden;
-  transform: translateX(-50%);
-  transform-origin: bottom center;
-
-  border-radius: var(--ck-border-radius, 30px);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
-  transition: width 200ms ease;
-
-  background: var(
-    --ck-body-disclaimer-background,
-    var(--ck-body-background-secondary)
-  );
-  box-shadow: var(--ck-body-disclaimer-box-shadow);
-
-  ${Disclaimer} {
-    margin: 0 !important;
-    /* visibility: hidden; */
-  }
-
-  @media only screen and (max-width: ${defaultTheme.mobileWidth}px) {
-    border-radius: 0;
-  }
-`
-
-const _SignInTooltip = styled(motion.div)`
-  z-index: 2;
-  position: absolute;
-  top: 100%;
-  white-space: nowrap;
-  padding: 8px 16px;
-  color: #fff;
-  font-size: 13px;
-  line-height: 1.5;
-  background: #1a88f8;
-  border-radius: calc(var(--ck-border-radius) * 0.75);
-  transform: translateY(8px) translateX(-48px);
-  box-shadow: var(--ck-modal-box-shadow);
-  &:before {
-    content: '';
-    position: absolute;
-    box-shadow: var(--shadow);
-    width: 18px;
-    height: 18px;
-    transform: translate(215%, -75%) rotate(45deg);
-    background: inherit;
-    border-radius: 3px 0 0 0;
-  }
-
-  @media only screen and (max-width: ${defaultTheme.mobileWidth}px) {
-    transform: translateY(8px) translateX(-16px);
-    &:before {
-      transform: translate(40%, -75%) rotate(45deg);
     }
   }
 `

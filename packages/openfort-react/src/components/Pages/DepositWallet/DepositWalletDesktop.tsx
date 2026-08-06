@@ -3,20 +3,22 @@
 import type { ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { type Address, type EIP1193Provider, encodeFunctionData, erc20Abi, formatUnits, parseUnits } from 'viem'
-import { WalletIcon } from '../../../assets/icons'
-import logos from '../../../assets/logos'
+import { WalletIcon } from '../../../assets/icons.js'
+import logos from '../../../assets/logos.js'
+import { ProviderNotFoundError } from '../../../errors/connection.js'
+import { WalletNotConnectedError } from '../../../errors/wallet.js'
 import {
   type OpenfortEthereumBridgeConnector,
   useEthereumBridge,
-} from '../../../ethereum/OpenfortEthereumBridgeContext'
-import type { FundingChain, FundingCurrency } from '../../../hooks/openfort/useFundingChains'
-import { ModalBody } from '../../Common/Modal/styles'
-import { ScrollArea } from '../../Common/ScrollArea'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { DepositStatus } from '../Deposit/DepositStatus'
-import { walletListBtn } from '../Deposit/formStyles'
-import { ButtonLogo } from '../Deposit/styles'
-import { caipToChainId } from './walletDeeplinks'
+} from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import type { FundingChain, FundingCurrency } from '../../../hooks/openfort/useFundingChains.js'
+import { ModalBody } from '../../Common/Modal/styles.js'
+import { ScrollArea } from '../../Common/ScrollArea/index.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { DepositStatus } from '../Deposit/DepositStatus.js'
+import { walletListBtn } from '../Deposit/formStyles.js'
+import { ButtonLogo } from '../Deposit/styles.js'
+import { caipToChainId } from './walletDeeplinks.js'
 
 /** Hardcoded brand logo for a connector, matched by id/name; falls back to its own icon, then a generic. */
 function brandLogo(connector: { id: string; name: string; icon?: string }): ReactNode {
@@ -69,6 +71,7 @@ export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurre
   // Grow the modal when the busy / error / sent feedback toggles, so the "Confirm
   // in your wallet…" and insufficient-balance messages are revealed instead of
   // clipped below the fold (which reads as "nothing happened" after a click).
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     triggerResize()
   }, [busyId, error, sent, triggerResize])
@@ -89,11 +92,11 @@ export function DepositWalletDesktop({ receiverAddress, activeChain, activeCurre
     setSent(false)
     try {
       const provider = (await c.getProvider?.()) as EIP1193Provider | undefined
-      if (!provider) throw new Error('Wallet provider unavailable')
+      if (!provider) throw new ProviderNotFoundError('Wallet provider unavailable.')
 
       const accounts = (await provider.request({ method: 'eth_requestAccounts' })) as string[]
       const from = accounts?.[0] as Address | undefined
-      if (!from) throw new Error('No account in wallet')
+      if (!from) throw new WalletNotConnectedError('No account in wallet.')
 
       // Ask the wallet to switch to the source chain (ignored if already there).
       await provider

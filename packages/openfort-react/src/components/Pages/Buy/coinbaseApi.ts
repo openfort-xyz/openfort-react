@@ -1,26 +1,9 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
-import type { Asset } from '../../Openfort/types'
-import { getAssetSymbol } from '../Send/utils'
-
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
-
-type CoinbaseQuoteResponse = {
-  provider: string
-  sourceAmount: string
-  sourceCurrency: string
-  destinationAmount: string
-  destinationCurrency: string
-  destinationNetwork: string
-  fees: Array<{
-    amount: string
-    currency: string
-    type: string
-  }>
-  exchangeRate: string
-}
+import { MissingParameterError } from '../../../errors/validation.js'
+import { getTrustedFundingProviderUrl } from '../../../utils/fundingProviderUrl.js'
+import type { Asset } from '../../Openfort/types.js'
+import { getAssetSymbol } from '../Send/utils.js'
+import { ONRAMP_SESSIONS_PATH } from './onrampApi.js'
+import { createCurrencySupport, postOnramp } from './onrampRequest.js'
 
 type CoinbaseOnrampResponse = {
   provider: string
@@ -63,26 +46,10 @@ const COINBASE_SUPPORTED_CURRENCIES = [
   'xlm',
 ] as const
 
+const coinbaseCurrencies = createCurrencySupport('Coinbase', COINBASE_SUPPORTED_CURRENCIES)
+
 // Check if a token is supported by Coinbase
-export const isCoinbaseSupported = (token: Asset): boolean => {
-  const symbol = getAssetSymbol(token)
-  return COINBASE_SUPPORTED_CURRENCIES.includes(symbol.toLowerCase() as any)
-}
-
-// Map token symbol to Coinbase currency code
-const getCurrencyCode = (token: Asset): string => {
-  const symbol = getAssetSymbol(token)
-  const lowercaseSymbol = symbol.toLowerCase()
-
-  // Validate that the currency is supported by Coinbase
-  if (!COINBASE_SUPPORTED_CURRENCIES.includes(lowercaseSymbol as any)) {
-    throw new Error(
-      `Unsupported currency for Coinbase: ${symbol}. Supported currencies are: ${COINBASE_SUPPORTED_CURRENCIES.join(', ')}`
-    )
-  }
-
-  return symbol
-}
+export const isCoinbaseSupported = (token: Asset): boolean => coinbaseCurrencies.isSupported(getAssetSymbol(token))
 
 /**
  * Create a Coinbase onramp session
@@ -101,13 +68,16 @@ export const createCoinbaseSession = async (
   const { token, network, publishableKey, ...rest } = params
 
   if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
+    throw new MissingParameterError({ params: ['publishableKey'] })
   }
 
-  // Build request body with only provided parameters
+  const symbol = getAssetSymbol(token)
+  coinbaseCurrencies.assertSupported(symbol)
+
+  // Coinbase takes the currency code in the asset's own casing.
   const requestBody: CreateCoinbaseSessionParams & { provider: string } = {
     provider: 'coinbase',
-    destinationCurrency: getCurrencyCode(token),
+    destinationCurrency: symbol,
     destinationNetwork: network,
     destinationAddress: rest.destinationAddress,
   }
@@ -121,77 +91,11 @@ export const createCoinbaseSession = async (
   if (rest.redirectUrl) requestBody.redirectUrl = rest.redirectUrl
   if (rest.clientIp) requestBody.clientIp = rest.clientIp
 
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/sessions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
+  const response = await postOnramp<CoinbaseOnrampResponse>({
+    path: ONRAMP_SESSIONS_PATH,
+    body: requestBody,
+    publishableKey,
+    operation: 'Coinbase session creation',
   })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to create Coinbase session')
-  }
-
-  return response.json()
-}
-
-type GetCoinbaseQuoteParams = {
-  sourceCurrency: string
-  destinationCurrency: string
-  destinationNetwork: string
-  sourceAmount: string
-  paymentMethod: string
-  country?: string
-  subdivision?: string
-}
-
-/**
- * Get a quote from Coinbase
- * This provides fee estimates and exchange rates
- */
-const _getCoinbaseQuote = async (
-  params: Omit<GetCoinbaseQuoteParams, 'destinationCurrency' | 'destinationNetwork'> & {
-    token: Asset
-    network: string
-    publishableKey: string
-  }
-): Promise<CoinbaseQuoteResponse> => {
-  const { token, network, publishableKey, ...rest } = params
-
-  if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
-  }
-
-  // Build request body
-  const requestBody: GetCoinbaseQuoteParams & { provider: string } = {
-    provider: 'coinbase',
-    destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: network,
-    sourceCurrency: rest.sourceCurrency,
-    sourceAmount: rest.sourceAmount,
-    paymentMethod: rest.paymentMethod,
-  }
-
-  // Add optional parameters only if provided
-  if (rest.country) requestBody.country = rest.country
-  if (rest.subdivision) requestBody.subdivision = rest.subdivision
-
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to fetch Coinbase quote')
-  }
-
-  return response.json()
+  return { ...response, onrampUrl: getTrustedFundingProviderUrl(response.onrampUrl, 'coinbase').href }
 }

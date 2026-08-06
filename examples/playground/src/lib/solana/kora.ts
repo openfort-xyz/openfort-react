@@ -95,7 +95,6 @@ export async function sendGaslessSolTransaction({
   const transaction = buildTransactionMessage(koraNoopSigner, blockhash, transferSol.instructions)
 
   // Step 4: Partially sign (noop for Kora placeholder), then sign with Openfort
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const partiallySignedTx = await partiallySignTransactionMessageWithSigners(transaction as any)
 
   const result = await provider.signTransaction(new Uint8Array(partiallySignedTx.messageBytes))

@@ -37,9 +37,9 @@ export const History = () => {
       .finally(() => setIsLoading(false))
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fetchHistory is recreated every render; the effect keys on its actual inputs (address, rpc)
   useEffect(() => {
     fetchHistory()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address, rpc])
 
   const visible = showAll ? transactions : transactions.slice(0, COLLAPSED_COUNT)
@@ -76,9 +76,7 @@ export const History = () => {
       ) : (
         <div className="space-y-2">
           {visible.map((tx) => {
-            const explorerUrl = cluster
-              ? getSolanaExplorerUrl(tx.signature, cluster)
-              : null
+            const explorerUrl = cluster ? getSolanaExplorerUrl(tx.signature, cluster) : null
             const isError = tx.err != null
 
             return (
@@ -89,12 +87,7 @@ export const History = () => {
                 <div className="flex flex-col gap-0.5 min-w-0 flex-1 mr-2">
                   <span className="font-mono text-xs truncate">
                     {explorerUrl ? (
-                      <a
-                        href={explorerUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-primary hover:underline"
-                      >
+                      <a href={explorerUrl} target="_blank" rel="noreferrer" className="text-primary hover:underline">
                         {tx.signature.slice(0, 20)}...
                       </a>
                     ) : (
@@ -105,9 +98,7 @@ export const History = () => {
                 </div>
                 <span
                   className={`text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${
-                    isError
-                      ? 'bg-red-900/30 text-red-400'
-                      : 'bg-green-900/30 text-green-400'
+                    isError ? 'bg-red-900/30 text-red-400' : 'bg-green-900/30 text-green-400'
                   }`}
                 >
                   {isError ? 'Failed' : 'Success'}
@@ -122,9 +113,7 @@ export const History = () => {
               onClick={() => setShowAll((v) => !v)}
               className="text-sm text-primary hover:underline w-full text-center pt-1 cursor-pointer"
             >
-              {showAll
-                ? 'Show less'
-                : `Show more (${transactions.length - COLLAPSED_COUNT})`}
+              {showAll ? 'Show less' : `Show more (${transactions.length - COLLAPSED_COUNT})`}
             </button>
           )}
         </div>

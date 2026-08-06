@@ -5,8 +5,8 @@ type EthereumWindowProvider = Record<string, unknown> & {
 
 declare global {
   interface Window {
-    trustWallet: any
-    trustwallet: any
+    trustWallet: unknown
+    trustwallet: unknown
     ethereum?: EthereumWindowProvider
   }
 }

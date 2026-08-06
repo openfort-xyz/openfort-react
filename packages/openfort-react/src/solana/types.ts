@@ -4,16 +4,21 @@
  * These types define the Solana wallet state machine and related interfaces.
  */
 
-import type { ChainTypeEnum, EmbeddedAccount, RecoveryMethod, RecoveryParams } from '@openfort/openfort-js'
+import type { ChainTypeEnum, RecoveryMethod, RecoveryParams } from '@openfort/openfort-js'
 import type React from 'react'
 import type {
   ConnectedWalletState,
   CreateEmbeddedWalletOptions,
+  CreateEmbeddedWalletResult,
+  ExportPrivateKeyOptions,
+  ExportPrivateKeyResult,
   ImportEmbeddedWalletOptions,
   SetActiveEmbeddedWalletOptionsBase,
+  SetActiveEmbeddedWalletResult,
   SetRecoveryOptions as SetRecoveryOptionsBase,
+  SetRecoveryResult,
   WalletDerived,
-} from '../shared/types'
+} from '../shared/types.js'
 
 /**
  * Solana cluster identifier
@@ -126,11 +131,6 @@ export type SolanaSignAllTransactionsRequest = {
  * }
  * ```
  *
- * @example With Kit Signer (from @openfort/react/solana)
- * ```tsx
- * const signer = createTransactionSigner(provider);
- * // Use with @solana/kit
- * ```
  */
 export interface OpenfortEmbeddedSolanaWalletProvider {
   /** Public key of the wallet (Base58 encoded) */
@@ -194,17 +194,17 @@ export type SetActiveSolanaWalletOptions = SetActiveEmbeddedWalletOptionsBase & 
  */
 export interface SolanaWalletActions {
   /** Create a new Solana embedded wallet */
-  create(options?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount>
+  create(options?: CreateEmbeddedWalletOptions): Promise<CreateEmbeddedWalletResult>
   /** Import a Solana embedded wallet from a base58-encoded secret key */
-  import(options: ImportEmbeddedWalletOptions): Promise<EmbeddedAccount>
+  import(options: ImportEmbeddedWalletOptions): Promise<CreateEmbeddedWalletResult>
   /** List of available Solana wallets */
   wallets: ConnectedEmbeddedSolanaWallet[]
   /** Set the active wallet */
-  setActive(options: SetActiveSolanaWalletOptions): Promise<void>
+  setActive(options: SetActiveSolanaWalletOptions): Promise<SetActiveEmbeddedWalletResult>
   /** Update recovery method */
-  setRecovery(options: SetRecoveryOptionsBase): Promise<void>
+  setRecovery(options: SetRecoveryOptionsBase): Promise<SetRecoveryResult>
   /** Export the private key (requires user confirmation) */
-  exportPrivateKey(): Promise<string>
+  exportPrivateKey(options?: ExportPrivateKeyOptions): Promise<ExportPrivateKeyResult>
 }
 
 export type SolanaWalletStateBase =

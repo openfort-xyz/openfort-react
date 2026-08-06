@@ -1,0 +1,5 @@
+---
+"@openfort/react": patch
+---
+
+Chain-switch failures now show their message. The switch-networks alert built its copy with a template literal over `useLocales` values, which are markdown-parsed React nodes rather than strings, so a failed switch rendered "[object Object] [object Object]". The failure was also misclassified: wagmi wraps every failed switch in viem's `SwitchChainError`, whose code is 4902, so an unreachable RPC or a rejecting backend was reported as "your wallet does not support switching networks from this app". That copy is now reserved for wagmi's `SwitchChainNotSupportedError` — a connector with no switch at all — and everything else reads "Could not switch networks. Please try again." Separately, `Alert` destructured its styled-components props wrong and painted every alert in the danger colour, not just the ones passed `error`. `useLocales` now returns `LocalizedText` (React nodes) instead of claiming to return strings, which is what hid the original bug from the type checker.

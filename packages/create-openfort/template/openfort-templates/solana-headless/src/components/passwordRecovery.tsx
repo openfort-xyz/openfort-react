@@ -1,10 +1,7 @@
 import { CheckCircleIcon } from '@heroicons/react/24/outline'
+import type { CreateEmbeddedWalletResult } from '@openfort/react'
 import { RecoveryMethod } from '@openfort/react'
-import type { EmbeddedAccount } from '@openfort/react'
-import {
-  type ConnectedEmbeddedSolanaWallet,
-  useSolanaEmbeddedWallet,
-} from '@openfort/react/solana'
+import { type ConnectedEmbeddedSolanaWallet, useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { useState } from 'react'
 import { Sheet } from './ui/Sheet'
 
@@ -12,10 +9,7 @@ type CreateWalletPasswordSheetProps = {
   open: boolean
   onClose: () => void
   onCreateWallet?: () => void
-  create: (options: {
-    recoveryMethod: RecoveryMethod
-    password?: string
-  }) => Promise<EmbeddedAccount>
+  create: (options: { recoveryMethod: RecoveryMethod; password?: string }) => Promise<CreateEmbeddedWalletResult>
   status: string
 }
 
@@ -46,16 +40,16 @@ export const CreateWalletPasswordSheet = ({
           const formData = new FormData(e.target as HTMLFormElement)
           const password = formData.get('password') as string
 
-          try {
-            await create({
-              recoveryMethod: RecoveryMethod.PASSWORD,
-              password,
-            })
-            onCreateWallet?.()
-            onClose()
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to create wallet')
+          const result = await create({
+            recoveryMethod: RecoveryMethod.PASSWORD,
+            password,
+          })
+          if (result.error) {
+            setError(result.error.message)
+            return
           }
+          onCreateWallet?.()
+          onClose()
         }}
       >
         <div className="flex flex-col gap-2 mr-4 mb-4">
@@ -65,10 +59,7 @@ export const CreateWalletPasswordSheet = ({
           </div>
           <div className="flex items-center gap-2">
             <CheckCircleIcon className="h-5 w-5 text-primary my-4 shrink-0" />
-            <span>
-              If you lose this password, you will not be able to access your
-              wallet.
-            </span>
+            <span>If you lose this password, you will not be able to access your wallet.</span>
           </div>
         </div>
         <input
@@ -78,9 +69,7 @@ export const CreateWalletPasswordSheet = ({
           placeholder="Enter your wallet's password"
           className="w-full mt-2 p-2 border border-gray-300 rounded"
         />
-        {error && (
-          <span className="text-red-500 text-sm mt-2">{error}</span>
-        )}
+        {error && <span className="text-red-500 text-sm mt-2">{error}</span>}
         <button
           className="mt-4 w-full bg-zinc-700 text-white p-2 rounded cursor-pointer"
           type="submit"
@@ -99,11 +88,7 @@ type WalletRecoverPasswordProps = {
   wallet: ConnectedEmbeddedSolanaWallet | null
 }
 
-export const WalletRecoverPasswordSheet = ({
-  open,
-  onClose,
-  wallet,
-}: WalletRecoverPasswordProps) => {
+export const WalletRecoverPasswordSheet = ({ open, onClose, wallet }: WalletRecoverPasswordProps) => {
   const { setActive, status } = useSolanaEmbeddedWallet()
   const [error, setError] = useState<string | null>(null)
   const isConnecting = status === 'connecting'
@@ -126,16 +111,16 @@ export const WalletRecoverPasswordSheet = ({
           const password = formData.get('password') as string
           if (!wallet) throw new Error('No wallet to recover')
 
-          try {
-            await setActive({
-              address: wallet.address,
-              recoveryMethod: RecoveryMethod.PASSWORD,
-              password,
-            })
-            onClose()
-          } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to recover wallet')
+          const result = await setActive({
+            address: wallet.address,
+            recoveryMethod: RecoveryMethod.PASSWORD,
+            password,
+          })
+          if (result.error) {
+            setError(result.error.message)
+            return
           }
+          if (!result.needsRecovery) onClose()
         }}
       >
         {wallet && (
@@ -151,9 +136,7 @@ export const WalletRecoverPasswordSheet = ({
           placeholder="Enter your wallet's password"
           className="w-full mt-2 p-2 border border-gray-300 rounded"
         />
-        {error && (
-          <span className="text-red-500 text-sm mt-2">{error}</span>
-        )}
+        {error && <span className="text-red-500 text-sm mt-2">{error}</span>}
         <button
           className="mt-4 w-full bg-zinc-700 text-white p-2 rounded cursor-pointer"
           type="submit"

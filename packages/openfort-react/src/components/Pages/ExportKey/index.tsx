@@ -2,14 +2,14 @@
 
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { KeyIcon } from '../../../assets/icons'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton'
-import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
-import { FloatingGraphic } from '../../FloatingGraphic'
-import { PageContent } from '../../PageContent'
-import { AddressField, AddressRow, Label } from '../Receive/styles'
-import { HoldButton, HoldFill, HoldLabel, KeyReveal } from './styles'
+import { KeyIcon } from '../../../assets/icons.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton.js'
+import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles.js'
+import { FloatingGraphic } from '../../FloatingGraphic/index.js'
+import { PageContent } from '../../PageContent/index.js'
+import { AddressField, AddressRow, Label } from '../Receive/styles.js'
+import { HoldButton, HoldFill, HoldLabel, KeyReveal } from './styles.js'
 
 // TODO: Localize
 
@@ -74,8 +74,13 @@ const ExportKey: React.FC = () => {
   useEffect(() => {
     const asyncExportKey = async () => {
       try {
-        const key = await exportPrivateKey()
-        setExportedKey(key)
+        const result = await exportPrivateKey()
+        if (result.error) {
+          setExportError('You cannot export the private key for this wallet.')
+          setExportedKey(null)
+          return
+        }
+        setExportedKey(result.privateKey)
       } catch {
         setExportError('You cannot export the private key for this wallet.')
         setExportedKey(null)

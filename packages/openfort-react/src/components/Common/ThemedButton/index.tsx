@@ -1,8 +1,10 @@
+'use client'
+
 import type React from 'react'
 import useMeasure from 'react-use-measure'
 
-import type { All } from '../../../types'
-import { Container, ThemeContainer } from './styles'
+import type { All } from '../../../types.js'
+import { Container, ThemeContainer } from './styles.js'
 
 type ThemedButtonProps = {
   children?: React.ReactNode
@@ -11,10 +13,6 @@ type ThemedButtonProps = {
   duration?: number
   style?: React.CSSProperties
   onClick?: () => void
-}
-
-const _PlaceholderButton = () => {
-  return <div style={{ height: 40 }} />
 }
 
 const ThemedButton: React.FC<ThemedButtonProps & All> = ({

@@ -8,16 +8,14 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
   email_not_verified: 'Please verify your email address before signing in.',
   user_not_found: 'No account found with this email.',
   user_already_exists: 'An account with this email already exists.',
-  weak_password:
-    'Password is too weak. Please use a stronger password (at least 8 characters).',
+  weak_password: 'Password is too weak. Please use a stronger password (at least 8 characters).',
   email_exists: 'An account with this email already exists.',
   invalid_email: 'Invalid email address.',
   user_banned: 'This account has been banned.',
 
   // OAuth errors
   oauth_provider_not_supported: 'This sign-in method is not supported.',
-  provider_email_needs_verification:
-    'Please verify your email with the provider.',
+  provider_email_needs_verification: 'Please verify your email with the provider.',
 
   // Network errors
   network_error: 'Network error. Please check your connection and try again.',
@@ -106,37 +104,23 @@ const DEVELOPER_SOLUTIONS: Record<string, string[]> = {
  * @param context - Additional context about where the error occurred
  */
 export function logBetterAuthError(error: unknown, context?: string): void {
-  const errorPrefix = context
-    ? `🔷 Better Auth Error (${context})`
-    : '🔷 Better Auth Error'
+  const errorPrefix = context ? `🔷 Better Auth Error (${context})` : '🔷 Better Auth Error'
 
-  console.group(
-    `%c${errorPrefix}`,
-    'color: #3ecf8e; font-weight: bold; font-size: 14px;',
-  )
+  console.group(`%c${errorPrefix}`, 'color: #3ecf8e; font-weight: bold; font-size: 14px;')
 
   // Log the error message
   if (error && typeof error === 'object' && 'message' in error) {
     const errorMessage = (error as { message: string }).message
-    console.error(
-      `%cError: ${errorMessage}`,
-      'color: #ff6b6b; font-weight: bold;',
-    )
+    console.error(`%cError: ${errorMessage}`, 'color: #ff6b6b; font-weight: bold;')
 
     // Log user-friendly message
     const userMessage = AUTH_ERROR_MESSAGES[errorMessage] || errorMessage
-    console.info(
-      `%cUser Message: ${userMessage}`,
-      'color: #ffd93d; font-style: italic;',
-    )
+    console.info(`%cUser Message: ${userMessage}`, 'color: #ffd93d; font-style: italic;')
 
     // Log developer solutions if available
     const solutions = DEVELOPER_SOLUTIONS[errorMessage]
     if (solutions) {
-      console.group(
-        '%c💡 How to Fix This:',
-        'color: #6bcf7f; font-weight: bold;',
-      )
+      console.group('%c💡 How to Fix This:', 'color: #6bcf7f; font-weight: bold;')
       for (const solution of solutions) {
         console.info(`%c${solution}`, 'color: #6bcf7f;')
       }

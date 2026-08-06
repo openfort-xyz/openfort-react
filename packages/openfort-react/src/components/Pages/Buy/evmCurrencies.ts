@@ -1,6 +1,6 @@
 import type { Hex } from 'viem'
-import type { Asset } from '../../Openfort/types'
-import { DEST_USDC } from '../Deposit/sources'
+import type { Asset } from '../../Openfort/types.js'
+import { DEST_USDC } from '../Deposit/sources.js'
 
 /**
  * Buyable EVM destination currencies for the fiat onramp. USDC is first so it is
@@ -11,7 +11,7 @@ import { DEST_USDC } from '../Deposit/sources'
  * {@link SOLANA_BUY_CURRENCIES} so the card/Apple Pay picker always has options,
  * even for a freshly created wallet with no indexed token balances.
  */
-export const EVM_BUY_CURRENCIES: Asset[] = [
+export const EVM_BUY_CURRENCIES: [Asset, ...Asset[]] = [
   {
     type: 'erc20',
     address: DEST_USDC as Hex,

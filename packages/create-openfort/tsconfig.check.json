@@ -1,0 +1,12 @@
+{
+  // Type-checking view of the package: the tests are checked alongside the
+  // sources, and nothing is written to `dist/` (tsup owns that directory).
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationDir": null,
+    "noEmit": true
+  },
+  "include": ["src", "test", "tsup.config.ts"]
+}

@@ -1,9 +1,13 @@
 'use client'
 
 import { SDKConfiguration } from '@openfort/openfort-js'
-import { useEffect, useState } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { getPublishableKeyEnvironment } from '../../utils/validation'
+import type { QueryKey } from '@tanstack/react-query'
+import { useCallback } from 'react'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { ApiRequestError } from '../../errors/operation.js'
+import { getOpenfortQueryInputScope, openfortKeys } from '../../query/queryKeys.js'
+import { useQuery } from '../../query/useQuery.js'
+import { getPublishableKeyEnvironment } from '../../utils/validation.js'
 
 /** A source currency available on a chain (sourced live from Relay via the backend). */
 export type FundingCurrency = {
@@ -35,8 +39,11 @@ type UseFundingChains = {
    * narrows {@link chains}.
    */
   railChains: FundingChain[]
-  loading: boolean
+  isLoading: boolean
+  isFetching: boolean
   error: Error | null
+  refetch: () => void
+  queryKey: QueryKey
 }
 
 /**
@@ -59,6 +66,9 @@ const DEFAULT_SOURCE_CHAINS = [
  */
 const DEFAULT_SOURCE_CURRENCIES = ['native', 'USDC', 'USDT']
 
+/** Shared empty list so a pending or failed fetch doesn't hand out a new array each render. */
+const EMPTY_CHAINS: FundingChain[] = []
+
 /**
  * The chains/currencies the funding backend supports, fetched from
  * `GET /v2/funding/chains` (a live passthrough of Relay's `/chains`), then
@@ -79,37 +89,38 @@ export function useFundingChains(): UseFundingChains {
   // testnet rail, everything else the mainnet rail. The backend picks the same
   // host from the request livemode for the authenticated session endpoints.
   const livemode = getPublishableKeyEnvironment(publishableKey) !== 'test'
-  const [state, setState] = useState<{ chains: FundingChain[]; loading: boolean; error: Error | null }>({
-    chains: [],
-    loading: true,
-    error: null,
+
+  // Narrowing the provider dictionary to the selected subset is cheap (O(chains))
+  // and pure, so it runs as a select: the curated and uncurated lists then stay
+  // referentially stable between renders.
+  const select = useCallback(
+    (chains: FundingChain[]) => ({
+      chains: curateChains(chains, sourceChains, sourceCurrencies),
+      railChains: chains,
+    }),
+    [sourceChains, sourceCurrencies]
+  )
+
+  const { data, error, isLoading, isFetching, refetch, queryKey } = useQuery({
+    queryKey: openfortKeys.fundingChains({ baseScope: getOpenfortQueryInputScope(baseUrl), livemode }),
+    queryFn: async () => {
+      const response = await fetch(`${baseUrl}/v2/funding/chains?livemode=${livemode}`)
+      if (!response.ok) throw new ApiRequestError({ operation: 'Funding chain lookup', status: response.status })
+      const body = (await response.json()) as { chains?: FundingChain[] }
+      return body.chains ?? []
+    },
+    select,
+    staleTime: 5 * 60 * 1000,
   })
 
-  useEffect(() => {
-    let cancelled = false
-    setState((s) => ({ ...s, loading: true }))
-    fetch(`${baseUrl}/v2/funding/chains?livemode=${livemode}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`Failed to load chains (${r.status})`)
-        return r.json() as Promise<{ chains: FundingChain[] }>
-      })
-      .then((d) => {
-        if (!cancelled) setState({ chains: d.chains ?? [], loading: false, error: null })
-      })
-      .catch((e) => {
-        if (!cancelled) setState({ chains: [], loading: false, error: e instanceof Error ? e : new Error(String(e)) })
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [baseUrl, livemode])
-
-  // Narrow the provider dictionary to the selected subset (cheap, O(chains)).
   return {
-    chains: curateChains(state.chains, sourceChains, sourceCurrencies),
-    railChains: state.chains,
-    loading: state.loading,
-    error: state.error,
+    chains: data?.chains ?? EMPTY_CHAINS,
+    railChains: data?.railChains ?? EMPTY_CHAINS,
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+    queryKey,
   }
 }
 

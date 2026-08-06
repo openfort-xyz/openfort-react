@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
 import { css, keyframes } from 'styled-components'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
-import { ModalContent } from '../../Common/Modal/styles'
+import { ModalContent } from '../../Common/Modal/styles.js'
 
 export const Content = styled(motion.div)`
   display: flex;

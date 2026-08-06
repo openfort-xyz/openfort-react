@@ -6,29 +6,29 @@ import type React from 'react'
 import { useEffect, useMemo } from 'react'
 import { PhoneInput } from 'react-international-phone'
 
-import { EmailIcon, GuestIcon, PhoneIcon } from '../../../assets/icons'
-import Logos, { OtherSocials, providersLogos } from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useProviders } from '../../../hooks/openfort/useProviders'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { logger } from '../../../utils/logger'
-import { isValidEmail as isValidEmailFn } from '../../../utils/validation'
-import Button from '../../Common/Button'
-import Loader from '../../Common/Loading'
-import { ModalHeading } from '../../Common/Modal/styles'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { routes, UIAuthProvider } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import type { SetOnBackFunction } from '../../PageContent'
-import { PageContent } from '../../PageContent'
+import { EmailIcon, GuestIcon, PhoneIcon } from '../../../assets/icons.js'
+import Logos, { OtherSocials, providersLogos } from '../../../assets/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useProviders } from '../../../hooks/openfort/useProviders.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { logger } from '../../../utils/logger.js'
+import { isValidEmail as isValidEmailFn } from '../../../utils/validation.js'
+import Button from '../../Common/Button/index.js'
+import Loader from '../../Common/Loading/index.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { routes, UIAuthProvider } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import type { SetOnBackFunction } from '../../PageContent/index.js'
+import { PageContent } from '../../PageContent/index.js'
 import {
   EmailInnerButton,
   ProviderIcon,
   ProviderInputInner,
   ProviderLabel,
   ProvidersButton as ProvidersButtonStyle,
-} from './styles'
+} from './styles.js'
 
 const ProviderButtonBase: React.FC<{
   onClick: () => void
@@ -62,7 +62,7 @@ const GuestButton: React.FC = () => {
 
 const WalletButton: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
   const { setRoute } = useOpenfort()
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
   return (
     <ProviderButtonBase
       onClick={() => setRoute({ route: routes.CONNECTORS, connectType: user ? 'link' : 'connect' })}
@@ -153,7 +153,7 @@ const EmailButton: React.FC<{ handleSubmit: () => void }> = ({ handleSubmit }) =
 
 const EmailPasswordButton: React.FC = () => {
   const { setRoute } = useOpenfort()
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
 
   const handleSubmit = () => {
     setRoute(user ? routes.LINK_EMAIL : routes.EMAIL_LOGIN)
@@ -307,7 +307,8 @@ const authProviderToOAuthProviderMap: Record<UIAuthProvider, React.ReactNode> = 
 }
 
 export const ProviderButton: React.FC<{ provider: UIAuthProvider }> = ({ provider }) => {
-  const { user, chainType } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const chainType = useOpenfortCore((s) => s.chainType)
   if (user && (provider === UIAuthProvider.EMAIL_OTP || provider === UIAuthProvider.EMAIL_PASSWORD)) {
     return <EmailPasswordButton />
   }
@@ -319,8 +320,8 @@ export const ProviderButton: React.FC<{ provider: UIAuthProvider }> = ({ provide
 
 // This accounts for the case where the user has an address but no user, which can happen if the user has not signed up yet, but logged in with a wallet
 const AddressButNoUserCase: React.FC = () => {
-  const { updateUser } = useOpenfortCore()
-  const { logout } = useOpenfortCore()
+  const updateUser = useOpenfortCore((s) => s.updateUser)
+  const logout = useOpenfortCore((s) => s.logout)
 
   useEffect(() => {
     updateUser()
@@ -349,10 +350,9 @@ const SocialProvidersButton = () => {
 }
 
 const Providers: React.FC = () => {
-  const { user } = useOpenfortCore()
-  const { previousRoute } = useOpenfort()
+  const user = useOpenfortCore((s) => s.user)
   const { mainProviders, hasExcessProviders } = useProviders()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()
@@ -367,7 +367,7 @@ const Providers: React.FC = () => {
       return 'back'
     }
     return null
-  }, [previousRoute, user])
+  }, [user])
 
   if (address && !user) {
     return <AddressButNoUserCase />

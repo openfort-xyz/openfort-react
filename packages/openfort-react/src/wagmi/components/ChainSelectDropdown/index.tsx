@@ -2,18 +2,50 @@
 
 import { AnimatePresence } from 'framer-motion'
 import type React from 'react'
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 
 import useMeasure from 'react-use-measure'
-import Portal from '../../../components/Common/Portal'
-import { useThemeContext } from '../../../components/ConnectKitThemeProvider/ConnectKitThemeProvider'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
-import FocusTrap from '../../../hooks/useFocusTrap'
-import useLocales from '../../../hooks/useLocales'
-import useLockBodyScroll from '../../../hooks/useLockBodyScroll'
-import { ResetContainer } from '../../../styles'
-import ChainSelectList from '../ChainSelectList'
-import { DropdownContainer, DropdownHeading, DropdownOverlay, DropdownWindow } from './styles'
+import Portal from '../../../components/Common/Portal/index.js'
+import { useThemeContext } from '../../../components/ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
+import FocusTrap from '../../../hooks/useFocusTrap.js'
+import useLocales from '../../../hooks/useLocales.js'
+import useLockBodyScroll from '../../../hooks/useLockBodyScroll.js'
+import { ResetContainer } from '../../../styles/index.js'
+import ChainSelectList from '../ChainSelectList/index.js'
+import { DropdownContainer, DropdownHeading, DropdownOverlay, DropdownWindow } from './styles.js'
+
+const FOCUSABLE_SELECTOR = `
+  a[href]:not(:disabled),
+  button:not(:disabled),
+  textarea:not(:disabled),
+  input[type="text"]:not(:disabled),
+  input[type="radio"]:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  select:not(:disabled)
+`
+
+const isDisabled = (element: Element): boolean =>
+  (element instanceof HTMLButtonElement ||
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLSelectElement ||
+    element instanceof HTMLTextAreaElement) &&
+  element.disabled
+
+/**
+ * Move focus to the enabled sibling of the active element in `direction`,
+ * skipping disabled controls. Falls back to `wrapTo` at either end of the list.
+ */
+const focusSibling = (direction: 'previous' | 'next', wrapTo: HTMLElement) => {
+  const step = (element: Element): Element | null =>
+    direction === 'previous' ? element.previousElementSibling : element.nextElementSibling
+
+  const active = document.activeElement
+  let candidate = active ? step(active) : null
+  while (candidate && isDisabled(candidate)) candidate = step(candidate)
+  if (candidate instanceof HTMLElement) candidate.focus()
+  else wrapTo.focus()
+}
 
 const ChainSelectDropdown: React.FC<{
   children?: React.ReactNode
@@ -27,8 +59,6 @@ const ChainSelectDropdown: React.FC<{
 
   const locales = useLocales()
 
-  const [offset, _setOffset] = useState({ x: 0, y: 0 })
-
   useLockBodyScroll(open)
 
   const contentRef = useRef<HTMLDivElement>(null)
@@ -41,36 +71,17 @@ const ChainSelectDropdown: React.FC<{
         if (!contentRef.current) return
         e.preventDefault()
 
-        const focusableEls: any = contentRef.current?.querySelectorAll(`
-            a[href]:not(:disabled),
-            button:not(:disabled),
-            textarea:not(:disabled),
-            input[type="text"]:not(:disabled),
-            input[type="radio"]:not(:disabled),
-            input[type="checkbox"]:not(:disabled),
-            select:not(:disabled)
-          `),
-          firstFocusableEl: any = focusableEls[0],
-          lastFocusableEl: any = focusableEls[focusableEls.length - 1]
+        const focusableEls = contentRef.current.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+        const firstFocusableEl = focusableEls[0]
+        const lastFocusableEl = focusableEls[focusableEls.length - 1]
+        if (!firstFocusableEl || !lastFocusableEl) return
 
         if (e.key === 'ArrowUp') {
-          if (document.activeElement === firstFocusableEl) {
-            lastFocusableEl.focus()
-          } else {
-            let focusItem: any = document?.activeElement?.previousSibling
-            if (!focusItem) focusItem = lastFocusableEl
-            while (focusItem.disabled) focusItem = focusItem.previousSibling
-            focusItem.focus()
-          }
+          if (document.activeElement === firstFocusableEl) lastFocusableEl.focus()
+          else focusSibling('previous', lastFocusableEl)
         } else {
-          if (document.activeElement === lastFocusableEl) {
-            firstFocusableEl.focus()
-          } else {
-            let focusItem: any = document?.activeElement?.nextSibling
-            if (!focusItem) focusItem = firstFocusableEl
-            while (focusItem.disabled) focusItem = focusItem.nextSibling
-            focusItem.focus()
-          }
+          if (document.activeElement === lastFocusableEl) firstFocusableEl.focus()
+          else focusSibling('next', firstFocusableEl)
         }
       }
     }
@@ -78,24 +89,17 @@ const ChainSelectDropdown: React.FC<{
     return () => {
       document.removeEventListener('keydown', listener)
     }
-  }, [open])
+  }, [open, onClose])
 
-  const targetRef = useRef<any>(null)
-  const innerRef = useCallback(
-    (node: any) => {
-      if (!node) return
-      targetRef.current = node
-      refresh()
-    },
-    [open]
-  )
+  const targetRef = useRef<HTMLDivElement | null>(null)
   const [ref, bounds] = useMeasure({
     debounce: 120, // waits until modal transition has finished before measuring
     offsetSize: true,
     scroll: true,
   })
 
-  const refresh = () => {
+  // Pin the dropdown window just below the measured trigger.
+  const refresh = useCallback(() => {
     if (
       !targetRef.current ||
       bounds.top + bounds.bottom + bounds.left + bounds.right + bounds.height + bounds.width === 0
@@ -108,24 +112,28 @@ const ChainSelectDropdown: React.FC<{
 
     targetRef.current.style.left = `${x}px`
     targetRef.current.style.top = `${y}px`
-  }
+  }, [bounds, offsetX, offsetY])
+
+  const innerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      if (!node) return
+      targetRef.current = node
+      refresh()
+    },
+    [refresh]
+  )
 
   const useIsomorphicLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect
-  useIsomorphicLayoutEffect(refresh, [targetRef.current, bounds, open])
+  useIsomorphicLayoutEffect(refresh, [refresh, open])
 
-  useEffect(refresh, [open, targetRef.current])
-
-  const onScroll = onClose
-  const onResize = onClose
   useEffect(() => {
-    refresh()
-    window.addEventListener('scroll', onScroll)
-    window.addEventListener('resize', onResize)
+    window.addEventListener('scroll', onClose)
+    window.addEventListener('resize', onClose)
     return () => {
-      window.removeEventListener('scroll', onScroll)
-      window.removeEventListener('resize', onResize)
+      window.removeEventListener('scroll', onClose)
+      window.removeEventListener('resize', onClose)
     }
-  }, [])
+  }, [onClose])
 
   return (
     <>
@@ -136,17 +144,13 @@ const ChainSelectDropdown: React.FC<{
             <ResetContainer
               $useTheme={themeContext.theme ?? context.uiConfig.theme}
               $useMode={themeContext.mode ?? context.mode}
-              $customTheme={themeContext.customTheme ?? themeContext.customTheme}
+              $customTheme={themeContext.customTheme ?? context.uiConfig.customTheme}
             >
               <FocusTrap>
                 <DropdownWindow ref={contentRef}>
                   <DropdownOverlay onClick={onClose} />
                   <DropdownContainer
                     ref={innerRef}
-                    style={{
-                      left: offset.x,
-                      top: offset.y,
-                    }}
                     initial={'collapsed'}
                     animate={'open'}
                     exit={'collapsed'}

@@ -26,15 +26,10 @@ import {
 
 interface CliFlags {
   noGit: boolean;
-  noInstall: boolean;
   default: boolean;
 
   /** @internal Used in CI. */
   CI: boolean;
-  /** @internal Used in CI. */
-  template?: OpenfortTemplate;
-  /** @internal Used in CI. */
-  theme?: OpenfortTheme;
 }
 
 interface CliResults {
@@ -74,11 +69,6 @@ export const runCli = async (): Promise<CliResults> => {
       false,
     )
     .option(
-      "--noInstall",
-      "Explicitly tell the CLI to not run the package manager's install command",
-      false,
-    )
-    .option(
       "-y, --default",
       "Bypass the CLI and use all default options to bootstrap a new Openfort app",
       false,
@@ -96,12 +86,23 @@ export const runCli = async (): Promise<CliResults> => {
       "afterAll",
       `\n Learn more about Openfort at ${chalk
         .hex("#5B87F5")
-        .bold("https://www.openfort.xyz")} \n`,
+        .bold("https://www.openfort.io")} \n`,
     )
     .parse(process.argv);
 
   // biome-ignore lint/suspicious/noControlCharactersInRegex: intentional sanitization of control chars to prevent log injection
   const cliProvidedName = program.args[0]?.replace(/[\r\n\x00-\x1f]/g, "");
+
+  // The interactive prompt runs `validateAppName`, but supplying the name as an
+  // argument skips the prompt entirely — so `../../elsewhere` scaffolded outside
+  // the working directory.
+  if (cliProvidedName) {
+    const nameProblem = validateAppName(cliProvidedName);
+    if (nameProblem) {
+      logger.error(nameProblem);
+      process.exit(1);
+    }
+  }
   const opts = program.opts();
 
   // Disable debug logging
@@ -118,19 +119,36 @@ export const runCli = async (): Promise<CliResults> => {
     appName: cliProvidedName || DEFAULT_APP_NAME,
     flags: {
       noGit: opts.noGit || false,
-      noInstall: opts.noInstall || false,
       default: opts.default || false,
       CI: opts.CI || false,
-      template: opts.template,
-      theme: opts.theme,
     },
   };
 
   // Handle CI mode
   if (cliResults.flags!.CI) {
     // In CI mode, use provided options or defaults
-    cliResults.template = (opts.template as OpenfortTemplate) || "openfort-ui";
-    cliResults.theme = opts.theme as OpenfortTheme;
+    // `--template` joins into a filesystem path, so an unlisted value such as
+    // `../../src` would copy whatever sits there into the new project.
+    const requestedTemplate = (opts.template as string) || "openfort-ui";
+    if (!availableTemplates.includes(requestedTemplate as OpenfortTemplate)) {
+      logger.error(
+        `Unknown template "${requestedTemplate}". Available: ${availableTemplates.join(", ")}.`,
+      );
+      process.exit(1);
+    }
+    cliResults.template = requestedTemplate as OpenfortTemplate;
+    // `--theme` lands verbatim in the generated `.env`; an unknown value would
+    // scaffold an app whose theme silently falls back at runtime.
+    if (opts.theme !== undefined) {
+      const requestedTheme = opts.theme as string;
+      if (!availableThemes.includes(requestedTheme as OpenfortTheme)) {
+        logger.error(
+          `Unknown theme "${requestedTheme}". Available: ${availableThemes.join(", ")}.`,
+        );
+        process.exit(1);
+      }
+      cliResults.theme = requestedTheme as OpenfortTheme;
+    }
     cliResults.createBackend = false;
 
     // Mock values for CI
@@ -397,6 +415,10 @@ export const runCli = async (): Promise<CliResults> => {
         initialValue: true,
       });
 
+      if (p.isCancel(shouldContinue)) {
+        p.cancel("Scaffolding cancelled.");
+        process.exit(0);
+      }
       if (!shouldContinue) {
         logger.info("Exiting...");
         process.exit(0);

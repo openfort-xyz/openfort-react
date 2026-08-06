@@ -27,7 +27,7 @@ export const Funding = () => {
     void fund(
       { chain: 'eip155:8453', currency: DEST_BASE_USDC, address },
       { type: 'evm', source: { chain: source.chain, currency: source.currency, amount: units } }
-    ).catch(() => {})
+    )
   }
 
   return (
@@ -49,7 +49,12 @@ export const Funding = () => {
               </option>
             ))}
           </select>
-          <input className={inputClass} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          <input
+            className={inputClass}
+            inputMode="decimal"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+          />
           <button type="button" className="btn" onClick={run} disabled={!address || !isAvailable}>
             Get deposit address
           </button>

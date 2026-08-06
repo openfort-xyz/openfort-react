@@ -25,9 +25,7 @@ function SignMessage() {
           {isPending ? 'Signing...' : 'Sign Message'}
         </button>
       </form>
-      {error && (
-        <TruncateData data={error.message} className="text-red-500" />
-      )}
+      {error && <TruncateData data={error.message} className="text-red-500" />}
       <TruncateData data={data} />
     </div>
   )
@@ -37,9 +35,7 @@ export const Sign = () => {
   return (
     <div className="flex flex-col w-full">
       <h1>Sign Message</h1>
-      <p className="mb-4 text-sm text-zinc-400">
-        Sign messages with your Solana embedded wallet using Ed25519.
-      </p>
+      <p className="mb-4 text-sm text-zinc-400">Sign messages with your Solana embedded wallet using Ed25519.</p>
       <div className="space-y-6">
         <SignMessage />
       </div>

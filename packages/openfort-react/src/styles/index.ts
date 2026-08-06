@@ -1,9 +1,11 @@
-import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import { hexToP3 } from '../utils/p3'
-import type { CustomTheme } from './customTheme'
-import styled from './styled'
-import predefinedThemes from './themes'
+import { hexToP3 } from '../utils/p3.js'
+import type { CustomTheme } from './customTheme.js'
+import styled from './styled/index.js'
+import predefinedThemes from './themes/index.js'
+
+/** A map of CSS custom property names to values. Falsy entries are skipped. */
+type ThemeScheme = Record<string, string | number | undefined>
 
 /**
  * Theme variables for the modal.
@@ -137,13 +139,9 @@ const themeColors = {
 /**
  * Generates CSS custom property declarations from the given theme map.
  */
-//  TODO: Don't use :any type
-const createCssVars = (scheme: any, _important?: boolean) => {
+const createCssVars = (scheme: ThemeScheme, _important?: boolean) => {
   return css`
-    ${Object.keys(scheme).map((key) => {
-      const value = scheme[key]
-      return value && `${key}:${value};`
-    })}
+    ${Object.entries(scheme).map(([key, value]) => value && `${key}:${value};`)}
   `
 }
 /**
@@ -152,18 +150,12 @@ const createCssVars = (scheme: any, _important?: boolean) => {
  * @param scheme - Map of CSS custom property names to hex colour values.
  * @param override - When `true`, appends `!important` to each declaration.
  */
-const createCssColors = (scheme: any, override?: boolean) => {
+const createCssColors = (scheme: ThemeScheme, override?: boolean) => {
   const important = override ? ' !important' : ''
   return css`
-    ${Object.keys(scheme).map((key) => {
-      const value = scheme[key]
-      return value && `${key}:${value}${important};`
-    })}
+    ${Object.entries(scheme).map(([key, value]) => value && `${key}:${value}${important};`)}
     @supports (color: color(display-p3 1 1 1)) {
-      ${Object.keys(scheme).map((key) => {
-        const value = scheme[key]
-        return `${key}:${hexToP3(value)}${important};`
-      })}
+      ${Object.entries(scheme).map(([key, value]) => value && `${key}:${hexToP3(String(value))}${important};`)}
     }
   `
 }
@@ -203,11 +195,54 @@ const globalsDark = css`
  *  Reset stylings to avoid conflicting with the parent websites styling
  * Automatically apply theme based on system theme
  */
-// OLD_TODO: Think more about how to reset our components as to not be affected by external stylings
-// OLD_TODO: Merge theme objects instead of overriding
+// TODO: Harden the reset so host-site styles cannot leak into our components.
+// TODO: Deep-merge theme objects so a partial custom theme keeps the base values
+// it does not specify, rather than replacing the whole object.
 
-let mode = 'auto'
-export const ResetContainer = styled(motion.div)<{
+type ThemeMode = 'light' | 'dark' | 'auto'
+
+/** @internal Pure theme resolution used by ResetContainer and regression tests. */
+export const resolveTheme = ($useTheme?: string, $useMode?: string) => {
+  switch ($useTheme) {
+    case 'web95':
+    case 'retro':
+    case 'soft':
+    case 'minimal':
+    case 'rounded':
+    case 'nouns':
+      return { colors: themes[$useTheme], mode: 'light' as const }
+    case 'midnight':
+      return { colors: themes.midnight, mode: 'dark' as const }
+    default: {
+      const mode: ThemeMode = $useMode === 'light' || $useMode === 'dark' ? $useMode : 'auto'
+      if (mode !== 'auto') return { colors: themes[mode], mode }
+      return {
+        mode,
+        colors: css`
+          @media (prefers-color-scheme: light) {
+            ${themes.light}
+          }
+          @media (prefers-color-scheme: dark) {
+            ${themes.dark}
+          }
+        `,
+      }
+    }
+  }
+}
+
+const globalsForMode = (mode: ThemeMode) => {
+  if (mode === 'light') return globalsLight
+  if (mode === 'dark') return globalsDark
+  return css`
+    ${globalsLight}
+    @media (prefers-color-scheme: dark) {
+      ${globalsDark}
+    }
+  `
+}
+
+export const ResetContainer = styled.div<{
   $useTheme?: string
   $useMode?: string
   $customTheme?: CustomTheme
@@ -215,62 +250,11 @@ export const ResetContainer = styled(motion.div)<{
   ${themes.default}
 
   ${(props) => {
-    switch (props.$useTheme) {
-      case 'web95':
-        mode = 'light'
-        return themes.web95
-      case 'retro':
-        mode = 'light'
-        return themes.retro
-      case 'soft':
-        mode = 'light'
-        return themes.soft
-      case 'midnight':
-        mode = 'dark'
-        return themes.midnight
-      case 'minimal':
-        mode = 'light'
-        return themes.minimal
-      case 'rounded':
-        mode = 'light'
-        return themes.rounded
-      case 'nouns':
-        mode = 'light'
-        return themes.nouns
-      default:
-        if (props.$useMode === 'light') {
-          mode = 'light'
-          return themes.light
-        } else if (props.$useMode === 'dark') {
-          mode = 'dark'
-          return themes.dark
-        } else {
-          return css`
-            @media (prefers-color-scheme: light) {
-              ${themes.light}
-            }
-            @media (prefers-color-scheme: dark) {
-              ${themes.dark}
-            }
-          `
-        }
-    }
-  }}
-
-  ${(_props) => {
-    switch (mode) {
-      case 'light':
-        return globalsLight
-      case 'dark':
-        return globalsDark
-      default:
-        return css`
-          ${globalsLight}
-          @media (prefers-color-scheme: dark) {
-            ${globalsDark}
-          }
-        `
-    }
+    const resolved = resolveTheme(props.$useTheme, props.$useMode)
+    return css`
+      ${resolved.colors}
+      ${globalsForMode(resolved.mode)}
+    `
   }}
 
   ${(props) => {
@@ -300,6 +284,7 @@ export const ResetContainer = styled(motion.div)<{
     if (props.$customTheme) {
       return createCssColors(props.$customTheme, true)
     }
+    return undefined
   }}
 
   all: initial;

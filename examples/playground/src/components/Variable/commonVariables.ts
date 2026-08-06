@@ -2,11 +2,6 @@ import type { FunctionInputType } from '@/components/Form/Form'
 import type { HookInput } from '@/components/Variable/Variable'
 
 export const onSettledInputs: Record<string, HookInput | FunctionInputType> = {
-  throwOnError: {
-    type: 'boolean',
-    description: 'Whether to throw errors.',
-    defaultValue: 'false',
-  },
   onSuccess: {
     type: 'function',
     typescriptType: '(data: any) => void',
@@ -20,7 +15,6 @@ export const onSettledInputs: Record<string, HookInput | FunctionInputType> = {
 }
 
 export const onSettledOptions = {
-  throwOnError: false,
   onSuccess: undefined,
   onError: undefined,
 }

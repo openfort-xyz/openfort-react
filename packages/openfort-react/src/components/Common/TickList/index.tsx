@@ -1,5 +1,5 @@
-import { TickIcon } from '../../../assets/icons'
-import { TickIconWrapper, TickItem, TickListContainer } from './styles'
+import { TickIcon } from '../../../assets/icons.js'
+import { TickIconWrapper, TickItem, TickListContainer } from './styles.js'
 
 const TickList = ({ items }: { items: string[] }) => {
   return (

@@ -1,3 +1,5 @@
+'use client'
+
 /**
  * Send page router
  *
@@ -7,15 +9,15 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { EthereumSend } from './EthereumSend'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { EthereumSend } from './EthereumSend.js'
 
 const SEND_REGISTRY: Partial<Record<ChainTypeEnum, React.FC>> = {
   [ChainTypeEnum.EVM]: EthereumSend,
 }
 
 const Send: React.FC = () => {
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const Component = SEND_REGISTRY[chainType]
   return Component ? <Component /> : <EthereumSend />
 }

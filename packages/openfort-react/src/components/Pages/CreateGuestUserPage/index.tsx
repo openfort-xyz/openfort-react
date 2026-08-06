@@ -1,12 +1,12 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { useGuestAuth } from '../../../hooks/openfort/auth/useGuestAuth'
-import { logger } from '../../../utils/logger'
-import Loader from '../../Common/Loading'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useGuestAuth } from '../../../hooks/openfort/auth/useGuestAuth.js'
+import { logger } from '../../../utils/logger.js'
+import Loader from '../../Common/Loading/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 const CreateGuestUserPage = () => {
   const { setRoute } = useOpenfort()
@@ -17,6 +17,7 @@ const CreateGuestUserPage = () => {
 
   const initialized = useRef(false)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: one guest sign-up per visit — `initialized` latches on the first run, and `signUpGuest` changes identity on every render because the hook options are an object literal
   useEffect(() => {
     if (initialized.current) return
     initialized.current = true

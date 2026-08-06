@@ -1,5 +1,5 @@
-import { embeddedWalletId } from '../../constants/openfort'
-import type { WalletStatus } from '../types'
+import { embeddedWalletId } from '../../constants/openfort.js'
+import type { WalletStatus } from '../types.js'
 
 /**
  * Maps wallet status + activeWallet presence to the derived boolean/id props

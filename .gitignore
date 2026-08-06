@@ -8,7 +8,7 @@ node_modules
 .pnpm-store
 
 # testing
-/coverage
+coverage
 
 # production
 build
@@ -20,6 +20,7 @@ create-openfort-*.tgz
 
 # misc
 .DS_Store
+.claude/settings.local.json
 .env
 .env.local
 .env.development.local
@@ -41,4 +42,6 @@ examples/playground/tests/.auth/
 
 docs/
 semgrep-results-001/
+REVIEW_TODO.md
 .gstack/
+.claude/worktrees/

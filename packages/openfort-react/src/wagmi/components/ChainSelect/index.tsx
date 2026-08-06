@@ -3,18 +3,20 @@
 import { motion } from 'framer-motion'
 import type React from 'react'
 import { useEffect, useState } from 'react'
-import { useChainId } from 'wagmi'
-import Chain from '../../../components/Common/Chain'
-import { SwitchChainButton } from '../../../components/Common/Chain/styles'
-import Tooltip from '../../../components/Common/Tooltip'
-import { routes } from '../../../components/Openfort/types'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
-import defaultTheme from '../../../constants/defaultTheme'
-import useLocales from '../../../hooks/useLocales'
-import styled from '../../../styles/styled'
-import { flattenChildren, isMobile } from '../../../utils'
-import { useSwitchChainFiltered } from '../../useSwitchChainFiltered'
-import ChainSelectDropdown from '../ChainSelectDropdown'
+// wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
+// namespace import rather than named bindings.
+import * as wagmi from 'wagmi'
+import Chain from '../../../components/Common/Chain/index.js'
+import { SwitchChainButton } from '../../../components/Common/Chain/styles.js'
+import Tooltip from '../../../components/Common/Tooltip/index.js'
+import { routes } from '../../../components/Openfort/types.js'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
+import defaultTheme from '../../../constants/defaultTheme.js'
+import useLocales from '../../../hooks/useLocales.js'
+import styled from '../../../styles/styled/index.js'
+import { flattenChildren, isMobile } from '../../../utils/index.js'
+import { useSwitchChainFiltered } from '../../useSwitchChainFiltered.js'
+import ChainSelectDropdown from '../ChainSelectDropdown/index.js'
 
 const Container = styled(motion.div)``
 
@@ -35,7 +37,7 @@ const ChevronDown = ({ ...props }) => (
 const ChainSelector: React.FC = () => {
   const { open, triggerResize, setRoute } = useOpenfort()
   const [isOpen, setIsOpen] = useState(false)
-  const chainId = useChainId()
+  const chainId = wagmi.useChainId()
   const { chains } = useSwitchChainFiltered()
 
   const chain = chains.find((c) => c.id === chainId)
@@ -50,6 +52,7 @@ const ChainSelector: React.FC = () => {
     if (!open) setIsOpen(false)
   }, [open])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `chainId` is the trigger — the selector label changes width with the active chain, so the modal has to re-measure
   useEffect(() => {
     triggerResize()
   }, [chainId, triggerResize])

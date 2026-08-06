@@ -9,9 +9,9 @@
 export type {
   CreateEmbeddedWalletOptions,
   CreateEmbeddedWalletResult,
-} from '../shared/types'
-export { useEthereumEmbeddedWallet } from './hooks/useEthereumEmbeddedWallet'
-export { useEthereumWalletAssets } from './hooks/useEthereumWalletAssets'
+} from '../shared/types.js'
+export { useEthereumEmbeddedWallet } from './hooks/useEthereumEmbeddedWallet.js'
+export { useEthereumWalletAssets } from './hooks/useEthereumWalletAssets.js'
 export type {
   ConnectedEmbeddedEthereumWallet,
   EthereumConfig,
@@ -21,4 +21,4 @@ export type {
   OpenfortEmbeddedEthereumWalletProvider,
   SetActiveEthereumWalletOptions,
   UseEmbeddedEthereumWalletOptions,
-} from './types'
+} from './types.js'

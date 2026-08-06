@@ -1,13 +1,18 @@
 'use client'
 
-import { useEffect } from 'react'
-import { BALANCE_INVALIDATE_EVENT } from '../../hooks/useBalance'
-import { useAsyncData } from '../../shared/hooks/useAsyncData'
-import { useSolanaContext } from '../SolanaContext'
-import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet'
+import { ChainTypeEnum } from '@openfort/openfort-js'
+import { useContext, useMemo } from 'react'
+import { asOpenfortError, type OpenfortError } from '../../errors/base.js'
+import { WalletError } from '../../errors/wallet.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { getOpenfortQueryInputScope, getOpenfortQueryScope, openfortKeys } from '../../query/queryKeys.js'
+import { type UseQueryReturnType, useQuery } from '../../query/useQuery.js'
+import { withQueryResultOverrides } from '../../query/withQueryResultOverrides.js'
+import { SolanaContext } from '../SolanaContext.js'
+import { useSolanaEmbeddedWallet } from './useSolanaEmbeddedWallet.js'
 
 /** A holding in the connected Solana wallet: native SOL or an SPL token. */
-type SolanaAsset = {
+export type SolanaAsset = {
   /** Mint address, or 'native' for SOL. */
   mint: string
   symbol: string
@@ -77,34 +82,78 @@ async function fetchSolanaAssets(addressStr: string, rpcUrl: string): Promise<So
 }
 
 /**
+ * The TanStack query result, mirroring `useEthereumWalletAssets` from
+ * `@openfort/react/ethereum`: `data`
+ * is `null` rather than `undefined` before the first result, and `isIdle`
+ * reports that the query is gated off because no wallet or cluster is available.
+ */
+export type UseSolanaWalletAssetsResult = Omit<UseQueryReturnType<SolanaAsset[], Error>, 'data' | 'error'> & {
+  data: SolanaAsset[] | null
+  error: OpenfortError | undefined
+  isIdle: boolean
+}
+
+/**
  * Returns the connected Solana wallet's balances: native SOL plus SPL token
  * holdings, read directly from the cluster RPC. The SVM counterpart of
- * {@link useEthereumWalletAssets}, feeding the Solana asset inventory. Refreshes
- * on BALANCE_INVALIDATE_EVENT (e.g. after a deposit/send).
+ * `useEthereumWalletAssets` from `@openfort/react/ethereum`, feeding the
+ * Solana asset inventory.
+ *
+ * The result refreshes when balances are invalidated — see `useInvalidateBalance`.
+ *
+ * @example
+ * ```tsx
+ * import { useSolanaWalletAssets } from '@openfort/react/solana'
+ *
+ * function SolanaBalances() {
+ *   const { data, error, isPending } = useSolanaWalletAssets()
+ *   if (isPending) return <p>Loading balances…</p>
+ *   if (error) return <p>{error.shortMessage}</p>
+ *   return <p>{data?.find((asset) => asset.isNative)?.amount ?? 0n} lamports</p>
+ * }
+ * ```
  */
-export function useSolanaWalletAssets(): {
-  data: SolanaAsset[] | null
-  isLoading: boolean
-  isError: boolean
-  refetch: () => Promise<unknown>
-} {
+export function useSolanaWalletAssets(): UseSolanaWalletAssetsResult {
+  const client = useOpenfortCore((state) => state.client)
   const wallet = useSolanaEmbeddedWallet()
-  const { rpcUrl } = useSolanaContext()
+  // Read the context directly rather than through useSolanaContext(): that
+  // throws when `walletConfig.solana` is absent, which would take down the tree
+  // of a consumer who simply called this hook without configuring Solana. With
+  // no cluster there is nothing to read, so the hook stays idle instead.
+  const solana = useContext(SolanaContext)
+  const rpcUrl = solana?.rpcUrl
   const address = wallet.status === 'connected' && wallet.address ? wallet.address : undefined
+  const enabled = Boolean(address && rpcUrl)
 
-  const { data, error, isLoading, refetch } = useAsyncData({
-    queryKey: ['solana-assets', address, rpcUrl],
+  const query = useQuery({
+    queryKey: openfortKeys.walletAssets({
+      address: address ?? '',
+      chainType: ChainTypeEnum.SVM,
+      multiChain: false,
+      clientScope: getOpenfortQueryScope(client),
+      rpcScope: getOpenfortQueryInputScope(rpcUrl),
+    }),
     queryFn: () => (address && rpcUrl ? fetchSolanaAssets(address, rpcUrl) : Promise.resolve([])),
-    enabled: Boolean(address && rpcUrl),
-    staleTime: 30000,
+    enabled,
+    staleTime: 30_000,
   })
 
-  useEffect(() => {
-    if (!address) return
-    const handler = () => refetch().catch(() => {})
-    window.addEventListener(BALANCE_INVALIDATE_EVENT, handler)
-    return () => window.removeEventListener(BALANCE_INVALIDATE_EVENT, handler)
-  }, [address, refetch])
+  // Memoized: asOpenfortError builds a new instance for any error that is not
+  // already an OpenfortError, so reading `error` twice would otherwise yield
+  // two different objects and re-fire a consumer effect keyed on it.
+  const mappedError = useMemo(
+    () =>
+      query.error
+        ? asOpenfortError(query.error, (cause) => new WalletError('Failed to fetch Solana wallet assets.', { cause }))
+        : undefined,
+    [query.error]
+  )
 
-  return { data: data ?? null, isLoading, isError: Boolean(error), refetch }
+  return withQueryResultOverrides(query, {
+    get data() {
+      return query.data ?? null
+    },
+    error: mappedError,
+    isIdle: !enabled,
+  })
 }

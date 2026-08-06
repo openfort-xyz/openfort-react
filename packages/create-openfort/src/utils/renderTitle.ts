@@ -1,14 +1,12 @@
-import gradient from "gradient-string";
+import chalk from "chalk";
 
 import { TITLE_TEXT } from "~/consts.js";
 import { getUserPkgManager } from "~/utils/getUserPkgManager.js";
 
-// Openfort brand colors
-const openfortTheme = ["#c3c3c3ff", "#ff3b30"];
+// Openfort brand red
+const openfortRed = chalk.hex("#ff3b30");
 
 export const renderTitle = async () => {
-  const openfortGradient = gradient(openfortTheme);
-
   // resolves weird behavior where the ascii is offset
   const pkgManager = getUserPkgManager();
   if (pkgManager === "yarn" || pkgManager === "pnpm") {
@@ -17,5 +15,5 @@ export const renderTitle = async () => {
   }
 
   // biome-ignore lint/suspicious/noConsole: CLI tool needs console output for title
-  console.log(openfortGradient.multiline(TITLE_TEXT));
+  console.log(openfortRed(TITLE_TEXT));
 };

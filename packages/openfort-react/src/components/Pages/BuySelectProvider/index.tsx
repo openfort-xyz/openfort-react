@@ -2,23 +2,23 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { getPublishableKeyEnvironment } from '../../../utils/validation'
-import Button from '../../Common/Button'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { reserveBuyPopup } from '../Buy/buyPopup'
-import { isCoinbaseSupported } from '../Buy/coinbaseApi'
-import type { OnrampQuote } from '../Buy/onrampApi'
-import { getAllQuotes, resolveOnrampNetwork } from '../Buy/onrampApi'
-import { getProviders } from '../Buy/providers'
-import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
-import { isStripeSupported } from '../Buy/stripeApi'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { getPublishableKeyEnvironment } from '../../../utils/validation.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { reserveBuyPopup } from '../Buy/buyPopup.js'
+import { isCoinbaseSupported } from '../Buy/coinbaseApi.js'
+import type { OnrampQuote } from '../Buy/onrampApi.js'
+import { getAllQuotes, resolveOnrampNetwork } from '../Buy/onrampApi.js'
+import { getProviders } from '../Buy/providers.js'
+import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies.js'
+import { isStripeSupported } from '../Buy/stripeApi.js'
 import {
   ContinueButtonWrapper,
   ProviderBadge,
@@ -31,13 +31,13 @@ import {
   ProviderNameRow,
   ProviderQuote,
   ProviderRight,
-} from '../Buy/styles'
-import { createCurrencyFormatter, formatTokenAmount } from '../Buy/utils'
-import { getAssetSymbol, isSameToken } from '../Send/utils'
+} from '../Buy/styles.js'
+import { createCurrencyFormatter, formatTokenAmount } from '../Buy/utils.js'
+import { getAssetSymbol, isSameToken } from '../Send/utils.js'
 
 const BuySelectProvider = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   // Card / Apple Pay settle on mainnet, so a test key can't deliver — block both
   // providers (and Continue) with a clear reason while keeping the screen reachable.
   const testnet = getPublishableKeyEnvironment(publishableKey) === 'test'
@@ -112,7 +112,9 @@ const BuySelectProvider = () => {
     }
   }, [fiatAmount])
 
-  // Fetch quotes from all providers
+  // Fetch quotes from all providers. `refetchTrigger` is incremented by the countdown above and is
+  // a trigger rather than an input: quotes expire after a minute and have to be re-requested.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: refetchTrigger is a refresh trigger, see above
   useEffect(() => {
     const fetchQuotes = async () => {
       if (!address || !network || !fiatAmount || fiatAmount <= 0) {
@@ -156,16 +158,7 @@ const BuySelectProvider = () => {
     // Debounce the quote fetching
     const timeoutId = setTimeout(fetchQuotes, 500)
     return () => clearTimeout(timeoutId)
-  }, [
-    fiatAmount,
-    selectedToken.metadata,
-    selectedToken.type,
-    buyForm.currency,
-    network,
-    address,
-    publishableKey,
-    refetchTrigger,
-  ])
+  }, [fiatAmount, selectedToken, buyForm.currency, network, address, publishableKey, refetchTrigger])
 
   const handleSelectProvider = (id: string) => {
     setBuyForm((prev) => ({
@@ -187,7 +180,15 @@ const BuySelectProvider = () => {
   }
 
   const formattedFiat = fiatAmount !== null ? currencyFormatter.format(fiatAmount) : null
-  const step2Disabled = !address || isLoadingQuote
+
+  // `providerId` defaults to Coinbase, so Continue has to check the selected
+  // provider can actually serve this token; otherwise the next screen fails with
+  // an untrue "Failed to create payment session".
+  const selectedProviderUnavailable =
+    buyForm.providerId === 'coinbase'
+      ? !isCoinbaseSupported(selectedToken) || !!coinbaseError
+      : !isStripeSupported(selectedToken) || !!stripeError
+  const step2Disabled = !address || isLoadingQuote || selectedProviderUnavailable
 
   const providers = getProviders()
 

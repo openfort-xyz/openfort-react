@@ -11,23 +11,25 @@ import {
   DEFAULT_EVM_CHAIN,
   getFundingConfigForKey,
   PLAYGROUND_EVM_CHAINS,
-  RPC_URLS,
   SOLANA_CLUSTER,
   SOLANA_DEFAULT_RPC,
+  WALLET_RPC_URLS,
 } from '@/lib/chains'
+
+const polygonMintContract = import.meta.env.VITE_POLYGON_MINT_CONTRACT as `0x${string}` | undefined
 
 const defaultWalletConfig: OpenfortWalletConfig = {
   shieldPublishableKey: import.meta.env.VITE_SHIELD_PUBLISHABLE_KEY,
   chainType: ChainTypeEnum.EVM,
   ethereum: {
     chainId: DEFAULT_EVM_CHAIN.id,
-    rpcUrls: RPC_URLS,
+    rpcUrls: WALLET_RPC_URLS,
     ethereumFeeSponsorshipId: Object.fromEntries(
       PLAYGROUND_EVM_CHAINS.map((c) => [c.id, import.meta.env.VITE_FEE_SPONSORSHIP_ID!])
     ),
     assets: {
       [base.id]: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`], // USDC on Base
-      [polygonAmoy.id]: [import.meta.env.VITE_POLYGON_MINT_CONTRACT!],
+      ...(polygonMintContract ? { [polygonAmoy.id]: [polygonMintContract] } : {}),
     },
   },
   solana: {
@@ -38,7 +40,7 @@ const defaultWalletConfig: OpenfortWalletConfig = {
   },
 
   // If you want to use AUTOMATIC embedded wallet recovery, an encryption session is required.
-  // See: https://www.openfort.io/docs/products/embedded-wallet/react-native/quickstart/automatic
+  // See: https://www.openfort.io/docs/products/embedded-wallet/server/automatic-recovery-session
   // For backend setup, check: https://github.com/openfort-xyz/openfort-backend-quickstart
   getEncryptionSession: undefined, // Optional function to get the encryption session
   createEncryptedSessionEndpoint:
@@ -103,9 +105,7 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
     overlayBlur: undefined,
     privacyPolicyUrl: undefined,
     termsOfServiceUrl: undefined,
-    reducedMotion: undefined,
     skipEmailVerification: undefined,
-    truncateLongENSAddress: undefined,
     walletConnectCTA: undefined,
     authProvidersLength: undefined,
 

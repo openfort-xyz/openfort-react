@@ -1,26 +1,9 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
-import type { Asset } from '../../Openfort/types'
-import { getAssetSymbol } from '../Send/utils'
-
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
-
-type StripeQuote = {
-  provider: string
-  sourceAmount: string
-  sourceCurrency: string
-  destinationAmount: string
-  destinationCurrency: string
-  destinationNetwork: string
-  fees: Array<{
-    amount: string
-    currency: string
-    type: string
-  }>
-  exchangeRate: string
-}
+import { MissingParameterError } from '../../../errors/validation.js'
+import { getTrustedFundingProviderUrl } from '../../../utils/fundingProviderUrl.js'
+import type { Asset } from '../../Openfort/types.js'
+import { getAssetSymbol } from '../Send/utils.js'
+import { ONRAMP_SESSIONS_PATH } from './onrampApi.js'
+import { createCurrencySupport, postOnramp } from './onrampRequest.js'
 
 type StripeOnrampResponse = {
   provider: string
@@ -42,26 +25,10 @@ type CreateStripeSessionParams = {
 // Stripe supported currencies
 const STRIPE_SUPPORTED_CURRENCIES = ['btc', 'eth', 'xlm', 'matic', 'pol', 'sol', 'usdc', 'avax', 'wld'] as const
 
+const stripeCurrencies = createCurrencySupport('Stripe', STRIPE_SUPPORTED_CURRENCIES)
+
 // Check if a token is supported by Stripe
-export const isStripeSupported = (token: Asset): boolean => {
-  const symbol = getAssetSymbol(token)
-  return STRIPE_SUPPORTED_CURRENCIES.includes(symbol.toLowerCase() as any)
-}
-
-// Map token symbol to Stripe currency code
-const getCurrencyCode = (token: Asset): string => {
-  const symbol = getAssetSymbol(token)
-  const lowercaseSymbol = symbol.toLowerCase()
-
-  // Validate that the currency is supported by Stripe
-  if (!STRIPE_SUPPORTED_CURRENCIES.includes(lowercaseSymbol as any)) {
-    throw new Error(
-      `Unsupported currency for Stripe: ${symbol}. Supported currencies are: ${STRIPE_SUPPORTED_CURRENCIES.join(', ')}`
-    )
-  }
-
-  return lowercaseSymbol
-}
+export const isStripeSupported = (token: Asset): boolean => stripeCurrencies.isSupported(getAssetSymbol(token))
 
 /**
  * Create a Stripe onramp session
@@ -77,87 +44,28 @@ export const createStripeSession = async (
   const { token, network, publishableKey, destinationAddress, sourceAmount, sourceCurrency, redirectUrl } = params
 
   if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
+    throw new MissingParameterError({ params: ['publishableKey'] })
   }
 
-  const destinationCurrency = getCurrencyCode(token)
-  const destinationNetwork = network
+  const symbol = getAssetSymbol(token)
+  stripeCurrencies.assertSupported(symbol)
 
-  // Build request body for backend API
+  // Stripe expects lowercase currency codes.
   const requestBody: CreateStripeSessionParams & { provider: string } = {
     provider: 'stripe',
-    destinationCurrency,
-    destinationNetwork,
+    destinationCurrency: symbol.toLowerCase(),
+    destinationNetwork: network,
     destinationAddress,
     sourceAmount,
     sourceCurrency: sourceCurrency?.toLowerCase(),
     redirectUrl,
   }
 
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/sessions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
+  const response = await postOnramp<StripeOnrampResponse>({
+    path: ONRAMP_SESSIONS_PATH,
+    body: requestBody,
+    publishableKey,
+    operation: 'Stripe session creation',
   })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to create Stripe session')
-  }
-
-  const data: StripeOnrampResponse = await response.json()
-  return data
-}
-
-type GetStripeQuoteParams = {
-  sourceCurrency: string
-  destinationCurrency: string
-  destinationNetwork: string
-  sourceAmount: string
-}
-
-/**
- * Get a quote from Stripe
- * This provides fee estimates and exchange rates
- */
-const _getStripeQuote = async (
-  params: Omit<GetStripeQuoteParams, 'destinationCurrency' | 'destinationNetwork'> & {
-    token: Asset
-    network: string
-    publishableKey: string
-  }
-): Promise<StripeQuote> => {
-  const { token, network, publishableKey, ...rest } = params
-
-  if (!publishableKey) {
-    throw new Error('Publishable key is required for authentication')
-  }
-
-  // Build request body
-  const requestBody: GetStripeQuoteParams & { provider: string } = {
-    provider: 'stripe',
-    destinationCurrency: getCurrencyCode(token),
-    destinationNetwork: network,
-    sourceCurrency: rest.sourceCurrency.toLowerCase(),
-    sourceAmount: rest.sourceAmount,
-  }
-
-  const response = await fetch(`${getBackendUrl()}/v1/onramp/quotes`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${publishableKey}`,
-    },
-    body: JSON.stringify(requestBody),
-  })
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}))
-    throw new Error(errorData.error || errorData.errorMessage || 'Failed to fetch Stripe quote')
-  }
-
-  return response.json()
+  return { ...response, onrampUrl: getTrustedFundingProviderUrl(response.onrampUrl, 'stripe').href }
 }

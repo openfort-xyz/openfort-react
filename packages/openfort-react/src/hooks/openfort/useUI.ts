@@ -2,14 +2,13 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import React from 'react'
-import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { useConnectionStrategy } from '../../core/ConnectionStrategyContext'
-import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../solana/hooks/useSolanaEmbeddedWallet'
-import { logger } from '../../utils/logger'
+import { type Asset, type RouteOptions, type RoutesWithoutOptions, routes } from '../../components/Openfort/types.js'
+import { useOpenfortForms, useOpenfortRouting, useOpenfortSignRequest } from '../../components/Openfort/useOpenfort.js'
+import { useConnectionStrategy } from '../../core/ConnectionStrategyContext.js'
+import { WalletError } from '../../errors/wallet.js'
+import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { logger } from '../../utils/logger.js'
 
 type ModalRoutes = RoutesWithoutOptions['route'] | RouteOptions
 
@@ -81,13 +80,17 @@ function isAccountId(id: string): boolean {
  * fire them directly and let the modal route the user through auth first.
  */
 export function useUI() {
-  const { open, setOpen, setRoute, setConnector, setSendForm, connector, chainType } = useOpenfort()
-  const { isLoading, user, needsRecovery, embeddedAccounts, activeEmbeddedAddress, embeddedState } = useOpenfortCore()
+  const { open, setOpen, setRoute, setConnector, connector, chainType } = useOpenfortRouting()
+  const { signRequest, setSignRequest } = useOpenfortSignRequest()
+  const { setSendForm } = useOpenfortForms()
+  const isLoading = useOpenfortCore((s) => s.isLoading)
+  const user = useOpenfortCore((s) => s.user)
+  const needsRecovery = useOpenfortCore((s) => s.needsRecovery)
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
   const bridge = useEthereumBridge()
   const strategy = useConnectionStrategy()
-  const ethereumWallet = useEthereumEmbeddedWallet()
-  const solanaWallet = useSolanaEmbeddedWallet()
-  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
 
   const state = React.useMemo(
     () => ({
@@ -99,11 +102,19 @@ export function useUI() {
     }),
     [user, embeddedAccounts, activeEmbeddedAddress, chainType, embeddedState]
   )
-  // Bridge: strategy owns connection. Embedded: wallet hooks are source of truth.
-  const isConnected =
-    strategy?.kind === 'bridge' ? (strategy?.isConnected(state) ?? false) : wallet.status === 'connected'
+  // The strategy for the active chain owns what "connected" means: the bridge
+  // reports its account, the embedded strategies read the store. Deriving it here
+  // keeps useUI off the embedded-wallet hooks, which hold a provider each.
+  const isConnected = strategy?.isConnected(state) ?? false
+
+  const rejectPendingSignature = () => {
+    if (!signRequest) return
+    signRequest.settle({ error: new WalletError('Signature request was cancelled.') })
+    setSignRequest((current) => (current === signRequest ? null : current))
+  }
 
   function defaultOpen() {
+    rejectPendingSignature()
     setOpen(true)
     if (isAccountId(connector.id)) {
       setConnector({ id: '' })
@@ -121,12 +132,14 @@ export function useUI() {
    * for the active chain, skipping asset/amount/recipient entry.
    */
   const openSendPreview = (tx: { to: string; amount: string; asset?: Asset }) => {
+    rejectPendingSignature()
     setSendForm({ recipient: tx.to, amount: tx.amount, asset: tx.asset ?? { type: 'native', balance: BigInt(0) } })
     setOpen(true)
     setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_SEND_CONFIRMATION : routes.SEND_CONFIRMATION)
   }
 
   const gotoAndOpen = (route: ValidRoutes) => {
+    rejectPendingSignature()
     const safeList = isConnected ? safeRoutes.connected : safeRoutes.disconnected
     const fallback = isConnected ? routes.CONNECTED : routes.PROVIDERS
 
@@ -146,11 +159,16 @@ export function useUI() {
     setRoute(match ?? fallback)
   }
 
+  const close = () => {
+    rejectPendingSignature()
+    setOpen(false)
+  }
+
   return {
     isOpen: open,
     open: () => defaultOpen(),
-    close: () => setOpen(false),
-    setIsOpen: setOpen,
+    close,
+    setIsOpen: (value: boolean) => (value ? setOpen(true) : close()),
 
     openProfile: () => gotoAndOpen(routes.CONNECTED),
     openSwitchNetworks: () => gotoAndOpen(routes.ETH_SWITCH_NETWORK),

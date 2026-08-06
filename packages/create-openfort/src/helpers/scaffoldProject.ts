@@ -1,7 +1,16 @@
+import {
+  cpSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  renameSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import path from "node:path";
 import * as p from "@clack/prompts";
 import chalk from "chalk";
-import fs from "fs-extra";
 import ora from "ora";
 
 import { PKG_ROOT } from "~/consts.js";
@@ -26,8 +35,8 @@ export const scaffoldProject = async ({
   const spinner = ora(`Scaffolding in: ${projectDir}...\n`).start();
 
   // Handle existing directory
-  if (fs.existsSync(projectDir)) {
-    if (fs.readdirSync(projectDir).length === 0) {
+  if (existsSync(projectDir)) {
+    if (readdirSync(projectDir).length === 0) {
       if (projectName !== ".")
         spinner.info(
           `${chalk.cyan.bold(projectName)} exists but is empty, continuing...\n`,
@@ -78,7 +87,8 @@ export const scaffoldProject = async ({
         spinner.info(
           `Emptying ${chalk.cyan.bold(projectName)} and creating Openfort app..\n`,
         );
-        fs.emptyDirSync(projectDir);
+        rmSync(projectDir, { recursive: true, force: true });
+        mkdirSync(projectDir, { recursive: true });
       }
     }
   }
@@ -86,7 +96,7 @@ export const scaffoldProject = async ({
   spinner.start();
 
   // Create project directory
-  fs.mkdirSync(projectDir, { recursive: true });
+  mkdirSync(projectDir, { recursive: true });
 
   // Copy the selected template
   const templateSrcDir = path.join(
@@ -100,17 +110,25 @@ export const scaffoldProject = async ({
     ? path.join(projectDir, "frontend")
     : projectDir;
 
-  fs.copySync(templateSrcDir, targetDir);
+  cpSync(templateSrcDir, targetDir, { recursive: true });
+
+  const npmSafeGitignore = path.join(targetDir, "gitignore");
+  if (existsSync(npmSafeGitignore)) {
+    renameSync(npmSafeGitignore, path.join(targetDir, ".gitignore"));
+  }
 
   const pkgPath = path.join(targetDir, "package.json");
-  if (fs.existsSync(pkgPath)) {
-    const pkg = fs.readJsonSync(pkgPath) as Record<string, unknown>;
+  if (existsSync(pkgPath)) {
+    const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as Record<
+      string,
+      unknown
+    >;
     const deps = pkg.dependencies as Record<string, string> | undefined;
     if (deps?.["@openfort/react"]) {
       const ref = deps["@openfort/react"];
       if (ref.startsWith("workspace:")) {
         deps["@openfort/react"] = "latest";
-        fs.writeJsonSync(pkgPath, pkg, { spaces: 2 });
+        writeFileSync(pkgPath, `${JSON.stringify(pkg, null, 2)}\n`);
       }
     }
   }

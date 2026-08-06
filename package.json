@@ -4,155 +4,142 @@
   "description": "The easiest way to integrate Openfort to your project.",
   "main": "packages/openfort-react/src/index.ts",
   "private": true,
-  "workspaces": {
-    "packages": [
-      "packages/**",
-      "examples/**",
-      "packages/create-openfort/template/openfort-templates/*",
-      "!packages/create-openfort/template/backend"
-    ]
-  },
   "scripts": {
     "preinstall": "pnpx only-allow pnpm",
-    "postinstall": "git config --unset core.hooksPath 2>/dev/null || true && simple-git-hooks",
+    "postinstall": "[ -n \"$CI\" ] || { git config --unset core.hooksPath 2>/dev/null || true; simple-git-hooks && ./.husky/check_gitleaks.sh; }",
+    "verify": "pnpm check:audit && pnpm scan:secrets && pnpm check:repo && pnpm check:templates && pnpm check:release && pnpm check:peers && pnpm check && pnpm build && pnpm build:cli && pnpm check:types && pnpm test:types && pnpm test:cov && pnpm knip --production && pnpm test:build && pnpm test:env && pnpm size && pnpm build:docs",
     "check": "biome check",
+    "check:repo": "sherif --fail-on-warnings --ignore-package playground --ignore-package 'quickstart-*' --ignore-package openfort-betterauth --ignore-package '@openfort-betterauth/*'",
+    "check:release": "node scripts/test-release-contract.mjs",
+    "check:peers": "node scripts/test-react-peer-alignment.mjs",
+    "check:templates": "node scripts/sync-templates.js --check",
+    "scan:secrets": "./.husky/run_gitleaks.sh",
     "check:fix": "biome check --write --unsafe",
-    "check:types": "tsc --noEmit",
-    "check:unused": "knip",
-    "check:audit": "pnpm audit --audit-level=moderate",
-    "check:quickstarts": "pnpm --filter quickstart-headless check",
+    "check:types": "tsc --noEmit -p packages/openfort-react/tsconfig.check.json",
+    "check:unused": "knip --no-config-hints",
+    "check:audit": "pnpm audit",
+    "check:quickstarts": "pnpm --filter 'quickstart-*' check && pnpm --filter openfort-betterauth check",
     "check:all": "pnpm check && pnpm check:types && pnpm check:unused && pnpm check:audit",
     "check:cli": "pnpm --filter create-openfort check",
     "sync-templates": "node scripts/sync-templates.js",
     "changeset": "changeset",
-    "changeset:version": "node scripts/sync-templates.js && pnpm install --lockfile-only && changeset version && node scripts/change-version.js && cp packages/openfort-react/CHANGELOG.md CHANGELOG.md",
-    "changeset:publish": "pnpm build && pnpm build:cli && changeset publish",
-    "changeset:prepublish": "pnpm build",
+    "changeset:version": "pnpm check:templates && changeset version && node scripts/update-version.mjs && cp packages/openfort-react/CHANGELOG.md CHANGELOG.md",
+    "changeset:prepublish": "pnpm check:templates && pnpm build && pnpm build:cli",
+    "changeset:publish": "pnpm changeset:prepublish && changeset publish",
     "dev": "pnpm --filter @openfort/react dev",
     "dev:cli": "pnpm --filter create-openfort dev",
     "dev:firebase": "cd examples/quickstarts/firebase && pnpm dev",
     "dev:headless": "cd examples/quickstarts/headless && pnpm dev",
     "dev:openfort-ui": "cd examples/quickstarts/openfort-ui && pnpm dev",
     "dev:playground": "pnpm --filter playground dev",
-    "build": "node scripts/change-version.js && pnpm --filter @openfort/react build && cp README.md packages/openfort-react/README.md",
+    "build": "node scripts/update-version.mjs && pnpm --filter @openfort/react build && cp README.md packages/openfort-react/README.md",
     "build:cli": "pnpm --filter create-openfort build",
     "build:firebase": "cd examples/quickstarts/firebase && pnpm build",
     "build:headless": "cd examples/quickstarts/headless && pnpm build",
     "build:openfort-ui": "cd examples/quickstarts/openfort-ui && pnpm build",
     "build:supabase": "cd examples/quickstarts/supabase && pnpm build",
     "build:betterauth": "cd examples/quickstarts/betterauth && pnpm build",
+    "build:docs": "typedoc --json docs/spec.json",
     "build:playground": "pnpm build && pnpm --filter playground build",
-    "build:examples": "pnpm build && pnpm build:headless && pnpm build:openfort-ui && pnpm build:firebase && pnpm build:supabase && pnpm build:betterauth && pnpm --filter playground build",
+    "build:examples": "pnpm build && pnpm build:headless && pnpm build:openfort-ui && pnpm build:firebase && pnpm build:supabase && pnpm build:betterauth && pnpm --dir examples/quickstarts/solana-headless build && pnpm --filter playground build",
     "build:ci": "pnpm -r run build",
     "start:cli": "pnpm --filter create-openfort start",
+    "size": "pnpm --filter @openfort/react size",
     "test": "pnpm --filter @openfort/react test && pnpm --filter playground test",
+    "test:build": "pnpm --filter @openfort/react test:build && pnpm --filter create-openfort test:build",
     "test:unit": "pnpm --filter @openfort/react test",
+    "test:types": "pnpm --filter @openfort/react test:types",
+    "test:cov": "pnpm --filter @openfort/react test:cov",
+    "test:cli": "pnpm --filter create-openfort test",
+    "test:env": "pnpm test:env:tsc && pnpm test:env:node",
+    "test:env:tsc": "pnpm --filter test-tsc test",
+    "test:env:node": "pnpm --filter test-node test",
     "test:e2e": "pnpm --filter playground test",
     "test:ui": "pnpm --filter playground test:ui",
     "test:debug": "pnpm --filter playground test:debug"
   },
   "devDependencies": {
+    "@arethetypeswrong/cli": "0.18.5",
     "@babel/core": "^7.28.5",
-    "@biomejs/biome": "^2.2.4",
+    "@biomejs/biome": "^2.4.16",
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.7",
     "@playwright/test": "^1.61.0",
+    "@size-limit/preset-small-lib": "12.1.0",
     "knip": "^5.64.0",
+    "publint": "0.3.22",
     "rollup": "^2.80.0",
+    "sherif": "1.13.0",
     "simple-git-hooks": "^2.13.1",
-    "typescript": "^5.0.4",
+    "size-limit": "12.1.0",
+    "typedoc": "0.28.20",
+    "typescript": "^5.9.3",
     "typescript-plugin-styled-components": "^2.0.0",
     "wagmi": "^3.6.16"
   },
   "packageManager": "pnpm@10.30.3",
-  "pnpm": {
-    "overrides": {
-      "bn.js": ">=5.2.3",
-      "axios": ">=1.15.1",
-      "react": "18.3.1",
-      "react-dom": "18.3.1",
-      "@types/react": "18.3.1",
-      "@types/react-dom": "18.3.1",
-      "viem": "^2.52.2",
-      "wagmi": "^3.6.16",
-      "@tanstack/react-query": "^5.99.2",
-      "@tanstack/query-core": "^5.99.2",
-      "use-sync-external-store": "^1.6.0",
-      "typescript": "^5.0.4",
-      "hono": ">=4.12.25",
-      "protobufjs": ">=8.6.0",
-      "follow-redirects": ">=1.16.0",
-      "@hono/node-server": ">=1.19.13",
-      "cross-spawn": ">=6.0.6",
-      "got": ">=11.8.5",
-      "esbuild": ">=0.28.1",
-      "glob@>=10.3.7 <=11.0.3": ">=11.1.0",
-      "body-parser@>=2.2.0 <2.2.1": ">=2.2.1",
-      "@modelcontextprotocol/sdk@<1.25.2": "1.25.2",
-      "qs@<6.15.2": ">=6.15.2",
-      "preact@>=10.28.0 <10.28.2": ">=10.28.2",
-      "diff@<8.0.3": ">=8.0.3",
-      "h3@<1.15.9": ">=1.15.9",
-      "kysely": ">=0.28.17",
-      "effect@<3.20.0": ">=3.20.0",
-      "lodash@>=4.0.0 <=4.17.23": ">=4.18.0",
-      "markdown-it": ">=14.2.0",
-      "minimatch": ">=10.2.3",
-      "bn.js@<4.12.3": ">=4.12.3",
-      "rollup@>=4.0.0 <4.59.0": ">=4.59.0",
-      "rollup@<2.80.0": ">=2.80.0",
-      "undici@>=7.0.0 <7.28.0": ">=7.28.0 <8",
-      "socket.io-parser@>=4.0.0 <4.2.6": ">=4.2.6",
-      "picomatch@<2.3.2": ">=2.3.2 <3.0.0",
-      "picomatch@>=4.0.0 <4.0.4": ">=4.0.4",
-      "yaml@>=2.0.0 <2.8.3": ">=2.8.3",
-      "smol-toml@<1.6.1": ">=1.6.1",
-      "brace-expansion@<5.0.5": ">=5.0.6",
-      "path-to-regexp@<0.1.13": ">=0.1.13",
-      "drizzle-orm": ">=0.45.2",
-      "defu": ">=6.1.5",
-      "uuid@<14.0.0": ">=14.0.0",
-      "postcss@<8.5.10": ">=8.5.10",
-      "ws": ">=8.21.0",
-      "vitest@<4.1.0": ">=4.1.0",
-      "shell-quote@>=1.1.0 <=1.8.3": ">=1.8.4",
-      "@grpc/grpc-js@<1.9.16": ">=1.9.16",
-      "form-data@>=4.0.0 <4.0.6": ">=4.0.6",
-      "vite@<6.4.3": ">=6.4.3",
-      "js-yaml@<4.2.0": ">=4.2.0",
-      "dompurify@<3.4.11": ">=3.4.11",
-      "@opentelemetry/core@<2.8.0": ">=2.8.0",
-      "@babel/core@<7.29.6": ">=7.29.6 <8"
-    },
-    "auditConfig": {
-      "ignoreCves": [
-        "CVE-2024-53384",
-        "CVE-2025-57319",
-        "CVE-2025-14505",
-        "CVE-2026-39356",
-        "CVE-2026-39365"
-      ]
-    }
-  },
   "knip": {
     "workspaces": {
-      "examples/playground": {
-        "ignoreDependencies": [
-          "typedoc"
+      ".": {
+        "entry": [
+          "scripts/*.{js,mjs}!",
+          "typedoc.json!"
+        ]
+      },
+      "packages/openfort-react": {
+        "entry": [
+          "src/index.ts!",
+          "src/ethereum/index.ts!",
+          "src/solana/index.ts!",
+          "src/wagmi/index.ts!",
+          "src/internal/index.ts!",
+          "scripts/*.mjs!",
+          "src/**/*.test-d.ts"
         ],
         "ignoreBinaries": [
-          "vite",
-          "typedoc"
+          "rollup"
+        ],
+        "ignore": [
+          "src/__tests__/**"
+        ],
+        "ignoreDependencies": [
+          "@coinbase/wallet-sdk",
+          "@safe-global/safe-apps-provider",
+          "@safe-global/safe-apps-sdk",
+          "@wagmi/connectors",
+          "@wagmi/core",
+          "@walletconnect/ethereum-provider"
+        ]
+      },
+      "environments/node": {
+        "entry": [
+          "esm.mjs!"
+        ],
+        "ignoreDependencies": [
+          "@openfort/react",
+          "@tanstack/react-query",
+          "react",
+          "react-dom",
+          "viem",
+          "wagmi"
+        ]
+      },
+      "environments/tsc": {
+        "entry": [
+          "check.mjs!",
+          "index.tsx!"
         ]
       }
     },
+    "ignoreWorkspaces": [
+      "examples/**"
+    ],
+    "ignoreExportsUsedInFile": true,
     "ignore": [
       "packages/openfort-react/rollup.config.dev.js",
       "packages/openfort-react/rollup.config.prod.js",
-      "packages/create-openfort/template/**",
-      "examples/playground/src/components/ui/**",
-      "examples/playground/tests/auth/auth.setup.solana.ts",
-      "examples/playground/tests/auth/auth.setup.evm.ts"
+      "packages/openfort-react/rollup.use-client.js",
+      "packages/create-openfort/template/**"
     ],
     "ignoreDependencies": [
       "@solana/kit",
@@ -169,6 +156,6 @@
     ]
   },
   "simple-git-hooks": {
-    "pre-commit": "pnpm check --staged --no-errors-on-unmatched"
+    "pre-commit": "./.husky/run_gitleaks.sh && pnpm check --staged --no-errors-on-unmatched"
   }
 }

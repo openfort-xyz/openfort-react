@@ -3,35 +3,50 @@
 import type { ChangeEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
-import logos from '../../../assets/logos'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import useIsMobile from '../../../hooks/useIsMobile'
-import styled from '../../../styles/styled'
-import { isIOS } from '../../../utils'
-import { ConnectorButton, ConnectorIcon, ConnectorLabel, ConnectorsContainer } from '../../Common/ConnectorList/styles'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { ScrollArea } from '../../Common/ScrollArea'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput, CurrencySymbol, PresetButton, PresetList, Section, SectionLabel } from '../Buy/styles'
-import { AddressPageLink } from '../Deposit/AddressPageLink'
-import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
-import { RouteSelectors } from '../Deposit/RouteSelectors'
-import { isSolana } from '../Deposit/sources'
-import { Skeleton, StepDivider } from '../Deposit/styles'
-import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
-import { useDepositRoute } from '../Deposit/useDepositRoute'
-import { sanitizeAmountInput } from '../Send/utils'
-import { DepositWalletDesktop } from './DepositWalletDesktop'
+import logos from '../../../assets/logos.js'
+import { toDisplayMessage } from '../../../errors/base.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import useIsMobile from '../../../hooks/useIsMobile.js'
+import styled from '../../../styles/styled/index.js'
+import { isIOS } from '../../../utils/index.js'
+import { isHttpsUrl } from '../../../utils/urlSecurity.js'
+import {
+  ConnectorButton,
+  ConnectorIcon,
+  ConnectorLabel,
+  ConnectorsContainer,
+} from '../../Common/ConnectorList/styles.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { ScrollArea } from '../../Common/ScrollArea/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import {
+  AmountCard,
+  AmountInput,
+  CurrencySymbol,
+  PresetButton,
+  PresetList,
+  Section,
+  SectionLabel,
+} from '../Buy/styles.js'
+import { AddressPageLink } from '../Deposit/AddressPageLink.js'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress.js'
+import { RouteSelectors } from '../Deposit/RouteSelectors.js'
+import { isSolana } from '../Deposit/sources.js'
+import { Skeleton, StepDivider } from '../Deposit/styles.js'
+import { TestnetNotice } from '../Deposit/TestnetNotice.js'
+import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice.js'
+import { useDepositRoute } from '../Deposit/useDepositRoute.js'
+import { sanitizeAmountInput } from '../Send/utils.js'
+import { DepositWalletDesktop } from './DepositWalletDesktop.js'
 import {
   buildDepositPageUrl,
   buildOpenDappLinks,
   caipToChainId,
   OPENFORT_DEPOSIT_PAGE_URL,
   type VmType,
-} from './walletDeeplinks'
+} from './walletDeeplinks.js'
 
 // Flex column capped at the modal viewport so the page never overflows
 // InnerContainer (which caps at 88vh and would otherwise scroll the footer off
@@ -87,7 +102,7 @@ const PRESETS = [10, 25, 50]
 const DepositWallet = () => {
   const { triggerResize, uiConfig } = useOpenfort()
   const isMobile = useIsMobile()
-  const route = useDepositRoute('crypto')
+  const route = useDepositRoute()
   // The desktop send path goes through the wagmi bridge (browser-extension wallets).
   // In Solana-only mode there's no wagmi provider, so fall back to the open-dApp
   // deeplinks for EVM sources too — otherwise the wallet list renders empty.
@@ -136,8 +151,13 @@ const DepositWallet = () => {
         })
       : null
 
-  const allDeeplinks = route.pm?.deeplinks?.length
-    ? route.pm.deeplinks
+  // The funding service supplies these, and they are the one funding link that
+  // does not go through `getTrustedFundingProviderUrl` — the destinations are
+  // third-party wallet domains, so an origin allowlist cannot cover them. An
+  // https-only check still rules out `javascript:` and `data:`.
+  const serverDeeplinks = (route.pm?.deeplinks ?? []).filter((deeplink) => isHttpsUrl(deeplink.url))
+  const allDeeplinks = serverDeeplinks.length
+    ? serverDeeplinks
     : pageUrl
       ? buildOpenDappLinks(pageUrl, (route.activeChain?.vmType as VmType) ?? 'evm')
       : []
@@ -145,6 +165,7 @@ const DepositWallet = () => {
   // dead-ends there, so hide it on iOS while keeping it on Android.
   const deeplinks = isIOS() ? allDeeplinks.filter((d) => d.app !== 'trust') : allDeeplinks
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the deposit state and the wallet count each change the page height
   useEffect(() => {
     triggerResize()
   }, [route.receiverAddress, route.loading, route.status, deeplinks.length, triggerResize])
@@ -260,7 +281,9 @@ const DepositWallet = () => {
           <FixedFooter>
             <AddressPageLink label="Or send to a deposit address" />
 
-            {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
+            {route.error && (
+              <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{toDisplayMessage(route.error)}</ModalBody>
+            )}
           </FixedFooter>
         </Layout>
       )}

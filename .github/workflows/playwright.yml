@@ -6,19 +6,27 @@ on:
   merge_group:
     branches:
       - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    timeout-minutes: 60
+    name: Unit tests
+    timeout-minutes: 40
     runs-on: ubuntu-latest
     permissions:
       contents: read
 
     steps:
       - name: Checkout
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
 
       - name: Setup pnpm
-        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
 
       - name: Setup Node
         uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
@@ -32,15 +40,92 @@ jobs:
       - name: Build
         run: pnpm build
 
-      - name: Run unit tests
-        run: pnpm test
+      - name: Run unit tests with coverage
+        # `CI` is set by GitHub Actions, which switches the vitest coverage
+        # reporter to lcov.
+        run: pnpm test:cov
         working-directory: packages/openfort-react
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
+        if: ${{ !cancelled() }}
+        with:
+          name: coverage-lcov
+          path: packages/openfort-react/coverage/lcov.info
+          retention-days: 30
+
+  browser-deterministic:
+    name: Deterministic browser security tests
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build SDK
+        run: pnpm build
+
+      - name: Install Chromium
+        run: pnpm playwright install --with-deps chromium
+        working-directory: examples/playground
+
+      - name: Run deterministic browser tests
+        run: pnpm test:smoke
+        working-directory: examples/playground
+
+  # These suites drive the SDK modal and both chain families through live
+  # Openfort infrastructure. They gate the PR because the hardened signer and
+  # recovery contracts must also hold in a real browser integration.
+  e2e-live:
+    name: Live-infra e2e
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+
+      - name: Setup Node
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install root dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
 
       - name: Install Playwright Browsers
         run: pnpm playwright install --with-deps
         working-directory: examples/playground
 
-      - name: Run Playwright tests
+      - name: Run live Playwright tests
         env:
           VITE_OPENFORT_PUBLISHABLE_KEY: ${{ vars.VITE_OPENFORT_PUBLISHABLE_KEY }}
           VITE_SHIELD_PUBLISHABLE_KEY: ${{ vars.VITE_SHIELD_PUBLISHABLE_KEY }}
@@ -51,10 +136,3 @@ jobs:
           VITE_POLYGON_MINT_CONTRACT: ${{ vars.VITE_POLYGON_MINT_CONTRACT }}
         run: pnpm test
         working-directory: examples/playground
-
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5.0.0
-        if: ${{ !cancelled() }}
-        with:
-          name: playwright-report
-          path: playwright-report
-          retention-days: 30

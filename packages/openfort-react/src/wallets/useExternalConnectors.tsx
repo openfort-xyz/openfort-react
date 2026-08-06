@@ -1,11 +1,13 @@
+'use client'
+
 import { createElement, useEffect, useState } from 'react'
-import { useConnectionStrategy } from '../core/ConnectionStrategyContext'
+import { useConnectionStrategy } from '../core/ConnectionStrategyContext.js'
 import type {
   OpenfortEthereumBridgeConnector,
   OpenfortEthereumBridgeValue,
-} from '../ethereum/OpenfortEthereumBridgeContext'
-import { isCoinbaseWalletConnector, isInjectedConnector } from '../utils'
-import { type WalletConfigProps, walletConfigs } from './walletConfigs'
+} from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { isCoinbaseWalletConnector, isInjectedConnector } from '../utils/index.js'
+import { type WalletConfigProps, walletConfigs } from './walletConfigs.js'
 
 export type ExternalConnectorProps = {
   id: string
@@ -33,8 +35,7 @@ export function mapBridgeConnectorsToWalletProps(
     if (!walletId && connector.id === 'injected' && connector.name) {
       const nameLower = connector.name.toLowerCase()
       if (nameLower.includes('metamask')) {
-        walletId =
-          Object.keys(walletConfigs).find((k) => walletConfigs[k].name?.toLowerCase() === 'metamask') ?? undefined
+        walletId = Object.entries(walletConfigs).find(([, config]) => config.name?.toLowerCase() === 'metamask')?.[0]
       }
     }
 

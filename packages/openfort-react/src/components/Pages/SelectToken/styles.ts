@@ -1,5 +1,5 @@
-import styled from '../../../styles/styled'
-import { PageContent } from '../../PageContent'
+import styled from '../../../styles/styled/index.js'
+import { PageContent } from '../../PageContent/index.js'
 
 export const SelectTokenContent = styled(PageContent)`
   min-height: 400px;

@@ -1,22 +1,24 @@
-import { embeddedWalletId } from '../../../constants/openfort'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useFamilyAccountsConnector, useFamilyConnector } from '../../../hooks/useConnectors'
+'use client'
 
-import useIsMobile from '../../../hooks/useIsMobile'
-import { useLastConnector } from '../../../hooks/useLastConnector'
-import { isInjectedConnector, isWalletConnectConnector } from '../../../utils'
-import { isFamily } from '../../../utils/wallets'
+import { embeddedWalletId } from '../../../constants/openfort.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useFamilyAccountsConnector, useFamilyConnector } from '../../../hooks/useConnectors.js'
+
+import useIsMobile from '../../../hooks/useIsMobile.js'
+import { useLastConnector } from '../../../hooks/useLastConnector.js'
+import { isInjectedConnector, isWalletConnectConnector } from '../../../utils/index.js'
+import { isFamily } from '../../../utils/wallets.js'
 import {
   type ExternalConnectorProps,
   useDetectedProviders,
   useExternalConnectors,
-} from '../../../wallets/useExternalConnectors'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import Alert from '../Alert'
-import { ScrollArea } from '../ScrollArea'
-import { useHasWalletConnect } from '../WalletConnectNotConfigured'
-import { ConnectorButton, ConnectorIcon, ConnectorLabel, ConnectorsContainer, RecentlyUsedTag } from './styles'
+} from '../../../wallets/useExternalConnectors.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import Alert from '../Alert/index.js'
+import { ScrollArea } from '../ScrollArea/index.js'
+import { useHasWalletConnect } from '../WalletConnectNotConfigured/index.js'
+import { ConnectorButton, ConnectorIcon, ConnectorLabel, ConnectorsContainer, RecentlyUsedTag } from './styles.js'
 
 const ConnectorList = () => {
   const context = useOpenfort()

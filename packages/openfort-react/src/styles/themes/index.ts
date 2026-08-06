@@ -1,10 +1,10 @@
-import base from './base'
-import midnight from './midnight'
-import minimal from './minimal'
-import nouns from './nouns'
-import retro from './retro'
-import rounded from './rounded'
-import soft from './soft'
-import web95 from './web95'
+import base from './base.js'
+import midnight from './midnight.js'
+import minimal from './minimal.js'
+import nouns from './nouns.js'
+import retro from './retro.js'
+import rounded from './rounded.js'
+import soft from './soft.js'
+import web95 from './web95.js'
 
 export default { base, web95, retro, soft, midnight, minimal, rounded, nouns }

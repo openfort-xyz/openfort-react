@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import styled from '../../styles/styled'
+import styled from '../../styles/styled/index.js'
 
 export const TextContainer = styled(motion.div)`
   top: 0;
@@ -11,16 +11,6 @@ export const TextContainer = styled(motion.div)`
   white-space: nowrap;
 `
 
-const _ChainContainer = styled(motion.div)`
-  position: relative;
-  width: 24px;
-  height: 24px;
-  border-radius: 12px;
-  overflow: hidden;
-  svg {
-    display: block;
-  }
-`
 export const IconContainer = styled(motion.div)`
   pointer-events: none;
   user-select: none;

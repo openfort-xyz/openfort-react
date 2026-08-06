@@ -3,18 +3,18 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { formatUnits } from 'viem'
-import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
-import { ModalHeading } from '../../Common/Modal/styles'
-import { type Asset, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
-import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
-import { AssetChainLogo } from '../Deposit/AssetChainLogo'
-import { formatBalanceWithSymbol, getAssetDecimals, getAssetSymbol } from '../Send/utils'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import { type Asset, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies.js'
+import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies.js'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo.js'
+import { formatBalanceWithSymbol, getAssetDecimals, getAssetSymbol } from '../Send/utils.js'
 import {
   EmptyState,
   SelectTokenContent,
@@ -26,7 +26,7 @@ import {
   TokenLogoArea,
   TokenName,
   TokenSymbol,
-} from './styles'
+} from './styles.js'
 
 const ZERO = BigInt(0)
 const usdFormatter = new Intl.NumberFormat('en-US', {
@@ -41,11 +41,12 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
 
   const [viewAllAssets, setViewAllAssets] = useState(false)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `viewAllAssets` is the trigger — expanding the list changes the page height
   useEffect(() => {
     triggerResize()
-  }, [viewAllAssets])
+  }, [viewAllAssets, triggerResize])
 
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const { chainId } = useEthereumEmbeddedWallet()
   const { data: walletAssets, isLoading: isBalancesLoading } = useEthereumWalletAssets()
 
@@ -81,9 +82,10 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
     setRoute(routes.SEND)
   }
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers — the token count sets the list height and the flow decides which list is shown
   useEffect(() => {
     triggerResize()
-  }, [selectableTokens.length, isBuyFlow])
+  }, [selectableTokens.length, isBuyFlow, triggerResize])
 
   const renderContent = () => {
     if (!selectableTokens.length) {
@@ -99,7 +101,6 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
           const key = token.type === 'erc20' ? token.address : 'native'
           const displaySymbol = getAssetSymbol(token)
           const displayName = (token.metadata?.name as string) || displaySymbol || 'Unknown Token'
-          // const symbolKey = token.metadata?.symbol?.toUpperCase()
           const decimals = getAssetDecimals(token)
 
           const pricePerToken = token.metadata?.fiat?.value

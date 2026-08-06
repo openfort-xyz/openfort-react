@@ -1,14 +1,8 @@
 import { useMemo } from 'react'
 import { getAddress, parseAbi } from 'viem'
-import {
-  useAccount,
-  useChainId,
-  useChains,
-  useReadContract,
-  useWriteContract
-} from 'wagmi'
+import { useAccount, useChainId, useChains, useReadContract, useWriteContract } from 'wagmi'
+import { TruncateData } from '../../../components/ui/TruncateData'
 import { getMintContractConfig } from '../../../lib/contracts'
-import { TruncateData } from '../../../components/ui/TruncateData';
 
 const MintContract = () => {
   const { address } = useAccount()
@@ -99,12 +93,7 @@ const MintContract = () => {
           submit({ amount })
         }}
       >
-        <input
-          type="number"
-          placeholder="Enter amount to mint"
-          className="grow peer"
-          name="amount"
-        />
+        <input type="number" placeholder="Enter amount to mint" className="grow peer" name="amount" />
         <button className="btn" disabled={isPending || !address || !config}>
           {isPending ? 'Minting...' : 'Mint Tokens'}
         </button>
@@ -122,25 +111,21 @@ export const ActionsCard = () => {
   return (
     <div className="flex flex-col w-full">
       <h1>Actions</h1>
-      <span className="mb-4 text-zinc-400 text-sm">
-        Interact with smart contracts on the blockchain.
-      </span>
+      <span className="mb-4 text-zinc-400 text-sm">Interact with smart contracts on the blockchain.</span>
       {!hasFeeSponsorship && (
         <div className="mb-3 p-3 bg-red-800 text-white rounded text-sm">
-          <strong>Warning: Transactions are not sponsored.</strong> Minting may
-          fail because transactions are not being sponsored. To sponsor
-          transactions, go to the{' '}
+          <strong>Warning: Transactions are not sponsored.</strong> Minting may fail because transactions are not being
+          sponsored. To sponsor transactions, go to the{' '}
           <a
-            href="https://dashboard.openfort.xyz/policies"
+            href="https://dashboard.openfort.io/policies"
             target="_blank"
             rel="noopener noreferrer"
             className="underline"
           >
             Openfort Dashboard
           </a>{' '}
-          and <b>create a fee sponsorship</b> for transactions in{' '}
-          <b>{chains[0].name}</b>. Set the <code>VITE_FEE_SPONSORSHIP_ID</code>{' '}
-          environment variable with the fee sponsorship ID.
+          and <b>create a fee sponsorship</b> for transactions in <b>{chains[0].name}</b>. Set the{' '}
+          <code>VITE_FEE_SPONSORSHIP_ID</code> environment variable with the fee sponsorship ID.
         </div>
       )}
       <MintContract />

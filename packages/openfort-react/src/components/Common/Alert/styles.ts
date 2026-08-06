@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import defaultTheme from '../../../constants/defaultTheme'
-import styled from '../../../styles/styled'
+import defaultTheme from '../../../constants/defaultTheme.js'
+import styled from '../../../styles/styled/index.js'
 
 export const AlertContainer = styled(motion.div)<{ $error?: boolean }>`
   display: flex;
@@ -30,12 +30,13 @@ export const AlertContainer = styled(motion.div)<{ $error?: boolean }>`
     text-align: center;
   }
 
-  ${($error) => {
+  ${({ $error }) => {
     if ($error)
       return css`
         color: #fff;
         background: var(--ck-body-color-danger, red);
       `
+    return undefined
   }}
 `
 

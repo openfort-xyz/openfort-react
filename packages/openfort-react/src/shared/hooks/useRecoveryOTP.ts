@@ -1,10 +1,15 @@
 'use client'
 
 import { useCallback, useMemo } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { logger } from '../../utils/logger'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { NotAuthenticatedError } from '../../errors/auth.js'
+import { asOpenfortError, type OpenfortError } from '../../errors/base.js'
+import { WalletConfigNotFoundError } from '../../errors/config.js'
+import { ApiRequestError } from '../../errors/operation.js'
+import { RecoveryError } from '../../errors/wallet.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { logger } from '../../utils/logger.js'
+import { fetchRecoveryRequest } from '../utils/recoveryRequest.js'
 
 export type OTPResponse = {
   error?: OpenfortError
@@ -13,8 +18,14 @@ export type OTPResponse = {
   phone?: string
 }
 
+/** How long the resend button stays locked after a recovery code has been requested. */
+export const OTP_RESEND_COOLDOWN_MS = 10_000
+/** How long a rejected-code message stays up before the code input reopens. */
+export const OTP_ERROR_DISPLAY_MS = 1_000
+
 export function useRecoveryOTP(): { isEnabled: boolean; requestOTP: () => Promise<OTPResponse> } {
-  const { client, user } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const user = useOpenfortCore((s) => s.user)
   const { walletConfig } = useOpenfort()
 
   const isEnabled = useMemo(() => {
@@ -23,55 +34,54 @@ export function useRecoveryOTP(): { isEnabled: boolean; requestOTP: () => Promis
 
   const requestOTP = useCallback(async (): Promise<OTPResponse> => {
     try {
-      logger.log('Requesting wallet recover OTP for user', { userId: user?.id })
+      logger.log('Requesting wallet recovery OTP')
       if (!walletConfig) {
-        throw new Error('No walletConfig found')
+        throw new WalletConfigNotFoundError()
       }
 
       const accessToken = await client.getAccessToken()
       if (!accessToken) {
-        throw new OpenfortError('Openfort access token not found', OpenfortReactErrorType.AUTHENTICATION_ERROR)
+        throw new NotAuthenticatedError('Openfort access token not found.')
       }
       if (!user?.id) {
-        throw new OpenfortError('User not found', OpenfortReactErrorType.AUTHENTICATION_ERROR)
+        throw new NotAuthenticatedError('User not found.')
       }
       const userId = user.id
       const email = user.email
       const phone = user.email ? undefined : user.phoneNumber
 
       if (!email && !phone) {
-        throw new OpenfortError('No email or phone number found for user', OpenfortReactErrorType.AUTHENTICATION_ERROR)
+        throw new NotAuthenticatedError('No email or phone number found for user.')
       }
 
-      logger.log('Requesting wallet recover OTP for user', { userId, email, phone })
       if (walletConfig.requestWalletRecoverOTP) {
         await walletConfig.requestWalletRecoverOTP({ userId, accessToken, email, phone })
         return { sentTo: email ? 'email' : 'phone', email, phone }
       }
 
       if (!walletConfig.requestWalletRecoverOTPEndpoint) {
-        throw new Error('No requestWalletRecoverOTPEndpoint set in walletConfig')
+        throw new RecoveryError('No `requestWalletRecoverOTPEndpoint` set in `walletConfig`.')
       }
 
-      const resp = await fetch(walletConfig.requestWalletRecoverOTPEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      const resp = await fetchRecoveryRequest(
+        walletConfig.requestWalletRecoverOTPEndpoint,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ user_id: userId, email, phone }),
         },
-        body: JSON.stringify({ user_id: userId, email, phone }),
-      })
+        'Request wallet recovery OTP'
+      )
 
       if (!resp.ok) {
-        throw new Error('Failed to request wallet recover OTP')
+        throw new ApiRequestError({ operation: 'Wallet recovery OTP request', status: resp.status })
       }
       return { sentTo: email ? 'email' : 'phone', email, phone }
     } catch (err) {
       logger.log('Error requesting wallet recover OTP:', err)
-      const error =
-        err instanceof OpenfortError
-          ? err
-          : new OpenfortError('Failed to request wallet recover OTP', OpenfortReactErrorType.WALLET_ERROR)
-      throw error
+      throw asOpenfortError(err, (cause) => new RecoveryError('Failed to request wallet recover OTP.', { cause }))
     }
   }, [walletConfig, client, user])
 

@@ -94,7 +94,9 @@ export const ConnectExternalWalletCard = () => {
   const isBusy = ethereum.isLoading
 
   const setActive = async (opts: { address: `0x${string}`; recoveryMethod?: RecoveryMethod; password?: string }) => {
-    await ethereum.setActive(opts)
+    const result = await ethereum.setActive(opts)
+    if (result.error) throw result.error
+    if (result.needsRecovery) return
     if (connector?.id !== embeddedWalletId && openfortConnector) {
       await disconnectAsync()
       connect({ connector: openfortConnector })

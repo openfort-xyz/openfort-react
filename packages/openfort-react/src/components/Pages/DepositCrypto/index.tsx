@@ -1,22 +1,23 @@
 'use client'
 
 import { useEffect } from 'react'
-import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { DepositAddressBlock } from '../Deposit/DepositAddressBlock'
-import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
-import { RouteSelectors } from '../Deposit/RouteSelectors'
-import { SameChainDepositStatus } from '../Deposit/SameChainDepositStatus'
-import { SameChainDepositSuccess } from '../Deposit/SameChainDepositSuccess'
-import { isSolana } from '../Deposit/sources'
-import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice'
-import { useDepositRoute } from '../Deposit/useDepositRoute'
-import { useSameChainArrival } from '../Deposit/useSameChainArrival'
-import { caipToChainId } from '../DepositWallet/walletDeeplinks'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos.js'
+import { toDisplayMessage } from '../../../errors/base.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { DepositAddressBlock } from '../Deposit/DepositAddressBlock.js'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress.js'
+import { RouteSelectors } from '../Deposit/RouteSelectors.js'
+import { SameChainDepositStatus } from '../Deposit/SameChainDepositStatus.js'
+import { SameChainDepositSuccess } from '../Deposit/SameChainDepositSuccess.js'
+import { isSolana } from '../Deposit/sources.js'
+import { TestnetNotice } from '../Deposit/TestnetNotice.js'
+import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice.js'
+import { useDepositRoute } from '../Deposit/useDepositRoute.js'
+import { useSameChainArrival } from '../Deposit/useSameChainArrival.js'
+import { caipToChainId } from '../DepositWallet/walletDeeplinks.js'
 
 /**
  * Transfer from address — choose a source chain + token and send to the deposit
@@ -26,8 +27,9 @@ import { caipToChainId } from '../DepositWallet/walletDeeplinks'
  */
 const DepositCrypto = () => {
   const { triggerResize } = useOpenfort()
-  const route = useDepositRoute('crypto')
+  const route = useDepositRoute()
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the route fields are re-measure triggers, not inputs — resolving an address and moving through the deposit states swaps in differently sized blocks
   useEffect(() => {
     triggerResize()
   }, [route.receiverAddress, route.loading, route.status, triggerResize])
@@ -84,7 +86,9 @@ const DepositCrypto = () => {
             status={route.status}
           />
           {sameChainEnabled && <SameChainDepositStatus />}
-          {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
+          {route.error && (
+            <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{toDisplayMessage(route.error)}</ModalBody>
+          )}
         </>
       )}
     </PageContent>

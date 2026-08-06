@@ -1,4 +1,4 @@
-import { embeddedWalletId } from '../constants/openfort'
+import { embeddedWalletId } from '../constants/openfort.js'
 
 type ConnectorLike = { id: string; name?: string }
 

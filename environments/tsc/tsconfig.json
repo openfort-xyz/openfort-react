@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "target": "es2022",
+    "lib": ["ES2022", "DOM"],
+    "jsx": "react-jsx",
+    // Off, so tsc reads the shipped `build/**/*.d.ts` instead of trusting them.
+    // That is what proves each declaration stands on its own — every name it
+    // uses is one it imports or declares. Run this project through `check.mjs`
+    // rather than `tsc` directly; its header explains which of the resulting
+    // diagnostics are this repository's to fix and why the rest are not.
+    "skipLibCheck": false
+  },
+  "include": ["index.tsx"]
+}

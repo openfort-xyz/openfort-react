@@ -1,7 +1,9 @@
+'use client'
+
 import { AnimatePresence } from 'framer-motion'
 import type React from 'react'
 import { useId } from 'react'
-import { ExpiringSpinner, Logo, LogoContainer, Spinner, SpinnerContainer } from './styles'
+import { ExpiringSpinner, Logo, LogoContainer, Spinner, SpinnerContainer } from './styles.js'
 
 const CircleSpinner = ({
   logo,

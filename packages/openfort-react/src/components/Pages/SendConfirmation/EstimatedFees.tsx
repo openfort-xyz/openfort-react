@@ -1,13 +1,17 @@
+'use client'
+
 import type { Address } from 'viem'
 import { createPublicClient, formatUnits, http } from 'viem'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData'
-import { logger } from '../../../utils/logger'
-import { getDefaultEthereumRpcUrl } from '../../../utils/rpc'
-import Tooltip from '../../Common/Tooltip'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { formatBalance } from '../Send/utils'
-import { FeeStrike, InfoIconWrapper, SponsoredText } from './styles'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { getOpenfortQueryInputScope, getOpenfortQueryScope, openfortKeys } from '../../../query/queryKeys.js'
+import { useQuery } from '../../../query/useQuery.js'
+import { logger } from '../../../utils/logger.js'
+import { getDefaultEthereumRpcUrl } from '../../../utils/rpc.js'
+import Tooltip from '../../Common/Tooltip/index.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { formatBalance } from '../Send/utils.js'
+import { FeeStrike, InfoIconWrapper, SponsoredText } from './styles.js'
 
 const InfoIcon = () => (
   <svg aria-hidden="true" width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -47,16 +51,39 @@ export const EstimatedFees = ({
   hideInfoIcon = false,
   sponsored = false,
 }: EstimatedFeesProps) => {
+  const client = useOpenfortCore((state) => state.client)
   const { walletConfig } = useOpenfort()
   const { data: assets } = useEthereumWalletAssets()
   const pricePerToken = assets?.find((a) => a.type === 'native')?.metadata?.fiat?.value as number | undefined
 
-  const gas = useAsyncData({
-    queryKey: ['gas-estimate', account, to, value, data, chainId],
+  const configuredRpcUrl = chainId ? walletConfig?.ethereum?.rpcUrls?.[chainId] : undefined
+  let rpcUrl = configuredRpcUrl
+  if (!rpcUrl && chainId) {
+    try {
+      rpcUrl = getDefaultEthereumRpcUrl(chainId)
+    } catch {
+      rpcUrl = undefined
+    }
+  }
+  const rpcScope = getOpenfortQueryInputScope(rpcUrl)
+  const queryKey =
+    account && to && chainId && rpcScope
+      ? openfortKeys.gasEstimate({
+          clientScope: getOpenfortQueryScope(client),
+          account,
+          to,
+          value,
+          data,
+          chainId,
+          rpcScope,
+        })
+      : openfortKeys.gasEstimate()
+
+  const gas = useQuery({
+    queryKey,
     queryFn: async () => {
-      if (!account || !to || !chainId) return null
+      if (!account || !to || !chainId || !rpcUrl) return null
       try {
-        const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
         const publicClient = createPublicClient({ transport: http(rpcUrl) })
         const [gasEstimate, feesPerGas] = await Promise.all([
           publicClient.estimateGas({
@@ -74,7 +101,7 @@ export const EstimatedFees = ({
         return null
       }
     },
-    enabled: enabled && !!account && !!to && !!chainId,
+    enabled: enabled && !!account && !!to && !!chainId && !!rpcUrl,
   })
 
   // Format the estimate (USD when a native price is known, otherwise native units).

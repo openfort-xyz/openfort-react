@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext'
-import { logger } from '../utils/logger'
+import { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { logger } from '../utils/logger.js'
 
 export const useLastConnector = () => {
   const bridge = useEthereumBridge()
