@@ -10,7 +10,7 @@ import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { useLatest } from '../../useLatest.js'
-import { onError, onSuccess } from '../hookConsistency.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { type BaseFlowState, mapStatus } from './status.js'
 import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth.js'
@@ -34,9 +34,7 @@ type RequestPhoneOtpOptions = {
 
 type UsePhoneHookOptions = OpenfortHookOptions<PhoneAuthResult> & CreateWalletPostAuthOptions
 
-const DEFAULT_PHONE_OTP_HOOK_OPTIONS: UsePhoneHookOptions = {}
-
-export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = DEFAULT_PHONE_OTP_HOOK_OPTIONS) => {
+export const usePhoneOtpAuth = (hookOptions: UsePhoneHookOptions = NO_HOOK_OPTIONS) => {
   const hookOptionsRef = useLatest(hookOptions)
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()

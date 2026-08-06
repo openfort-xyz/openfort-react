@@ -19,7 +19,7 @@ import type { OpenfortHookOptions } from '../../types.js'
 import { logger } from '../../utils/logger.js'
 import { useLatest } from '../useLatest.js'
 import { type BaseFlowState, mapStatus } from './auth/status.js'
-import { onError, onSuccess } from './hookConsistency.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from './hookConsistency.js'
 
 type RevokePermissionsRequest = {
   sessionKey: Hex
@@ -57,9 +57,8 @@ type RevokePermissionsHookOptions = OpenfortHookOptions<RevokePermissionsHookRes
  * };
  * ```
  */
-const DEFAULT_REVOKE_HOOK_OPTIONS: RevokePermissionsHookOptions = {}
 
-export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = DEFAULT_REVOKE_HOOK_OPTIONS) => {
+export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = NO_HOOK_OPTIONS) => {
   const hookOptionsRef = useLatest(hookOptions)
   const { chains } = useOpenfort()
   const client = useOpenfortCore((s) => s.client)

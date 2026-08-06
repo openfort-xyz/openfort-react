@@ -8,7 +8,7 @@ import type { WalletChain } from '../../../errors/wallet.js'
 import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import type { OTPResponse } from '../../../shared/hooks/useRecoveryOTP.js'
-import { useRecoveryOTP } from '../../../shared/hooks/useRecoveryOTP.js'
+import { OTP_ERROR_DISPLAY_MS, OTP_RESEND_COOLDOWN_MS, useRecoveryOTP } from '../../../shared/hooks/useRecoveryOTP.js'
 import type { CreateEmbeddedWalletOptions, CreateEmbeddedWalletResult } from '../../../shared/types.js'
 import { handleOtpRecoveryError } from '../../../shared/utils/otpError.js'
 import {
@@ -33,11 +33,6 @@ type CreationOutcome =
 type OtpOperation =
   | { kind: 'verify'; promise: Promise<{ error?: unknown }>; isCurrent: () => boolean }
   | { kind: 'resend'; promise: Promise<OTPResponse>; isCurrent: () => boolean }
-
-/** How long the resend button stays locked after a code has been requested. */
-const RESEND_COOLDOWN_MS = 10000
-/** How long a failure message stays up before the code input reopens. */
-const ERROR_DISPLAY_DURATION_MS = 1000
 
 type AutomaticRecoveryOptions = {
   /** Chain family this flow creates a wallet on, used to label the debug logs. */
@@ -95,10 +90,10 @@ export function useAutomaticRecovery({
 
   const [recoveryError, setRecoveryError] = useState<Error | null>(null)
   const [shouldCreate, setShouldCreate] = useState(false)
-  const [needsOTP, setNeedsOTP] = useState(false)
+  // A code has been requested exactly when there is somewhere to have sent it,
+  // so the response doubles as the "needs a code" flag.
   const [otpResponse, setOtpResponse] = useState<OTPResponse | null>(null)
-  const [otpStatus, setOtpStatus] = useState<OtpStatus>('idle')
-  const [otpError, setOtpError] = useState<false | string>(false)
+  const [otp, setOtp] = useState<{ status: OtpStatus; error: false | string }>({ status: 'idle', error: false })
   const [canSendOtp, setCanSendOtp] = useState(true)
   const operationVersionRef = useRef(0)
   const mountedRef = useRef(true)
@@ -148,7 +143,7 @@ export function useAutomaticRecovery({
   useEffect(() => {
     if (pageActive) return
     otpOperationRef.current = null
-    setOtpStatus((status) => (status === 'loading' ? 'idle' : status))
+    setOtp((current) => (current.status === 'loading' ? { status: 'idle', error: false } : current))
   }, [pageActive])
 
   const observeOtpOperation = useCallback(
@@ -158,7 +153,7 @@ export function useAutomaticRecovery({
       otpOperationRef.current = otpOperation
       const operationVersion = ++operationVersionRef.current
       const scope = operationScopeRef.current
-      setOtpStatus('loading')
+      setOtp({ status: 'loading', error: false })
       try {
         if (operation.kind === 'verify') {
           const result = await operation.promise
@@ -167,7 +162,7 @@ export function useAutomaticRecovery({
           if (result.error) throw result.error
           clearPersistentOperation(client, verificationOperationKey)
           clearPersistentOperation(client, creationOperationKey)
-          setOtpStatus('success')
+          setOtp({ status: 'success', error: false })
           scope.setRoute(scope.successRoute)
         } else {
           const response = await operation.promise
@@ -175,7 +170,7 @@ export function useAutomaticRecovery({
           pendingOtpOperationRef.current = null
           clearPersistentOperation(client, resendOperationKey)
           setOtpResponse(response)
-          setOtpStatus('idle')
+          setOtp({ status: 'idle', error: false })
         }
       } catch (err) {
         if (
@@ -185,9 +180,8 @@ export function useAutomaticRecovery({
           return
         pendingOtpOperationRef.current = null
         clearPersistentOperation(client, operation.kind === 'verify' ? verificationOperationKey : resendOperationKey)
-        setOtpStatus('error')
         const fallback = operation.kind === 'verify' ? scope.otpVerificationError : 'Failed to send recovery code'
-        setOtpError(err instanceof OpenfortError ? err.message : fallback)
+        setOtp({ status: 'error', error: err instanceof OpenfortError ? err.message : fallback })
         logger.log(operation.kind === 'verify' ? 'Error verifying OTP for wallet recovery' : fallback, err)
       } finally {
         if (otpOperationRef.current === otpOperation) otpOperationRef.current = null
@@ -289,7 +283,6 @@ export function useAutomaticRecovery({
           scope.setRoute(scope.successRoute)
         } else if (outcome.status === 'otp-required') {
           setCanSendOtp(false)
-          setNeedsOTP(true)
           setOtpResponse(outcome.response)
           setShouldCreate(false)
         } else {
@@ -329,18 +322,15 @@ export function useAutomaticRecovery({
 
   // A failure message stays up long enough to be read, then the input reopens.
   useEffect(() => {
-    if (otpStatus !== 'error') return
-    const timerId = setTimeout(() => {
-      setOtpStatus('idle')
-      setOtpError(false)
-    }, ERROR_DISPLAY_DURATION_MS)
+    if (otp.status !== 'error') return
+    const timerId = setTimeout(() => setOtp({ status: 'idle', error: false }), OTP_ERROR_DISPLAY_MS)
     return () => clearTimeout(timerId)
-  }, [otpStatus])
+  }, [otp.status])
 
   // Requesting a code locks the resend button until the cooldown elapses.
   useEffect(() => {
     if (canSendOtp) return
-    const timerId = setTimeout(() => setCanSendOtp(true), RESEND_COOLDOWN_MS)
+    const timerId = setTimeout(() => setCanSendOtp(true), OTP_RESEND_COOLDOWN_MS)
     return () => clearTimeout(timerId)
   }, [canSendOtp])
 
@@ -372,14 +362,14 @@ export function useAutomaticRecovery({
   return {
     recoveryError,
     shouldCreate,
-    needsOTP: needsOTP && isWalletRecoveryOTPEnabled,
+    needsOTP: otpResponse !== null && isWalletRecoveryOTPEnabled,
     otpResponse,
-    otpStatus,
-    otpError,
+    otpStatus: otp.status,
+    otpError: otp.error,
     submitOtp,
     resend: {
       onClick: onResendClick,
-      disabled: !canSendOtp || otpStatus !== 'idle',
+      disabled: !canSendOtp || otp.status !== 'idle',
       label: canSendOtp ? 'Resend Code' : 'Code Sent!',
     },
     startCreation,

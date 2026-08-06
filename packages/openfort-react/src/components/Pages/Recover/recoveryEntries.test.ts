@@ -1,7 +1,7 @@
-import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
+import { RecoveryMethod } from '@openfort/openfort-js'
 import { describe, expect, it, vi } from 'vitest'
 import { OtpRequiredError, RecoveryError } from '../../../errors/wallet.js'
-import { recoveryRegistry } from './recoveryRegistry.js'
+import { automaticRecovery, passwordRecovery } from './recoveryEntries.js'
 
 const wallet = {
   id: 'emb_test',
@@ -21,11 +21,11 @@ function context(result: { error?: Error; needsRecovery?: boolean }) {
   }
 }
 
-describe('recoveryRegistry', () => {
+describe('recovery entries', () => {
   it('does not route password recovery after a resolved action error', async () => {
     const ctx = context({ error: new RecoveryError('Wrong password.') })
 
-    await recoveryRegistry[ChainTypeEnum.EVM].password(wallet, { ...ctx, password: 'wrong' })
+    await passwordRecovery(wallet, { ...ctx, password: 'wrong' })
 
     expect(ctx.setRoute).not.toHaveBeenCalled()
     expect(ctx.setError).toHaveBeenLastCalledWith(expect.stringContaining('Wrong password.'))
@@ -34,7 +34,7 @@ describe('recoveryRegistry', () => {
   it('keeps OTP-required automatic recovery observable', async () => {
     const ctx = context({ error: new OtpRequiredError({ canRequestOtp: true }) })
 
-    const outcome = await recoveryRegistry[ChainTypeEnum.EVM].automatic(wallet, ctx)
+    const outcome = await automaticRecovery(wallet, ctx)
 
     expect(outcome).toEqual({ status: 'otp-required' })
     expect(ctx.setRoute).not.toHaveBeenCalled()
@@ -46,7 +46,7 @@ describe('recoveryRegistry', () => {
   it('returns an error outcome when automatic recovery resolves with an action error', async () => {
     const ctx = context({ error: new RecoveryError('Invalid code.') })
 
-    const outcome = await recoveryRegistry[ChainTypeEnum.EVM].automatic(wallet, { ...ctx, otpCode: '123456789' })
+    const outcome = await automaticRecovery(wallet, { ...ctx, otpCode: '123456789' })
 
     expect(outcome).toEqual({ status: 'error' })
     expect(ctx.setError).toHaveBeenLastCalledWith(expect.stringContaining('Invalid code.'))
@@ -56,7 +56,7 @@ describe('recoveryRegistry', () => {
   it('returns success without routing so the active recovery screen controls navigation', async () => {
     const ctx = context({ needsRecovery: false })
 
-    const outcome = await recoveryRegistry[ChainTypeEnum.EVM].automatic(wallet, ctx)
+    const outcome = await automaticRecovery(wallet, ctx)
 
     expect(outcome).toEqual({ status: 'success' })
     expect(ctx.setRoute).not.toHaveBeenCalled()

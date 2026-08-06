@@ -10,7 +10,7 @@ import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { assertNavigableRedirect } from '../../../utils/urlSecurity.js'
-import { onError, onSuccess } from '../hookConsistency.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { buildCallbackUrl } from './requestEmailVerification.js'
 import { type BaseFlowState, mapStatus } from './status.js'
@@ -68,9 +68,8 @@ type AuthHookOptions = {
  * }
  * ```
  */
-const DEFAULT_AUTH_HOOK_OPTIONS: AuthHookOptions = {}
 
-export const useOAuth = (hookOptions: AuthHookOptions = DEFAULT_AUTH_HOOK_OPTIONS) => {
+export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)

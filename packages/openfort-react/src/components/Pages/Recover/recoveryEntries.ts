@@ -1,9 +1,14 @@
-import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
+import { RecoveryMethod } from '@openfort/openfort-js'
 import type { OTPResponse } from '../../../shared/hooks/useRecoveryOTP.js'
 import type { RecoverableWallet, SetActiveEmbeddedWalletResult } from '../../../shared/types.js'
 import { handleOtpRecoveryError } from '../../../shared/utils/otpError.js'
 import { routes, type SetRouteOptions } from '../../Openfort/types.js'
 
+/**
+ * Callbacks the entries below report through instead of touching React state,
+ * so a recovery attempt can keep running inside a persistent operation after
+ * the page that started it unmounts.
+ */
 type RecoveryContext = {
   setActive: (opts: {
     address: string
@@ -22,20 +27,22 @@ type RecoveryContext = {
   passkeyId?: string
 }
 
-type RecoveryEntry = (wallet: RecoverableWallet, ctx: RecoveryContext) => Promise<void>
-
 export type AutomaticRecoveryOutcome =
   | { status: 'success' }
   | { status: 'needs-recovery' }
   | { status: 'otp-required' }
   | { status: 'error' }
 
-async function passwordEntry(wallet: RecoverableWallet, ctx: RecoveryContext): Promise<void> {
+async function credentialRecovery(
+  wallet: RecoverableWallet,
+  ctx: RecoveryContext,
+  recoveryMethod: RecoveryMethod.PASSWORD | RecoveryMethod.PASSKEY
+): Promise<void> {
   ctx.setError(false)
   const result = await ctx.setActive({
     address: wallet.address,
-    recoveryMethod: RecoveryMethod.PASSWORD,
-    password: ctx.password,
+    recoveryMethod,
+    ...(recoveryMethod === RecoveryMethod.PASSWORD ? { password: ctx.password } : { passkeyId: ctx.passkeyId }),
   })
   if (result.error) {
     ctx.setError(result.error.message)
@@ -44,21 +51,16 @@ async function passwordEntry(wallet: RecoverableWallet, ctx: RecoveryContext): P
   }
 }
 
-async function passkeyEntry(wallet: RecoverableWallet, ctx: RecoveryContext): Promise<void> {
-  ctx.setError(false)
-  const result = await ctx.setActive({
-    address: wallet.address,
-    recoveryMethod: RecoveryMethod.PASSKEY,
-    passkeyId: ctx.passkeyId,
-  })
-  if (result.error) {
-    ctx.setError(result.error.message)
-  } else if (!result.needsRecovery) {
-    ctx.setRoute(routes.CONNECTED_SUCCESS)
-  }
-}
+export const passwordRecovery = (wallet: RecoverableWallet, ctx: RecoveryContext) =>
+  credentialRecovery(wallet, ctx, RecoveryMethod.PASSWORD)
 
-async function automaticEntry(wallet: RecoverableWallet, ctx: RecoveryContext): Promise<AutomaticRecoveryOutcome> {
+export const passkeyRecovery = (wallet: RecoverableWallet, ctx: RecoveryContext) =>
+  credentialRecovery(wallet, ctx, RecoveryMethod.PASSKEY)
+
+export async function automaticRecovery(
+  wallet: RecoverableWallet,
+  ctx: RecoveryContext
+): Promise<AutomaticRecoveryOutcome> {
   ctx.setError(false)
   try {
     const result = await ctx.setActive({
@@ -85,21 +87,4 @@ async function automaticEntry(wallet: RecoverableWallet, ctx: RecoveryContext): 
       return { status: 'error' }
     }
   }
-}
-
-type RecoveryRegistryByChain = {
-  password: RecoveryEntry
-  passkey: RecoveryEntry
-  automatic: (wallet: RecoverableWallet, ctx: RecoveryContext) => Promise<AutomaticRecoveryOutcome>
-}
-
-const RECOVERY_REGISTRY: RecoveryRegistryByChain = {
-  password: passwordEntry,
-  passkey: passkeyEntry,
-  automatic: automaticEntry,
-}
-
-export const recoveryRegistry: Record<ChainTypeEnum.EVM | ChainTypeEnum.SVM, RecoveryRegistryByChain> = {
-  [ChainTypeEnum.EVM]: RECOVERY_REGISTRY,
-  [ChainTypeEnum.SVM]: RECOVERY_REGISTRY,
 }

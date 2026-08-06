@@ -26,7 +26,8 @@ vi.mock('../../Openfort/useOpenfort.js', () => ({
   useOpenfort: () => ({ setRoute, triggerResize }),
 }))
 
-vi.mock('../../../shared/hooks/useRecoveryOTP.js', () => ({
+vi.mock('../../../shared/hooks/useRecoveryOTP.js', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useRecoveryOTP: () => ({ isEnabled: true, requestOTP }),
 }))
 

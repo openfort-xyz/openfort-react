@@ -131,20 +131,6 @@ function RouteComponent() {
               })
             },
           },
-          reducedMotion: {
-            type: 'boolean',
-            description:
-              'Whether to reduce motion in the UI. This is useful for users who prefer less motion in the UI.',
-            onEdit: (value) => {
-              setProviderOptions({
-                ...providerOptions,
-                uiConfig: {
-                  ...providerOptions.uiConfig,
-                  reducedMotion: Boolean(value),
-                },
-              })
-            },
-          },
           logo: {
             type: 'text',
             typescriptType: 'React.ReactNode | string | undefined',

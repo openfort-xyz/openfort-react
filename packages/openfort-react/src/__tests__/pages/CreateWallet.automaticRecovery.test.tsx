@@ -83,7 +83,8 @@ vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
 vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
   useSolanaEmbeddedWallet: () => ({ status: 'disconnected', create: h.createSolana }),
 }))
-vi.mock('../../shared/hooks/useRecoveryOTP', () => ({
+vi.mock('../../shared/hooks/useRecoveryOTP', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useRecoveryOTP: () => ({ isEnabled: h.otpEnabled, requestOTP: h.requestOTP }),
 }))
 vi.mock('../../hooks/openfort/auth/useSignOut', () => ({ useSignOut: () => ({ signOut: vi.fn() }) }))

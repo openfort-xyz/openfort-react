@@ -12,7 +12,7 @@ import { authTransitionSupersededResult, startLocalAuthTransition } from '../../
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { isValidEmail } from '../../../utils/validation.js'
-import { onError, onSuccess } from '../hookConsistency.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { buildCallbackUrl } from './requestEmailVerification.js'
 import { type BaseFlowState, mapStatus } from './status.js'
@@ -96,9 +96,8 @@ type UseEmailHookOptions = {
  * }
  * ```
  */
-const DEFAULT_EMAIL_HOOK_OPTIONS: UseEmailHookOptions = {}
 
-export const useEmailAuth = (hookOptions: UseEmailHookOptions = DEFAULT_EMAIL_HOOK_OPTIONS) => {
+export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS) => {
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)

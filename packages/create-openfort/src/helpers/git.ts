@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { existsSync, readdirSync, rmSync } from "node:fs";
 import path from "node:path";
 import * as p from "@clack/prompts";
@@ -8,9 +7,9 @@ import ora from "ora";
 
 import { logger } from "~/utils/logger.js";
 
-const isGitInstalled = (dir: string): boolean => {
+const isGitInstalled = async (dir: string): Promise<boolean> => {
   try {
-    execSync("git --version", { cwd: dir });
+    await execa("git", ["--version"], { cwd: dir });
     return true;
   } catch {
     return false;
@@ -37,28 +36,24 @@ export const isInsideGitRepo = async (dir: string): Promise<boolean> => {
   }
 };
 
-const getGitVersion = () => {
-  const stdout = execSync("git --version").toString().trim();
-  const gitVersionTag = stdout.split(" ")[2];
-  const major = gitVersionTag?.split(".")[0];
-  const minor = gitVersionTag?.split(".")[1];
-  return { major: Number(major), minor: Number(minor) };
-};
-
 /** @returns The git config value of "init.defaultBranch". If it is not set, returns "main". */
-const getDefaultBranch = () => {
-  const stdout = execSync("git config --global init.defaultBranch || echo main")
-    .toString()
-    .trim();
-
-  return stdout;
+const getDefaultBranch = async (): Promise<string> => {
+  const { stdout } = await execa("git", [
+    "config",
+    "--global",
+    "--get",
+    "--default",
+    "main",
+    "init.defaultBranch",
+  ]);
+  return stdout.trim() || "main";
 };
 
 // This initializes the Git-repository for the project
 export const initializeGit = async (projectDir: string) => {
   logger.info("Initializing Git...");
 
-  if (!isGitInstalled(projectDir)) {
+  if (!(await isGitInstalled(projectDir))) {
     logger.warn("Git is not installed. Skipping Git initialization.");
     return;
   }
@@ -110,23 +105,13 @@ export const initializeGit = async (projectDir: string) => {
 
   // We're good to go, initializing the git repo
   try {
-    const branchName = getDefaultBranch();
+    const branchName = await getDefaultBranch();
 
-    // --initial-branch flag was added in git v2.28.0
-    const { major, minor } = getGitVersion();
-    if (major < 2 || (major === 2 && minor < 28)) {
-      await execa("git", ["init"], { cwd: projectDir });
-      // symbolic-ref is used here due to refs/heads/master not existing
-      // It is only created after the first commit
-      // https://superuser.com/a/1419674
-      await execa("git", ["symbolic-ref", "HEAD", `refs/heads/${branchName}`], {
-        cwd: projectDir,
-      });
-    } else {
-      await execa("git", ["init", `--initial-branch=${branchName}`], {
-        cwd: projectDir,
-      });
-    }
+    // `--initial-branch` needs git >= 2.28 (2020); older gits land in the
+    // catch below, whose message already says to update git.
+    await execa("git", ["init", `--initial-branch=${branchName}`], {
+      cwd: projectDir,
+    });
     const secretFiles: string[] = [];
     const collectSecretFiles = (directory: string) => {
       for (const entry of readdirSync(directory, { withFileTypes: true })) {

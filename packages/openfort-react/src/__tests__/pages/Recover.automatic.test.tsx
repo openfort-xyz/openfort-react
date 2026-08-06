@@ -63,7 +63,8 @@ vi.mock('../../solana/hooks/useSolanaEmbeddedWallet.js', () => ({
   useSolanaEmbeddedWallet: () => ({ setActive: vi.fn() }),
 }))
 
-vi.mock('../../shared/hooks/useRecoveryOTP.js', () => ({
+vi.mock('../../shared/hooks/useRecoveryOTP.js', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   useRecoveryOTP: () => ({ isEnabled: true, requestOTP }),
 }))
 

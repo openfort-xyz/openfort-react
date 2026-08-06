@@ -22,7 +22,7 @@ import type { OpenfortHookOptions } from '../../types.js'
 import { logger } from '../../utils/logger.js'
 import { useLatest } from '../useLatest.js'
 import { type BaseFlowState, mapStatus } from './auth/status.js'
-import { onError, onSuccess } from './hookConsistency.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from './hookConsistency.js'
 
 type GrantPermissionsRequest = {
   request: GrantPermissionsParameters
@@ -108,9 +108,7 @@ function getEmbeddedWalletClientWithErc7715(
 /** Anything longer is far likelier to be a timestamp than an intended lifetime. */
 const TEN_YEARS_IN_SECONDS = 10 * 365 * 24 * 60 * 60
 
-const DEFAULT_GRANT_HOOK_OPTIONS: GrantPermissionsHookOptions = {}
-
-export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = DEFAULT_GRANT_HOOK_OPTIONS) => {
+export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = NO_HOOK_OPTIONS) => {
   const hookOptionsRef = useLatest(hookOptions)
   const bridge = useEthereumBridge()
   const { chains } = useOpenfort()

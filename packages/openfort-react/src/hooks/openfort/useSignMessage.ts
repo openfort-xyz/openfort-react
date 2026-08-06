@@ -7,7 +7,7 @@ import type { OpenfortError } from '../../errors/base.js'
 import { WalletError } from '../../errors/wallet.js'
 import type { OpenfortHookOptions } from '../../types.js'
 import { useLatest } from '../useLatest.js'
-import { onError, onSuccess } from './hookConsistency.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from './hookConsistency.js'
 
 type SignArgs = { kind: 'message'; message: string } | { kind: 'typedData'; typedData: SignTypedDataPayload }
 
@@ -41,8 +41,6 @@ type SignMessageSuccess = Extract<SignMessageResult, { signature: string }>
  */
 export type UseSignMessageOptions = OpenfortHookOptions<SignMessageSuccess>
 
-const DEFAULT_SIGN_MESSAGE_OPTIONS: UseSignMessageOptions = {}
-
 /**
  * Hook for signing messages with a confirmation modal. EIP-712 typed data is
  * available for EVM wallets; Solana wallets accept plain messages.
@@ -66,7 +64,7 @@ const DEFAULT_SIGN_MESSAGE_OPTIONS: UseSignMessageOptions = {}
  * }
  * ```
  */
-export function useSignMessage(hookOptions: UseSignMessageOptions = DEFAULT_SIGN_MESSAGE_OPTIONS) {
+export function useSignMessage(hookOptions: UseSignMessageOptions = NO_HOOK_OPTIONS) {
   const { setSignRequest } = useOpenfortSignRequest()
   const { setRoute, setOpen } = useOpenfortRouting()
   const [isPending, setIsPending] = useState(false)

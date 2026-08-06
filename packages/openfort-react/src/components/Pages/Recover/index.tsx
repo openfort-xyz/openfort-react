@@ -12,7 +12,7 @@ import type { EthereumUserWallet, SolanaUserWallet } from '../../../hooks/openfo
 import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity.js'
 import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
-import { useRecoveryOTP } from '../../../shared/hooks/useRecoveryOTP.js'
+import { OTP_ERROR_DISPLAY_MS, OTP_RESEND_COOLDOWN_MS, useRecoveryOTP } from '../../../shared/hooks/useRecoveryOTP.js'
 import type { RecoverableWallet } from '../../../shared/types.js'
 import {
   clearPersistentOperation,
@@ -38,7 +38,7 @@ import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent, type SetOnBackFunction } from '../../PageContent/index.js'
 import { Body, FooterButtonText, FooterTextButton, ResultContainer } from '../EmailOTP/styles.js'
 import { useLatestAsyncAttempt } from '../useLatestAsyncAttempt.js'
-import { recoveryRegistry } from './recoveryRegistry.js'
+import { automaticRecovery, passkeyRecovery, passwordRecovery } from './recoveryEntries.js'
 
 function useRecoveryOperationScope(wallet: EthereumUserWallet | SolanaUserWallet) {
   const client = useOpenfortCore((state) => state.client)
@@ -131,7 +131,7 @@ const RecoverPasswordWallet = ({
         principalIsCurrent: authSession.isCurrent,
         start: async () => {
           const result: PasswordRecoveryResult = { error: false }
-          await recoveryRegistry[chainType].password(wallet as RecoverableWallet, {
+          await passwordRecovery(wallet as RecoverableWallet, {
             ...ctx,
             password: recoveryPhrase,
             setRoute: (route) => {
@@ -266,7 +266,7 @@ const RecoverPasskeyWallet = ({
       principalIsCurrent: session.isCurrent,
       start: async () => {
         const result: { route?: Parameters<typeof setRoute>[0]; error: string | false } = { error: false }
-        await recoveryRegistry[chainType].passkey(wallet as RecoverableWallet, {
+        await passkeyRecovery(wallet as RecoverableWallet, {
           ...ctx,
           setRoute: (route) => {
             result.route = route
@@ -294,7 +294,7 @@ const RecoverPasskeyWallet = ({
       clearPersistentOperation(client, operationKey)
       setRecoveryError(err instanceof OpenfortError ? err.message : 'Invalid passkey. Please try again.')
     }
-  }, [beginAttempt, captureAuthSession, chainType, client, wallet, ctx, isCurrentAttempt, operationKey, setRoute])
+  }, [beginAttempt, captureAuthSession, client, wallet, ctx, isCurrentAttempt, operationKey, setRoute])
 
   const shouldRecoverWalletRef = useRef(false)
   useEffect(() => {
@@ -366,7 +366,7 @@ const RecoverAutomaticWallet = ({
     otpResponse: Awaited<ReturnType<typeof requestOTP>> | null
   }
   type AutomaticRecoveryOperation = {
-    promise: ReturnType<(typeof recoveryRegistry)[typeof chainType]['automatic']>
+    promise: ReturnType<typeof automaticRecovery>
     result: AutomaticRecoverySnapshot
   }
   const automaticRecoveryRef = useRef<AutomaticRecoveryOperation | null>(null)
@@ -419,7 +419,7 @@ const RecoverAutomaticWallet = ({
         principalIsCurrent: session.isCurrent,
         start: async ({ isCurrent }) => {
           const result: AutomaticRecoverySnapshot = { error: false, needsOTP: false, otpResponse: null }
-          const outcome = await recoveryRegistry[chainType].automatic(
+          const outcome = await automaticRecovery(
             wallet as RecoverableWallet,
             createRecoveryContext(result, otpCode, isCurrent)
           )
@@ -435,7 +435,7 @@ const RecoverAutomaticWallet = ({
         }),
       }
     },
-    [captureAuthSession, chainType, client, wallet, createRecoveryContext]
+    [captureAuthSession, client, wallet, createRecoveryContext]
   )
 
   const recoverWallet = useCallback(async () => {
@@ -520,7 +520,7 @@ const RecoverAutomaticWallet = ({
 
   useEffect(() => {
     if (!active || canSendOtp) return
-    const timerId = setTimeout(() => setCanSendOtp(true), 10000)
+    const timerId = setTimeout(() => setCanSendOtp(true), OTP_RESEND_COOLDOWN_MS)
     return () => clearTimeout(timerId)
   }, [active, canSendOtp])
 
@@ -530,7 +530,7 @@ const RecoverAutomaticWallet = ({
     errorTimeoutRef.current = setTimeout(() => {
       setOtpStatus('idle')
       setError(false)
-    }, 1000)
+    }, OTP_ERROR_DISPLAY_MS)
     return () => clearTimeout(errorTimeoutRef.current)
   }, [active, otpStatus])
 

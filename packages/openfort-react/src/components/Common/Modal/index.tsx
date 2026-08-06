@@ -2,14 +2,13 @@
 
 import { AnimatePresence, motion, type Variants } from 'framer-motion'
 import type React from 'react'
-import { type PropsWithChildren, useCallback, useEffect, useState } from 'react'
+import { type PropsWithChildren, useCallback, useEffect, useRef, useState } from 'react'
 import { useTransition } from 'react-transition-state'
 import { useConnectionStrategy } from '../../../core/ConnectionStrategyContext.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
 import FocusTrap from '../../../hooks/useFocusTrap.js'
 import useLocales from '../../../hooks/useLocales.js'
 import useLockBodyScroll from '../../../hooks/useLockBodyScroll.js'
-import usePrevious from '../../../hooks/usePrevious.js'
 import { getRouteHeading } from '../../../localizations/routeHeadings.js'
 import { ResetContainer } from '../../../styles/index.js'
 import type { CustomTheme } from '../../../types.js'
@@ -212,7 +211,13 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
 
   const route = routing.route.route
   const currentDepth = route === routes.PROVIDERS ? 0 : route === routes.DOWNLOAD ? 2 : 1
-  const prevDepth = usePrevious(currentDepth, currentDepth)
+  // Depth of the previously rendered route, so page transitions know which way to animate.
+  const depthRef = useRef({ target: currentDepth, previous: currentDepth })
+  if (depthRef.current.target !== currentDepth) {
+    depthRef.current.previous = depthRef.current.target
+    depthRef.current.target = currentDepth
+  }
+  const prevDepth = depthRef.current.previous
   const { active: activePageId, outgoing: outgoingPageId } = usePageTransition(pageId, mounted)
   useLockBodyScroll(!positionInside ? mounted : false)
 

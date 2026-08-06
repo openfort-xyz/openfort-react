@@ -10,7 +10,7 @@ import { authTransitionSupersededResult, startLocalAuthTransition } from '../../
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { useLatest } from '../../useLatest.js'
-import { onError, onSuccess } from '../hookConsistency.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { type BaseFlowState, mapStatus } from './status.js'
 import { type CreateWalletPostAuthOptions, useConnectToWalletPostAuth } from './useConnectToWalletPostAuth.js'
@@ -49,9 +49,8 @@ type GuestHookOptions = OpenfortHookOptions<GuestHookResult> & CreateWalletPostA
  * }
  * ```
  */
-const DEFAULT_GUEST_HOOK_OPTIONS: GuestHookOptions = {}
 
-export const useGuestAuth = (hookOptions: GuestHookOptions = DEFAULT_GUEST_HOOK_OPTIONS) => {
+export const useGuestAuth = (hookOptions: GuestHookOptions = NO_HOOK_OPTIONS) => {
   const hookOptionsRef = useLatest(hookOptions)
   const client = useOpenfortCore((s) => s.client)
   const { startAuthTransition } = useAuthTransitions()

@@ -105,9 +105,7 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
     overlayBlur: undefined,
     privacyPolicyUrl: undefined,
     termsOfServiceUrl: undefined,
-    reducedMotion: undefined,
     skipEmailVerification: undefined,
-    truncateLongENSAddress: undefined,
     walletConnectCTA: undefined,
     authProvidersLength: undefined,
 

@@ -336,9 +336,7 @@ export type ConnectUIOptions = {
   avoidLayoutShift?: boolean
   /** Automatically embeds the Google font of the current theme. Does not work with custom themes. */
   embedGoogleFonts?: boolean
-  truncateLongENSAddress?: boolean
   walletConnectName?: string
-  reducedMotion?: boolean
   disclaimer?: ReactNode | string
   /** Buffer polyfill, needed for bundlers that do not provide Node polyfills (e.g. CRA, Vite, etc.). */
   bufferPolyfill?: boolean
@@ -347,9 +345,6 @@ export type ConnectUIOptions = {
   /** Blur intensity applied to the background when the modal is open. */
   overlayBlur?: number
   walletRecovery?: WalletRecoveryOptions
-  buyWithCardUrl?: string
-  buyFromExchangeUrl?: string
-  buyTroubleshootingUrl?: string
   /**
    * Base URL of the funding JSON API serving `/v2/funding/*` (chains + sessions).
    * Defaults to the SDK's backend URL (`https://api.openfort.io`); set this only to
@@ -444,30 +439,20 @@ export type OpenfortUIOptionsExtended = {
   hideBalance?: boolean
   hideTooltips?: boolean
   hideQuestionMarkCTA?: boolean
-  hideNoWalletCTA?: boolean
   hideRecentBadge?: boolean
   walletConnectCTA?: 'link' | 'modal' | 'both'
   /** Avoids layout shift when the Openfort modal is open by adding padding to the body. */
   avoidLayoutShift?: boolean
   /** Automatically embeds the Google font of the current theme. Does not work with custom themes. */
   embedGoogleFonts?: boolean
-  truncateLongENSAddress?: boolean
   walletConnectName?: string
-  reducedMotion?: boolean
   disclaimer?: ReactNode | string
   /** Buffer polyfill, needed for bundlers that do not provide Node polyfills (e.g. CRA, Vite, etc.). */
   bufferPolyfill?: boolean
   customAvatar?: React.FC<CustomAvatarProps>
   enforceSupportedChains?: boolean
-  ethereumOnboardingUrl?: string
-  walletOnboardingUrl?: string
-  /** Disable redirect to the SIWE page after a wallet is connected. */
-  disableSiweRedirect?: boolean
   /** Blur intensity applied to the background when the modal is open. */
   overlayBlur?: number
-  buyWithCardUrl?: string
-  buyFromExchangeUrl?: string
-  buyTroubleshootingUrl?: string
   /** Base URL of the openfort-funding backend. See {@link ConnectUIOptions.fundingBaseUrl}. */
   fundingBaseUrl?: string
   /** Deposit-hub funding options. See {@link ConnectUIOptions.funding}. */

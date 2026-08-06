@@ -18,6 +18,11 @@ export type OTPResponse = {
   phone?: string
 }
 
+/** How long the resend button stays locked after a recovery code has been requested. */
+export const OTP_RESEND_COOLDOWN_MS = 10_000
+/** How long a rejected-code message stays up before the code input reopens. */
+export const OTP_ERROR_DISPLAY_MS = 1_000
+
 export function useRecoveryOTP(): { isEnabled: boolean; requestOTP: () => Promise<OTPResponse> } {
   const client = useOpenfortCore((s) => s.client)
   const user = useOpenfortCore((s) => s.user)
