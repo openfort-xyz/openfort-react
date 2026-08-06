@@ -11,6 +11,8 @@ import assert from "node:assert/strict";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 
+import { compareVersions, minimumVersion } from "./semver-lite.mjs";
+
 /** Directories whose immediate children are workspace packages. */
 const PACKAGE_PARENTS = [
   "environments",
@@ -43,20 +45,6 @@ const sdkManifest = JSON.parse(
 const peerRange = sdkManifest.peerDependencies?.react;
 assert.ok(peerRange, "The SDK must declare a React peer range.");
 
-/** Lowest version a `^x.y.z`, `>=x.y.z` or exact range accepts. */
-function minimumVersion(range) {
-  const match = /^(?:\^|>=|~)?(\d+)\.(\d+)\.(\d+)/.exec(range.trim());
-  assert.ok(match, `Unsupported React range "${range}" — teach this gate about it.`);
-  return [Number(match[1]), Number(match[2]), Number(match[3])];
-}
-
-function compare(a, b) {
-  for (let i = 0; i < 3; i++) {
-    if (a[i] !== b[i]) return a[i] < b[i] ? -1 : 1;
-  }
-  return 0;
-}
-
 const peerFloor = minimumVersion(peerRange);
 const manifests = collectManifests();
 assert.ok(manifests.length > 0, "No workspace manifests were found to check.");
@@ -74,7 +62,7 @@ for (const manifestPath of manifests) {
   const where = path.relative(process.cwd(), manifestPath);
 
   assert.ok(
-    compare(minimumVersion(react), peerFloor) >= 0,
+    compareVersions(minimumVersion(react), peerFloor) >= 0,
     `${where} accepts React ${react}, which is below the SDK peer range ${peerRange}.`,
   );
 

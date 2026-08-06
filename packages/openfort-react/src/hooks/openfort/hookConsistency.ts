@@ -52,3 +52,10 @@ export const onError = <T>({
 
   return { error }
 }
+
+/**
+ * Shared default for hooks whose options parameter defaults to "no options".
+ * One frozen instance, so the default keeps a stable identity across renders
+ * and never becomes an accidental mutation channel.
+ */
+export const NO_HOOK_OPTIONS: Readonly<Record<never, never>> = Object.freeze({})

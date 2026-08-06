@@ -52,10 +52,19 @@ export function getOpenfortQueryInputScope(value: string | undefined): QueryInpu
   return keccak256(stringToBytes(value))
 }
 
-function sanitizeBalanceKeyParams(params: BalanceKeyParams): Omit<BalanceKeyParams, 'rpcUrl'> {
-  const { rpcUrl, ...safeParams } = params
-  if (rpcUrl === undefined || safeParams.rpcScope !== undefined) return safeParams
-  return { ...safeParams, rpcScope: getOpenfortQueryInputScope(rpcUrl) }
+/**
+ * Replaces a public URL input with its opaque scope, so an endpoint carrying an
+ * API key never reaches the host application's cache in plaintext. An explicitly
+ * supplied scope wins.
+ */
+function withInputScope<TParams extends object, TUrl extends keyof TParams, TScope extends keyof TParams>(
+  params: TParams,
+  urlKey: TUrl,
+  scopeKey: TScope
+): Omit<TParams, TUrl> {
+  const { [urlKey]: url, ...safeParams } = params
+  if (url === undefined || safeParams[scopeKey as unknown as keyof typeof safeParams] !== undefined) return safeParams
+  return { ...safeParams, [scopeKey]: getOpenfortQueryInputScope(url as string) }
 }
 
 /**
@@ -82,12 +91,6 @@ export type WalletAssetsKeyParams = {
   fallbackChains?: readonly WalletAssetsChainKeyConfig[]
 }
 
-function sanitizeWalletAssetsKeyParams(params: WalletAssetsKeyParams): Omit<WalletAssetsKeyParams, 'rpcUrl'> {
-  const { rpcUrl, ...safeParams } = params
-  if (rpcUrl === undefined || safeParams.rpcScope !== undefined) return safeParams
-  return { ...safeParams, rpcScope: getOpenfortQueryInputScope(rpcUrl) }
-}
-
 /** Identifies a single ENS name/avatar resolution. */
 type IdentityKeyParams = {
   address: string
@@ -97,12 +100,6 @@ type IdentityKeyParams = {
   rpcScope?: QueryInputScope
   /** Public factory input converted to an opaque scope before entering the key. */
   rpcUrl?: string
-}
-
-function sanitizeIdentityKeyParams(params: IdentityKeyParams): Omit<IdentityKeyParams, 'rpcUrl'> {
-  const { rpcUrl, ...safeParams } = params
-  if (rpcUrl === undefined || safeParams.rpcScope !== undefined) return safeParams
-  return { ...safeParams, rpcScope: getOpenfortQueryInputScope(rpcUrl) }
 }
 
 /** Identifies a single funding-rail chain listing. */
@@ -161,12 +158,6 @@ function sanitizeGasEstimateKeyParams(
   return { ...safeParams, ...(value === undefined ? {} : { value: value.toString() }) }
 }
 
-function sanitizeFundingChainsKeyParams(params: FundingChainsKeyParams): Omit<FundingChainsKeyParams, 'baseUrl'> {
-  const { baseUrl, ...safeParams } = params
-  if (baseUrl === undefined || safeParams.baseScope !== undefined) return safeParams
-  return { ...safeParams, baseScope: getOpenfortQueryInputScope(baseUrl) }
-}
-
 /**
  * Query key factory for every query the SDK owns.
  *
@@ -188,10 +179,10 @@ export const openfortKeys = {
     [...openfortKeys.all, 'embeddedAccounts', ...(scope ? [scope] : [])] as const,
 
   balance: (params?: BalanceKeyParams) =>
-    [...openfortKeys.all, 'balance', ...(params ? [sanitizeBalanceKeyParams(params)] : [])] as const,
+    [...openfortKeys.all, 'balance', ...(params ? [withInputScope(params, 'rpcUrl', 'rpcScope')] : [])] as const,
 
   walletAssets: (params?: WalletAssetsKeyParams) =>
-    [...openfortKeys.all, 'walletAssets', ...(params ? [sanitizeWalletAssetsKeyParams(params)] : [])] as const,
+    [...openfortKeys.all, 'walletAssets', ...(params ? [withInputScope(params, 'rpcUrl', 'rpcScope')] : [])] as const,
 
   erc20Balance: (params?: Erc20BalanceKeyParams) =>
     [...openfortKeys.all, 'erc20Balance', ...(params ? [params] : [])] as const,
@@ -205,8 +196,12 @@ export const openfortKeys = {
     [...openfortKeys.all, 'gasEstimate', ...(params ? [sanitizeGasEstimateKeyParams(params)] : [])] as const,
 
   identity: (params?: IdentityKeyParams) =>
-    [...openfortKeys.all, 'identity', ...(params ? [sanitizeIdentityKeyParams(params)] : [])] as const,
+    [...openfortKeys.all, 'identity', ...(params ? [withInputScope(params, 'rpcUrl', 'rpcScope')] : [])] as const,
 
   fundingChains: (params?: FundingChainsKeyParams) =>
-    [...openfortKeys.all, 'fundingChains', ...(params ? [sanitizeFundingChainsKeyParams(params)] : [])] as const,
+    [
+      ...openfortKeys.all,
+      'fundingChains',
+      ...(params ? [withInputScope(params, 'baseUrl', 'baseScope')] : []),
+    ] as const,
 }

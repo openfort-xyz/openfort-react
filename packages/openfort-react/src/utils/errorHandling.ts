@@ -66,7 +66,7 @@ type ErrorClass = abstract new (...args: never[]) => Error
  * `UserRejectedRequestError` — so only a walk of the whole chain classifies
  * reliably.
  */
-function matches(error: unknown, classes: readonly ErrorClass[]): boolean {
+export function matchesErrorClass(error: unknown, classes: readonly ErrorClass[]): boolean {
   const is = (candidate: unknown) => classes.some((cls) => candidate instanceof cls)
   if (is(error)) return true
   if (error instanceof ViemBaseError) return error.walk(is) !== null
@@ -74,212 +74,202 @@ function matches(error: unknown, classes: readonly ErrorClass[]): boolean {
   return false
 }
 
+/**
+ * Every message the transaction screens can show. The class, provider-code and
+ * text tables below all resolve to one of these, and several resolve to the same
+ * one, so the copy lives here once.
+ */
+const COPY = {
+  cancelled: { title: 'Transaction cancelled', message: 'You cancelled the transaction.' },
+  insufficientFundsEth: {
+    title: 'Insufficient funds',
+    message: "You don't have enough ETH to pay for the gas fee.",
+    action: 'Add more ETH to your wallet to cover the transaction fee.',
+  },
+  insufficientFundsNative: {
+    title: 'Insufficient funds',
+    message: "You don't have enough native token to pay the gas fee.",
+    action: 'Add funds to your wallet to cover the transaction fee.',
+  },
+  walletNotConnected: {
+    title: 'Wallet not connected',
+    message: 'Your wallet is not connected.',
+    action: 'Please connect your wallet and try again.',
+  },
+  walletNotFound: {
+    title: 'Wallet not found',
+    message: 'No wallet extension detected.',
+    action: 'Please install a wallet extension and try again.',
+  },
+  wrongNetwork: {
+    title: 'Wrong network',
+    message: 'Your wallet is connected to a different network.',
+    action: 'Please switch to the correct network in your wallet.',
+  },
+  switchFailed: {
+    title: 'Network switch failed',
+    message: 'Unable to switch to the requested network.',
+    action: 'Please manually switch networks in your wallet.',
+  },
+  wouldFail: {
+    title: 'Transaction would fail',
+    message: 'This transaction is likely to fail.',
+    action: 'Please check the recipient address and amount, then try again.',
+  },
+  gasLimit: {
+    title: 'Gas limit error',
+    message: 'The gas limit for this transaction is incorrect.',
+    action: 'Please try again or contact support.',
+  },
+  gasLimitExceeded: {
+    title: 'Gas limit error',
+    message: 'The transaction needs more gas than its limit allowed.',
+    action: 'Try again, or reduce what the transaction does.',
+  },
+  pending: {
+    title: 'Transaction pending',
+    message: 'A transaction is already pending.',
+    action: 'Please wait for your pending transaction to complete.',
+  },
+  pendingEarlier: {
+    title: 'Transaction pending',
+    message: 'An earlier transaction from this wallet has not confirmed yet.',
+    action: 'Wait for it to confirm, then try again.',
+  },
+  badNonce: {
+    title: 'Transaction error',
+    message: 'Transaction nonce is invalid.',
+    action: 'Please refresh the page and try again.',
+  },
+  feeTooLow: {
+    title: 'Gas fee too low',
+    message: 'The gas fee is too low for this transaction.',
+    action: 'Try again with a higher gas fee.',
+  },
+  feeBelowBase: {
+    title: 'Gas fee too low',
+    message: 'The gas fee is below what the network is currently accepting.',
+    action: 'Try again to price the transaction at the current rate.',
+  },
+  feeTooHigh: {
+    title: 'Gas fee too high',
+    message: 'The gas fee is unusually high.',
+    action: 'Please check the fee and try again.',
+  },
+  typeNotSupported: {
+    title: 'Transaction not supported',
+    message: 'This transaction type is not supported on this network.',
+    action: 'Please try a different transaction method.',
+  },
+  timeout: {
+    title: 'Transaction timeout',
+    message: 'The transaction is taking longer than expected.',
+    action: 'It may still be processing. Check your wallet or block explorer.',
+  },
+  reverted: {
+    title: 'Transaction failed',
+    message: 'The transaction was rejected by the contract.',
+    action: 'Please check the transaction details and try again.',
+  },
+  revertedShort: {
+    title: 'Transaction failed',
+    message: 'The transaction was rejected by the contract.',
+    action: 'Check the transaction details and try again.',
+  },
+  contractNoData: {
+    title: 'Contract error',
+    message: 'The contract returned no data.',
+    action: 'This contract may not exist on this network.',
+  },
+  contractRejected: {
+    title: 'Contract error',
+    message: 'The contract rejected this transaction.',
+    action: 'Please verify the transaction parameters and try again.',
+  },
+  disconnected: {
+    title: 'Connection lost',
+    message: 'Lost connection to the network.',
+    action: 'Please check your internet connection and try again.',
+  },
+  internal: {
+    title: 'Network error',
+    message: 'The network encountered an internal error.',
+    action: 'Please try again in a moment.',
+  },
+  methodNotSupported: {
+    title: 'Method not supported',
+    message: 'This operation is not supported by the current network.',
+    action: 'Try switching to a different RPC provider.',
+  },
+  invalidRequest: {
+    title: 'Invalid request',
+    message: 'The request contains invalid parameters.',
+    action: 'Please check the transaction details and try again.',
+  },
+  networkRejected: {
+    title: 'Transaction rejected',
+    message: 'The network rejected this transaction.',
+    action: 'Please check the transaction details and try again.',
+  },
+  busy: {
+    title: 'Network busy',
+    message: 'The network is currently busy or unavailable.',
+    action: 'Please wait a moment and try again.',
+  },
+  unauthorized: {
+    title: 'Unauthorized',
+    message: 'This action requires authorization.',
+    action: 'Please connect your wallet and try again.',
+  },
+  unreachable: {
+    title: 'Network error',
+    message: 'Unable to connect to the network.',
+    action: 'Check your internet connection and try again.',
+  },
+  executionFailed: {
+    title: 'Transaction failed',
+    message: 'The transaction failed to execute.',
+    action: 'Please check the transaction details and try again.',
+  },
+} as const satisfies Record<string, TransactionErrorDetails>
+
 /** Ordered classification table: the first entry whose classes match wins. */
 const RULES: readonly { classes: readonly ErrorClass[]; details: TransactionErrorDetails }[] = [
-  {
-    classes: [UserRejectedRequestError],
-    details: { title: 'Transaction cancelled', message: 'You cancelled the transaction.' },
-  },
-  {
-    classes: [InsufficientFundsError],
-    details: {
-      title: 'Insufficient funds',
-      message: "You don't have enough ETH to pay for the gas fee.",
-      action: 'Add more ETH to your wallet to cover the transaction fee.',
-    },
-  },
-  {
-    classes: [WalletNotConnectedError],
-    details: {
-      title: 'Wallet not connected',
-      message: 'Your wallet is not connected.',
-      action: 'Please connect your wallet and try again.',
-    },
-  },
-  {
-    classes: [ProviderNotFoundError],
-    details: {
-      title: 'Wallet not found',
-      message: 'No wallet extension detected.',
-      action: 'Please install a wallet extension and try again.',
-    },
-  },
-  {
-    classes: [ChainMismatchError, ChainNotFoundError, InvalidChainIdError],
-    details: {
-      title: 'Wrong network',
-      message: 'Your wallet is connected to a different network.',
-      action: 'Please switch to the correct network in your wallet.',
-    },
-  },
-  {
-    classes: [SwitchChainError],
-    details: {
-      title: 'Network switch failed',
-      message: 'Unable to switch to the requested network.',
-      action: 'Please manually switch networks in your wallet.',
-    },
-  },
-  {
-    classes: [EstimateGasExecutionError],
-    details: {
-      title: 'Transaction would fail',
-      message: 'This transaction is likely to fail.',
-      action: 'Please check the recipient address and amount, then try again.',
-    },
-  },
-  {
-    classes: [IntrinsicGasTooHighError, IntrinsicGasTooLowError],
-    details: {
-      title: 'Gas limit error',
-      message: 'The gas limit for this transaction is incorrect.',
-      action: 'Please try again or contact support.',
-    },
-  },
-  {
-    classes: [NonceTooLowError],
-    details: {
-      title: 'Transaction pending',
-      message: 'A transaction is already pending.',
-      action: 'Please wait for your pending transaction to complete.',
-    },
-  },
-  {
-    classes: [NonceTooHighError, NonceMaxValueError],
-    details: {
-      title: 'Transaction error',
-      message: 'Transaction nonce is invalid.',
-      action: 'Please refresh the page and try again.',
-    },
-  },
-  {
-    classes: [FeeCapTooLowError, TipAboveFeeCapError],
-    details: {
-      title: 'Gas fee too low',
-      message: 'The gas fee is too low for this transaction.',
-      action: 'Try again with a higher gas fee.',
-    },
-  },
-  {
-    classes: [FeeCapTooHighError],
-    details: {
-      title: 'Gas fee too high',
-      message: 'The gas fee is unusually high.',
-      action: 'Please check the fee and try again.',
-    },
-  },
-  {
-    classes: [TransactionTypeNotSupportedError],
-    details: {
-      title: 'Transaction not supported',
-      message: 'This transaction type is not supported on this network.',
-      action: 'Please try a different transaction method.',
-    },
-  },
-  {
-    classes: [WaitForTransactionReceiptTimeoutError, TimeoutError],
-    details: {
-      title: 'Transaction timeout',
-      message: 'The transaction is taking longer than expected.',
-      action: 'It may still be processing. Check your wallet or block explorer.',
-    },
-  },
-  {
-    classes: [ExecutionRevertedError],
-    details: {
-      title: 'Transaction failed',
-      message: 'The transaction was rejected by the contract.',
-      action: 'Please check the transaction details and try again.',
-    },
-  },
-  {
-    classes: [ContractFunctionZeroDataError],
-    details: {
-      title: 'Contract error',
-      message: 'The contract returned no data.',
-      action: 'This contract may not exist on this network.',
-    },
-  },
+  { classes: [UserRejectedRequestError], details: COPY.cancelled },
+  { classes: [InsufficientFundsError], details: COPY.insufficientFundsEth },
+  { classes: [WalletNotConnectedError], details: COPY.walletNotConnected },
+  { classes: [ProviderNotFoundError], details: COPY.walletNotFound },
+  { classes: [ChainMismatchError, ChainNotFoundError, InvalidChainIdError], details: COPY.wrongNetwork },
+  { classes: [SwitchChainError], details: COPY.switchFailed },
+  { classes: [EstimateGasExecutionError], details: COPY.wouldFail },
+  { classes: [IntrinsicGasTooHighError, IntrinsicGasTooLowError], details: COPY.gasLimit },
+  { classes: [NonceTooLowError], details: COPY.pending },
+  { classes: [NonceTooHighError, NonceMaxValueError], details: COPY.badNonce },
+  { classes: [FeeCapTooLowError, TipAboveFeeCapError], details: COPY.feeTooLow },
+  { classes: [FeeCapTooHighError], details: COPY.feeTooHigh },
+  { classes: [TransactionTypeNotSupportedError], details: COPY.typeNotSupported },
+  { classes: [WaitForTransactionReceiptTimeoutError, TimeoutError], details: COPY.timeout },
+  { classes: [ExecutionRevertedError], details: COPY.reverted },
+  { classes: [ContractFunctionZeroDataError], details: COPY.contractNoData },
   {
     classes: [ContractFunctionExecutionError, ContractFunctionRevertedError, CallExecutionError, RawContractError],
-    details: {
-      title: 'Contract error',
-      message: 'The contract rejected this transaction.',
-      action: 'Please verify the transaction parameters and try again.',
-    },
+    details: COPY.contractRejected,
   },
-  {
-    classes: [ChainDisconnectedError, ProviderDisconnectedError],
-    details: {
-      title: 'Connection lost',
-      message: 'Lost connection to the network.',
-      action: 'Please check your internet connection and try again.',
-    },
-  },
-  {
-    classes: [InternalRpcError, UnknownRpcError],
-    details: {
-      title: 'Network error',
-      message: 'The network encountered an internal error.',
-      action: 'Please try again in a moment.',
-    },
-  },
+  { classes: [ChainDisconnectedError, ProviderDisconnectedError], details: COPY.disconnected },
+  { classes: [InternalRpcError, UnknownRpcError], details: COPY.internal },
   {
     classes: [MethodNotFoundRpcError, MethodNotSupportedRpcError, UnsupportedProviderMethodError],
-    details: {
-      title: 'Method not supported',
-      message: 'This operation is not supported by the current network.',
-      action: 'Try switching to a different RPC provider.',
-    },
+    details: COPY.methodNotSupported,
   },
-  {
-    classes: [InvalidInputRpcError, InvalidParamsRpcError, InvalidRequestRpcError],
-    details: {
-      title: 'Invalid request',
-      message: 'The request contains invalid parameters.',
-      action: 'Please check the transaction details and try again.',
-    },
-  },
-  {
-    classes: [TransactionRejectedRpcError],
-    details: {
-      title: 'Transaction rejected',
-      message: 'The network rejected this transaction.',
-      action: 'Please check the transaction details and try again.',
-    },
-  },
+  { classes: [InvalidInputRpcError, InvalidParamsRpcError, InvalidRequestRpcError], details: COPY.invalidRequest },
+  { classes: [TransactionRejectedRpcError], details: COPY.networkRejected },
   {
     classes: [LimitExceededRpcError, ResourceNotFoundRpcError, ResourceUnavailableRpcError],
-    details: {
-      title: 'Network busy',
-      message: 'The network is currently busy or unavailable.',
-      action: 'Please wait a moment and try again.',
-    },
+    details: COPY.busy,
   },
-  {
-    classes: [UnauthorizedProviderError],
-    details: {
-      title: 'Unauthorized',
-      message: 'This action requires authorization.',
-      action: 'Please connect your wallet and try again.',
-    },
-  },
-  {
-    classes: [HttpRequestError, WebSocketRequestError, RpcRequestError],
-    details: {
-      title: 'Network error',
-      message: 'Unable to connect to the network.',
-      action: 'Check your internet connection and try again.',
-    },
-  },
-  {
-    classes: [TransactionExecutionError],
-    details: {
-      title: 'Transaction failed',
-      message: 'The transaction failed to execute.',
-      action: 'Please check the transaction details and try again.',
-    },
-  },
+  { classes: [UnauthorizedProviderError], details: COPY.unauthorized },
+  { classes: [HttpRequestError, WebSocketRequestError, RpcRequestError], details: COPY.unreachable },
+  { classes: [TransactionExecutionError], details: COPY.executionFailed },
 ]
 
 /**
@@ -290,56 +280,14 @@ const RULES: readonly { classes: readonly ErrorClass[]; details: TransactionErro
  */
 const PROVIDER_ERROR_CODES = new Map<number, TransactionErrorDetails>([
   // -32000 is the de-facto "server error" node code; wallets reuse it for gas failures.
-  [
-    -32000,
-    {
-      title: 'Transaction would fail',
-      message: 'This transaction is likely to fail.',
-      action: 'Please check the recipient address and amount, then try again.',
-    },
-  ],
-  [
-    -32003,
-    {
-      title: 'Transaction failed',
-      message: 'The transaction was rejected by the contract.',
-      action: 'Check the transaction details and try again.',
-    },
-  ],
-  [-32603, { title: 'Network error', message: 'The network encountered an internal error.' }],
-  [4001, { title: 'Transaction cancelled', message: 'You cancelled the transaction.' }],
-  [
-    4100,
-    {
-      title: 'Unauthorized',
-      message: 'This action requires authorization.',
-      action: 'Please connect your wallet and try again.',
-    },
-  ],
-  [
-    4200,
-    {
-      title: 'Method not supported',
-      message: 'This operation is not supported by the current network.',
-      action: 'Try switching to a different RPC provider.',
-    },
-  ],
-  [
-    4900,
-    {
-      title: 'Connection lost',
-      message: 'Lost connection to the network.',
-      action: 'Please check your internet connection and try again.',
-    },
-  ],
-  [
-    4901,
-    {
-      title: 'Wrong network',
-      message: 'Your wallet is connected to a different network.',
-      action: 'Please switch to the correct network in your wallet.',
-    },
-  ],
+  [-32000, COPY.wouldFail],
+  [-32003, COPY.revertedShort],
+  [-32603, { title: COPY.internal.title, message: COPY.internal.message }],
+  [4001, COPY.cancelled],
+  [4100, COPY.unauthorized],
+  [4200, COPY.methodNotSupported],
+  [4900, COPY.disconnected],
+  [4901, COPY.wrongNetwork],
 ])
 
 /**
@@ -364,68 +312,25 @@ const AMBIGUOUS_PROVIDER_CODES: ReadonlySet<number> = new Set([-32603, -32000])
 const TEXT_RULES: readonly { pattern: RegExp; details: TransactionErrorDetails }[] = [
   {
     pattern: /user (rejected|denied|cancell?ed)|rejected the request|transaction was rejected/i,
-    details: { title: 'Transaction cancelled', message: 'You cancelled the transaction.' },
+    details: COPY.cancelled,
   },
-  {
-    pattern: /failed to fetch|network ?error|networkerror when attempting/i,
-    details: {
-      title: 'Network error',
-      message: 'Unable to connect to the network.',
-      action: 'Check your internet connection and try again.',
-    },
-  },
+  { pattern: /failed to fetch|network ?error|networkerror when attempting/i, details: COPY.unreachable },
   {
     pattern: /insufficient funds|doesn't have enough native token|exceeds the balance/i,
-    details: {
-      title: 'Insufficient funds',
-      message: "You don't have enough native token to pay the gas fee.",
-      action: 'Add funds to your wallet to cover the transaction fee.',
-    },
+    details: COPY.insufficientFundsNative,
   },
   {
     pattern: /execution reverted|transaction reverted|reverted with reason|transfer amount exceeds/i,
-    details: {
-      title: 'Transaction failed',
-      message: 'The transaction was rejected by the contract.',
-      action: 'Check the transaction details and try again.',
-    },
+    details: COPY.revertedShort,
   },
-  {
-    pattern: /nonce too low|nonce conflict|transaction with this nonce|already known/i,
-    details: {
-      title: 'Transaction pending',
-      message: 'An earlier transaction from this wallet has not confirmed yet.',
-      action: 'Wait for it to confirm, then try again.',
-    },
-  },
+  { pattern: /nonce too low|nonce conflict|transaction with this nonce|already known/i, details: COPY.pendingEarlier },
   {
     pattern: /replacement transaction underpriced|fee too low|max fee per gas less than block/i,
-    details: {
-      title: 'Gas fee too low',
-      message: 'The gas fee is below what the network is currently accepting.',
-      action: 'Try again to price the transaction at the current rate.',
-    },
+    details: COPY.feeBelowBase,
   },
-  {
-    pattern: /ran out of gas|out of gas|gas required exceeds|intrinsic gas too low/i,
-    details: {
-      title: 'Gas limit error',
-      message: 'The transaction needs more gas than its limit allowed.',
-      action: 'Try again, or reduce what the transaction does.',
-    },
-  },
+  { pattern: /ran out of gas|out of gas|gas required exceeds|intrinsic gas too low/i, details: COPY.gasLimitExceeded },
 ]
 
-/**
- * Reads the most specific EIP-1193 code carried by `error` or anything nested
- * under its `cause` or `data`.
- *
- * A wrapper's own code is usually the vaguest one present: openfort-js stamps
- * `-32603` on the outside while the wallet's real `4001` sits in the cause, and
- * MetaMask nests the revert code under `data`. Returning the first code found
- * would surface the wrapper every time, so an ambiguous code is only used when
- * the whole chain offers nothing better.
- */
 /**
  * Yields `error` and everything nested under its `cause` or `data`, breadth
  * first. Cycles are skipped and the walk is capped, because a provider is free
@@ -445,6 +350,16 @@ function* nestedErrors(error: unknown): Generator<Record<string, unknown>> {
   }
 }
 
+/**
+ * Reads the most specific EIP-1193 code carried by `error` or anything nested
+ * under its `cause` or `data`.
+ *
+ * A wrapper's own code is usually the vaguest one present: openfort-js stamps
+ * `-32603` on the outside while the wallet's real `4001` sits in the cause, and
+ * MetaMask nests the revert code under `data`. Returning the first code found
+ * would surface the wrapper every time, so an ambiguous code is only used when
+ * the whole chain offers nothing better.
+ */
 function providerErrorCode(error: unknown): number | undefined {
   let ambiguous: number | undefined
 
@@ -487,7 +402,7 @@ export function parseTransactionError(error: unknown): TransactionErrorDetails {
   }
 
   for (const rule of RULES) {
-    if (matches(error, rule.classes)) return rule.details
+    if (matchesErrorClass(error, rule.classes)) return rule.details
   }
 
   const code = providerErrorCode(error)

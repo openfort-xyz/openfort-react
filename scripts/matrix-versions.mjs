@@ -17,6 +17,8 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
+import { compareVersions, minimumVersion } from "./semver-lite.mjs";
+
 const MANIFEST = "pnpm-workspace.yaml";
 const INSTALLED = "packages/openfort-react/node_modules";
 
@@ -26,16 +28,6 @@ const tanstackVersion = process.env.TANSTACK_VERSION;
 assert.ok(reactVersion, "REACT_VERSION is required.");
 assert.ok(viemVersion, "VIEM_VERSION is required.");
 assert.ok(tanstackVersion, "TANSTACK_VERSION is required.");
-
-/** Ascending semver comparison for release versions. */
-function compareVersions(a, b) {
-  const left = a.split(".").map(Number);
-  const right = b.split(".").map(Number);
-  for (let i = 0; i < 3; i++) {
-    if (left[i] !== right[i]) return left[i] - right[i];
-  }
-  return 0;
-}
 
 /**
  * The publish delay the workspace enforces, in milliseconds.
@@ -94,7 +86,9 @@ function resolveExact(name, range) {
     return Number.isFinite(published) && published <= cutoff;
   });
 
-  const version = mature.sort(compareVersions).at(-1);
+  const version = mature
+    .sort((left, right) => compareVersions(minimumVersion(left), minimumVersion(right)))
+    .at(-1);
   assert.ok(
     version,
     `No published ${name} matches "${range}" and is older than the ${MINIMUM_RELEASE_AGE_MS / 60_000}-minute minimumReleaseAge.`,

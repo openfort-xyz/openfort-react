@@ -42,5 +42,6 @@ examples/playground/tests/.auth/
 
 docs/
 semgrep-results-001/
+REVIEW_TODO.md
 .gstack/
 .claude/worktrees/
