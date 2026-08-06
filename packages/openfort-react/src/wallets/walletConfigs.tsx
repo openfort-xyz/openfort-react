@@ -39,11 +39,6 @@ export type WalletConfigProps = {
   }
   // Create URI for QR code, where uri is encoded data from WalletConnect
   getWalletConnectDeeplink?: (uri: string) => string
-  // Opens the given dapp URL inside the wallet app's own browser, where the
-  // wallet injects its provider. Static URL — no WalletConnect pairing needed.
-  // Used on mobile for wallets whose provider can't be injected into the
-  // mobile browser itself.
-  getBrowseDeeplink?: (dappUrl: string) => string
   shouldDeeplinkDesktop?: boolean
 }
 
@@ -183,19 +178,11 @@ export const walletConfigs: {
     getWalletConnectDeeplink: (uri: string) => {
       return `https://metamask.app.link/wc?uri=${encodeURIComponent(uri)}`
     },
-    // https://docs.metamask.io/sdk/guides/use-deeplinks/ — dapp URL goes in
-    // without its scheme.
-    getBrowseDeeplink: (dappUrl: string) => `https://link.metamask.io/dapp/${dappUrl.replace(/^https?:\/\//, '')}`,
   },
   'phantom, app.phantom': {
     name: 'Phantom',
     icon: <Logos.Phantom background />,
     iconShape: 'squircle',
-    // https://docs.phantom.com/phantom-deeplinks/other-methods/browse
-    getBrowseDeeplink: (dappUrl: string) => {
-      const ref = typeof window !== 'undefined' ? window.location.origin : dappUrl
-      return `https://phantom.app/ul/browse/${encodeURIComponent(dappUrl)}?ref=${encodeURIComponent(ref)}`
-    },
   },
   'me.rainbow': {
     name: 'Rainbow Wallet',
@@ -216,10 +203,9 @@ export const walletConfigs: {
       return `https://rnbwapp.com/wc?uri=${encodeURIComponent(uri)}&connector=connectkit`
     },
   },
-  'rabby, io.rabby': {
+  'io.rabby': {
     name: 'Rabby Wallet',
     shortName: 'Rabby',
-    icon: <Logos.Rabby />,
     downloadUrls: {
       website: 'https://rabby.io',
       chrome: 'https://chrome.google.com/webstore/detail/rabby-wallet/acmacodkjbdgmoleebolmdjonilkdbch',

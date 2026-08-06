@@ -20,7 +20,6 @@ import { ConnectorButton, ConnectorIcon, ConnectorLabel, ConnectorsContainer, Re
 
 const ConnectorList = () => {
   const context = useOpenfort()
-  const isMobile = useIsMobile()
 
   const wallets = useExternalConnectors()
   const { lastConnectorId } = useLastConnector()
@@ -28,14 +27,6 @@ const ConnectorList = () => {
   const familyAccountsConnector = useFamilyAccountsConnector()
   const hasWalletConnect = useHasWalletConnect()
   const detectedProviders = useDetectedProviders()
-
-  // On mobile there are no extensions: an undetected wallet with a browse
-  // deeplink hands the dapp to the wallet app's own browser instead, where the
-  // provider is injected. No WalletConnect pairing involved.
-  const browseDeeplinkFor = (wallet: ExternalConnectorProps): string | undefined =>
-    isMobile && detectedProviders && !detectedProviders.has(wallet.id) && wallet.getBrowseDeeplink
-      ? wallet.getBrowseDeeplink(window.location.href)
-      : undefined
 
   let filteredWallets = wallets.filter(
     (wallet) => wallet.id !== familyAccountsConnector?.id && wallet.id !== embeddedWalletId
@@ -48,14 +39,9 @@ const ConnectorList = () => {
   // whose provider isn't actually present (extension not installed; mobile
   // browser outside the wallet's in-app browser) can never connect — hide it
   // instead of dead-ending on the "Wallet connections unavailable" page.
-  // Wallets with a browse deeplink stay visible on mobile: the deeplink works
-  // without WalletConnect.
   if (!hasWalletConnect && detectedProviders) {
     filteredWallets = filteredWallets.filter(
-      (wallet) =>
-        !isInjectedConnector(wallet.connector.type) ||
-        detectedProviders.has(wallet.id) ||
-        (isMobile && !!wallet.getBrowseDeeplink)
+      (wallet) => !isInjectedConnector(wallet.connector.type) || detectedProviders.has(wallet.id)
     )
   }
 
@@ -75,12 +61,7 @@ const ConnectorList = () => {
       {walletsToDisplay.length > 0 && (
         <ConnectorsContainer $mobile={false} $totalResults={walletsToDisplay.length}>
           {walletsToDisplay.map((wallet) => (
-            <ConnectorItem
-              key={wallet.id}
-              wallet={wallet}
-              isRecent={wallet.id === lastConnectorId}
-              browseDeeplink={browseDeeplinkFor(wallet)}
-            />
+            <ConnectorItem key={wallet.id} wallet={wallet} isRecent={wallet.id === lastConnectorId} />
           ))}
         </ConnectorsContainer>
       )}
@@ -90,15 +71,7 @@ const ConnectorList = () => {
 
 export default ConnectorList
 
-const ConnectorItem = ({
-  wallet,
-  isRecent,
-  browseDeeplink,
-}: {
-  wallet: ExternalConnectorProps
-  isRecent?: boolean
-  browseDeeplink?: string
-}) => {
+const ConnectorItem = ({ wallet, isRecent }: { wallet: ExternalConnectorProps; isRecent?: boolean }) => {
   const isMobile = useIsMobile()
   const context = useOpenfort()
   const bridge = useEthereumBridge()
@@ -119,16 +92,6 @@ const ConnectorItem = ({
       </ConnectorLabel>
     </>
   )
-
-  // A browse deeplink renders as a plain anchor: universal links are most
-  // reliable when the navigation comes straight from the tap.
-  if (browseDeeplink) {
-    return (
-      <ConnectorButton as="a" href={browseDeeplink}>
-        {content()}
-      </ConnectorButton>
-    )
-  }
 
   return (
     <ConnectorButton
