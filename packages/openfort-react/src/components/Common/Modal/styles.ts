@@ -172,8 +172,12 @@ export const BackgroundOverlay = styled(motion.div)<{
   right: 0;
   bottom: 0;
   background: var(--ck-overlay-background, rgba(71, 88, 107, 0.24));
-  backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, blur(2px))')};
-  -webkit-backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, blur(2px))')};
+  /* No blur by default (upstream parity): a full-viewport backdrop-filter forces
+     Safari to re-composite the blurred backdrop on every frame of any animation
+     above it, which starves the page cross-fade of frames. Opt in via the blur
+     prop or --ck-overlay-backdrop-filter. */
+  backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, none)')};
+  -webkit-backdrop-filter: ${(props) => (props.$blur ? `blur(${props.$blur}px)` : 'var(--ck-overlay-backdrop-filter, none)')};
   opacity: 0;
   animation: ${(props) => (props.$active ? FadeIn : FadeOut)} 150ms ease-out
     both;
@@ -223,10 +227,14 @@ export const BoxContainer = styled(motion.div)`
     /* Match InnerContainer's viewport cap so a tall page's card background
        doesn't run off-screen while the content scrolls inside. */
     max-height: 88vh;
-    transform: translateX(-50%);
+    /* translateZ promotes the card background (and its blurred box-shadow) to
+       its own compositing layer: Safari then scales the cached shadow layer
+       during the resize instead of re-rasterizing the blur every frame.
+       box-shadow/border-radius are constants — transitioning them only forced
+       those per-frame repaints, so only the real movers (width/height) remain. */
+    transform: translateX(-50%) translateZ(0);
     backface-visibility: hidden;
-    transition: width 200ms ease, height 200ms ease, box-shadow 200ms ease,
-      border-radius 200ms ease;
+    transition: width 200ms ease, height 200ms ease;
     border-radius: var(--ck-border-radius, 20px);
     background: var(--ck-body-background);
     box-shadow: var(--ck-modal-box-shadow);
@@ -307,7 +315,13 @@ export const PageContainer = styled(motion.div)`
   justify-content: center;
   align-items: center;
   transform-origin: center center;
-  animation: 200ms var(--ck-ease-out, cubic-bezier(0.23, 1, 0.32, 1)) both;
+  /* Keep the enter/exit keyframes (opacity+transform only) on the compositor:
+     mounting the incoming page stalls the main thread right as the cross-fade
+     starts, and without a layer Safari paints the whole animation as a single
+     snapped frame. Upstream's plain ease also spreads the motion through the
+     middle of the run, so it survives a slow first frame better than ease-out. */
+  will-change: transform, opacity;
+  animation: 200ms ease both;
 
   &.active {
     animation-name: ${FadeInScaleDown};
@@ -362,9 +376,18 @@ export const PageContainer = styled(motion.div)`
 `
 export const PageContents = styled(motion.div)`
   margin: 0 auto;
-  width: fit-content;
+  /* max-content, not fit-content: while the modal's width/height tween between
+     pages, fit-content lets the page shrink with the animating container, so
+     text re-wraps on every frame (button labels vanish mid-transition, lines
+     jump — most visible in Safari's text repainting). max-content keeps each
+     page at its natural width for the whole transition; the animating rounded
+     box clips it instead of reflowing it. Mobile overrides width to 100%. */
+  width: max-content;
   padding: 29px 24px 24px;
   backface-visibility: hidden;
+  /* Promote to a compositing layer: prevents Safari's font-smoothing shimmer
+     while the page opacity-fades over the resizing container. */
+  transform: translateZ(0);
 `
 
 export const ModalContainer = styled.div`

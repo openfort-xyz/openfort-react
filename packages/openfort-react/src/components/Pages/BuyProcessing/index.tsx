@@ -15,6 +15,7 @@ import SquircleSpinner from '../../Common/SquircleSpinner/index.js'
 import { routes } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent } from '../../PageContent/index.js'
+import { buyPopupFeatures, closeBuyPopup, navigateBuyPopup, takeBuyPopup } from '../Buy/buyPopup.js'
 import { createCoinbaseSession } from '../Buy/coinbaseApi.js'
 import { resolveOnrampNetwork } from '../Buy/onrampApi.js'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies.js'
@@ -41,6 +42,8 @@ const BuyProcessing = () => {
   const [showContinueButton, setShowContinueButton] = useState(false)
   const [isCreatingSession, setIsCreatingSession] = useState(true)
   const [sessionError, setSessionError] = useState(false)
+  // Set when the session exists but the browser refused to open a window for it.
+  const [blockedProviderUrl, setBlockedProviderUrl] = useState<string | null>(null)
 
   const { data: ethAssets } = useEthereumWalletAssets()
   const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
@@ -76,14 +79,21 @@ const BuyProcessing = () => {
     if (sessionStartedRef.current) return
     sessionStartedRef.current = true
     let cancelled = false
-    let reservedPopup: Window | null = null
-
-    const closeReservedPopup = () => {
-      if (reservedPopup && !reservedPopup.closed) reservedPopup.close()
-    }
+    // The claimed reservation, held in effect scope so teardown can close it
+    // while it is still blank. Once navigated it belongs to the user.
+    let claimedPopup: Window | null = null
 
     const createSessionAndOpenPopup = async () => {
+      // Claimed up front so every exit path below can close it. The window was
+      // reserved inside the provider click, so it still carries the user activation.
+      const reservedPopup = takeBuyPopup()
+      claimedPopup = reservedPopup
+      const closeReservedPopup = () => {
+        if (reservedPopup && !reservedPopup.closed) reservedPopup.close()
+      }
+
       if (!fiatAmount || fiatAmount <= 0) {
+        closeReservedPopup()
         setRoute(routes.BUY_SELECT_PROVIDER)
         return
       }
@@ -92,35 +102,7 @@ const BuyProcessing = () => {
       setSessionError(false)
 
       try {
-        const popupWidth = 500
-        const popupHeight = 700
-        const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX
-        const dualScreenTop = window.screenTop !== undefined ? window.screenTop : window.screenY
-        const width = window.innerWidth
-          ? window.innerWidth
-          : document.documentElement.clientWidth
-            ? document.documentElement.clientWidth
-            : screen.width
-        const height = window.innerHeight
-          ? window.innerHeight
-          : document.documentElement.clientHeight
-            ? document.documentElement.clientHeight
-            : screen.height
-        const left = width / 2 - popupWidth / 2 + dualScreenLeft
-        const top = height / 2 - popupHeight / 2 + dualScreenTop
-
-        reservedPopup = window.open(
-          'about:blank',
-          'BuyPopup',
-          `scrollbars=yes,width=${popupWidth},height=${popupHeight},top=${top},left=${left}`
-        )
-        if (!reservedPopup) {
-          setSessionError(true)
-          return
-        }
-        reservedPopup.opener = null
         popupNavigatedRef.current = false
-        setPopupWindow(reservedPopup)
 
         let onrampUrl: string | null = null
 
@@ -135,7 +117,10 @@ const BuyProcessing = () => {
             sourceCurrency: buyForm.currency,
             redirectUrl: `${window.location.origin}?coinbase_onramp=success`,
           })
-          if (cancelled) return
+          if (cancelled) {
+            closeReservedPopup()
+            return
+          }
           onrampUrl = session.onrampUrl
         } else if (buyForm.providerId === 'stripe') {
           const session = await createStripeSession({
@@ -147,13 +132,15 @@ const BuyProcessing = () => {
             sourceCurrency: buyForm.currency,
             redirectUrl: `${window.location.origin}?stripe_onramp=success`,
           })
-          if (cancelled) return
+          if (cancelled) {
+            closeReservedPopup()
+            return
+          }
           onrampUrl = session.onrampUrl
         }
 
         if (!onrampUrl) {
           closeReservedPopup()
-          setPopupWindow(null)
           setSessionError(true)
           return
         }
@@ -164,13 +151,36 @@ const BuyProcessing = () => {
         url.searchParams.delete('fiatCurrency')
         const sanitizedProviderUrl = url.toString()
 
-        if (cancelled || reservedPopup.closed) return
-        reservedPopup.location.href = sanitizedProviderUrl
-        popupNavigatedRef.current = true
+        if (cancelled) {
+          closeReservedPopup()
+          return
+        }
+
+        // A window the user already closed must not be "navigated": the closed-popup
+        // monitor would read that as a finished purchase and report completion.
+        if (reservedPopup && !reservedPopup.closed && navigateBuyPopup(reservedPopup, sanitizedProviderUrl)) {
+          popupNavigatedRef.current = true
+          setPopupWindow(reservedPopup)
+          return
+        }
+
+        // No usable window: either the user dismissed it, or the popup blocker took
+        // it despite the gesture. Retry inline — this still succeeds when the session
+        // resolved fast enough to stay inside the activation window.
+        const popup = window.open(sanitizedProviderUrl, 'BuyPopup', buyPopupFeatures())
+
+        if (popup) {
+          popupNavigatedRef.current = true
+          setPopupWindow(popup)
+          return
+        }
+
+        // Give up on opening it ourselves and let the user click through. A click
+        // handler always carries a fresh activation, so that open cannot be blocked.
+        setBlockedProviderUrl(sanitizedProviderUrl)
       } catch (_error) {
-        if (cancelled) return
         closeReservedPopup()
-        setPopupWindow(null)
+        if (cancelled) return
         setSessionError(true)
       } finally {
         if (!cancelled) setIsCreatingSession(false)
@@ -181,12 +191,15 @@ const BuyProcessing = () => {
     return () => {
       cancelled = true
       sessionStartedRef.current = false
-      closeReservedPopup()
+      // Closes the reserved window while it is still unclaimed, and the claimed
+      // window while it is still blank. A navigated popup — the one the user is
+      // paying in — survives this teardown.
+      closeBuyPopup()
+      if (claimedPopup && !popupNavigatedRef.current && !claimedPopup.closed) claimedPopup.close()
       // The monitor treats a closed popup as the user finishing at the provider.
       // This cleanup also runs when `address` briefly goes undefined mid-purchase
       // (a recovery retry, an iframe reload), so leaving the state behind made
       // the effect's own teardown look like a completed purchase.
-      setPopupWindow(null)
       popupNavigatedRef.current = false
     }
   }, [pageActive, address, network])
@@ -194,7 +207,7 @@ const BuyProcessing = () => {
   // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — each of the three states swaps in a differently sized body (spinner, continue button, error)
   useEffect(() => {
     triggerResize()
-  }, [triggerResize, isCreatingSession, showContinueButton, sessionError])
+  }, [triggerResize, isCreatingSession, showContinueButton, sessionError, blockedProviderUrl])
 
   // Show continue button after 2 seconds
   useEffect(() => {
@@ -295,6 +308,35 @@ const BuyProcessing = () => {
   const isStripe = buyForm.providerId === 'stripe'
   const isCoinbase = buyForm.providerId === 'coinbase'
   const isProvider = isStripe || isCoinbase
+
+  if (blockedProviderUrl) {
+    const openBlockedProvider = () => {
+      const popup = window.open(blockedProviderUrl, 'BuyPopup', buyPopupFeatures())
+      if (popup) {
+        popupNavigatedRef.current = true
+        setBlockedProviderUrl(null)
+        setPopupWindow(popup)
+      }
+    }
+
+    return (
+      <PageContent onBack={handleBack}>
+        <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
+          <ModalHeading>Popup blocked</ModalHeading>
+          <ModalBody>
+            Your payment is ready, but your browser blocked the {isStripe ? 'Stripe' : 'Coinbase'} window.
+            <br />
+            Allow popups for this site, or continue below.
+          </ModalBody>
+          <ContinueButtonWrapper style={{ marginTop: 24 }}>
+            <Button variant="primary" onClick={openBlockedProvider}>
+              Continue to {isStripe ? 'Stripe' : 'Coinbase'}
+            </Button>
+          </ContinueButtonWrapper>
+        </ModalContent>
+      </PageContent>
+    )
+  }
 
   if (isCreatingSession) {
     return (

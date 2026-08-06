@@ -68,24 +68,34 @@ vi.mock('../../components/PageContent/index.js', () => ({
 }))
 
 const { default: BuyProcessing } = await import('../../components/Pages/BuyProcessing/index.js')
+const { reserveBuyPopup, closeBuyPopup } = await import('../../components/Pages/Buy/buyPopup.js')
+
+function fakePopup() {
+  const popup = {
+    closed: false,
+    close: vi.fn(() => {
+      popup.closed = true
+    }),
+    location: { href: 'about:blank' },
+    opener: window,
+    document: { write: vi.fn(), close: vi.fn() },
+  }
+  return popup
+}
 
 describe('BuyProcessing lifecycle', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    closeBuyPopup()
   })
 
   it('closes its reserved popup and never navigates it after page deactivation', async () => {
     const session = deferred<{ onrampUrl: string }>()
     h.createCoinbaseSession.mockReturnValueOnce(session.promise)
-    const popup = {
-      closed: false,
-      close: vi.fn(() => {
-        popup.closed = true
-      }),
-      location: { href: 'about:blank' },
-      opener: window,
-    }
+    const popup = fakePopup()
     const open = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window)
+    // The provider click reserved the window; BuyProcessing claims it.
+    reserveBuyPopup()
 
     const { rerender } = render(
       <PageActivityProvider active>
@@ -112,15 +122,9 @@ describe('BuyProcessing lifecycle', () => {
   it('closes its reserved popup and never navigates it after unmount', async () => {
     const session = deferred<{ onrampUrl: string }>()
     h.createCoinbaseSession.mockReturnValueOnce(session.promise)
-    const popup = {
-      closed: false,
-      close: vi.fn(() => {
-        popup.closed = true
-      }),
-      location: { href: 'about:blank' },
-      opener: window,
-    }
+    const popup = fakePopup()
     const open = vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window)
+    reserveBuyPopup()
 
     const { unmount } = render(<BuyProcessing />)
     await waitFor(() => expect(h.createCoinbaseSession).toHaveBeenCalledOnce())
@@ -139,15 +143,13 @@ describe('BuyProcessing lifecycle', () => {
     try {
       const session = deferred<{ onrampUrl: string }>()
       h.createCoinbaseSession.mockReturnValueOnce(session.promise)
-      const popup = {
-        closed: false,
-        close: vi.fn(() => {
-          popup.closed = true
-        }),
-        location: { href: 'about:blank' },
-        opener: window,
-      }
-      vi.spyOn(window, 'open').mockReturnValue(popup as unknown as Window)
+      const popup = fakePopup()
+      // The reservation hands out this popup; the inline retry after the user
+      // closes it is refused, as a popup blocker without an activation would.
+      vi.spyOn(window, 'open')
+        .mockReturnValueOnce(popup as unknown as Window)
+        .mockReturnValue(null)
+      reserveBuyPopup()
 
       render(<BuyProcessing />)
       await waitFor(() => expect(h.createCoinbaseSession).toHaveBeenCalledOnce())

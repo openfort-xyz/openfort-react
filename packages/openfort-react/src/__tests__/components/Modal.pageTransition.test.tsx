@@ -10,6 +10,9 @@ import { useLatestAsyncAttempt } from '../../components/Pages/useLatestAsyncAtte
  */
 
 let currentRoute: string = routes.PROVIDERS
+// Depth comes from the route-history stack, so navigation must grow it the way
+// the provider's setRoute does.
+let routeStack: { route: string }[] = [{ route: routes.PROVIDERS }]
 
 // Stable identities: the modal treats a changed uiConfig as a re-measure trigger.
 const uiConfig = {}
@@ -18,6 +21,7 @@ const connector = { id: '' }
 vi.mock('../../components/Openfort/useOpenfort.js', () => ({
   useOpenfortRouting: () => ({
     route: { route: currentRoute },
+    routeHistory: routeStack,
     connector,
     onBack: null,
     headerLeftSlot: null,
@@ -59,12 +63,14 @@ function renderModal(pageId: string) {
 
 function navigate(rerender: (ui: React.ReactElement) => void, pageId: string) {
   currentRoute = pageId
+  routeStack = [...routeStack, { route: pageId }]
   rerender(<Modal open pages={pages} pageId={pageId} />)
 }
 
 describe('Modal page mounting', () => {
   afterEach(() => {
     currentRoute = routes.PROVIDERS
+    routeStack = [{ route: routes.PROVIDERS }]
   })
 
   it('mounts only the active page', async () => {

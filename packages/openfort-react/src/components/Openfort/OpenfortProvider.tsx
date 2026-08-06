@@ -310,6 +310,11 @@ export const OpenfortProvider = ({
       const lastRoute = prev.length > 0 ? prev[prev.length - 1] : null
       if (lastRoute && lastRoute.route === route) return prev
       if (notStoredInHistoryRoutes.includes(route)) return prev
+      // Navigating to the route directly beneath the top of the stack is a back
+      // step — several pages "back" via setRoute instead of setPreviousRoute.
+      // Pop instead of pushing a duplicate so the depth-driven page transition
+      // plays the pop animation and the stack cannot grow on the way back.
+      if (prev.length > 1 && prev[prev.length - 2]?.route === route) return prev.slice(0, -1)
       return [...prev, routeObj]
     })
   }, [])

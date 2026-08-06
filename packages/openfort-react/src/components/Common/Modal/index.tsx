@@ -16,7 +16,6 @@ import { flattenChildren, isMobile } from '../../../utils/index.js'
 import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
 import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
 import { PageErrorBoundary } from '../../ConnectModal/pageLoading.js'
-import { routes } from '../../Openfort/types.js'
 import { useOpenfortConfig, useOpenfortRouting } from '../../Openfort/useOpenfort.js'
 import FitText from '../FitText/index.js'
 import Portal from '../Portal/index.js'
@@ -210,7 +209,11 @@ const Modal: React.FC<ModalProps> = ({ open, pages, pageId, positionInside, inli
   const rendered = state === 'preEnter' || state !== 'exiting'
 
   const route = routing.route.route
-  const currentDepth = route === routes.PROVIDERS ? 0 : route === routes.DOWNLOAD ? 2 : 1
+  // Depth = position in the route-history stack, so forward navigation plays the
+  // push pair (incoming rises from 0.85) and back plays the pop pair (outgoing
+  // grows to 1.1). A hardcoded per-route table put every page below PROVIDERS at
+  // the same depth, which made every forward step play the backwards animation.
+  const currentDepth = routing.routeHistory.length
   // Depth of the previously rendered route, so page transitions know which way to animate.
   const depthRef = useRef({ target: currentDepth, previous: currentDepth })
   if (depthRef.current.target !== currentDepth) {

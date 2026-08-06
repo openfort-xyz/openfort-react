@@ -9,7 +9,12 @@ import useIsMobile from '../../../hooks/useIsMobile.js'
 import styled from '../../../styles/styled/index.js'
 import { isIOS } from '../../../utils/index.js'
 import { isHttpsUrl } from '../../../utils/urlSecurity.js'
-import { TextLinkButton } from '../../Common/Button/styles.js'
+import {
+  ConnectorButton,
+  ConnectorIcon,
+  ConnectorLabel,
+  ConnectorsContainer,
+} from '../../Common/ConnectorList/styles.js'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
 import { ScrollArea } from '../../Common/ScrollArea/index.js'
 import { routes } from '../../Openfort/types.js'
@@ -26,10 +31,9 @@ import {
 } from '../Buy/styles.js'
 import { AddressPageLink } from '../Deposit/AddressPageLink.js'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress.js'
-import { walletListBtn } from '../Deposit/formStyles.js'
 import { RouteSelectors } from '../Deposit/RouteSelectors.js'
 import { isSolana } from '../Deposit/sources.js'
-import { ButtonLogo, Skeleton, StepDivider } from '../Deposit/styles.js'
+import { Skeleton, StepDivider } from '../Deposit/styles.js'
 import { TestnetNotice } from '../Deposit/TestnetNotice.js'
 import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice.js'
 import { useDepositRoute } from '../Deposit/useDepositRoute.js'
@@ -106,8 +110,6 @@ const DepositWallet = () => {
   // (the funding deposit-address mint uses a fixed nominal amount regardless).
   const [amount, setAmount] = useState('1')
   const [pressedPreset, setPressedPreset] = useState<number | null>(null)
-  // Collapse the wallet list to keep the picker short on mobile; "Show more" reveals the rest.
-  const [showAllWallets, setShowAllWallets] = useState(false)
 
   const depositPageUrl = uiConfig.funding?.depositPageUrl ?? OPENFORT_DEPOSIT_PAGE_URL
   // Solana sources have no numeric chain id and no desktop EVM-extension send, so
@@ -162,13 +164,10 @@ const DepositWallet = () => {
   // dead-ends there, so hide it on iOS while keeping it on Android.
   const deeplinks = isIOS() ? allDeeplinks.filter((d) => d.app !== 'trust') : allDeeplinks
 
-  const WALLET_LIMIT = 3
-  const visibleDeeplinks = showAllWallets ? deeplinks : deeplinks.slice(0, WALLET_LIMIT)
-
-  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the deposit state, the wallet count and the "show all" toggle each change the page height
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the deposit state and the wallet count each change the page height
   useEffect(() => {
     triggerResize()
-  }, [route.receiverAddress, route.loading, route.status, deeplinks.length, showAllWallets, triggerResize])
+  }, [route.receiverAddress, route.loading, route.status, deeplinks.length, triggerResize])
 
   if (isDepositFlowActive(route.status)) return <DepositProgress status={route.status} />
 
@@ -245,39 +244,25 @@ const DepositWallet = () => {
                 )}
 
                 {deeplinks.length > 0 && (
-                  <ScrollArea fill>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      {visibleDeeplinks.map((d) => (
-                        <a
+                  <ScrollArea mobileDirection={'horizontal'}>
+                    <ConnectorsContainer $mobile $totalResults={deeplinks.length} $disabled={!amountValid}>
+                      {deeplinks.map((d) => (
+                        <ConnectorButton
+                          as="a"
                           key={d.app}
                           href={amountValid ? d.url : undefined}
                           aria-disabled={!amountValid}
                           target="_blank"
                           rel="noreferrer"
-                          style={{
-                            ...walletListBtn,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: 8,
-                            opacity: amountValid ? 1 : 0.55,
-                            pointerEvents: amountValid ? 'auto' : 'none',
-                          }}
                         >
-                          {WALLET_LOGO[d.app] && <ButtonLogo>{WALLET_LOGO[d.app]}</ButtonLogo>}
-                          {d.label} ↗
-                        </a>
+                          <ConnectorIcon data-shape="squircle">
+                            {WALLET_LOGO[d.app] ?? <logos.Injected />}
+                          </ConnectorIcon>
+                          {/* Deeplink labels read "Open <wallet>" — the tile icon already says it. */}
+                          <ConnectorLabel>{d.label.replace(/^Open\s+/, '')}</ConnectorLabel>
+                        </ConnectorButton>
                       ))}
-                      {deeplinks.length > WALLET_LIMIT && (
-                        <TextLinkButton
-                          type="button"
-                          onClick={() => setShowAllWallets((v) => !v)}
-                          style={{ alignSelf: 'center', marginTop: 2 }}
-                        >
-                          {showAllWallets ? 'Show less' : `Show ${deeplinks.length - WALLET_LIMIT} more`}
-                        </TextLinkButton>
-                      )}
-                    </div>
+                    </ConnectorsContainer>
                   </ScrollArea>
                 )}
               </>

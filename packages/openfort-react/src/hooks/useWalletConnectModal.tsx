@@ -18,13 +18,30 @@ export function useWalletConnectModal() {
 
     const currentBridge = bridgeRef.current
 
-    const w3mcss = document.createElement('style')
-    w3mcss.textContent = `w3m-modal, wcm-modal{ --wcm-z-index: 2147483647; --w3m-z-index:2147483647; }`
-    document.head.appendChild(w3mcss)
-
-    const removeChild = () => {
-      if (document.head.contains(w3mcss)) {
-        document.head.removeChild(w3mcss)
+    // The Openfort modal sits at z-index 2147483646, so the WalletConnect modal
+    // must take the one slot above it. A constructed stylesheet (CSSOM) is used
+    // instead of an injected <style> tag because CSP style-src blocks inline
+    // style elements in hardened apps — which silently left the WalletConnect
+    // modal rendering UNDER the Openfort modal.
+    const WC_CSS = `w3m-modal, wcm-modal { --wcm-z-index: 2147483647; --w3m-z-index: 2147483647; z-index: 2147483647; }`
+    let removeChild = () => {}
+    try {
+      const sheet = new CSSStyleSheet()
+      sheet.replaceSync(WC_CSS)
+      document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+      removeChild = () => {
+        document.adoptedStyleSheets = document.adoptedStyleSheets.filter((s) => s !== sheet)
+      }
+    } catch {
+      // Constructable stylesheets unsupported: fall back to a style tag (may be
+      // dropped by a strict CSP, in which case the modals keep their old order).
+      const w3mcss = document.createElement('style')
+      w3mcss.textContent = WC_CSS
+      document.head.appendChild(w3mcss)
+      removeChild = () => {
+        if (document.head.contains(w3mcss)) {
+          document.head.removeChild(w3mcss)
+        }
       }
     }
 
