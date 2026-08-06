@@ -72,15 +72,16 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
     if (!bridgeIsPending) setPendingChainId(undefined)
   }, [bridgeIsPending])
 
-  // 4902 means the wallet cannot switch networks at all. Providers put that on
-  // `code`, which isn't part of SwitchChainErrorType, so the property is
-  // narrowed before it's read.
-  const isUnsupported = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4902
+  // The connector has no switch at all — wagmi throws this before it ever reaches
+  // the wallet. Matched by name because it carries no code. Not by 4902: viem's
+  // generic SwitchChainError uses that code for *every* failed switch, so keying
+  // off it told people with a dead RPC that their wallet cannot switch networks.
+  const isUnsupported = bridgeError?.name === 'SwitchChainNotSupportedError'
   // 4001 is the user declining the wallet prompt. That is a choice, not a
   // failure, and painting an alert for it tells someone their own action broke.
   const isUserRejection = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4001
   // Anything else is a real failure of this one switch — an unreachable RPC, a
-  // backend refusal. Reporting only 4902 left every one of those silent: the
+  // backend refusal. Reporting nothing left every one of those silent: the
   // spinner cleared and the chain simply never changed.
   const switchFailed = !!bridgeError && !isUnsupported && !isUserRejection
   const disabled = isUnsupported || !switchChainFn
@@ -258,9 +259,13 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
           >
             <div style={{ paddingTop: 10, paddingBottom: 8 }}>
               <Alert>
-                {isUnsupported
-                  ? `${locales.warnings_walletSwitchingUnsupported} ${locales.warnings_walletSwitchingUnsupportedResolve}`
-                  : locales.warnings_walletSwitchingFailed}
+                {isUnsupported ? (
+                  <>
+                    {locales.warnings_walletSwitchingUnsupported} {locales.warnings_walletSwitchingUnsupportedResolve}
+                  </>
+                ) : (
+                  locales.warnings_walletSwitchingFailed
+                )}
               </Alert>
             </div>
           </motion.div>

@@ -1,6 +1,7 @@
+import type React from 'react'
 import { routes } from '../components/Openfort/types.js'
+import type { LocalizedText } from '../hooks/useLocales.js'
 import { isWalletConnectConnector } from '../utils/index.js'
-import type { LocaleProps } from './locales/index.js'
 
 /** The connector a connect-route heading describes, if one has been picked. */
 type HeadingConnector = {
@@ -18,7 +19,7 @@ type HeadingConnector = {
  * @param locales Translations for the active language.
  * @param connector Connector the connect route is talking about.
  */
-export function getRouteHeading(route: string, locales: LocaleProps, connector: HeadingConnector): string {
+export function getRouteHeading(route: string, locales: LocalizedText, connector: HeadingConnector): React.ReactNode {
   switch (route) {
     case routes.EMAIL_LOGIN:
       return locales.emailLoginScreen_heading

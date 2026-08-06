@@ -15,7 +15,7 @@ type PageContentProps = {
   width?: number | string
   onBack?: SetOnBackFunction
   logoutOnBack?: boolean
-  header?: string
+  header?: React.ReactNode
   className?: string
 }
 

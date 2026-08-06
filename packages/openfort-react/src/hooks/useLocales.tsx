@@ -9,7 +9,14 @@ import { getLocale } from './../localizations/index.js'
 import type { LocaleProps } from '../localizations/locales/index.js'
 import { logger } from '../utils/logger.js'
 
-export default function useLocales(replacements?: Record<string, string>): LocaleProps {
+/**
+ * The hook's values, unlike the raw locale modules, are markdown-parsed into
+ * React nodes. Typing them as `string` is what let a template literal print
+ * `[object Object]` in the chain-switch alert.
+ */
+export type LocalizedText = { [K in keyof LocaleProps]: React.ReactNode }
+
+export default function useLocales(replacements?: Record<string, string>): LocalizedText {
   const { uiConfig } = useOpenfortConfig()
   const language = uiConfig.language ?? 'en-US'
 
@@ -22,12 +29,12 @@ export default function useLocales(replacements?: Record<string, string>): Local
     throw new OpenfortConfigError(`Missing translations for language "${language}".`)
   }
 
-  const translated: Record<string, unknown> = {}
+  const translated: Record<string, React.ReactNode> = {}
   Object.entries(translations).forEach(([key, string]) => {
     translated[key] = localize(string, replacements)
   })
 
-  return translated as LocaleProps
+  return translated as LocalizedText
 }
 
 const localize = (text: string, replacements?: Record<string, string>) => {
