@@ -1,5 +1,7 @@
 {
   "name": "auth-sample-backend",
+  "private": true,
+  "version": "0.0.0",
   "packageManager": "pnpm@9.15.4",
   "dependencies": {
     "@openfort/openfort-node": "^0.7.1",
