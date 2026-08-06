@@ -18,7 +18,7 @@ import Button from '../../Common/Button'
 import Loader from '../../Common/Loading'
 import { ModalHeading } from '../../Common/Modal/styles'
 import PoweredByFooter from '../../Common/PoweredByFooter'
-import { routes, socialProviders, UIAuthProvider } from '../../Openfort/types'
+import { routes, UIAuthProvider } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import type { SetOnBackFunction } from '../../PageContent'
 import { PageContent } from '../../PageContent'
@@ -69,7 +69,7 @@ const WalletButton: React.FC<{ disabled?: boolean }> = ({ disabled }) => {
       icon={<Logos.OtherWallets />}
       disabled={disabled}
     >
-      Wallet
+      Connect your wallet
     </ProviderButtonBase>
   )
 }
@@ -95,7 +95,7 @@ const EmailButton: React.FC<{ handleSubmit: () => void }> = ({ handleSubmit }) =
             value={emailInput}
             onChange={(e) => setEmailInput(e.target.value)}
             type="email"
-            placeholder="Enter your email"
+            placeholder="your@email.com"
             formNoValidate
           />
           <div style={{ position: 'relative' }}>
@@ -339,11 +339,11 @@ const AddressButNoUserCase: React.FC = () => {
   )
 }
 
-const SocialProvidersButton = ({ thereAreSocialsAlready }: { thereAreSocialsAlready: boolean }) => {
+const SocialProvidersButton = () => {
   const { setRoute } = useOpenfort()
   return (
     <ProviderButtonBase onClick={() => setRoute(routes.SOCIAL_PROVIDERS)} icon={<OtherSocials />}>
-      {thereAreSocialsAlready ? 'Other socials' : 'Social providers'}
+      Other socials
     </ProviderButtonBase>
   )
 }
@@ -375,13 +375,11 @@ const Providers: React.FC = () => {
 
   return (
     <PageContent onBack={onBack}>
-      <ModalHeading>{user ? 'Link auth' : 'Connect'}</ModalHeading>
+      <ModalHeading>{user ? 'Link auth' : 'Log in or sign up'}</ModalHeading>
       {mainProviders.map((auth) => (
         <ProviderButton key={auth} provider={auth} />
       ))}
-      {hasExcessProviders && (
-        <SocialProvidersButton thereAreSocialsAlready={!!mainProviders.find((p) => socialProviders.includes(p))} />
-      )}
+      {hasExcessProviders && <SocialProvidersButton />}
       <PoweredByFooter showDisclaimer={true} />
     </PageContent>
   )

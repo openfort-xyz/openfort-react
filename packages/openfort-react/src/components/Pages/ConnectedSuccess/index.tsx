@@ -17,7 +17,7 @@ const ConnectedSuccess: React.FC = () => {
 
   return (
     <PageContent>
-      <Loader isLoading={false} isSuccess={true} header="Connected" />
+      <Loader isLoading={false} isSuccess={true} header="Successfully connected" />
     </PageContent>
   )
 }

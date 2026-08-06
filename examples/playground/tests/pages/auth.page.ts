@@ -16,7 +16,7 @@ export class AuthPage {
     await safeClick(this.page, /^(not connected|connect wallet)$/i, 30_000)
 
     await expect(this.page.getByText(/^connect$/i)).toBeVisible({ timeout: 30_000 })
-    await expect(this.page.getByPlaceholder('Enter your email')).toBeVisible({ timeout: 30_000 })
+    await expect(this.page.getByPlaceholder('your@email.com')).toBeVisible({ timeout: 30_000 })
   }
 
   /**
@@ -32,7 +32,7 @@ export class AuthPage {
   async continueAsGuest(mode: PlaygroundMode) {
     // Open the Openfort widget modal from the onboarding screen, then sign up via "Guest".
     await safeClick(this.page, /^connect wallet$/i, 30_000)
-    await expect(this.page.getByPlaceholder('Enter your email')).toBeVisible({ timeout: 30_000 })
+    await expect(this.page.getByPlaceholder('your@email.com')).toBeVisible({ timeout: 30_000 })
     await this.page.getByRole('button', { name: /^guest$/i }).click()
 
     // Guest auth redirects to the dashboard. With connectOnLogin=false there is no wallet yet,
