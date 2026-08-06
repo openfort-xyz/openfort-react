@@ -61,17 +61,21 @@ export function useProviders() {
     })
     const social = activeProviders.filter((p) => socialProviders.includes(p))
 
-    // Allow as many non-socials as possible, then fill the rest with socials
+    // Allow as many non-socials as possible, then fill the rest with socials —
+    // but always surface at least one social on the main page (the -1 reserves
+    // a slot for the "Other socials" button). Overflowing maxProviders by one
+    // beats hiding every social behind an extra tap.
     const remainingSlots = maxProviders - nonSocial.length
-    const remainingSocialProviders = social.slice(Math.max(0, remainingSlots - 1))
+    const mainSocialCount = social.length > 0 ? Math.max(1, remainingSlots - 1) : 0
+    const remainingSocialProviders = social.slice(mainSocialCount)
     return {
-      mainProviders: [...nonSocial, ...social.slice(0, Math.max(0, remainingSlots - 1))].sort((a, b) => {
+      mainProviders: [...nonSocial, ...social.slice(0, mainSocialCount)].sort((a, b) => {
         // sort them in the original order
         const indexA = activeProviders.indexOf(a)
         const indexB = activeProviders.indexOf(b)
         return indexA - indexB
       }),
-      hasExcessProviders: social.length > remainingSlots - 1,
+      hasExcessProviders: remainingSocialProviders.length > 0,
       remainingSocialProviders,
     }
   }, [user, availableProviders, allProviders, maxProviders])
