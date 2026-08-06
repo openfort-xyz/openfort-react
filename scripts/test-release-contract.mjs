@@ -53,6 +53,18 @@ assert.deepEqual(
   "Private templates and examples must stay outside release version plans.",
 );
 
+// The backend template depends on no released package, so it never appears in
+// the release plan below — `private` is the only thing keeping publish away
+// from it. Without it the canary publish fails on the versionless manifest.
+const backendTemplate = JSON.parse(
+  readFileSync("packages/create-openfort/template/backend/package.json", "utf8"),
+);
+assert.equal(
+  backendTemplate.private,
+  true,
+  "The backend template must stay private or changeset publish will try to release it.",
+);
+
 const statusDirectory = mkdtempSync(join(tmpdir(), "openfort-react-changeset-status-"));
 const statusPath = join(statusDirectory, "status.json");
 try {
