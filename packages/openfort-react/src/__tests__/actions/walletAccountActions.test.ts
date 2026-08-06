@@ -135,7 +135,7 @@ describe('setRecoveryMethod', () => {
     ).rejects.toBeInstanceOf(RecoveryError)
   })
 
-  it('wraps a rejected accounts refetch in RecoveryError', async () => {
+  it('treats a rejected accounts refetch as best-effort — the method already changed', async () => {
     await expect(
       setRecoveryMethod({
         client: asOpenfort(client),
@@ -143,7 +143,12 @@ describe('setRecoveryMethod', () => {
         newRecovery,
         updateEmbeddedAccounts: vi.fn().mockRejectedValue(new Error('network down')),
       })
-    ).rejects.toBeInstanceOf(RecoveryError)
+    ).resolves.toBeUndefined()
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[embedded-wallet] recovery method was changed but the account list could not be refreshed',
+      expect.any(Error)
+    )
   })
 })
 

@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos.js'
+import { toDisplayMessage } from '../../../errors/base.js'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
 import { routes } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
@@ -85,7 +86,9 @@ const DepositCrypto = () => {
             status={route.status}
           />
           {sameChainEnabled && <SameChainDepositStatus />}
-          {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
+          {route.error && (
+            <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{toDisplayMessage(route.error)}</ModalBody>
+          )}
         </>
       )}
     </PageContent>

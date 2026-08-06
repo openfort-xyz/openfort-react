@@ -178,13 +178,15 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
     [chains, chainId, client, connectedEmbeddedAddress]
   )
 
+  const reset = useCallback(() => {
+    setStatus({ status: 'idle' })
+    setData(null)
+  }, [])
+
   return {
     revokePermissions,
     data,
-    reset: () => {
-      setStatus({ status: 'idle' })
-      setData(null)
-    },
+    reset,
     ...mapStatus(status),
   }
 }

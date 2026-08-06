@@ -1,4 +1,5 @@
 import { UserRejectedRequestError } from 'viem'
+import { AuthenticationError } from '../errors/auth.js'
 import { OpenfortError, toError } from '../errors/base.js'
 import { SiweMessageError } from '../errors/connection.js'
 import type { useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
@@ -156,11 +157,10 @@ export async function runSiweFlow(
   } catch (err) {
     if (settleStale()) return
     logger.error('[siwe] SIWE failed', err instanceof Error ? err.message : err)
-    notifySiweCallback(
-      params.onError,
-      'onError',
-      getSiweErrorMessage(err, inputs.chainName),
-      err instanceof OpenfortError ? err : undefined
-    )
+    const message = getSiweErrorMessage(err, inputs.chainName)
+    // The core SDK's errors are not instances of this package's OpenfortError,
+    // so wrap them rather than dropping the cause the consumer needs.
+    const openfortError = err instanceof OpenfortError ? err : new AuthenticationError(message, { cause: toError(err) })
+    notifySiweCallback(params.onError, 'onError', message, openfortError)
   }
 }

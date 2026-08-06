@@ -1,6 +1,7 @@
 import type { EmbeddedAccount, Openfort, RecoveryParams } from '@openfort/openfort-js'
 import { asOpenfortError } from '../errors/base.js'
 import { RecoveryError } from '../errors/wallet.js'
+import { logger } from '../utils/logger.js'
 
 type SetRecoveryMethodParameters = {
   client: Openfort
@@ -24,8 +25,15 @@ export async function setRecoveryMethod(parameters: SetRecoveryMethodParameters)
 
   try {
     await client.embeddedWallet.setRecoveryMethod(previousRecovery, newRecovery)
-    await updateEmbeddedAccounts({ silent: true })
   } catch (err) {
     throw asOpenfortError(err, (cause) => new RecoveryError('Failed to set recovery method.', { cause }))
+  }
+
+  // The recovery method has already changed; a stale list is not worth
+  // reporting the successful change as a failure.
+  try {
+    await updateEmbeddedAccounts({ silent: true })
+  } catch (err) {
+    logger.warn('[embedded-wallet] recovery method was changed but the account list could not be refreshed', err)
   }
 }

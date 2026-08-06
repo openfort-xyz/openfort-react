@@ -159,24 +159,29 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = N
 
         logger.log('Granting permissions')
 
-        // An empty list is not "no restrictions to add" — the backend skips the
-        // destination check entirely when the whitelist is empty, so the key
-        // becomes callable on any contract. Refuse rather than silently grant it.
-        if (Array.isArray(request.permissions) && request.permissions.length === 0) {
-          throw new ValidationError('Refusing to grant a session key with no permissions.', {
-            details:
-              'An empty `permissions` array places no restriction on what the key may call. List the contract calls the key is allowed to make.',
-          })
-        }
+        // Both gates below encode Openfort-embedded semantics; external ERC-7715
+        // wallets get the request verbatim, where `expiry` legitimately is a
+        // timestamp and the wallet applies its own permission policy.
+        if (connectorKind !== 'external') {
+          // An empty list is not "no restrictions to add" — the backend skips the
+          // destination check entirely when the whitelist is empty, so the key
+          // becomes callable on any contract. Refuse rather than silently grant it.
+          if (Array.isArray(request.permissions) && request.permissions.length === 0) {
+            throw new ValidationError('Refusing to grant a session key with no permissions.', {
+              details:
+                'An empty `permissions` array places no restriction on what the key may call. List the contract calls the key is allowed to make.',
+            })
+          }
 
-        // `expiry` is a duration in seconds, not a timestamp. Passing a
-        // timestamp (the shape viem's re-exported type documents) yields a key
-        // valid for roughly the age of the epoch — decades rather than the hour
-        // that was meant.
-        if (typeof request.expiry === 'number' && request.expiry > TEN_YEARS_IN_SECONDS) {
-          throw new ValidationError('The session-key expiry looks like a timestamp, not a duration.', {
-            details: `\`expiry\` is the number of seconds the key stays valid. Received ${request.expiry}, which would keep it alive for over ten years.`,
-          })
+          // `expiry` is a duration in seconds, not a timestamp. Passing a
+          // timestamp (the shape viem's re-exported type documents) yields a key
+          // valid for roughly the age of the epoch — decades rather than the hour
+          // that was meant.
+          if (typeof request.expiry === 'number' && request.expiry > TEN_YEARS_IN_SECONDS) {
+            throw new ValidationError('The session-key expiry looks like a timestamp, not a duration.', {
+              details: `\`expiry\` is the number of seconds the key stays valid. Received ${request.expiry}, which would keep it alive for over ten years.`,
+            })
+          }
         }
 
         const chain = chains.find((c) => c.id === chainId)
@@ -300,13 +305,15 @@ export const useGrantPermissions = (hookOptions: GrantPermissionsHookOptions = N
     [bridge, chains, chainId, client, connectedEmbeddedAddress]
   )
 
+  const reset = useCallback(() => {
+    setStatus({ status: 'idle' })
+    setData(null)
+  }, [])
+
   return {
     grantPermissions,
     data,
-    reset: () => {
-      setStatus({ status: 'idle' })
-      setData(null)
-    },
+    reset,
     ...mapStatus(status),
   }
 }

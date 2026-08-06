@@ -244,7 +244,7 @@ const SolanaCreatePassword = ({
         if (!principalIsCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
         clearPersistentOperation(client, operationKey)
         if (result.error) {
-          setRecoveryError(result.error.message)
+          setRecoveryError(result.error.shortMessage)
           return
         }
         setRoute(routes.SOL_CONNECTED)
@@ -256,7 +256,7 @@ const SolanaCreatePassword = ({
         )
           return
         clearPersistentOperation(client, operationKey)
-        setRecoveryError(err instanceof OpenfortError ? err.message : 'Failed to create wallet. Please try again.')
+        setRecoveryError(err instanceof OpenfortError ? err.shortMessage : 'Failed to create wallet. Please try again.')
       } finally {
         if (principalIsCurrent() && isCurrentAttempt(attempt)) setLoading(false)
       }

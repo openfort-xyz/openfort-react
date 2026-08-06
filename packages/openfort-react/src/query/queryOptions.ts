@@ -11,11 +11,14 @@ import {
 /**
  * The cache key the user query reads and writes.
  *
+ * The real key carries a per-client scope, so `openfortKeys.user()` alone never
+ * matches a cached entry. Target the family by prefix instead:
+ *
  * @example
  * ```ts
- * import { openfortKeys, type UserQueryKey } from '@openfort/react'
+ * import { openfortKeys } from '@openfort/react'
  *
- * const key: UserQueryKey = openfortKeys.user()
+ * queryClient.invalidateQueries({ queryKey: openfortKeys.user() })
  * ```
  */
 export type UserQueryKey = ReturnType<typeof openfortKeys.user>
@@ -23,11 +26,14 @@ export type UserQueryKey = ReturnType<typeof openfortKeys.user>
 /**
  * The cache key the embedded-accounts query reads and writes.
  *
+ * As with {@link UserQueryKey}, the real key carries a per-client scope, so use
+ * the unscoped form only as an `invalidateQueries` prefix.
+ *
  * @example
  * ```ts
- * import { openfortKeys, type EmbeddedAccountsQueryKey } from '@openfort/react'
+ * import { openfortKeys } from '@openfort/react'
  *
- * const key: EmbeddedAccountsQueryKey = openfortKeys.embeddedAccounts()
+ * queryClient.invalidateQueries({ queryKey: openfortKeys.embeddedAccounts() })
  * ```
  */
 export type EmbeddedAccountsQueryKey = ReturnType<typeof openfortKeys.embeddedAccounts>

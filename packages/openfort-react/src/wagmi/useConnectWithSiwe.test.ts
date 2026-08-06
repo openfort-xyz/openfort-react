@@ -150,7 +150,13 @@ describe('useConnectWithSiwe', () => {
       await expect(result.current.connectWithSiwe({ onConnect, onError })).resolves.toBeUndefined()
     })
 
-    expect(onError).toHaveBeenCalledWith('Invalid signature. Please try again.', undefined)
+    expect(onError).toHaveBeenCalledWith(
+      'Invalid signature. Please try again.',
+      expect.objectContaining({
+        name: 'AuthenticationError',
+        cause: expect.objectContaining({ message: 'Invalid signature from provider' }),
+      })
+    )
     expect(onConnect).not.toHaveBeenCalled()
   })
 

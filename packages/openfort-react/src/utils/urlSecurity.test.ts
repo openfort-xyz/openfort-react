@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ValidationError } from '../errors/validation.js'
-import { assertNavigableRedirect, suppressReferrer } from './urlSecurity.js'
+import { assertCredentialedEndpoint, assertNavigableRedirect, suppressReferrer } from './urlSecurity.js'
 
 describe('suppressReferrer', () => {
   beforeEach(() => {
@@ -55,5 +55,32 @@ describe('assertNavigableRedirect', () => {
     'not a url',
   ])('refuses to navigate to %s', (value) => {
     expect(() => assertNavigableRedirect(value)).toThrow(ValidationError)
+  })
+})
+
+describe('assertCredentialedEndpoint', () => {
+  it.each([
+    'https://api.example.com/protected-create-encryption-session',
+    'http://localhost:3110/api/protected-create-encryption-session',
+    'http://127.0.0.1:3110/session',
+    'http://[::1]:3110/session',
+  ])('accepts %s', (value) => {
+    expect(assertCredentialedEndpoint(value)).toBe(value)
+  })
+
+  it('resolves a relative path against the page origin (firebase template proxy)', () => {
+    expect(assertCredentialedEndpoint('/api/protected-create-encryption-session')).toBe(
+      new URL('/api/protected-create-encryption-session', window.location.href).href
+    )
+  })
+
+  it.each([
+    'http://api.example.com/session',
+    'http://192.168.1.10:3110/session',
+    'ws://localhost/session',
+    // Protocol-relative: inherits the page's http scheme but leaves its host.
+    '//evil.example/session',
+  ])('refuses to send a bearer token to %s', (value) => {
+    expect(() => assertCredentialedEndpoint(value)).toThrow(ValidationError)
   })
 })

@@ -5,6 +5,7 @@ import { AuthenticationError } from '../../../errors/auth.js'
 import { toError } from '../../../errors/base.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import type { OpenfortHookOptions } from '../../../types.js'
+import { useLatest } from '../../useLatest.js'
 import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
 import { type BaseFlowState, mapStatus } from './status.js'
 
@@ -37,6 +38,7 @@ import { type BaseFlowState, mapStatus } from './status.js'
 
 export function useSignOut(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS) {
   const logout = useOpenfortCore((s) => s.logout)
+  const hookOptionsRef = useLatest(hookOptions)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
@@ -53,7 +55,7 @@ export function useSignOut(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS) {
         })
 
         return onSuccess({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           data: {},
         })
@@ -64,13 +66,13 @@ export function useSignOut(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS) {
           error,
         })
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [logout, hookOptions]
+    [logout]
   )
 
   return {

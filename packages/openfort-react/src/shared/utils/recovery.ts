@@ -5,6 +5,7 @@ import { OpenfortConfigError, WalletConfigNotFoundError } from '../../errors/con
 import { UnsupportedOperationError } from '../../errors/operation.js'
 import { MissingParameterError } from '../../errors/validation.js'
 import { OtpRequiredError, RecoveryError } from '../../errors/wallet.js'
+import { assertCredentialedEndpoint } from '../../utils/urlSecurity.js'
 import { fetchRecoveryRequest } from './recoveryRequest.js'
 
 type RecoveryOptions = {
@@ -97,7 +98,7 @@ async function getEncryptionSession(params: {
 
   if (walletConfig.createEncryptedSessionEndpoint) {
     const response = await fetchRecoveryRequest(
-      walletConfig.createEncryptedSessionEndpoint,
+      assertCredentialedEndpoint(walletConfig.createEncryptedSessionEndpoint),
       {
         method: 'POST',
         // The endpoint mints the credential that unlocks the wallet's key share,

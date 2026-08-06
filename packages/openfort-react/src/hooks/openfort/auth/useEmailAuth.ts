@@ -12,6 +12,7 @@ import { authTransitionSupersededResult, startLocalAuthTransition } from '../../
 import type { OpenfortHookOptions } from '../../../types.js'
 import { logger } from '../../../utils/logger.js'
 import { isValidEmail } from '../../../utils/validation.js'
+import { useLatest } from '../../useLatest.js'
 import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { buildCallbackUrl } from './requestEmailVerification.js'
@@ -98,6 +99,7 @@ type UseEmailHookOptions = {
  */
 
 export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS) => {
+  const hookOptionsRef = useLatest(hookOptions)
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
@@ -132,7 +134,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -145,7 +147,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -174,7 +176,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             email: options.email,
             redirectUrl: buildCallbackUrl({
               email: options.email,
-              callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
+              callbackUrl: options.emailVerificationRedirectTo ?? hookOptionsRef.current.emailVerificationRedirectTo,
               provider: 'email',
               isOpen,
             }),
@@ -184,7 +186,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           setRequiresEmailVerification(true)
           return onSuccess<EmailAuthResult>({
             data: { requiresEmailVerification: true },
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
           })
         } else {
@@ -193,8 +195,9 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           if (settleStale()) return authTransitionSupersededResult()
 
           const { wallet } = await tryUseWallet({
-            logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
-            recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
+            logoutOnError: options.logoutOnError ?? hookOptionsRef.current.logoutOnError,
+            recoverWalletAutomatically:
+              options.recoverWalletAutomatically ?? hookOptionsRef.current.recoverWalletAutomatically,
           })
           if (settleStale()) return authTransitionSupersededResult()
 
@@ -203,7 +206,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           })
           return onSuccess<EmailAuthResult>({
             data: { user, wallet },
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
           })
         }
@@ -217,13 +220,13 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, startAuthTransition, updateUser, hookOptions, isOpen, tryUseWallet]
+    [client, startAuthTransition, updateUser, isOpen, tryUseWallet]
   )
 
   const requestResetPassword = useCallback(
@@ -236,7 +239,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -251,7 +254,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           email: options.email,
           redirectUrl: buildCallbackUrl({
             email: options.email,
-            callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
+            callbackUrl: options.emailVerificationRedirectTo ?? hookOptionsRef.current.emailVerificationRedirectTo,
             provider: 'password',
             isOpen,
             uiParam: 'openfortForgotPasswordUI',
@@ -265,7 +268,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         setRequiresEmailVerification(true)
         return onSuccess<EmailAuthResult>({
           data: { requiresEmailVerification: true },
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -276,13 +279,13 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, hookOptions, isOpen]
+    [client, isOpen]
   )
 
   const resetPassword = useCallback(
@@ -295,7 +298,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -318,7 +321,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         setRequiresEmailVerification(true)
         return onSuccess<EmailAuthResult>({
           data: { requiresEmailVerification: true },
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -329,13 +332,13 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, hookOptions]
+    [client]
   )
 
   const signUpEmail = useCallback(
@@ -349,7 +352,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -362,7 +365,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -382,7 +385,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
               password: options.password,
               callbackURL: buildCallbackUrl({
                 email: options.email,
-                callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
+                callbackUrl: options.emailVerificationRedirectTo ?? hookOptionsRef.current.emailVerificationRedirectTo,
                 provider: 'email',
                 isOpen,
               }),
@@ -401,8 +404,9 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           if (settleStale()) return authTransitionSupersededResult()
 
           const { wallet } = await tryUseWallet({
-            logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
-            recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
+            logoutOnError: options.logoutOnError ?? hookOptionsRef.current.logoutOnError,
+            recoverWalletAutomatically:
+              options.recoverWalletAutomatically ?? hookOptionsRef.current.recoverWalletAutomatically,
           })
           if (settleStale()) return authTransitionSupersededResult()
 
@@ -411,7 +415,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           })
           return onSuccess<EmailAuthResult>({
             data: { user, wallet },
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
           })
         } else {
@@ -422,7 +426,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           setRequiresEmailVerification(true)
           return onSuccess<EmailAuthResult>({
             data: { requiresEmailVerification: true },
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
           })
         }
@@ -435,13 +439,13 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, startAuthTransition, updateUser, hookOptions, isOpen, tryUseWallet]
+    [client, startAuthTransition, updateUser, isOpen, tryUseWallet]
   )
 
   const linkEmail = useCallback(
@@ -457,7 +461,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -476,7 +480,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
           await client.auth.addEmail({
             email: options.email,
             callbackURL: buildCallbackUrl({
-              callbackUrl: options.emailVerificationRedirectTo ?? hookOptions?.emailVerificationRedirectTo,
+              callbackUrl: options.emailVerificationRedirectTo ?? hookOptionsRef.current.emailVerificationRedirectTo,
               email: options.email,
               provider: 'email',
               isOpen,
@@ -492,7 +496,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
 
         return onSuccess<EmailAuthResult>({
           data: {},
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -508,13 +512,13 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [captureAuthSession, client, hookOptions, isOpen, startAuthenticatedMutation]
+    [captureAuthSession, client, isOpen, startAuthenticatedMutation]
   )
 
   const verifyEmail = useCallback(
@@ -531,7 +535,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
             error,
           })
           return onError<EmailAuthResult>({
-            hookOptions,
+            hookOptions: hookOptionsRef.current,
             options,
             error,
           })
@@ -545,7 +549,7 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         })
 
         return onSuccess({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           data: {
             email: options.email,
@@ -562,13 +566,13 @@ export const useEmailAuth = (hookOptions: UseEmailHookOptions = NO_HOOK_OPTIONS)
         logger.error('Error verifying email', e)
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, hookOptions]
+    [client]
   )
 
   return {

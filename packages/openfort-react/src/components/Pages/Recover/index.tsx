@@ -111,7 +111,7 @@ const RecoverPasswordWallet = ({
         )
           return
         clearPersistentOperation(client, operationKey)
-        setRecoveryError(err instanceof OpenfortError ? err.message : 'Recovery failed. Please try again.')
+        setRecoveryError(err instanceof OpenfortError ? err.shortMessage : 'Recovery failed. Please try again.')
       } finally {
         if (principalIsCurrent() && isCurrentAttempt(attempt)) setLoading(false)
       }
@@ -292,7 +292,7 @@ const RecoverPasskeyWallet = ({
       )
         return
       clearPersistentOperation(client, operationKey)
-      setRecoveryError(err instanceof OpenfortError ? err.message : 'Invalid passkey. Please try again.')
+      setRecoveryError(err instanceof OpenfortError ? err.shortMessage : 'Invalid passkey. Please try again.')
     }
   }, [beginAttempt, captureAuthSession, client, wallet, ctx, isCurrentAttempt, operationKey, setRoute])
 
@@ -572,7 +572,9 @@ const RecoverAutomaticWallet = ({
         if (!isCurrentAttempt(attempt)) return
         otpRecoveryRef.current = null
         setOtpStatus('error')
-        setError(err instanceof OpenfortError ? err.message : 'There was an error verifying the OTP. Please try again.')
+        setError(
+          err instanceof OpenfortError ? err.shortMessage : 'There was an error verifying the OTP. Please try again.'
+        )
         logger.log('Error verifying OTP for wallet recovery', err)
       } finally {
         if (otpOperationRef.current === otpOperation) otpOperationRef.current = null
@@ -628,7 +630,7 @@ const RecoverAutomaticWallet = ({
         resendOperationRef.current = null
         clearPersistentOperation(client, resendOperationKey)
         logger.log('Error requesting OTP for wallet recovery', err)
-        setError(err instanceof OpenfortError ? err.message : 'Failed to send recovery code')
+        setError(err instanceof OpenfortError ? err.shortMessage : 'Failed to send recovery code')
         setOtpStatus('error')
       } finally {
         if (otpOperationRef.current === otpOperation) otpOperationRef.current = null

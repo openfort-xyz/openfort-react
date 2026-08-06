@@ -8,6 +8,7 @@ import { ConnectorNotFoundError } from '../errors/connection.js'
 import { type OpenfortEthereumBridgeConnector, useEthereumBridge } from '../ethereum/OpenfortEthereumBridgeContext.js'
 import { type BaseFlowState, mapStatus } from '../hooks/openfort/auth/status.js'
 import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hooks/openfort/hookConsistency.js'
+import { useLatest } from '../hooks/useLatest.js'
 import { useAuthTransitions } from '../openfort/authTransitionContext.js'
 import { useOpenfortCore } from '../openfort/useOpenfort.js'
 import type { AuthSession } from '../shared/utils/authTransitionQueue.js'
@@ -28,6 +29,7 @@ interface WalletAuthCallbacks {
 }
 
 export function useWalletAuth(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS) {
+  const hookOptionsRef = useLatest(hookOptions)
   const bridge = useEthereumBridge()
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
@@ -53,7 +55,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS
         const err = new ConnectorNotFoundError({ connectorId })
         const msg = err.shortMessage
         setStatus({ status: 'error', error: err })
-        onError({ hookOptions, error: err })
+        onError({ hookOptions: hookOptionsRef.current, error: err })
         notifySiweCallback(callbacks?.onError, 'onError', msg, err)
         return
       }
@@ -72,7 +74,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS
         setWalletConnectingTo(null)
         const error = new AuthenticationError(message, { cause: toError(cause) })
         setStatus({ status: 'error', error })
-        onError({ hookOptions, error })
+        onError({ hookOptions: hookOptionsRef.current, error })
         notifySiweCallback(callbacks?.onError, 'onError', cause instanceof Error ? cause.message : message, error)
       }
       const run = async (session: AuthSession) => {
@@ -95,7 +97,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS
           setWalletConnectingTo(null)
           const error = openfortError ?? new AuthenticationError(message)
           setStatus({ status: 'error', error })
-          onError({ hookOptions, error })
+          onError({ hookOptions: hookOptionsRef.current, error })
           notifySiweCallback(callbacks?.onError, 'onError', message, error)
         }
 
@@ -117,7 +119,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS
               if (!session.isCurrent()) return settleStale()
               setWalletConnectingTo(null)
               setStatus({ status: 'success' })
-              onSuccess({ hookOptions, data: {} })
+              onSuccess({ hookOptions: hookOptionsRef.current, data: {} })
               notifySiweCallback(callbacks?.onConnect, 'onSuccess')
             },
             onError: reportSiweError,
@@ -154,7 +156,7 @@ export function useWalletAuth(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS
         handleError(error, operationErrorMessage)
       }
     },
-    [bridge, client, captureAuthSession, startAuthenticatedMutation, startAuthTransition, updateUser, hookOptions]
+    [bridge, client, captureAuthSession, startAuthenticatedMutation, startAuthTransition, updateUser]
   )
 
   const connectWallet = useCallback(

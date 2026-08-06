@@ -121,6 +121,37 @@ export function isHttpsUrl(value: string): boolean {
  * the application's own origin, so the scheme is checked the same way funding
  * links already are.
  */
+/** Loopback hosts, where plaintext http never leaves the machine. */
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+/**
+ * Returns a URL a bearer credential may be sent to, or throws.
+ *
+ * The encryption-session endpoint receives the user's access token in an
+ * `Authorization` header. Over plain http that token crosses the network in
+ * clear text, so only https is accepted — except on loopback, which local
+ * development backends use.
+ */
+export function assertCredentialedEndpoint(value: string): string {
+  let url: URL
+  try {
+    // A relative path resolves against the page itself (the firebase template
+    // proxies `/api/...` through its dev server), so it never leaves the origin
+    // the user is already on.
+    url = new URL(value, globalThis.location?.href)
+  } catch {
+    throw new ValidationError('`createEncryptedSessionEndpoint` is not a valid URL.')
+  }
+
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && LOOPBACK_HOSTS.has(url.hostname))) {
+    throw new ValidationError('`createEncryptedSessionEndpoint` must be https.', {
+      details: `Refused to send the user's access token to a "${url.protocol}" URL on "${url.hostname}". Plain http is allowed only on localhost.`,
+    })
+  }
+
+  return url.href
+}
+
 export function assertNavigableRedirect(value: string): string {
   let url: URL
   try {

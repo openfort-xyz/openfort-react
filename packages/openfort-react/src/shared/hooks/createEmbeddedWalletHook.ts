@@ -332,7 +332,7 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
           const error = asOpenfortError(err, (cause) => new WalletCreationError({ chain: chainName, cause }))
 
           if (shouldPublish()) {
-            setState((s) => ({ ...s, status: 'error', error: error.message }))
+            setState((s) => ({ ...s, status: 'error', error: error.shortMessage }))
             notifyConsumer(createOptions?.onError, error)
           } else restoreIfSupersededElsewhere()
           return { error }
@@ -386,7 +386,7 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
           const error = asOpenfortError(err, (cause) => new WalletImportError({ chain: chainName, cause }))
 
           if (shouldPublish()) {
-            setState((s) => ({ ...s, status: 'error', error: error.message }))
+            setState((s) => ({ ...s, status: 'error', error: error.shortMessage }))
             notifyConsumer(importOptions.onError, error)
           } else restoreIfSupersededElsewhere()
           return { error }
@@ -490,7 +490,7 @@ export function createEmbeddedWalletHook<TWallet extends { address: string }, TP
           const error = asOpenfortError(err, (cause) => new SetActiveWalletError({ chain: chainName, cause }))
 
           if (shouldPublish()) {
-            setState((s) => ({ ...s, status: 'error', error: error.message }))
+            setState((s) => ({ ...s, status: 'error', error: error.shortMessage }))
             notifyConsumer(activeOptions.onError, error)
           } else restoreIfSupersededElsewhere()
           return { error }

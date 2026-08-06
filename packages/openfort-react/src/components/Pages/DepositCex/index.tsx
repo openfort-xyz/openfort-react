@@ -4,6 +4,7 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import type { ChangeEvent, CSSProperties, ReactNode, SyntheticEvent } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import logos from '../../../assets/logos.js'
+import { toDisplayMessage } from '../../../errors/base.js'
 import { FundingError } from '../../../errors/funding.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import { useFunding } from '../../../hooks/openfort/useFunding.js'
@@ -384,7 +385,7 @@ const DepositCex = () => {
       {!testnet && isAvailable && !chainSupported && (
         <ModalBody>Coinbase can't deliver to {destChainName} yet.</ModalBody>
       )}
-      {!testnet && error && <ModalBody style={{ color: '#dc2626' }}>{error.message}</ModalBody>}
+      {!testnet && error && <ModalBody style={{ color: '#dc2626' }}>{toDisplayMessage(error)}</ModalBody>}
 
       <StepDivider>Then open an exchange</StepDivider>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>

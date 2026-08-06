@@ -131,7 +131,9 @@ const SendConfirmation = () => {
 
   // Get current balance value from discriminated unions
   const nativeBalanceValue = nativeBalance.status === 'success' ? nativeBalance.value : undefined
-  const erc20BalanceValue = erc20Balance.data && !erc20Balance.error ? erc20Balance.data?.value : undefined
+  // Cached data wins over a failed refetch, matching the native path: a known
+  // stale balance still blocks an over-balance send, an unknown one cannot.
+  const erc20BalanceValue = erc20Balance.data?.value
   const currentBalance = isErc20 ? erc20BalanceValue : nativeBalanceValue
   const nativeSymbol = nativeBalance.status === 'success' ? nativeBalance.symbol : 'ETH'
 

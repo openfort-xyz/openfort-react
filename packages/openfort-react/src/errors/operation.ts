@@ -1,3 +1,4 @@
+import { redactSensitiveText } from '../utils/redact.js'
 import { OpenfortError, type OpenfortErrorOptions } from './base.js'
 
 /**
@@ -56,6 +57,8 @@ export class ApiRequestError extends OpenfortError {
       ...(body ? { details: body } : {}),
     })
     this.status = status
-    this.body = body
+    // Redacted like `details`: `body` is enumerable, so it survives
+    // `JSON.stringify(error)` and would otherwise ship the raw response.
+    this.body = body === undefined ? undefined : redactSensitiveText(body)
   }
 }

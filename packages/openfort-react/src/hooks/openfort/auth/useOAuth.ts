@@ -10,6 +10,7 @@ import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { authTransitionSupersededResult, startLocalAuthTransition } from '../../../shared/utils/authTransitionQueue.js'
 import type { OpenfortHookOptions } from '../../../types.js'
 import { assertNavigableRedirect } from '../../../utils/urlSecurity.js'
+import { useLatest } from '../../useLatest.js'
 import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
 import type { EthereumUserWallet, SolanaUserWallet } from '../walletTypes.js'
 import { buildCallbackUrl } from './requestEmailVerification.js'
@@ -70,6 +71,7 @@ type AuthHookOptions = {
  */
 
 export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
+  const hookOptionsRef = useLatest(hookOptions)
   const client = useOpenfortCore((s) => s.client)
   const { captureAuthSession, startAuthenticatedMutation, startAuthTransition } = useAuthTransitions()
   const updateUser = useOpenfortCore((s) => s.updateUser)
@@ -107,8 +109,9 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
         if (settleStale()) return authTransitionSupersededResult()
 
         const { wallet } = await tryUseWallet({
-          logoutOnError: options.logoutOnError ?? hookOptions.logoutOnError,
-          recoverWalletAutomatically: options.recoverWalletAutomatically ?? hookOptions.recoverWalletAutomatically,
+          logoutOnError: options.logoutOnError ?? hookOptionsRef.current.logoutOnError,
+          recoverWalletAutomatically:
+            options.recoverWalletAutomatically ?? hookOptionsRef.current.recoverWalletAutomatically,
         })
         if (settleStale()) return authTransitionSupersededResult()
 
@@ -118,7 +121,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
 
         return onSuccess({
           data: { user, wallet, type: 'storeCredentials' },
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -131,13 +134,13 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, hookOptions, startAuthTransition, tryUseWallet, updateUser]
+    [client, startAuthTransition, tryUseWallet, updateUser]
   )
 
   const initOAuth = useCallback(
@@ -153,7 +156,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
           provider: authProvider,
           redirectTo: buildCallbackUrl({
             provider: authProvider,
-            callbackUrl: options?.redirectTo ?? hookOptions?.redirectTo,
+            callbackUrl: options?.redirectTo ?? hookOptionsRef.current.redirectTo,
             isOpen,
           }),
         })
@@ -162,7 +165,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
 
         return onSuccess<InitOAuthReturnType>({
           data: {},
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -174,13 +177,13 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [client, hookOptions, isOpen]
+    [client, isOpen]
   )
 
   const linkOauth = useCallback(
@@ -207,7 +210,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
             provider: authProvider,
             redirectTo: buildCallbackUrl({
               provider: authProvider,
-              callbackUrl: options?.redirectTo ?? hookOptions?.redirectTo,
+              callbackUrl: options?.redirectTo ?? hookOptionsRef.current.redirectTo,
               isOpen,
             }),
           })
@@ -220,7 +223,7 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
 
         return onSuccess<InitOAuthReturnType>({
           data: {},
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
         })
       } catch (e) {
@@ -233,13 +236,13 @@ export const useOAuth = (hookOptions: AuthHookOptions = NO_HOOK_OPTIONS) => {
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [captureAuthSession, client, hookOptions, isOpen, startAuthenticatedMutation]
+    [captureAuthSession, client, isOpen, startAuthenticatedMutation]
   )
 
   return {

@@ -165,3 +165,15 @@ export function asOpenfortError(cause: unknown, wrap: (cause: Error) => Openfort
   if (cause instanceof OpenfortError) return cause
   return wrap(toError(cause))
 }
+
+/**
+ * The one-line message a UI should render for `error`.
+ *
+ * An `OpenfortError`'s `message` is the composed multi-line block ending in a
+ * `Version:` footer — for logs and reports, not for a modal. Rendering surfaces
+ * use the short message and fall back through the parts that stay one line.
+ */
+export function toDisplayMessage(error: unknown): string {
+  if (error instanceof OpenfortError) return error.shortMessage || error.details || error.message
+  return toError(error).message
+}

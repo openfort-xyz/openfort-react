@@ -76,7 +76,9 @@ const PhoneOTP: React.FC = () => {
         logger.error('Error verifying phone OTP:', error)
         setStatus('error')
 
-        if (error.message === 'Invalid OTP') {
+        // The underlying API message lands in `details`; `message` carries the
+        // composed wrapper text and version footer.
+        if (error.details.includes('Invalid OTP')) {
           setErrorMessage('Invalid code. Please try again.')
         } else {
           setErrorMessage('Verification failed. Please try again.')

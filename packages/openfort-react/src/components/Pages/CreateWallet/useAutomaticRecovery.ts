@@ -181,7 +181,7 @@ export function useAutomaticRecovery({
         pendingOtpOperationRef.current = null
         clearPersistentOperation(client, operation.kind === 'verify' ? verificationOperationKey : resendOperationKey)
         const fallback = operation.kind === 'verify' ? scope.otpVerificationError : 'Failed to send recovery code'
-        setOtp({ status: 'error', error: err instanceof OpenfortError ? err.message : fallback })
+        setOtp({ status: 'error', error: err instanceof OpenfortError ? err.shortMessage : fallback })
         logger.log(operation.kind === 'verify' ? 'Error verifying OTP for wallet recovery' : fallback, err)
       } finally {
         if (otpOperationRef.current === otpOperation) otpOperationRef.current = null

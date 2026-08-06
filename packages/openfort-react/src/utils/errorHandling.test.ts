@@ -10,6 +10,7 @@ import {
   RpcRequestError,
   SwitchChainError,
   TransactionExecutionError,
+  UnknownRpcError,
   UserRejectedRequestError,
   WaitForTransactionReceiptTimeoutError,
 } from 'viem'
@@ -121,6 +122,29 @@ describe('raw EIP-1193 provider errors', () => {
     const error = new Error('wrapper', { cause: providerError(4001) })
 
     expect(parseTransactionError(error).title).toBe('Transaction cancelled')
+  })
+
+  // viem converts -32603/-32000 into wrapper classes before this module runs,
+  // so the catch-all classes must defer to the nested message exactly like the
+  // catch-all codes do.
+  test('reads the reason out of a viem-wrapped catch-all rather than reporting a network fault', () => {
+    const metamaskRevert = new InternalRpcError(
+      Object.assign(new Error('Internal JSON-RPC error.'), {
+        code: -32603,
+        data: { code: 3, message: 'execution reverted: ERC20: transfer amount exceeds balance' },
+      })
+    )
+    expect(parseTransactionError(metamaskRevert).title).toBe('Transaction failed')
+    expect(parseTransactionError(metamaskRevert).message).toBe('The transaction was rejected by the contract.')
+
+    const walletConnectRejection = new UnknownRpcError(Object.assign(new Error('User rejected.'), { code: 5000 }))
+    expect(parseTransactionError(walletConnectRejection).title).toBe('Transaction cancelled')
+  })
+
+  test('does not tell a user with a failing token balance to top up gas', () => {
+    const revert = providerError(-32000, 'execution reverted: ERC20: transfer amount exceeds balance')
+
+    expect(parseTransactionError(revert).message).toBe('The transaction was rejected by the contract.')
   })
 
   test('classifies a rejection that carries no code, by wording', () => {

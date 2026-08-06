@@ -12,7 +12,7 @@ export const REDACTED = '[REDACTED]'
  * Names matched exactly, for words too common to match as a substring.
  * `share` is what Shield calls the recovery share; `sharedConfig` must not match.
  */
-const SENSITIVE_KEYS = new Set(['share', 'cookie', 'setcookie', 'jwt', 'bearer', 'otp'])
+const SENSITIVE_KEYS = new Set(['share', 'shares', 'cookie', 'setcookie', 'jwt', 'bearer', 'otp', 'sessionkey'])
 
 /**
  * Fragments matched anywhere in the normalized key. A substring rule covers the
@@ -28,6 +28,8 @@ const SENSITIVE_KEY_FRAGMENTS = [
   'mnemonic',
   'seedphrase',
   'passphrase',
+  'recoveryphrase',
+  'verificationcode',
   'codeverifier',
   'otpcode',
   'passkey',

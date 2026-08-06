@@ -293,7 +293,7 @@ const CreateWalletPasswordRecovery = ({
         if (!principalIsCurrent() || !operation.isCurrent() || !isCurrentAttempt(attempt)) return
         clearPersistentOperation(client, operationKey)
         if (result.error) {
-          setRecoveryError(result.error.message)
+          setRecoveryError(result.error.shortMessage)
           return
         }
         logger.log('Recovery success')
@@ -306,7 +306,7 @@ const CreateWalletPasswordRecovery = ({
         )
           return
         clearPersistentOperation(client, operationKey)
-        setRecoveryError(err instanceof OpenfortError ? err.message : 'There was an error recovering your account')
+        setRecoveryError(err instanceof OpenfortError ? err.shortMessage : 'There was an error recovering your account')
       } finally {
         if (principalIsCurrent() && isCurrentAttempt(attempt)) setLoading(false)
       }

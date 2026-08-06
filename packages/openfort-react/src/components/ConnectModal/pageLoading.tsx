@@ -51,6 +51,7 @@ export class PageErrorBoundary extends Component<{ children: ReactNode }, PageEr
           header="Something went wrong"
           description="This screen could not be loaded. Check your connection, or reload the page if it was recently updated."
           onReload={() => window.location.reload()}
+          onGoBack={() => this.setState({ hasError: false })}
         />
       )
     }

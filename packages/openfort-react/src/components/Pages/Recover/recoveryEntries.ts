@@ -45,7 +45,7 @@ async function credentialRecovery(
     ...(recoveryMethod === RecoveryMethod.PASSWORD ? { password: ctx.password } : { passkeyId: ctx.passkeyId }),
   })
   if (result.error) {
-    ctx.setError(result.error.message)
+    ctx.setError(result.error.shortMessage)
   } else if (!result.needsRecovery) {
     ctx.setRoute(routes.CONNECTED_SUCCESS)
   }
@@ -83,7 +83,7 @@ export async function automaticRecovery(
         return { status: 'error' }
       }
     } else {
-      ctx.setError(error.message)
+      ctx.setError(error.shortMessage)
       return { status: 'error' }
     }
   }

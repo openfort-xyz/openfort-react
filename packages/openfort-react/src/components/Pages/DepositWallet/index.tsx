@@ -4,6 +4,7 @@ import type { ChangeEvent, ReactNode } from 'react'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
 import logos from '../../../assets/logos.js'
+import { toDisplayMessage } from '../../../errors/base.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
 import useIsMobile from '../../../hooks/useIsMobile.js'
 import styled from '../../../styles/styled/index.js'
@@ -280,7 +281,9 @@ const DepositWallet = () => {
           <FixedFooter>
             <AddressPageLink label="Or send to a deposit address" />
 
-            {route.error && <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{route.error.message}</ModalBody>}
+            {route.error && (
+              <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{toDisplayMessage(route.error)}</ModalBody>
+            )}
           </FixedFooter>
         </Layout>
       )}

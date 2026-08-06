@@ -109,10 +109,12 @@ const EmailLogin: React.FC = () => {
     setIsRegister((prev) => !prev)
   }
 
+  // The underlying API message lands in `details`; `message` carries the
+  // composed wrapper text and version footer, so neither belongs in the UI.
   const errorMessage = loginError
-    ? loginError.message === 'Unauthorized'
+    ? loginError.details.includes('Unauthorized')
       ? 'Invalid email or password'
-      : loginError.message
+      : loginError.shortMessage
     : null
 
   const onBack = useMemo<SetOnBackFunction>(() => {

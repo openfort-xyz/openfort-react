@@ -241,6 +241,10 @@ const RULES: readonly { classes: readonly ErrorClass[]; details: TransactionErro
   { classes: [ProviderNotFoundError], details: COPY.walletNotFound },
   { classes: [ChainMismatchError, ChainNotFoundError, InvalidChainIdError], details: COPY.wrongNetwork },
   { classes: [SwitchChainError], details: COPY.switchFailed },
+  // Before EstimateGasExecutionError: viem wraps a revert during estimation as
+  // EstimateGasExecutionError → … → ExecutionRevertedError, and the nested class
+  // is the one that says why the transaction would fail.
+  { classes: [ExecutionRevertedError], details: COPY.reverted },
   { classes: [EstimateGasExecutionError], details: COPY.wouldFail },
   { classes: [IntrinsicGasTooHighError, IntrinsicGasTooLowError], details: COPY.gasLimit },
   { classes: [NonceTooLowError], details: COPY.pending },
@@ -249,19 +253,17 @@ const RULES: readonly { classes: readonly ErrorClass[]; details: TransactionErro
   { classes: [FeeCapTooHighError], details: COPY.feeTooHigh },
   { classes: [TransactionTypeNotSupportedError], details: COPY.typeNotSupported },
   { classes: [WaitForTransactionReceiptTimeoutError, TimeoutError], details: COPY.timeout },
-  { classes: [ExecutionRevertedError], details: COPY.reverted },
   { classes: [ContractFunctionZeroDataError], details: COPY.contractNoData },
   {
     classes: [ContractFunctionExecutionError, ContractFunctionRevertedError, CallExecutionError, RawContractError],
     details: COPY.contractRejected,
   },
   { classes: [ChainDisconnectedError, ProviderDisconnectedError], details: COPY.disconnected },
-  { classes: [InternalRpcError, UnknownRpcError], details: COPY.internal },
   {
     classes: [MethodNotFoundRpcError, MethodNotSupportedRpcError, UnsupportedProviderMethodError],
     details: COPY.methodNotSupported,
   },
-  { classes: [InvalidInputRpcError, InvalidParamsRpcError, InvalidRequestRpcError], details: COPY.invalidRequest },
+  { classes: [InvalidParamsRpcError, InvalidRequestRpcError], details: COPY.invalidRequest },
   { classes: [TransactionRejectedRpcError], details: COPY.networkRejected },
   {
     classes: [LimitExceededRpcError, ResourceNotFoundRpcError, ResourceUnavailableRpcError],
@@ -269,6 +271,20 @@ const RULES: readonly { classes: readonly ErrorClass[]; details: TransactionErro
   },
   { classes: [UnauthorizedProviderError], details: COPY.unauthorized },
   { classes: [HttpRequestError, WebSocketRequestError, RpcRequestError], details: COPY.unreachable },
+]
+
+/**
+ * Catch-all wrapper classes, the class-shaped twins of
+ * {@link AMBIGUOUS_PROVIDER_CODES}: viem converts `-32603` into
+ * `InternalRpcError`, `-32000` into `InvalidInputRpcError`, an unmapped code
+ * into `UnknownRpcError`, and wraps every send failure in
+ * `TransactionExecutionError` — all before this module sees the error. The real
+ * reason (a revert, a rejection, an out-of-gas) sits in the nested message, so
+ * these classes are only consulted once the text rules have found nothing.
+ */
+const AMBIGUOUS_RULES: readonly { classes: readonly ErrorClass[]; details: TransactionErrorDetails }[] = [
+  { classes: [InternalRpcError, UnknownRpcError], details: COPY.internal },
+  { classes: [InvalidInputRpcError], details: COPY.invalidRequest },
   { classes: [TransactionExecutionError], details: COPY.executionFailed },
 ]
 
@@ -315,13 +331,17 @@ const TEXT_RULES: readonly { pattern: RegExp; details: TransactionErrorDetails }
     details: COPY.cancelled,
   },
   { pattern: /failed to fetch|network ?error|networkerror when attempting/i, details: COPY.unreachable },
-  {
-    pattern: /insufficient funds|doesn't have enough native token|exceeds the balance/i,
-    details: COPY.insufficientFundsNative,
-  },
+  // Revert before insufficient-funds: a revert reason routinely mentions a
+  // balance ("ERC20: transfer amount exceeds balance"), and telling that user to
+  // top up gas would be wrong. The node-level gas failure carries no revert
+  // wording, so it still reaches the rule below.
   {
     pattern: /execution reverted|transaction reverted|reverted with reason|transfer amount exceeds/i,
     details: COPY.revertedShort,
+  },
+  {
+    pattern: /insufficient funds|doesn't have enough native token|exceeds the balance/i,
+    details: COPY.insufficientFundsNative,
   },
   { pattern: /nonce too low|nonce conflict|transaction with this nonce|already known/i, details: COPY.pendingEarlier },
   {
@@ -416,6 +436,9 @@ export function parseTransactionError(error: unknown): TransactionErrorDetails {
   }
 
   // Nothing more specific matched, so fall back to what the catch-all says.
+  for (const rule of AMBIGUOUS_RULES) {
+    if (matchesErrorClass(error, rule.classes)) return rule.details
+  }
   if (code !== undefined) {
     const details = PROVIDER_ERROR_CODES.get(code)
     if (details) return details
