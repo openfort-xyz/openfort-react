@@ -74,6 +74,16 @@ describe("runCli", () => {
     expect(results.flags.noGit).toBe(true);
   });
 
+  test("rejects an unknown theme", async () => {
+    vi.spyOn(process, "exit").mockImplementation((code) => {
+      throw new Error(`process.exit(${code})`);
+    });
+
+    await expect(
+      run("my-app", "--template", "openfort-ui", "--theme", "nonexistent"),
+    ).rejects.toThrow("process.exit(1)");
+  });
+
   test("rejects the removed install opt-out", async () => {
     vi.spyOn(process, "exit").mockImplementation((code) => {
       throw new Error(`process.exit(${code})`);

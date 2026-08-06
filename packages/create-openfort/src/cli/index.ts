@@ -137,7 +137,18 @@ export const runCli = async (): Promise<CliResults> => {
       process.exit(1);
     }
     cliResults.template = requestedTemplate as OpenfortTemplate;
-    cliResults.theme = opts.theme as OpenfortTheme;
+    // `--theme` lands verbatim in the generated `.env`; an unknown value would
+    // scaffold an app whose theme silently falls back at runtime.
+    if (opts.theme !== undefined) {
+      const requestedTheme = opts.theme as string;
+      if (!availableThemes.includes(requestedTheme as OpenfortTheme)) {
+        logger.error(
+          `Unknown theme "${requestedTheme}". Available: ${availableThemes.join(", ")}.`,
+        );
+        process.exit(1);
+      }
+      cliResults.theme = requestedTheme as OpenfortTheme;
+    }
     cliResults.createBackend = false;
 
     // Mock values for CI

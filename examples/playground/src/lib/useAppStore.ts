@@ -40,7 +40,7 @@ const defaultWalletConfig: OpenfortWalletConfig = {
   },
 
   // If you want to use AUTOMATIC embedded wallet recovery, an encryption session is required.
-  // See: https://www.openfort.io/docs/products/embedded-wallet/react-native/quickstart/automatic
+  // See: https://www.openfort.io/docs/products/embedded-wallet/server/automatic-recovery-session
   // For backend setup, check: https://github.com/openfort-xyz/openfort-backend-quickstart
   getEncryptionSession: undefined, // Optional function to get the encryption session
   createEncryptedSessionEndpoint:
