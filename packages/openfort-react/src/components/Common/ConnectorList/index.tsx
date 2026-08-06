@@ -4,7 +4,7 @@ import { useFamilyAccountsConnector, useFamilyConnector } from '../../../hooks/u
 
 import useIsMobile from '../../../hooks/useIsMobile'
 import { useLastConnector } from '../../../hooks/useLastConnector'
-import { isInjectedConnector } from '../../../utils'
+import { isInjectedConnector, isWalletConnectConnector } from '../../../utils'
 import { isFamily } from '../../../utils/wallets'
 import {
   type ExternalConnectorProps,
@@ -20,6 +20,7 @@ import { ConnectorButton, ConnectorIcon, ConnectorLabel, ConnectorsContainer, Re
 
 const ConnectorList = () => {
   const context = useOpenfort()
+  const isMobile = useIsMobile()
 
   const wallets = useExternalConnectors()
   const { lastConnectorId } = useLastConnector()
@@ -59,7 +60,7 @@ const ConnectorList = () => {
     <ScrollArea mobileDirection={'horizontal'}>
       {walletsToDisplay.length === 0 && <Alert error>No connectors found in Openfort config.</Alert>}
       {walletsToDisplay.length > 0 && (
-        <ConnectorsContainer $mobile={false} $totalResults={walletsToDisplay.length}>
+        <ConnectorsContainer $mobile={isMobile} $totalResults={walletsToDisplay.length}>
           {walletsToDisplay.map((wallet) => (
             <ConnectorItem key={wallet.id} wallet={wallet} isRecent={wallet.id === lastConnectorId} />
           ))}
@@ -77,9 +78,13 @@ const ConnectorItem = ({ wallet, isRecent }: { wallet: ExternalConnectorProps; i
   const bridge = useEthereumBridge()
   const connector = bridge?.account?.connector
 
+  // On mobile the WalletConnect row is the "Other" tile: the mini wallet grid
+  // on a tinted tile, opening the WalletConnect modal (our more-wallets surface).
+  const isOtherTile = isMobile && isWalletConnectConnector(wallet.id)
+
   const content = () => (
     <>
-      <ConnectorIcon data-small={wallet.iconShouldShrink} data-shape={wallet.iconShape}>
+      <ConnectorIcon data-small={wallet.iconShouldShrink} data-shape={wallet.iconShape} data-background={isOtherTile}>
         {wallet.iconConnector ?? wallet.icon}
       </ConnectorIcon>
       <ConnectorLabel>
