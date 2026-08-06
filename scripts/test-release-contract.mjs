@@ -67,37 +67,53 @@ assert.equal(
 
 const statusDirectory = mkdtempSync(join(tmpdir(), "openfort-react-changeset-status-"));
 const statusPath = join(statusDirectory, "status.json");
+let statusAvailable = true;
 try {
-  execFileSync("pnpm", ["exec", "changeset", "status", "--output", statusPath], {
-    cwd: process.cwd(),
-    stdio: "pipe",
-  });
-  const status = JSON.parse(readFileSync(statusPath, "utf8"));
-  // `changeset status` lists every workspace, so the invariant is not absence
-  // from the plan: it is that these workspaces never take a version bump.
-  const privateWorkspaces = [
-    "create-openfort-template-firebase",
-    "create-openfort-template-headless",
-    "create-openfort-template-openfort-ui",
-    "create-openfort-template-solana-headless",
-    "quickstart-solana-headless",
-  ];
-  for (const name of privateWorkspaces) {
-    const release = status.releases.find((entry) => entry.name === name);
-    assert.ok(
-      release,
-      `${name} is missing from the release plan, so this gate no longer covers it.`,
+  try {
+    execFileSync("pnpm", ["exec", "changeset", "status", "--output", statusPath], {
+      cwd: process.cwd(),
+      stdio: "pipe",
+    });
+  } catch (error) {
+    const stderr = error.stderr?.toString() ?? "";
+    // On the changeset-release branch the version PR has already consumed the
+    // changesets, so `changeset status` exits with this complaint by design.
+    // There is no release plan to inspect there; the config and manifest
+    // assertions above still ran.
+    if (!stderr.includes("no changesets were found")) throw error;
+    statusAvailable = false;
+    console.log(
+      "No pending changesets (version branch); skipping the release-plan assertions.",
     );
-    assert.equal(
-      release.type,
-      "none",
-      `Changesets must not version the private workspace ${name}.`,
-    );
-    assert.equal(
-      release.newVersion,
-      release.oldVersion,
-      `Changesets must not bump the private workspace ${name}.`,
-    );
+  }
+  if (statusAvailable) {
+    const status = JSON.parse(readFileSync(statusPath, "utf8"));
+    // `changeset status` lists every workspace, so the invariant is not absence
+    // from the plan: it is that these workspaces never take a version bump.
+    const privateWorkspaces = [
+      "create-openfort-template-firebase",
+      "create-openfort-template-headless",
+      "create-openfort-template-openfort-ui",
+      "create-openfort-template-solana-headless",
+      "quickstart-solana-headless",
+    ];
+    for (const name of privateWorkspaces) {
+      const release = status.releases.find((entry) => entry.name === name);
+      assert.ok(
+        release,
+        `${name} is missing from the release plan, so this gate no longer covers it.`,
+      );
+      assert.equal(
+        release.type,
+        "none",
+        `Changesets must not version the private workspace ${name}.`,
+      );
+      assert.equal(
+        release.newVersion,
+        release.oldVersion,
+        `Changesets must not bump the private workspace ${name}.`,
+      );
+    }
   }
 } finally {
   rmSync(statusDirectory, { recursive: true, force: true });
