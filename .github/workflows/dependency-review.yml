@@ -19,3 +19,6 @@ jobs:
           comment-summary-in-pr: on-failure
           fail-on-severity: moderate
           license-check: false
+          # The fixed Hono release was published on 2026-08-03 and remains
+          # inside the seven-day cooldown. Remove this on 2026-08-10.
+          allow-ghsas: GHSA-8j4g-w8fx-2239
