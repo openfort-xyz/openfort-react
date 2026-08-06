@@ -203,9 +203,10 @@ export const walletConfigs: {
       return `https://rnbwapp.com/wc?uri=${encodeURIComponent(uri)}&connector=connectkit`
     },
   },
-  'io.rabby': {
+  'rabby, io.rabby': {
     name: 'Rabby Wallet',
     shortName: 'Rabby',
+    icon: <Logos.Rabby />,
     downloadUrls: {
       website: 'https://rabby.io',
       chrome: 'https://chrome.google.com/webstore/detail/rabby-wallet/acmacodkjbdgmoleebolmdjonilkdbch',
