@@ -143,6 +143,7 @@
     ],
     "ignoreDependencies": [
       "@solana/kit",
+      "@solana-program/compute-budget",
       "@solana-program/system",
       "@solana-program/token",
       "@solana/kora",

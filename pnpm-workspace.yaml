@@ -25,7 +25,6 @@ overrides:
   '@tanstack/query-core': ^5.99.2
   use-sync-external-store: ^1.6.0
   typescript: ^5.9.3
-  hono: '>=4.12.34 <5'
   protobufjs: '>=8.6.0'
   follow-redirects: '>=1.16.0'
   '@hono/node-server': '>=1.19.13'
@@ -78,14 +77,7 @@ overrides:
 # itself out before a release can reach this workspace.
 minimumReleaseAge: 10080
 minimumReleaseAgeExclude:
-  - "@openfort/openfort-js"
-  - "@openfort/openfort-node"
-  - "@openfort/better-auth"
-  # The `hono: '>=4.12.34 <5'` override above is a security floor, and 4.12.34 is
-  # newer than the delay window — the two policies cannot both hold. Taking a
-  # known-vulnerable version to satisfy the delay would be the worse trade, so
-  # the floor wins here. Drop this entry once the floor is older than the window.
-  - "hono"
+  - "@openfort/*"
 
 # Fail the install if a dependency's npm trust level drops below what it had on
 # an earlier release — for example a package that published with provenance and
@@ -149,6 +141,9 @@ auditConfig:
     # Remove this exception when the core SDK drops the ethers v5 dependency.
     - CVE-2025-14505
   ignoreGhsas:
+    # The fixed Hono release was published on 2026-08-03 and remains inside the
+    # seven-day cooldown. Remove this exception and override Hono on 2026-08-10.
+    - GHSA-8j4g-w8fx-2239
     # websocket-driver <0.7.5 — message corruption and compression resource
     # limits. Reached only via `firebase > @firebase/database > faye-websocket`
     # in the firebase quickstart, which has no release on a patched driver.
