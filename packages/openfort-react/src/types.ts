@@ -1,3 +1,4 @@
+import type { OpenfortSDKConfiguration } from '@openfort/openfort-js'
 import type { OpenfortError } from './errors/index.js'
 import type { Languages as Lang } from './localizations/index.js'
 import type { CustomTheme } from './styles/customTheme.js'
@@ -39,5 +40,5 @@ export type OpenfortHookOptions<T = { error?: OpenfortError }> = {
 }
 
 // Re-export important types and enums from openfort-js
-export type { SDKOverrides } from '@openfort/openfort-js'
+export type SDKOverrides = NonNullable<OpenfortSDKConfiguration['overrides']>
 export { OAuthProvider, ThirdPartyOAuthProvider } from '@openfort/openfort-js'

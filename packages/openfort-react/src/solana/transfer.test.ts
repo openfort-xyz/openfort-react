@@ -1,7 +1,7 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
 import { describe, expect, it, vi } from 'vitest'
 import { ValidationError } from '../errors/validation.js'
 import { WalletError } from '../errors/wallet.js'
+import { getOpenfortBackendUrl } from '../openfort/core/client.js'
 import {
   assertKoraInstructionsAreExpected,
   assertTransferableRecipient,
@@ -11,8 +11,8 @@ import {
   solToLamports,
 } from './transfer.js'
 
-vi.mock('@openfort/openfort-js', () => ({
-  SDKConfiguration: { getInstance: vi.fn(() => undefined) },
+vi.mock('../openfort/core/client.js', () => ({
+  getOpenfortBackendUrl: vi.fn(() => 'https://api.openfort.io'),
 }))
 
 describe('solToLamports', () => {
@@ -44,9 +44,7 @@ describe('koraRpcUrl', () => {
   })
 
   it('uses the configured SDK backend URL', () => {
-    vi.mocked(SDKConfiguration.getInstance).mockReturnValueOnce({
-      backendUrl: 'https://configured.example',
-    } as ReturnType<typeof SDKConfiguration.getInstance>)
+    vi.mocked(getOpenfortBackendUrl).mockReturnValueOnce('https://configured.example')
     expect(koraRpcUrl('mainnet-beta')).toBe('https://configured.example/rpc/solana/mainnet')
   })
 })

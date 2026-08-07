@@ -1,10 +1,10 @@
 'use client'
 
-import { SDKConfiguration } from '@openfort/openfort-js'
 import type { QueryKey } from '@tanstack/react-query'
 import { useCallback } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
 import { ApiRequestError } from '../../errors/operation.js'
+import { getOpenfortBackendUrl } from '../../openfort/core/client.js'
 import { getOpenfortQueryInputScope, openfortKeys } from '../../query/queryKeys.js'
 import { useQuery } from '../../query/useQuery.js'
 import { getPublishableKeyEnvironment } from '../../utils/validation.js'
@@ -82,7 +82,7 @@ const EMPTY_CHAINS: FundingChain[] = []
 export function useFundingChains(): UseFundingChains {
   const { uiConfig, publishableKey } = useOpenfort()
   // Defaults to the SDK backend (api.openfort.io); override for a custom funding service.
-  const baseUrl = uiConfig.fundingBaseUrl || SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
+  const baseUrl = uiConfig.fundingBaseUrl || getOpenfortBackendUrl()
   const sourceChains = uiConfig.funding?.sourceChains ?? DEFAULT_SOURCE_CHAINS
   const sourceCurrencies = uiConfig.funding?.sourceCurrencies ?? DEFAULT_SOURCE_CURRENCIES
   // Match the rail host to the key environment: test keys (`pk_test_…`) list the

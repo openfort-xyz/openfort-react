@@ -12,12 +12,12 @@
  * runtime.
  */
 
-import { SDKConfiguration } from '@openfort/openfort-js'
 import type { Address, SignatureBytes, SignatureDictionary, TransactionSigner } from '@solana/kit'
 import { toError } from '../errors/base.js'
 import { ApiRequestError } from '../errors/operation.js'
 import { ValidationError } from '../errors/validation.js'
 import { WalletError } from '../errors/wallet.js'
+import { getOpenfortBackendUrl } from '../openfort/core/client.js'
 import { getDefaultSolanaRpcUrl } from '../utils/rpc.js'
 import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster, SolanaCommitment } from './types.js'
 
@@ -351,7 +351,7 @@ export async function sendSplToken({
 /** @internal Exported for focused configuration tests; not part of a package entry point. */
 export function koraRpcUrl(cluster: SolanaCluster, backendUrl?: string): string {
   const segment = cluster === 'mainnet-beta' ? 'mainnet' : cluster
-  const baseUrl = backendUrl ?? SDKConfiguration.getInstance()?.backendUrl ?? 'https://api.openfort.io'
+  const baseUrl = backendUrl ?? getOpenfortBackendUrl()
   return `${baseUrl.replace(/\/$/, '')}/rpc/solana/${segment}`
 }
 

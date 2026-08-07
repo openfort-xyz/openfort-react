@@ -1,10 +1,5 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
 import { ApiRequestError, UnsupportedOperationError } from '../../../errors/operation.js'
-
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
+import { getOpenfortBackendUrl } from '../../../openfort/core/client.js'
 
 type PostOnrampParameters = {
   /** Backend path, relative to the SDK's configured backend URL. */
@@ -28,7 +23,7 @@ type PostOnrampParameters = {
 export async function postOnramp<TResponse>(parameters: PostOnrampParameters): Promise<TResponse> {
   const { path, body, publishableKey, operation } = parameters
 
-  const response = await fetch(`${getBackendUrl()}${path}`, {
+  const response = await fetch(`${getOpenfortBackendUrl()}${path}`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
