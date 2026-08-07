@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+### Patch Changes
+
+- [#331](https://github.com/openfort-xyz/openfort-react/pull/331) [`9ae943d`](https://github.com/openfort-xyz/openfort-react/commit/9ae943ddbefbfc4e0cd0f86adf06214d94412edd) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Added compatibility with Solana Kit 6 and its current program packages.
+
 ## 2.0.0
 
 ### Major Changes
