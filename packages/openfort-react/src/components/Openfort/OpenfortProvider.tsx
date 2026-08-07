@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  ChainTypeEnum,
-  RecoveryMethod,
-  type SDKOverrides,
-  type ThirdPartyAuthConfiguration,
-} from '@openfort/openfort-js'
+import { ChainTypeEnum, RecoveryMethod, type ThirdPartyAuthConfiguration } from '@openfort/openfort-js'
 import type React from 'react'
 import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
 import { DEFAULT_DEV_CHAIN_ID } from '../../core/ConnectionStrategy.js'
@@ -15,7 +10,7 @@ import { OpenfortEthereumBridgeContext } from '../../ethereum/OpenfortEthereumBr
 import { useThemeFont } from '../../hooks/useGoogleFont.js'
 import { CoreOpenfortProvider } from '../../openfort/CoreOpenfortProvider.js'
 import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes.js'
-import type { CustomTheme, Languages, Mode, Theme } from '../../types.js'
+import type { CustomTheme, Languages, Mode, SDKOverrides, Theme } from '../../types.js'
 import { logger, setDebugLogsEnabled } from '../../utils/logger.js'
 import { buildChainFromConfig } from '../../utils/rpc.js'
 import { isFamily } from '../../utils/wallets.js'

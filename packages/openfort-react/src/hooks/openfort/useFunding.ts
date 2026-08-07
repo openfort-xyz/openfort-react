@@ -1,12 +1,12 @@
 'use client'
 
-import { SDKConfiguration } from '@openfort/openfort-js'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
 import { asOpenfortError, type OpenfortError } from '../../errors/base.js'
 import { FundingError, FundingNotConfiguredError } from '../../errors/funding.js'
 import { UnsupportedOperationError } from '../../errors/operation.js'
 import { useAuthTransitions } from '../../openfort/authTransitionContext.js'
+import { getOpenfortBackendUrl } from '../../openfort/core/client.js'
 import { useOpenfortCore } from '../../openfort/useOpenfort.js'
 import { getOrCreatePersistentOperation } from '../../shared/utils/persistentOperationRegistry.js'
 import { getTrustedFundingProviderUrl } from '../../utils/fundingProviderUrl.js'
@@ -155,7 +155,7 @@ export type UseFundingOptions = {
    * fetch adapter over `uiConfig.fundingBaseUrl`. */
   client?: FundingClient
   /**
-   * Resolve the base URL from the Openfort API backend (`SDKConfiguration.backendUrl`)
+   * Resolve the base URL from the configured Openfort API backend
    * instead of `uiConfig.fundingBaseUrl`. The CEX (Coinbase pay-link) rail is served
    * by the API, not the standalone funding service — `DepositCex` opts in.
    */
@@ -207,7 +207,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
   // The funding JSON API defaults to the Openfort backend (api.openfort.io);
   // integrators can point the crypto rails at a custom service via
   // uiConfig.fundingBaseUrl. The CEX rail always uses the backend (Coinbase pay-link).
-  const backendUrl = SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
+  const backendUrl = getOpenfortBackendUrl()
   const baseUrl = options?.useBackendUrl ? backendUrl : uiConfig.fundingBaseUrl || backendUrl
   const injected = options?.client
   // Resolve the client, in order of preference:

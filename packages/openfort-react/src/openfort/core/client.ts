@@ -1,5 +1,11 @@
 import { Openfort as OpenfortClient, type OpenfortSDKConfiguration } from '@openfort/openfort-js'
 
+const DEFAULT_BACKEND_URL = 'https://api.openfort.io'
+let backendUrl = DEFAULT_BACKEND_URL
+
+/** @internal */
+export const getOpenfortBackendUrl = (): string => backendUrl
+
 /**
  * Creates a new {@link OpenfortClient} instance.
  *
@@ -16,5 +22,6 @@ import { Openfort as OpenfortClient, type OpenfortSDKConfiguration } from '@open
  * ```
  */
 export function createOpenfortClient(config: OpenfortSDKConfiguration): OpenfortClient {
+  backendUrl = config.overrides?.backendUrl ?? DEFAULT_BACKEND_URL
   return new OpenfortClient(config)
 }

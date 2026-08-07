@@ -1,11 +1,11 @@
 'use client'
 
-import type { ChainTypeEnum, OAuthProvider, SDKOverrides, ThirdPartyAuthConfiguration } from '@openfort/openfort-js'
+import type { ChainTypeEnum, OAuthProvider, ThirdPartyAuthConfiguration } from '@openfort/openfort-js'
 import type React from 'react'
 import { createContext } from 'react'
 import type { Chain } from 'viem'
 import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes.js'
-import type { CustomTheme, Languages, Mode, Theme } from '../../types.js'
+import type { CustomTheme, Languages, Mode, SDKOverrides, Theme } from '../../types.js'
 import type {
   BuyFormState,
   DebugModeOptions,
