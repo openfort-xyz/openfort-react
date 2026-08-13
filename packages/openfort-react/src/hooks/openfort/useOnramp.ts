@@ -20,7 +20,7 @@ const POLL_MS = 4000
 
 export type UseOnrampOptions = UseFundingOptions & {
   /**
-   * How to present an iframe-angle checkout URL:
+   * How to present a popup-angle checkout URL:
    * - 'popup' (default): `window.open` in a new window; the session keeps
    *   polling here, so completion is detected even if the popup never redirects.
    * - 'redirect': navigate the current page to the provider checkout.
@@ -58,15 +58,16 @@ export type OnrampOpenParams = {
     emailVerificationId?: string
   }
   /**
-   * Stripe v2 Link-auth flow — present when the buyer authenticated with Link
-   * and a payment method was collected (the `embedded` angle's element flow).
-   * The commit creates a HEADLESS Stripe session; redeem its secret afterwards
-   * via `sessions.onrampCheckout` inside the coordinator's performCheckout.
+   * Embedded element flow — present when the buyer authenticated with the
+   * provider's embedded auth element and a payment method was collected (the
+   * `embedded` angle). The commit creates a HEADLESS provider session; redeem
+   * its secret afterwards via `sessions.onrampCheckout` inside the
+   * coordinator's performCheckout.
    */
-  stripeLink?: {
-    linkAuthIntentId: string
-    cryptoCustomerId: string
-    cryptoPaymentToken: string
+  embedded?: {
+    authIntentId: string
+    customerRef: string
+    paymentToken: string
   }
 }
 
@@ -83,13 +84,13 @@ export type UseOnramp = {
   /** Session lifecycle status; 'idle' before open(). */
   status: SessionStatus | 'idle'
   /**
-   * The committed checkout URL. For the `iframe` angle it's the provider's hosted
+   * The committed checkout URL. For the `popup` angle it's the provider's hosted
    * page (auto-presented unless mode is 'manual'); for `native` it's the in-page
    * Pay-button link the caller mounts itself (never auto-presented). Null before
    * open() / when the provider returns none.
    */
   url: string | null
-  /** The committed angle — branch on it to mount (`native`) vs open (`iframe`). */
+  /** The committed angle — branch on it to mount (`native`) vs open (`popup`). */
   angle: OnrampAngle | null
   session: FundingSession | null
   /** True from open() until the checkout URL is presented (not until settlement). */
@@ -102,7 +103,7 @@ export type UseOnramp = {
  * Execute ONE resolved fiat method against a funding session — the headless
  * engine behind the modal's card / Apple Pay / Google Pay / bank-transfer rows.
  *
- * Angle-agnostic to the caller: `iframe` opens the provider's hosted checkout
+ * Angle-agnostic to the caller: `popup` opens the provider's hosted checkout
  * (popup / redirect / manual); `native` (in-page provider SDK, e.g. Coinbase
  * wallet pay) commits a provider order from the OTP-verified `walletPay` identity
  * and surfaces its Pay-button `url` for the caller to mount in-page — the hook
@@ -186,7 +187,7 @@ export function useOnramp(
             sourceCurrency: params?.sourceCurrency,
             redirectUrl: params?.redirectUrl,
             country,
-            stripeLink: params?.stripeLink,
+            embedded: params?.embedded,
             // Native wallet pay only; spreading `undefined` adds nothing for
             // card / bank transfer.
             ...params?.walletPay,
@@ -205,12 +206,12 @@ export function useOnramp(
           angle,
           hasUrl: Boolean(checkoutUrl),
         })
-        // Only the hosted (iframe) angle is auto-presented. A native url is an
+        // Only the hosted (popup) angle is auto-presented. A native url is an
         // in-page Pay-button link — surfaced via `url`/`angle` for the caller to
         // mount; auto-opening it would break the in-page sheet.
-        if (checkoutUrl && angle === 'iframe' && mode === 'popup') {
+        if (checkoutUrl && angle === 'popup' && mode === 'popup') {
           window.open(checkoutUrl, 'openfort-onramp', 'popup,width=470,height=750')
-        } else if (checkoutUrl && angle === 'iframe' && mode === 'redirect') {
+        } else if (checkoutUrl && angle === 'popup' && mode === 'redirect') {
           window.location.href = checkoutUrl
         }
 

@@ -14,7 +14,7 @@ vi.mock('../openfort/useOpenfort', () => ({
 const { useFundingMethods } = await import('../hooks/openfort/useFundingMethods')
 
 const sessionRef = { id: 'fnd_1', clientSecret: 'cs_1' }
-const cardRow: ResolvedFundingMethod = { method: 'card', provider: 'stripe', angle: 'iframe', label: 'Card' }
+const cardRow: ResolvedFundingMethod = { method: 'card', provider: 'stripe', angle: 'popup', label: 'Card' }
 
 function makeClient() {
   const methods = vi.fn()

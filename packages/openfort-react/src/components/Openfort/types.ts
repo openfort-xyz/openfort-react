@@ -627,11 +627,11 @@ export type BuyFormState = {
   walletPay?: WalletPayDraft | null
   /**
    * How the amount step resolved a wallet-pay method for THIS buyer: 'native'
-   * (Coinbase sheet — identity required) or 'iframe' (hosted checkout — none).
+   * (Coinbase sheet — identity required) or 'popup' (hosted checkout — none).
    * Null/absent for non-wallet-pay methods or before resolution; the commit
    * screen treats unknown as native, the safe direction.
    */
-  walletPayAngle?: 'native' | 'iframe' | null
+  walletPayAngle?: 'native' | 'popup' | null
   /**
    * Set when the amount step resolved the method to Stripe's v2 Link-auth flow
    * (`embedded` angle with a publishable key) — the Stripe checkout screen

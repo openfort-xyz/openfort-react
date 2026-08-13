@@ -61,7 +61,7 @@ export type FundingFee = {
 export type OnrampMethodId = 'apple_pay' | 'google_pay' | 'card' | 'bank_transfer'
 
 /** How a resolved onramp executes: open a hosted `url`, an in-page provider SDK, or Stripe's Link element flow. */
-export type OnrampAngle = 'iframe' | 'native' | 'embedded'
+export type OnrampAngle = 'popup' | 'native' | 'embedded'
 
 /**
  * Payment-method input. `evm` and `solana` are self-custody wallet sends (they
@@ -88,15 +88,16 @@ export type PaymentMethodInput =
       /** URL the provider redirects back to after checkout. */
       redirectUrl?: string
       /**
-       * Stripe v2 embedded-components (Link-auth headless) flow: present after
-       * the client authenticated the buyer with Link and collected a payment
-       * method. The commit then creates a HEADLESS Stripe session; redeem its
-       * secret via `sessions.onrampCheckout` for performCheckout.
+       * Embedded (headless) element flow: present after the client
+       * authenticated the buyer with the provider's embedded auth element and
+       * collected a payment method. The commit then creates a HEADLESS
+       * provider session; redeem its secret via `sessions.onrampCheckout` for
+       * performCheckout.
        */
-      stripeLink?: {
-        linkAuthIntentId: string
-        cryptoCustomerId: string
-        cryptoPaymentToken: string
+      embedded?: {
+        authIntentId: string
+        customerRef: string
+        paymentToken: string
       }
     }
 
@@ -330,9 +331,9 @@ export function useFundingClient(options?: UseFundingOptions): FundingClient | n
     // Only adopt the SDK namespace once it covers the full session surface
     // (an older SDK without methods/quote would break the fiat hooks).
     if (sdkFunding && typeof sdkFunding.sessions?.methods === 'function' && fetchClient) {
-      // The SDK namespace covers sessions; Stripe Link auth + pay-links stay on
+      // The SDK namespace covers sessions; embedded auth + pay-links stay on
       // the fetch adapter until the SDK exposes them.
-      return { sessions: sdkFunding.sessions, stripeLink: fetchClient.stripeLink, payLink: fetchClient.payLink }
+      return { sessions: sdkFunding.sessions, authIntents: fetchClient.authIntents, payLink: fetchClient.payLink }
     }
     return fetchClient
   }, [injected, coreClient, baseUrl, publishableKey])

@@ -31,7 +31,7 @@ const WalletPayFrame = styled.iframe`
 `
 
 /**
- * Commit-and-track screen for a fiat buy on the `iframe` and `native` angles
+ * Commit-and-track screen for a fiat buy on the `popup` and `native` angles
  * (the `embedded` angle runs in StripeLinkCheckout). The amount screen minted
  * the funding session; this one sets the onramp payment method (the server
  * resolves the provider), presents the checkout — a hosted popup or the
@@ -63,10 +63,10 @@ const BuyProcessing = () => {
     // NATIVE wallet pay needs the OTP-verified identity; if it's somehow missing
     // (e.g. a stale reload), send the buyer back to gather it rather than commit
     // a request the server will reject. Wallet pay resolved to the HOSTED
-    // checkout ('iframe') commits like a card — no identity; unknown angle is
+    // checkout ('popup') commits like a card — no identity; unknown angle is
     // treated as native, the safe direction.
     const walletPay = isCompleteWalletPay(buyForm.walletPay) ? buyForm.walletPay : undefined
-    if (isWalletPayMethod(buyForm.method) && buyForm.walletPayAngle !== 'iframe' && !walletPay) {
+    if (isWalletPayMethod(buyForm.method) && buyForm.walletPayAngle !== 'popup' && !walletPay) {
       setRoute(routes.BUY_WALLET_PAY_CONTACT)
       return
     }

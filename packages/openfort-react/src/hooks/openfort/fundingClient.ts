@@ -26,11 +26,11 @@ import type {
  */
 export type FundingClient = {
   /**
-   * Stripe Link auth for the v2 embedded-components onramp. Both 501/400 until
-   * the deployment configures the crypto_onramp_beta=v2 access.
+   * Provider-neutral embedded auth for the onramp's element flow. Both
+   * 501/400 until the deployment configures the provider's embedded access.
    */
-  stripeLink: {
-    createAuthIntent(params: { email: string }): Promise<{ id: string }>
+  authIntents: {
+    create(params: { email: string }): Promise<{ id: string }>
     exchangeToken(intentId: string): Promise<{ exchanged: boolean }>
   }
   sessions: {
@@ -43,9 +43,9 @@ export type FundingClient = {
     /** Resolve the fiat methods for this session's destination + buyer region. */
     methods(id: string, params: { clientSecret: string; country?: string }): Promise<ResolvedFundingMethods>
     /**
-     * Stripe Link (v2 headless) checkout: confirm the committed headless onramp
+     * Embedded (headless) checkout: confirm the committed headless onramp
      * with mandate acceptance and get the provider client secret for
-     * performCheckout. One-shot; only valid after a `stripeLink` commit.
+     * performCheckout. One-shot; only valid after an `embedded` commit.
      */
     onrampCheckout(id: string, params: { clientSecret: string }): Promise<{ clientSecret: string }>
     /** Price a fiat route with the exact provider a commit would resolve. */
@@ -88,9 +88,9 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
   const authHeaders = (): Record<string, string> =>
     publishableKey ? { authorization: `Bearer ${publishableKey}` } : {}
   return {
-    stripeLink: {
-      async createAuthIntent({ email }) {
-        const res = await fetch(`${baseUrl}/v2/funding/onramp/stripe/link_auth_intents`, {
+    authIntents: {
+      async create({ email }) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/auth_intents`, {
           method: 'POST',
           headers: { 'content-type': 'application/json', ...authHeaders() },
           body: JSON.stringify({ email }),
@@ -98,10 +98,10 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
         return readJson<{ id: string }>(res)
       },
       async exchangeToken(intentId) {
-        const res = await fetch(
-          `${baseUrl}/v2/funding/onramp/stripe/link_auth_intents/${encodeURIComponent(intentId)}/tokens`,
-          { method: 'POST', headers: authHeaders() }
-        )
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/auth_intents/${encodeURIComponent(intentId)}/tokens`, {
+          method: 'POST',
+          headers: authHeaders(),
+        })
         return readJson<{ exchanged: boolean }>(res)
       },
     },

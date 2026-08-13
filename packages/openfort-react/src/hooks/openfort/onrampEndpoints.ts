@@ -1,9 +1,8 @@
 /**
- * Base path for the fiat-onramp API: `methods`, `quotes` and `sessions`.
+ * Base path for the fiat-onramp API (`methods` preview).
  *
- * The onramp is being consolidated under the v2 funding namespace
- * (`/v2/funding/onramp/*`). `/v1/onramp/*` stays as a deprecated alias so
- * already-shipped SDKs keep working. This stays on v1 until the v2 routes are
- * live in prod, then flips here in one place.
+ * The onramp is consolidated under the v2 funding namespace
+ * (`/v2/funding/onramp/*`); the `/v1/onramp/*` alias no longer serves
+ * `/methods`, so this widget release requires the v2 api.
  */
-export const ONRAMP_API_BASE = '/v1/onramp'
+export const ONRAMP_API_BASE = '/v2/funding/onramp'

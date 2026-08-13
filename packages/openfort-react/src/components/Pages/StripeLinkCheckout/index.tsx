@@ -165,7 +165,7 @@ const StripeLinkCheckout: React.FC = () => {
       setError(null)
       setLoading(true)
       try {
-        const intent = await client.stripeLink.createAuthIntent({ email: forEmail })
+        const intent = await client.authIntents.create({ email: forEmail })
         intentIdRef.current = intent.id
         setElementReady(false)
         setStep('auth')
@@ -209,7 +209,7 @@ const StripeLinkCheckout: React.FC = () => {
     setLoading(true)
     setError(null)
     try {
-      await client.stripeLink.exchangeToken(intentId)
+      await client.authIntents.exchangeToken(intentId)
       // Register the session's destination wallet with the Link user so the
       // headless session can deliver to it. Best-effort: an already-registered
       // wallet errors harmlessly and the commit surfaces anything real.
@@ -367,7 +367,7 @@ const StripeLinkCheckout: React.FC = () => {
       .open({
         sourceAmount: Number.isFinite(fiatAmount) && fiatAmount > 0 ? fiatAmount.toFixed(2) : undefined,
         sourceCurrency: buyForm.currency,
-        stripeLink: { linkAuthIntentId: intentId, cryptoCustomerId: customerId, cryptoPaymentToken: token },
+        embedded: { authIntentId: intentId, customerRef: customerId, paymentToken: token },
       })
       .then((session) => {
         if (session.status === 'succeeded') setRoute(routes.BUY_COMPLETE)

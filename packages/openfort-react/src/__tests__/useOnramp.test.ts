@@ -19,7 +19,7 @@ function onrampPm(over: Partial<OnrampPaymentMethod> = {}): OnrampPaymentMethod 
   return {
     type: 'onramp',
     method: 'card',
-    angle: 'iframe',
+    angle: 'popup',
     url: 'https://crypto.link.com/s?x=1',
     fees: [],
     minAmount: null,
@@ -96,7 +96,7 @@ describe('useOnramp', () => {
   it('accepts a resolved method row and forwards its method id', async () => {
     const { client, setPaymentMethod } = makeClient()
     setPaymentMethod.mockResolvedValue(makeSession({ status: 'succeeded' }))
-    const row = { method: 'bank_transfer', provider: 'stripe', angle: 'iframe', label: 'ACH' } as const
+    const row = { method: 'bank_transfer', provider: 'stripe', angle: 'popup', label: 'ACH' } as const
 
     const { result } = renderHook(() => useOnramp(sessionRef, row, { client }))
     await act(async () => {

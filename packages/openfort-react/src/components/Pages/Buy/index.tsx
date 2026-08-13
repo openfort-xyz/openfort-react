@@ -233,7 +233,7 @@ const Buy = () => {
       setBuyForm((prev) => ({
         ...prev,
         session,
-        walletPayAngle: isWalletPay ? 'iframe' : null,
+        walletPayAngle: isWalletPay ? 'popup' : null,
         stripeLink: { publishableKey: stripeLinkKey },
       }))
       setRoute(routes.BUY_STRIPE_LINK)
@@ -242,7 +242,7 @@ const Buy = () => {
     // Card, bank transfer, and embedded/hosted wallet pay commit directly — the
     // server resolves the provider (never shown to the user) and the checkout
     // collects its own consent, so no identity capture here.
-    setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'iframe' : null, stripeLink: null }))
+    setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'popup' : null, stripeLink: null }))
     setRoute(routes.BUY_PROCESSING)
   }
 
