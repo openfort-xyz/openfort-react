@@ -16,6 +16,12 @@ export const createCurrencyFormatter = (currency: string) => {
   }
 }
 
+/**
+ * CSS width for a BigAmountInput that hugs its value, so the currency symbol
+ * stays attached ($|50|). Clamped to 12ch so an absurd entry can't blow the row.
+ */
+export const amountInputWidth = (value: string): string => `${Math.min(Math.max(value.length, 1), 12)}ch`
+
 export const getCurrencySymbol = (currency: string) => {
   try {
     const parts = new Intl.NumberFormat('en-US', {

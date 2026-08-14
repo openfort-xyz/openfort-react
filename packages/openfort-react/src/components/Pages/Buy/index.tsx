@@ -35,11 +35,10 @@ import {
   FlagBadge,
   MethodRowButton,
   SummaryLabel,
-  SummaryMuted,
   SummaryRow,
   SummarySection,
 } from './styles'
-import { createCurrencyFormatter, getCurrencySymbol } from './utils'
+import { amountInputWidth, createCurrencyFormatter, getCurrencySymbol } from './utils'
 
 // Fiat source currencies the onramp accepts. Kept small; USD is the safe default
 // (some providers reject non-USD and fall back to the buyer's local currency).
@@ -177,7 +176,7 @@ const Buy = () => {
   // always stays in the buyer's chosen fiat currency).
   const { quote } = useOnrampQuote({
     session,
-    method: backendMethodId(buyForm.method),
+    method: methodId,
     sourceCurrency: buyForm.currency,
     amount: fiatAmount,
   })
@@ -262,9 +261,6 @@ const Buy = () => {
 
   const feeText = quote ? currencyFormatter.format(totalFee(quote)) : null
 
-  // The amount input hugs its value so the symbol stays attached ($|50|).
-  const amountWidthCh = Math.min(Math.max(buyForm.amount.length, 1), 12)
-
   return (
     <PageContent onBack={handleBack}>
       {/* Token first: the heading carries the decided destination token and
@@ -295,7 +291,7 @@ const Buy = () => {
           placeholder="0"
           inputMode="decimal"
           autoComplete="off"
-          style={{ width: `${amountWidthCh}ch` }}
+          style={{ width: amountInputWidth(buyForm.amount) }}
         />
       </BigAmountRow>
 
@@ -332,7 +328,7 @@ const Buy = () => {
         <SummarySection>
           <SummaryRow>
             <SummaryLabel>Fee</SummaryLabel>
-            <SummaryMuted>{feeText}</SummaryMuted>
+            <SummaryLabel>{feeText}</SummaryLabel>
           </SummaryRow>
         </SummarySection>
       )}

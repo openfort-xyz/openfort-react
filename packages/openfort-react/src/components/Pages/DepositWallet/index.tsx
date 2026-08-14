@@ -16,6 +16,7 @@ import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { BigAmountInput, BigAmountRow, BigAmountSymbol, MethodRowButton } from '../Buy/styles'
+import { amountInputWidth } from '../Buy/utils'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { walletListBtn } from '../Deposit/formStyles'
 import { RouteSelectors } from '../Deposit/RouteSelectors'
@@ -181,7 +182,7 @@ const DepositWallet = () => {
                 placeholder="0"
                 inputMode="decimal"
                 autoComplete="off"
-                style={{ width: `${Math.min(Math.max(amount.length, 1), 12)}ch` }}
+                style={{ width: amountInputWidth(amount) }}
               />
               <BigAmountSymbol>{route.activeCurrency?.symbol ?? ''}</BigAmountSymbol>
             </BigAmountRow>

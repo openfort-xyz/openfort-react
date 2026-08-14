@@ -22,12 +22,12 @@ import { ErrorText } from '../../Common/ErrorText'
 import LabeledField from '../../Common/LabeledField'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import PhoneField from '../../Common/PhoneField'
-import { Skeleton, SkeletonStack } from '../../Common/Skeleton'
 import SquircleSpinner from '../../Common/SquircleSpinner'
 import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper, PendingContainer } from '../Buy/styles'
+import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox } from '../Buy/styles'
+import { Skeleton, SkeletonStack } from '../Deposit/styles'
 import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
 
 type Step =
@@ -41,38 +41,9 @@ type Step =
 
 // EU/EEA countries whose addresses make Stripe require birth details and a
 // national identifier instead of the US state + SSN pair.
-const EU_COUNTRIES = new Set([
-  'AT',
-  'BE',
-  'BG',
-  'HR',
-  'CY',
-  'CZ',
-  'DK',
-  'EE',
-  'FI',
-  'FR',
-  'DE',
-  'GR',
-  'HU',
-  'IE',
-  'IS',
-  'IT',
-  'LI',
-  'LT',
-  'LU',
-  'LV',
-  'MT',
-  'NL',
-  'NO',
-  'PL',
-  'PT',
-  'RO',
-  'SE',
-  'SI',
-  'SK',
-  'ES',
-])
+const EU_COUNTRIES = new Set(
+  'AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IS IT LI LT LU LV MT NL NO PL PT RO SE SI SK ES'.split(' ')
+)
 
 /**
  * Stripe v2 (Link-auth headless) checkout — the `embedded` angle's element
@@ -145,7 +116,6 @@ const StripeLinkCheckout: React.FC = () => {
       coordinatorRef.current = null
     }
     // The page mounts once per attempt; the session/key never change mid-flight.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   /** Mount a Stripe element into the host div (replacing any previous one). */
@@ -192,7 +162,6 @@ const StripeLinkCheckout: React.FC = () => {
       }
     },
     // completeAuthentication is stable (refs only); listing it would recreate the flow per render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [client]
   )
 
@@ -349,7 +318,6 @@ const StripeLinkCheckout: React.FC = () => {
       .catch((e) => {
         setError(e instanceof Error ? e.message : 'Could not load the payment form.')
       })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
   // ---- Commit + checkout + settlement ----
@@ -386,7 +354,6 @@ const StripeLinkCheckout: React.FC = () => {
         }
         setFailed(message)
       })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step])
 
   // Once the commit lands, drive Stripe's headless checkout: performCheckout
@@ -411,7 +378,6 @@ const StripeLinkCheckout: React.FC = () => {
       .catch((e) => {
         setFailed(e instanceof Error ? e.message : 'The payment could not be processed.')
       })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [providerSessionId])
 
   const handleBack = () => {
@@ -440,9 +406,9 @@ const StripeLinkCheckout: React.FC = () => {
       {step === 'init' && (
         <>
           <SkeletonStack>
-            <Skeleton $height={16} $width="60%" />
-            <Skeleton $height={40} />
-            <Skeleton $height={44} $radius={12} />
+            <Skeleton $h="16px" $w="60%" />
+            <Skeleton $h="40px" />
+            <Skeleton $h="44px" $r="12px" />
           </SkeletonStack>
           {error && <ModalBody $error>{error}</ModalBody>}
         </>
@@ -588,9 +554,9 @@ const StripeLinkCheckout: React.FC = () => {
           {error && <ErrorText>{error}</ErrorText>}
           {!elementReady && (
             <SkeletonStack>
-              <Skeleton $height={18} $width="50%" />
-              <Skeleton $height={40} />
-              <Skeleton $height={40} $width="70%" />
+              <Skeleton $h="18px" $w="50%" />
+              <Skeleton $h="40px" />
+              <Skeleton $h="40px" $w="70%" />
             </SkeletonStack>
           )}
         </>
@@ -614,19 +580,9 @@ const StripeLinkCheckout: React.FC = () => {
           <PendingContainer>
             <SquircleSpinner
               logo={
-                <div
-                  style={{
-                    padding: '12px',
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+                <SpinnerLogoBox>
                   <Logos.Openfort />
-                </div>
+                </SpinnerLogoBox>
               }
               connecting={true}
             />

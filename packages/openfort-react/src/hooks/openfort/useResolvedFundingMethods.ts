@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { FundingMethod } from '../../components/Openfort/types'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { backendMethodId, fetchOnrampMethods, type ResolvedOnrampMethod } from './onrampMethodsApi'
+import { fetchOnrampMethods, type ResolvedOnrampMethod } from './onrampMethodsApi'
 import { useFundingTarget } from './useFundingTarget'
 
 type ResolvedFundingMethods = {
@@ -14,8 +13,6 @@ type ResolvedFundingMethods = {
    * rather than falling back to a static list.
    */
   availableMethodIds: Set<string>
-  /** The resolved row for a hub method (label/rail/device-check), if available. */
-  rowFor: (method: FundingMethod) => ResolvedOnrampMethod | undefined
 }
 
 /**
@@ -51,12 +48,7 @@ export function useResolvedFundingMethods(): ResolvedFundingMethods {
     }
   }, [publishableKey, target.chain, target.currency, country])
 
-  const availableMethodIds = new Set(resolved.map((r) => r.method))
+  const availableMethodIds = new Set<string>(resolved.map((r) => r.method))
 
-  const rowFor = (method: FundingMethod): ResolvedOnrampMethod | undefined => {
-    const id = backendMethodId(method)
-    return id ? resolved.find((r) => r.method === id) : undefined
-  }
-
-  return { loaded, availableMethodIds, rowFor }
+  return { loaded, availableMethodIds }
 }

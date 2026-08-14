@@ -13,7 +13,7 @@ import SquircleSpinner from '../../Common/SquircleSpinner'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper, PendingContainer, StackedButtonWrapper } from '../Buy/styles'
+import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox, StackedButtonWrapper } from '../Buy/styles'
 
 // In-page mount for the Coinbase native Pay button (Apple/Google Pay). The
 // server returns Coinbase's hosted Pay-button URL; `allow="payment"` lets the
@@ -197,19 +197,9 @@ const BuyProcessing = () => {
           <PendingContainer>
             <SquircleSpinner
               logo={
-                <div
-                  style={{
-                    padding: '12px',
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
+                <SpinnerLogoBox>
                   <Logos.Openfort />
-                </div>
+                </SpinnerLogoBox>
               }
               connecting={true}
             />

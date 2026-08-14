@@ -1,4 +1,4 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
+import { getBackendUrl } from './onrampMethodsApi'
 
 /**
  * Coinbase-issued OTP verification for native wallet pay (Apple/Google Pay),
@@ -9,11 +9,6 @@ import { SDKConfiguration } from '@openfort/openfort-js'
  * Lives under the v2 funding namespace only (no legacy /v1/onramp alias).
  */
 const VERIFICATIONS_API_BASE = '/v2/funding/onramp/verifications'
-
-const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
 
 export type OnrampVerificationChannel = 'sms' | 'email'
 

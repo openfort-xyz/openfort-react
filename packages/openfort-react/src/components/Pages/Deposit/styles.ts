@@ -48,6 +48,14 @@ export const Skeleton = styled.div<{ $w?: string; $h?: string; $r?: string }>`
   animation: ${pulse} 1.4s ease-in-out infinite;
 `
 
+/** A vertical stack of skeleton lines with consistent spacing. */
+export const SkeletonStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+`
+
 export const OptionList = styled.div`
   display: flex;
   flex-direction: column;

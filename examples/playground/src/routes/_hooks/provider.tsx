@@ -9,7 +9,7 @@ export const Route = createFileRoute('/_hooks/provider')({
 })
 
 // Geographies worth simulating: the three routing outcomes (US → Coinbase,
-// EU → Stripe embedded, rest-of-world → Meld/hidden) plus an IP-detect option.
+// EU → Stripe embedded, rest-of-world → Coinbase hosted) plus an IP-detect option.
 const SIMULATED_COUNTRIES = ['US', 'DE', 'ES', 'FR', 'GB', 'BR']
 
 /**
