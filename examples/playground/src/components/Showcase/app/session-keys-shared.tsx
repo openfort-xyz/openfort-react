@@ -5,13 +5,13 @@ import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/cn'
 import type { StoredData } from '@/lib/useSessionKeysStorage'
+import { cn } from '@/lib/utils'
 
 interface SessionKeyListItemProps {
   item: StoredData
   storageKey: string
-  onRevoke: (publicKey: string) => Promise<{ error?: Error | null }>
+  onRevoke: (publicKey: StoredData['publicKey']) => Promise<{ error?: Error | null }>
   onRemove: (sessionKeyId: string) => void
   onUpdate: (key: string, data: { sessionKeyId: string; active: boolean }) => void
   onRefresh: () => void

@@ -13,7 +13,6 @@ import { Route as ShowcaseRouteImport } from './routes/_showcase'
 import { Route as HooksRouteImport } from './routes/_hooks'
 import { Route as ShowcaseIndexRouteImport } from './routes/_showcase/index'
 import { Route as HooksWagmiRouteImport } from './routes/_hooks/wagmi'
-import { Route as HooksSolanaRouteImport } from './routes/_hooks/solana'
 import { Route as HooksProviderRouteImport } from './routes/_hooks/provider'
 import { Route as ShowcaseShowcaseAuthRouteImport } from './routes/_showcase/showcase/auth'
 import { Route as HooksWalletUseSolanaEmbeddedWalletRouteImport } from './routes/_hooks/wallet/useSolanaEmbeddedWallet'
@@ -50,11 +49,6 @@ const ShowcaseIndexRoute = ShowcaseIndexRouteImport.update({
 const HooksWagmiRoute = HooksWagmiRouteImport.update({
   id: '/wagmi',
   path: '/wagmi',
-  getParentRoute: () => HooksRoute,
-} as any)
-const HooksSolanaRoute = HooksSolanaRouteImport.update({
-  id: '/solana',
-  path: '/solana',
   getParentRoute: () => HooksRoute,
 } as any)
 const HooksProviderRoute = HooksProviderRouteImport.update({
@@ -163,7 +157,6 @@ const ShowcaseShowcaseAuthIndexRoute =
 export interface FileRoutesByFullPath {
   '/': typeof ShowcaseIndexRoute
   '/provider': typeof HooksProviderRoute
-  '/solana': typeof HooksSolanaRoute
   '/wagmi': typeof HooksWagmiRouteWithChildren
   '/auth/useAuthCallback': typeof HooksAuthUseAuthCallbackRoute
   '/auth/useConnectWithSiwe': typeof HooksAuthUseConnectWithSiweRoute
@@ -187,7 +180,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof ShowcaseIndexRoute
   '/provider': typeof HooksProviderRoute
-  '/solana': typeof HooksSolanaRoute
   '/wagmi': typeof HooksWagmiRouteWithChildren
   '/auth/useAuthCallback': typeof HooksAuthUseAuthCallbackRoute
   '/auth/useConnectWithSiwe': typeof HooksAuthUseConnectWithSiweRoute
@@ -212,7 +204,6 @@ export interface FileRoutesById {
   '/_hooks': typeof HooksRouteWithChildren
   '/_showcase': typeof ShowcaseRouteWithChildren
   '/_hooks/provider': typeof HooksProviderRoute
-  '/_hooks/solana': typeof HooksSolanaRoute
   '/_hooks/wagmi': typeof HooksWagmiRouteWithChildren
   '/_showcase/': typeof ShowcaseIndexRoute
   '/_hooks/auth/useAuthCallback': typeof HooksAuthUseAuthCallbackRoute
@@ -239,7 +230,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/provider'
-    | '/solana'
     | '/wagmi'
     | '/auth/useAuthCallback'
     | '/auth/useConnectWithSiwe'
@@ -263,7 +253,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/provider'
-    | '/solana'
     | '/wagmi'
     | '/auth/useAuthCallback'
     | '/auth/useConnectWithSiwe'
@@ -287,7 +276,6 @@ export interface FileRouteTypes {
     | '/_hooks'
     | '/_showcase'
     | '/_hooks/provider'
-    | '/_hooks/solana'
     | '/_hooks/wagmi'
     | '/_showcase/'
     | '/_hooks/auth/useAuthCallback'
@@ -343,13 +331,6 @@ declare module '@tanstack/react-router' {
       path: '/wagmi'
       fullPath: '/wagmi'
       preLoaderRoute: typeof HooksWagmiRouteImport
-      parentRoute: typeof HooksRoute
-    }
-    '/_hooks/solana': {
-      id: '/_hooks/solana'
-      path: '/solana'
-      fullPath: '/solana'
-      preLoaderRoute: typeof HooksSolanaRouteImport
       parentRoute: typeof HooksRoute
     }
     '/_hooks/provider': {
@@ -508,7 +489,6 @@ const HooksWagmiRouteWithChildren = HooksWagmiRoute._addFileChildren(
 
 interface HooksRouteChildren {
   HooksProviderRoute: typeof HooksProviderRoute
-  HooksSolanaRoute: typeof HooksSolanaRoute
   HooksWagmiRoute: typeof HooksWagmiRouteWithChildren
   HooksAuthUseAuthCallbackRoute: typeof HooksAuthUseAuthCallbackRoute
   HooksAuthUseConnectWithSiweRoute: typeof HooksAuthUseConnectWithSiweRoute
@@ -526,7 +506,6 @@ interface HooksRouteChildren {
 
 const HooksRouteChildren: HooksRouteChildren = {
   HooksProviderRoute: HooksProviderRoute,
-  HooksSolanaRoute: HooksSolanaRoute,
   HooksWagmiRoute: HooksWagmiRouteWithChildren,
   HooksAuthUseAuthCallbackRoute: HooksAuthUseAuthCallbackRoute,
   HooksAuthUseConnectWithSiweRoute: HooksAuthUseConnectWithSiweRoute,

@@ -5,8 +5,7 @@ import { commonVariables } from '@/components/Variable/commonVariables'
 import { getFunctionSignature } from '@/components/Variable/getFunctionSignature'
 import { getValueColor } from '@/components/Variable/getValueColor'
 import { VariableTooltip } from '@/components/Variable/VariableTooltip'
-import { cn } from '@/lib/cn'
-import { alertFn, logFn } from '@/lib/utils'
+import { alertFn, cn, logFn } from '@/lib/utils'
 import { Form, type FunctionInputType, type FunctionInputTypeType } from '../Form/Form'
 
 type HookFunctions = {

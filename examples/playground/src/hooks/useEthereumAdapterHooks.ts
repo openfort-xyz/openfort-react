@@ -24,7 +24,7 @@ interface UseWriteContractLike {
   data?: `0x${string}`
   writeContract: (params: {
     address: `0x${string}`
-    abi: unknown[]
+    abi: Abi
     functionName: string
     args?: unknown[]
   }) => Promise<`0x${string}`>
@@ -59,7 +59,7 @@ export function useEthereumAccount(): UseAccountLike {
       (a) => a.chainType === ChainTypeEnum.EVM && a.address.toLowerCase() === fallbackAddress.toLowerCase()
     )
   const useFallback = !!evmAccount
-  const chainId = wallet.activeChainId ?? DEFAULT_EVM_CHAIN.id
+  const chainId = wallet.chainId ?? DEFAULT_EVM_CHAIN.id
 
   return {
     address: useFallback ? (evmAccount.address as `0x${string}`) : undefined,
@@ -105,7 +105,7 @@ export function useEthereumReadContractLocal(params: {
   }
 }
 
-type WriteParams = { address: `0x${string}`; abi: unknown[]; functionName: string; args?: unknown[] }
+type WriteParams = { address: `0x${string}`; abi: Abi; functionName: string; args?: unknown[] }
 
 /**
  * Write contract using the active wallet provider.
@@ -145,7 +145,7 @@ export function useEthereumWriteContractLocal(): UseWriteContractLike {
 
       try {
         const dataEncoded = encodeFunctionData({
-          abi: params.abi as Abi,
+          abi: params.abi,
           functionName: params.functionName,
           args: params.args,
         })

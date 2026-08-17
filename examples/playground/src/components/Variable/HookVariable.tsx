@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { commonVariables, onSettledInputs } from '@/components/Variable/commonVariables'
 import { BaseVariable, type HookInput } from '@/components/Variable/Variable'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 
 const EMPTY_OPTIONS = {} as any
 

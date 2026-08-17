@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { InputAny } from '@/components/Form/InputAny'
 import { VariableTooltip } from '@/components/Variable/VariableTooltip'
-import { alertFn, logFn } from '@/lib/utils'
-import { cn } from '../../lib/cn'
+import { alertFn, cn, logFn } from '@/lib/utils'
 import { BaseVariable } from '../Variable/Variable'
 
 export type FunctionInputTypeType =

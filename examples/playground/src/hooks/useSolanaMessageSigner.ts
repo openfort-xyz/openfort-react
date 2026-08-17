@@ -30,7 +30,7 @@ export function useSolanaMessageSigner() {
         setIsPending(false)
       }
     },
-    [solana.status, solana.provider]
+    [solana]
   )
 
   return { data: data ?? undefined, signMessage, isPending, error: error ?? null }

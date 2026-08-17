@@ -27,7 +27,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { EVM_CHAIN_BY_ID } from '@/lib/chains'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 
 const ACCOUNT_TYPE_BADGE: Record<AccountTypeEnum, string> = {
   [AccountTypeEnum.EOA]: 'EOA',
