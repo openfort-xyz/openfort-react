@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 
 type EmbeddedWalletItem = ReturnType<typeof useSolanaEmbeddedWallet>['wallets'][number]
 
@@ -140,7 +140,7 @@ const WalletButton = ({
   wallet: EmbeddedWalletItem
   activeWallet: EmbeddedWalletItem | null
   connectingAddress: string | undefined
-  setActive: (opts: { address: string; password?: string; recoveryMethod?: RecoveryMethod }) => Promise<void>
+  setActive: ReturnType<typeof useSolanaEmbeddedWallet>['setActive']
 }) => {
   const isConnecting = connectingAddress != null && connectingAddress.toLowerCase() === wallet.address.toLowerCase()
   const [password, setPassword] = useState('example-password')

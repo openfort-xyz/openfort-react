@@ -4,7 +4,7 @@ import { useWalletAuth } from '@openfort/react/wagmi'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useActiveEthereumEmbeddedWallet } from '@/hooks/useActiveEthereumEmbeddedWallet'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 import { EmbeddedWalletsList } from './EmbeddedWalletsList'
 
 const FALLBACK_CONNECTOR_ICONS: Record<string, React.ReactNode> = {

@@ -82,6 +82,10 @@ jobs:
       - name: Build SDK
         run: pnpm build
 
+      - name: Typecheck playground
+        run: pnpm typecheck
+        working-directory: examples/playground
+
       - name: Install Chromium
         run: pnpm playwright install --with-deps chromium
         working-directory: examples/playground

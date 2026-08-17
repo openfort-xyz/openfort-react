@@ -72,15 +72,17 @@ export function useAutoConnectOnModeSwitch(mode: OpenfortPlaygroundMode) {
     }
     if (walletStatus === 'connecting' || walletStatus === 'creating') return
 
-    const setActive = mode === 'svm' ? solanaSetActiveRef.current : setActiveRef.current
-
     const automatic = chainAccounts.find((w) => w.recoveryMethod === RecoveryMethod.AUTOMATIC)
     const target = automatic ?? chainAccounts.find((w) => w.recoveryMethod === RecoveryMethod.PASSKEY)
 
     if (!target) return
 
     handledModeRef.current = mode
-    setActive({ address: target.address as string }).then((result) => {
+    const activate =
+      mode === 'svm'
+        ? solanaSetActiveRef.current({ address: target.address })
+        : setActiveRef.current({ address: target.address as `0x${string}` })
+    activate.then((result) => {
       if (result.error || result.needsRecovery) handledModeRef.current = null
     })
     // wallet.create() intentionally omitted — autoCreateWalletAfterAuth:false in config.

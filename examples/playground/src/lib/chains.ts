@@ -120,7 +120,7 @@ export const EVM_CHAIN_BY_ID: Record<number, PlaygroundEvmChain> = Object.fromEn
   PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c])
 )
 
-export const RPC_URLS: Record<number, string> = Object.fromEntries(PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
+const RPC_URLS: Record<number, string> = Object.fromEntries(PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
 
 /**
  * Deposit-hub funding target (CAIP-2 chain + currency) for an active chain.

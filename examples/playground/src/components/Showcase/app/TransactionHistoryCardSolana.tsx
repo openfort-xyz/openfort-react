@@ -5,9 +5,9 @@ import { useState } from 'react'
 import { HookBadge } from '@/components/HookBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useAsyncData } from '@/hooks/useAsyncData'
-import { cn } from '@/lib/cn'
 import { getExplorerUrl } from '@/lib/explorer'
 import { getTransactionHistory } from '@/lib/solana'
+import { cn } from '@/lib/utils'
 
 const COLLAPSED_COUNT = 4
 

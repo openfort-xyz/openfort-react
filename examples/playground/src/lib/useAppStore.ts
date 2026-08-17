@@ -18,6 +18,11 @@ import {
 
 const polygonMintContract = import.meta.env.VITE_POLYGON_MINT_CONTRACT as `0x${string}` | undefined
 
+const walletAssets: Record<number, `0x${string}`[]> = {
+  [base.id]: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'], // USDC on Base
+}
+if (polygonMintContract) walletAssets[polygonAmoy.id] = [polygonMintContract]
+
 const defaultWalletConfig: OpenfortWalletConfig = {
   shieldPublishableKey: import.meta.env.VITE_SHIELD_PUBLISHABLE_KEY,
   chainType: ChainTypeEnum.EVM,
@@ -27,10 +32,7 @@ const defaultWalletConfig: OpenfortWalletConfig = {
     ethereumFeeSponsorshipId: Object.fromEntries(
       PLAYGROUND_EVM_CHAINS.map((c) => [c.id, import.meta.env.VITE_FEE_SPONSORSHIP_ID!])
     ),
-    assets: {
-      [base.id]: ['0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913' as `0x${string}`], // USDC on Base
-      ...(polygonMintContract ? { [polygonAmoy.id]: [polygonMintContract] } : {}),
-    },
+    assets: walletAssets,
   },
   solana: {
     cluster: SOLANA_CLUSTER,

@@ -83,6 +83,7 @@ function RouteComponent() {
             onEdit: (value) => {
               setProviderOptions({
                 ...providerOptions,
+                // @ts-expect-error spreading the walletConfig union loses variant discrimination; runtime value stays a valid config
                 walletConfig: {
                   ...providerOptions.walletConfig,
                   connectOnLogin: value === true || value === 'true',

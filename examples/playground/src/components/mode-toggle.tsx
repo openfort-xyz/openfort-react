@@ -1,7 +1,7 @@
 import { Moon, Sun } from 'lucide-react'
 import { useTheme } from '@/components/theme-provider'
 import { Switch } from '@/components/ui/switch'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 
 type ModeToggleProps = {
   className?: string

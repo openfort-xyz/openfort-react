@@ -1,6 +1,6 @@
 import { type ComponentType, forwardRef } from 'react'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 
 type CustomTruncatedTextContentProps = { displayText: string; className?: string }
 
