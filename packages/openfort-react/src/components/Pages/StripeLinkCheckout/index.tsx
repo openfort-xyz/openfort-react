@@ -252,7 +252,10 @@ const StripeLinkCheckout: React.FC = () => {
 
   const handleKycSubmit = async () => {
     const coordinator = coordinatorRef.current
-    if (!coordinator) return
+    if (!coordinator) {
+      setError('The Stripe checkout is no longer active — close and reopen the purchase.')
+      return
+    }
     const dobMatch = kyc.dob.trim().match(/^(\d{4})-(\d{2})-(\d{2})$/)
     if (!dobMatch) {
       setError('Enter your date of birth as YYYY-MM-DD.')
@@ -318,6 +321,24 @@ const StripeLinkCheckout: React.FC = () => {
       .catch((e) => {
         setError(e instanceof Error ? e.message : 'Could not load the payment form.')
       })
+  }, [step])
+
+  // An existing-but-unverified Link buyer fails at payment-token creation, and
+  // Stripe's element surfaces that as an unhandled rejection — outside both the
+  // mount promise and the completion callback. Catch it while the payment step
+  // is up and collect identity, mirroring the commit-stage recovery below.
+  useEffect(() => {
+    if (step !== 'payment') return
+    const onRejection = (event: PromiseRejectionEvent) => {
+      const message = event.reason instanceof Error ? event.reason.message : String(event.reason)
+      if (!/identity verification/i.test(message)) return
+      event.preventDefault()
+      paymentMounted.current = false
+      setError(null)
+      setStep('kyc')
+    }
+    window.addEventListener('unhandledrejection', onRejection)
+    return () => window.removeEventListener('unhandledrejection', onRejection)
   }, [step])
 
   // ---- Commit + checkout + settlement ----

@@ -20,10 +20,11 @@ import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox, StackedButtonW
 // wallet-pay sheet run inside the frame. The page renders a single ~44px Pay
 // button centered in the frame's viewport (no resize events), so the frame
 // hugs the button — the wallet-pay sheet itself is a native overlay, not
-// constrained by the frame.
-const WalletPayFrame = styled.iframe`
+// constrained by the frame. When the page falls back to the Apple Pay QR
+// experience (device can't present the sheet), it needs a full viewport.
+const WalletPayFrame = styled.iframe<{ $qrFallback: boolean }>`
   width: 100%;
-  height: 60px;
+  height: ${({ $qrFallback }) => ($qrFallback ? '440px' : '60px')};
   margin-top: 8px;
   border: 0;
   border-radius: 12px;
@@ -50,6 +51,10 @@ const BuyProcessing = () => {
   // button is done at that point, so the frame gives way to the spinner while
   // the session poll waits for settlement.
   const [framePaid, setFramePaid] = useState(false)
+
+  // The frame reported this device can't present the Apple Pay sheet and is
+  // showing the QR-code fallback instead — give it a viewport, not a strip.
+  const [qrFallback, setQrFallback] = useState(false)
 
   // Commit once per mount. A session takes a single payment method, so a retry
   // goes back to the amount screen, which mints a fresh session.
@@ -98,7 +103,7 @@ const BuyProcessing = () => {
   // Re-measure the modal as the state machine advances.
   useEffect(() => {
     triggerResize()
-  }, [triggerResize, onramp.status, failed, showContinueButton, framePaid])
+  }, [triggerResize, onramp.status, failed, showContinueButton, framePaid, qrFallback])
 
   // The Pay-button page reports its lifecycle via postMessage
   // (onramp_api.load_* / commit_* / polling_*, per the headless onramp docs) —
@@ -115,10 +120,20 @@ const BuyProcessing = () => {
           return
         }
       }
-      const { eventName, data } = (payload ?? {}) as { eventName?: string; data?: { errorMessage?: string } }
+      const { eventName, data } = (payload ?? {}) as {
+        eventName?: string
+        data?: { errorCode?: string; errorMessage?: string }
+      }
       if (eventName === 'onramp_api.commit_success' || eventName === 'onramp_api.polling_start') {
         setFramePaid(true)
       } else if (eventName === 'onramp_api.load_error' || eventName === 'onramp_api.commit_error') {
+        // Coinbase documents this load error as safe to ignore on web: the frame
+        // falls back to an Apple Pay QR code the buyer scans with their phone.
+        // The QR page needs a real viewport, not the Pay-button strip.
+        if (data?.errorCode === 'ERROR_CODE_GUEST_APPLE_PAY_NOT_SUPPORTED') {
+          setQrFallback(true)
+          return
+        }
         setFailed(data?.errorMessage ?? 'The payment could not be started. Please try again.')
       }
     }
@@ -192,6 +207,7 @@ const BuyProcessing = () => {
             allow="payment"
             sandbox="allow-scripts allow-same-origin"
             referrerPolicy="no-referrer"
+            $qrFallback={qrFallback}
           />
         ) : (
           <PendingContainer>
