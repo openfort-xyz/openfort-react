@@ -33,6 +33,25 @@ function RouteComponent() {
           openSwitchNetworks: {
             description: 'Open the switch networks UI.',
           },
+          openSend: {
+            description:
+              'Open the Send flow for the active chain. Pass a transaction to prefill it and jump straight to the confirmation screen.',
+          },
+          openReceive: {
+            description: 'Open the Receive screen (address + QR) for the active chain.',
+          },
+          openFunding: {
+            description: 'Open the Deposit hub — every way to add funds: crypto transfer, exchange, or fiat.',
+          },
+          openBuy: {
+            description: 'Open the Buy screen, the fiat amount entry that leads into the card / wallet-pay rails.',
+          },
+          openExportKey: {
+            description: 'Open the export private key flow for the embedded wallet.',
+          },
+          openSettings: {
+            description: 'Open the wallet profile / settings screen.',
+          },
         }}
       />
     </Layout>

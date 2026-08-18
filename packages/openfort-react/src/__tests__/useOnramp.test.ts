@@ -225,6 +225,74 @@ describe('useOnramp', () => {
     await expect(result.current.open()).rejects.toThrow(/needs a session and a method/)
   })
 
+  it('flags the checkout closing and keeps polling — closing is not an outcome', async () => {
+    vi.useFakeTimers()
+    const { client, setPaymentMethod, get } = makeClient()
+    setPaymentMethod.mockResolvedValue(makeSession({ status: 'waiting_payment' }))
+    get.mockResolvedValue(makeSession({ status: 'waiting_payment' }))
+    const fakeWindow = { closed: false } as Window
+    openSpy.mockReturnValue(fakeWindow)
+
+    const { result } = renderHook(() => useOnramp(sessionRef, 'card', { client }))
+    act(() => {
+      void result.current.open().catch(() => {})
+    })
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(4_000)
+    })
+    expect(result.current.checkoutClosed).toBe(false)
+
+    // The buyer shuts the checkout window.
+    fakeWindow.closed = true
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+    expect(result.current.checkoutClosed).toBe(true)
+    // Still non-terminal: settlement may land after the window is gone.
+    expect(result.current.status).toBe('waiting_payment')
+
+    const callsSoFar = get.mock.calls.length
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(8_000)
+    })
+    expect(get.mock.calls.length).toBeGreaterThan(callsSoFar)
+  })
+
+  it('a close that follows settlement surfaces the succeeded status', async () => {
+    vi.useFakeTimers()
+    const { client, setPaymentMethod, get } = makeClient()
+    setPaymentMethod.mockResolvedValue(makeSession({ status: 'waiting_payment' }))
+    // The webhook lands while the buyer is still in the checkout window.
+    get.mockResolvedValue(makeSession({ status: 'succeeded' }))
+    const fakeWindow = { closed: false } as Window
+    openSpy.mockReturnValue(fakeWindow)
+
+    const { result } = renderHook(() => useOnramp(sessionRef, 'card', { client }))
+    act(() => {
+      void result.current.open().catch(() => {})
+    })
+    fakeWindow.closed = true
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+    expect(result.current.status).toBe('succeeded')
+  })
+
+  it('present() reopens the committed checkout url', async () => {
+    const { client, setPaymentMethod } = makeClient()
+    setPaymentMethod.mockResolvedValue(makeSession({ status: 'succeeded' }))
+
+    const { result } = renderHook(() => useOnramp(sessionRef, 'card', { client, mode: 'manual' }))
+    await act(async () => {
+      await result.current.open()
+    })
+    openSpy.mockClear()
+    act(() => {
+      result.current.present()
+    })
+    expect(openSpy).toHaveBeenCalledWith('https://crypto.link.com/s?x=1', 'openfort-onramp', expect.any(String))
+  })
+
   it('stops polling when the hook unmounts mid-flight', async () => {
     vi.useFakeTimers()
     const { client, setPaymentMethod, get } = makeClient()

@@ -17,6 +17,30 @@ import type { FundingSessionRef } from './useFundingMethods'
 
 const TERMINAL: SessionStatus[] = ['succeeded', 'bounced', 'expired']
 const POLL_MS = 4000
+const CLOSE_CHECK_MS = 500
+const POPUP_FEATURES = 'popup,width=470,height=750'
+const POPUP_NAME = 'openfort-onramp'
+
+/**
+ * Sleep `ms`, returning early the moment the checkout popup is closed. `closed`
+ * is one of the few properties readable on a cross-origin window, so it is the
+ * only signal a hosted checkout gives us that the buyer is done with it — either
+ * because they paid or because they abandoned. Returning early makes the next
+ * session poll fire immediately instead of up to POLL_MS later, so a completed
+ * purchase lands on screen as soon as the buyer closes the window.
+ */
+function sleepUntilClosed(ms: number, popup: Window | null): Promise<void> {
+  if (!popup) return new Promise((resolve) => setTimeout(resolve, ms))
+  return new Promise((resolve) => {
+    const deadline = Date.now() + ms
+    const tick = setInterval(() => {
+      if (popup.closed || Date.now() >= deadline) {
+        clearInterval(tick)
+        resolve()
+      }
+    }, CLOSE_CHECK_MS)
+  })
+}
 
 export type UseOnrampOptions = UseFundingOptions & {
   /**
@@ -97,6 +121,22 @@ export type UseOnramp = {
   loading: boolean
   error: Error | null
   reset: () => void
+  /**
+   * The buyer closed the hosted checkout popup while the session was still
+   * non-terminal. NOT an outcome: they may have paid moments before closing (the
+   * provider settles by webhook, which can land after), or they may have
+   * abandoned. Polling continues either way — branch on this to offer "reopen"
+   * / "I've finished" instead of leaving a spinner running against a window that
+   * is no longer there. Always false on the `native` and `embedded` angles, and
+   * when the popup was blocked.
+   */
+  checkoutClosed: boolean
+  /**
+   * Re-present the committed hosted checkout in a fresh popup — the same
+   * provider session, so a buyer who closed the window by accident continues
+   * where they left off. No-op unless a `popup`-angle url has been committed.
+   */
+  present: () => void
 }
 
 /**
@@ -131,6 +171,9 @@ export function useOnramp(
   const [current, setCurrent] = useState<FundingSession | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [loading, setLoading] = useState(false)
+  const [checkoutClosed, setCheckoutClosed] = useState(false)
+  // The presented checkout window, so the poll loop can watch it close.
+  const popup = useRef<Window | null>(null)
   // Generation guard: only the latest open()/reset() updates state. Unmount is
   // tracked separately with a ref the mount effect re-arms — StrictMode's dev
   // double-mount must NOT kill an in-flight open() (the cleanup runs between
@@ -148,9 +191,13 @@ export function useOnramp(
 
   const reset = useCallback(() => {
     generation.current += 1
+    // The popup is left alone deliberately — a buyer may still be paying in it,
+    // and the session it belongs to is finished with either way.
+    popup.current = null
     setCurrent(null)
     setError(null)
     setLoading(false)
+    setCheckoutClosed(false)
   }, [])
 
   const quote = useCallback(
@@ -210,17 +257,25 @@ export function useOnramp(
         // in-page Pay-button link — surfaced via `url`/`angle` for the caller to
         // mount; auto-opening it would break the in-page sheet.
         if (checkoutUrl && angle === 'popup' && mode === 'popup') {
-          window.open(checkoutUrl, 'openfort-onramp', 'popup,width=470,height=750')
+          popup.current = window.open(checkoutUrl, POPUP_NAME, POPUP_FEATURES)
         } else if (checkoutUrl && angle === 'popup' && mode === 'redirect') {
           window.location.href = checkoutUrl
         }
 
-        // Settlement is webhook-driven server-side; poll the session (never the
-        // popup) until it turns terminal.
+        // Settlement is webhook-driven server-side, so the SESSION is the source
+        // of truth — never the popup. The popup is still watched, for latency and
+        // for the UI: closing it ends the wait early so a purchase finished just
+        // before the close is reflected immediately, and it flips `checkoutClosed`
+        // so the caller can stop pretending a checkout window is still open.
         let latest = committed
         while (!TERMINAL.includes(latest.status)) {
-          await new Promise((resolve) => setTimeout(resolve, POLL_MS))
+          await sleepUntilClosed(POLL_MS, popup.current)
           if (!isCurrent()) return latest
+          if (popup.current?.closed) {
+            popup.current = null
+            setCheckoutClosed(true)
+            logger.log('[onramp] checkout window closed', { sessionId: latest.id, status: latest.status })
+          }
           latest = await client.sessions.get(session.id, { clientSecret: session.clientSecret })
           if (!isCurrent()) return latest
           setCurrent(latest)
@@ -241,15 +296,27 @@ export function useOnramp(
   )
 
   const pm = current?.paymentMethod
+  const url = pm?.type === 'onramp' ? pm.url : null
+  const angle = pm?.type === 'onramp' ? pm.angle : null
+
+  const present = useCallback(() => {
+    if (!url || angle !== 'popup') return
+    popup.current = window.open(url, POPUP_NAME, POPUP_FEATURES)
+    // The running poll loop picks the new window up on its next tick.
+    if (popup.current) setCheckoutClosed(false)
+  }, [url, angle])
+
   return {
     open,
     quote,
     status: current?.status ?? 'idle',
-    url: pm?.type === 'onramp' ? pm.url : null,
-    angle: pm?.type === 'onramp' ? pm.angle : null,
+    url,
+    angle,
     session: current,
     loading,
     error,
     reset,
+    checkoutClosed,
+    present,
   }
 }

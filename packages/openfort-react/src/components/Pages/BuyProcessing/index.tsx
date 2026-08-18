@@ -103,7 +103,7 @@ const BuyProcessing = () => {
   // Re-measure the modal as the state machine advances.
   useEffect(() => {
     triggerResize()
-  }, [triggerResize, onramp.status, failed, showContinueButton, framePaid, qrFallback])
+  }, [triggerResize, onramp.status, failed, showContinueButton, framePaid, qrFallback, onramp.checkoutClosed])
 
   // The Pay-button page reports its lifecycle via postMessage
   // (onramp_api.load_* / commit_* / polling_*, per the headless onramp docs) —
@@ -144,13 +144,18 @@ const BuyProcessing = () => {
   // Offer a manual advance after a while — settlement webhooks can lag the
   // provider's own success screen. Suppressed while the native Pay button is
   // mounted (the buyer is still paying; advancing would skip it); it appears
-  // once payment is received.
+  // once payment is received. Closing the checkout window skips the wait: there
+  // is nothing left on screen for the buyer to finish in.
   useEffect(() => {
     const inPageAwaitingPayment = onramp.angle === 'native' && !framePaid && onramp.status === 'waiting_payment'
     if ((onramp.status !== 'waiting_payment' && onramp.status !== 'processing') || inPageAwaitingPayment) return
+    if (onramp.checkoutClosed) {
+      setShowContinueButton(true)
+      return
+    }
     const timer = setTimeout(() => setShowContinueButton(true), 5_000)
     return () => clearTimeout(timer)
-  }, [onramp.status, onramp.angle, framePaid])
+  }, [onramp.status, onramp.angle, framePaid, onramp.checkoutClosed])
 
   const handleBack = () => {
     onramp.reset()
@@ -174,6 +179,12 @@ const BuyProcessing = () => {
   }
 
   const starting = onramp.status === 'idle' || onramp.loading
+  const delivering = onramp.status === 'processing' || framePaid
+  // The buyer shut the hosted checkout before it settled. Not a failure — they
+  // may have paid and closed it, and settlement can still arrive — but the
+  // "finish in the checkout window" copy no longer describes anything on screen.
+  const closedEarly = onramp.checkoutClosed && !delivering
+  const canReopen = closedEarly && onramp.angle === 'popup' && !!onramp.url
   // Native wallet pay mounts Coinbase's in-page Pay button once the commit
   // returns its URL and while we await payment; every other angle (and the
   // post-payment 'processing' delivery) shows the spinner.
@@ -184,7 +195,13 @@ const BuyProcessing = () => {
     <PageContent onBack={handleBack}>
       <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
         <ModalHeading>
-          {starting ? 'Preparing checkout' : showWalletPayFrame ? 'Complete your purchase' : 'Processing purchase'}
+          {starting
+            ? 'Preparing checkout'
+            : showWalletPayFrame
+              ? 'Complete your purchase'
+              : closedEarly
+                ? 'Checkout window closed'
+                : 'Processing purchase'}
         </ModalHeading>
         {/* The provider's own Pay button carries its copy — no description is
             repeated above it. */}
@@ -192,9 +209,11 @@ const BuyProcessing = () => {
           <ModalBody>
             {starting
               ? 'Please wait…'
-              : onramp.status === 'processing' || framePaid
+              : delivering
                 ? 'Payment received — delivering your funds…'
-                : 'Complete the purchase in the checkout window.'}
+                : closedEarly
+                  ? "We're still checking for your payment. Reopen the checkout if you haven't finished."
+                  : 'Complete the purchase in the checkout window.'}
           </ModalBody>
         )}
 
@@ -224,10 +243,17 @@ const BuyProcessing = () => {
 
         {showContinueButton && (
           <>
-            <ModalBody>Finished in the checkout window?</ModalBody>
+            {!closedEarly && <ModalBody>Finished in the checkout window?</ModalBody>}
+            {canReopen && (
+              <StackedButtonWrapper>
+                <Button variant="primary" onClick={onramp.present}>
+                  Reopen checkout
+                </Button>
+              </StackedButtonWrapper>
+            )}
             <StackedButtonWrapper>
-              <Button variant="primary" onClick={() => setRoute(routes.BUY_COMPLETE)}>
-                Continue
+              <Button variant={canReopen ? 'secondary' : 'primary'} onClick={() => setRoute(routes.BUY_COMPLETE)}>
+                {closedEarly ? "I've completed payment" : 'Continue'}
               </Button>
             </StackedButtonWrapper>
             <StackedButtonWrapper>

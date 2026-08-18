@@ -199,12 +199,17 @@ function FundingTargetSync() {
 function SolanaFundingTargetSync() {
   const providerOptions = useAppStore((s) => s.providerOptions)
   const setProviderOptions = useAppStore((s) => s.setProviderOptions)
+  const simulation = useAppStore((s) => s.fundingSimulation)
 
   useEffect(() => {
     const funding = providerOptions.uiConfig?.funding
+    // The country override has to be re-checked here too, not just the target:
+    // switching funding scenario while in Solana mode is otherwise a no-op,
+    // because the target already matches and this effect returns early.
     if (
       funding?.targetChain === SOLANA_FUNDING_TARGET.targetChain &&
-      funding?.targetCurrency === SOLANA_FUNDING_TARGET.targetCurrency
+      funding?.targetCurrency === SOLANA_FUNDING_TARGET.targetCurrency &&
+      funding?.country === simulation.country
     ) {
       return
     }
@@ -212,10 +217,10 @@ function SolanaFundingTargetSync() {
       ...providerOptions,
       uiConfig: {
         ...providerOptions.uiConfig,
-        funding: { ...funding, ...SOLANA_FUNDING_TARGET },
+        funding: { ...funding, ...SOLANA_FUNDING_TARGET, country: simulation.country },
       },
     })
-  }, [providerOptions, setProviderOptions])
+  }, [providerOptions, setProviderOptions, simulation.country])
 
   return null
 }
