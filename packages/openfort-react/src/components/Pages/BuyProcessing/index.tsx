@@ -22,6 +22,10 @@ import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox, StackedButtonW
 // hugs the button — the wallet-pay sheet itself is a native overlay, not
 // constrained by the frame. When the page falls back to the Apple Pay QR
 // experience (device can't present the sheet), it needs a full viewport.
+// How long the mounted Pay-button frame may stay silent before we assume it
+// never ran. A working frame reports within about a second.
+const FRAME_SILENCE_MS = 6_000
+
 const WalletPayFrame = styled.iframe<{ $qrFallback: boolean }>`
   width: 100%;
   height: ${({ $qrFallback }) => ($qrFallback ? '440px' : '60px')};
@@ -55,6 +59,20 @@ const BuyProcessing = () => {
   // The frame reported this device can't present the Apple Pay sheet and is
   // showing the QR-code fallback instead — give it a viewport, not a strip.
   const [qrFallback, setQrFallback] = useState(false)
+
+  // The Pay-button frame never said anything. The usual cause is the embedding
+  // origin missing from the provider's frame-ancestors allowlist: the frame is
+  // blocked, which still fires `load` but emits no onramp_api.* message, so
+  // nothing below can tell the difference from a slow network. Offer the same
+  // escape the provider's own sample recommends — open the checkout in a tab.
+  const [frameSilent, setFrameSilent] = useState(false)
+  const frameSpokeRef = useRef(false)
+
+  // Native wallet pay mounts the provider's in-page Pay button once the commit
+  // returns its URL and while we await payment; every other angle (and the
+  // post-payment 'processing' delivery) shows the spinner.
+  const showWalletPayFrame =
+    onramp.angle === 'native' && !!onramp.url && onramp.status === 'waiting_payment' && !framePaid
 
   // Commit once per mount. A session takes a single payment method, so a retry
   // goes back to the amount screen, which mints a fresh session.
@@ -103,7 +121,29 @@ const BuyProcessing = () => {
   // Re-measure the modal as the state machine advances.
   useEffect(() => {
     triggerResize()
-  }, [triggerResize, onramp.status, failed, showContinueButton, framePaid, qrFallback, onramp.checkoutClosed])
+  }, [
+    triggerResize,
+    onramp.status,
+    failed,
+    showContinueButton,
+    framePaid,
+    qrFallback,
+    onramp.checkoutClosed,
+    frameSilent,
+  ])
+
+  // Start the silence timer once the frame is actually mounted. FRAME_SILENCE_MS
+  // is generous: a real Pay button reports within a second, so anything past
+  // this is the frame not running at all.
+  useEffect(() => {
+    if (!showWalletPayFrame) return
+    frameSpokeRef.current = false
+    setFrameSilent(false)
+    const timer = setTimeout(() => {
+      if (!frameSpokeRef.current) setFrameSilent(true)
+    }, FRAME_SILENCE_MS)
+    return () => clearTimeout(timer)
+  }, [showWalletPayFrame])
 
   // The Pay-button page reports its lifecycle via postMessage
   // (onramp_api.load_* / commit_* / polling_*, per the headless onramp docs) —
@@ -124,9 +164,24 @@ const BuyProcessing = () => {
         eventName?: string
         data?: { errorCode?: string; errorMessage?: string }
       }
-      if (eventName === 'onramp_api.commit_success' || eventName === 'onramp_api.polling_start') {
+      // Any message at all proves the frame rendered, so the silence timer below
+      // must stand down even for events this screen doesn't otherwise act on.
+      setFrameSilent(false)
+      frameSpokeRef.current = true
+      if (eventName === 'onramp_api.polling_success') {
+        // The provider finished its own polling and the purchase succeeded.
+        // This is the earliest definitive success we get on the native angle —
+        // the session otherwise advances only when the settlement webhook lands,
+        // which can lag badly and never arrives in local development.
         setFramePaid(true)
-      } else if (eventName === 'onramp_api.load_error' || eventName === 'onramp_api.commit_error') {
+        setRoute(routes.BUY_COMPLETE)
+      } else if (eventName === 'onramp_api.commit_success' || eventName === 'onramp_api.polling_start') {
+        setFramePaid(true)
+      } else if (
+        eventName === 'onramp_api.load_error' ||
+        eventName === 'onramp_api.commit_error' ||
+        eventName === 'onramp_api.polling_error'
+      ) {
         // Coinbase documents this load error as safe to ignore on web: the frame
         // falls back to an Apple Pay QR code the buyer scans with their phone.
         // The QR page needs a real viewport, not the Pay-button strip.
@@ -147,7 +202,10 @@ const BuyProcessing = () => {
   // once payment is received. Closing the checkout window skips the wait: there
   // is nothing left on screen for the buyer to finish in.
   useEffect(() => {
-    const inPageAwaitingPayment = onramp.angle === 'native' && !framePaid && onramp.status === 'waiting_payment'
+    // A silent frame is the exception: the buyer has nothing to press, so the
+    // escape hatch must appear rather than be suppressed as "still paying".
+    const inPageAwaitingPayment =
+      onramp.angle === 'native' && !framePaid && onramp.status === 'waiting_payment' && !frameSilent
     if ((onramp.status !== 'waiting_payment' && onramp.status !== 'processing') || inPageAwaitingPayment) return
     if (onramp.checkoutClosed) {
       setShowContinueButton(true)
@@ -180,16 +238,14 @@ const BuyProcessing = () => {
 
   const starting = onramp.status === 'idle' || onramp.loading
   const delivering = onramp.status === 'processing' || framePaid
+  const openInTab = () => {
+    if (onramp.url) window.open(onramp.url, '_blank', 'noopener,noreferrer')
+  }
   // The buyer shut the hosted checkout before it settled. Not a failure — they
   // may have paid and closed it, and settlement can still arrive — but the
   // "finish in the checkout window" copy no longer describes anything on screen.
   const closedEarly = onramp.checkoutClosed && !delivering
   const canReopen = closedEarly && onramp.angle === 'popup' && !!onramp.url
-  // Native wallet pay mounts Coinbase's in-page Pay button once the commit
-  // returns its URL and while we await payment; every other angle (and the
-  // post-payment 'processing' delivery) shows the spinner.
-  const showWalletPayFrame =
-    onramp.angle === 'native' && !!onramp.url && onramp.status === 'waiting_payment' && !framePaid
 
   return (
     <PageContent onBack={handleBack}>
@@ -218,16 +274,32 @@ const BuyProcessing = () => {
         )}
 
         {showWalletPayFrame ? (
-          // Coinbase requires these exact iframe attributes for the in-page
-          // Apple/Google Pay sheet to run (headless onramp docs).
-          <WalletPayFrame
-            src={onramp.url ?? undefined}
-            title="Coinbase Pay"
-            allow="payment"
-            sandbox="allow-scripts allow-same-origin"
-            referrerPolicy="no-referrer"
-            $qrFallback={qrFallback}
-          />
+          <>
+            {/* `allow="payment"` is what lets the wallet-pay sheet run in the
+                frame, and is all Coinbase's own sample sets. A `sandbox` here
+                would have to grant popups, forms, modals and top-navigation for
+                the sheet and the QR fallback to work, and `allow-scripts` with
+                `allow-same-origin` lets the frame drop the sandbox anyway — so
+                it bought nothing and risked breaking the sheet. */}
+            <WalletPayFrame
+              src={onramp.url ?? undefined}
+              title="Coinbase Pay"
+              allow="payment"
+              $qrFallback={qrFallback}
+            />
+            {frameSilent && (
+              <>
+                <ModalBody>
+                  The payment button couldn’t load here. Open the checkout in a new tab to finish paying.
+                </ModalBody>
+                <StackedButtonWrapper>
+                  <Button variant="primary" onClick={openInTab}>
+                    Open checkout in a new tab
+                  </Button>
+                </StackedButtonWrapper>
+              </>
+            )}
+          </>
         ) : (
           <PendingContainer>
             <SquircleSpinner

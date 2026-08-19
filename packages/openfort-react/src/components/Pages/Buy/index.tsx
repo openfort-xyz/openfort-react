@@ -38,17 +38,17 @@ import {
   SummaryRow,
   SummarySection,
 } from './styles'
-import { amountInputWidth, createCurrencyFormatter, getCurrencySymbol } from './utils'
+import { amountInputWidth, createCurrencyFormatter, defaultCurrencyForCountry, getCurrencySymbol } from './utils'
 
-// Fiat source currencies the onramp accepts. Kept small; USD is the safe default
-// (some providers reject non-USD and fall back to the buyer's local currency).
-const SOURCE_CURRENCIES = ['USD', 'EUR', 'GBP']
+// Fiat source currencies the onramp actually settles. GBP is omitted on
+// purpose: the provider accepts it as a parameter but currently quotes no
+// destination pairs for it, so offering it only produces a dead end.
+const SOURCE_CURRENCIES = ['USD', 'EUR']
 
 // Flag shown in the currency pill (display only — the selector drives the value).
 const CURRENCY_FLAG: Record<string, string> = {
   USD: '🇺🇸',
   EUR: '🇪🇺',
-  GBP: '🇬🇧',
 }
 
 // The payment-method switch below the amount ("Pay with card") — plain grey
@@ -163,6 +163,16 @@ const Buy = () => {
   useEffect(() => {
     triggerResize()
   }, [triggerResize])
+
+  // Price in the buyer's regional currency once the server resolves their
+  // country (it accounts for the IP and any override, so it is the same region
+  // the commit will route with). A currency the buyer picked themselves wins.
+  useEffect(() => {
+    if (buyForm.currencyPinned || !fundingMethods.country) return
+    const regional = defaultCurrencyForCountry(fundingMethods.country)
+    if (regional === buyForm.currency) return
+    setBuyForm((prev) => (prev.currencyPinned ? prev : { ...prev, currency: regional }))
+  }, [fundingMethods.country, buyForm.currency, buyForm.currencyPinned, setBuyForm])
 
   const tokenSymbol = getAssetSymbol(selectedToken)
   const tokenName = (selectedToken.metadata?.name as string) || tokenSymbol
@@ -299,7 +309,7 @@ const Buy = () => {
         <div style={{ width: 120 }}>
           <LogoSelect
             value={buyForm.currency}
-            onChange={(currency) => setBuyForm((prev) => ({ ...prev, currency }))}
+            onChange={(currency) => setBuyForm((prev) => ({ ...prev, currency, currencyPinned: true }))}
             options={SOURCE_CURRENCIES.map((c) => ({
               value: c,
               label: c,

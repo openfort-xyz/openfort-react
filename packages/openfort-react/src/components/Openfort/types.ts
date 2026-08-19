@@ -611,6 +611,11 @@ export type WalletPayDraft = Partial<WalletPayIdentity>
 export type BuyFormState = {
   amount: string
   currency: string
+  /**
+   * The buyer chose the currency themselves, so the region default must stop
+   * overwriting it — the amount screen otherwise re-applies it on every mount.
+   */
+  currencyPinned?: boolean
   asset: Asset
   /** The fiat method being bought with. The provider is resolved server-side. */
   method: FundingMethod
