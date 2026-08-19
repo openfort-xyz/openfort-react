@@ -53,18 +53,22 @@ const EU_COUNTRIES = new Set(
  * settlement. All Stripe UI stays inside the modal; nothing opens a popup.
  */
 const StripeLinkCheckout: React.FC = () => {
-  const { buyForm, setRoute, triggerResize, publishableKey, uiConfig } = useOpenfort()
+  const { buyForm, setRoute, triggerResize, publishableKey, uiConfig, mode } = useOpenfort()
   const { user } = useUser()
   const client = useFundingClient({ useBackendUrl: true })
   const onramp = useOnramp(buyForm.session, backendMethodId(buyForm.method), { useBackendUrl: true })
   const isTestMode = getPublishableKeyEnvironment(publishableKey) === 'test'
-  // Link registration wants the buyer's country; the widget's configured
-  // country matches how the method row was resolved.
-  const buyerCountry = uiConfig.funding?.country ?? 'US'
+  // Prefer the country the SERVER resolved when it listed the methods — it is
+  // the region this purchase actually routes with. The configured country is a
+  // fallback, and defaulting to US would show EU buyers the wrong identity form.
+  const buyerCountry = buyForm.buyerCountry ?? uiConfig.funding?.country ?? 'US'
   const isEU = EU_COUNTRIES.has(buyerCountry.toUpperCase())
-  // The same Link flow serves both rails — only the collected payment method
-  // differs: card, or a US bank account for the ACH bank-transfer row.
+  // The same Link flow serves every rail — only the instrument differs: a US
+  // bank account for ACH, a wallet sheet for Apple/Google Pay (both card-backed,
+  // so the type stays 'card'), or the card form itself.
   const isBankTransfer = buyForm.method === FundingMethod.BANK_TRANSFER
+  const isApplePay = buyForm.method === FundingMethod.APPLE_PAY
+  const isGooglePay = buyForm.method === FundingMethod.GOOGLE_PAY
 
   const [step, setStep] = useState<Step>('init')
   const [error, setError] = useState<string | null>(null)
@@ -98,7 +102,14 @@ const StripeLinkCheckout: React.FC = () => {
       return
     }
     let cancelled = false
-    createStripeOnrampCoordinator(key, { theme: 'stripe' })
+    // Stripe's elements carry their own theme, so a light one inside a dark
+    // modal is the only combination that looks broken. 'auto' has to be
+    // resolved here: the widget expresses it as a CSS media query, which this
+    // cross-origin element can't see.
+    const prefersDark =
+      typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: dark)').matches === true
+    const theme = mode === 'dark' || (mode !== 'light' && prefersDark) ? 'night' : 'stripe'
+    createStripeOnrampCoordinator(key, { theme })
       .then((coordinator) => {
         if (cancelled) {
           coordinator.destroy()
@@ -310,7 +321,13 @@ const StripeLinkCheckout: React.FC = () => {
       .collectPaymentMethod(
         {
           payment_method_types: [isBankTransfer ? 'us_bank_account' : 'card'],
-          wallets: { applePay: 'never', googlePay: 'never' },
+          // Offer the sheet the buyer actually picked. Leaving both 'never' —
+          // as this did — handed anyone who chose Apple or Google Pay a plain
+          // card form with their wallet explicitly switched off.
+          wallets: {
+            applePay: isApplePay ? 'always' : 'never',
+            googlePay: isGooglePay ? 'always' : 'never',
+          },
         },
         (result) => {
           paymentTokenRef.current = result.cryptoPaymentToken

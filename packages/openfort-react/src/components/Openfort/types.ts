@@ -616,6 +616,13 @@ export type BuyFormState = {
    * overwriting it — the amount screen otherwise re-applies it on every mount.
    */
   currencyPinned?: boolean
+  /**
+   * Buyer country as the SERVER resolved it (IP plus any override) while
+   * listing methods — the same region the commit routes with. Downstream
+   * screens must prefer this over the configured country, which is optional and
+   * would otherwise silently make everyone American.
+   */
+  buyerCountry?: string | null
   asset: Asset
   /** The fiat method being bought with. The provider is resolved server-side. */
   method: FundingMethod

@@ -167,12 +167,17 @@ const Buy = () => {
   // Price in the buyer's regional currency once the server resolves their
   // country (it accounts for the IP and any override, so it is the same region
   // the commit will route with). A currency the buyer picked themselves wins.
+  // The country itself is carried on the form for the checkout screens, which
+  // otherwise fall back to the optional configured country.
   useEffect(() => {
-    if (buyForm.currencyPinned || !fundingMethods.country) return
+    if (!fundingMethods.country) return
     const regional = defaultCurrencyForCountry(fundingMethods.country)
-    if (regional === buyForm.currency) return
-    setBuyForm((prev) => (prev.currencyPinned ? prev : { ...prev, currency: regional }))
-  }, [fundingMethods.country, buyForm.currency, buyForm.currencyPinned, setBuyForm])
+    setBuyForm((prev) => ({
+      ...prev,
+      buyerCountry: fundingMethods.country,
+      ...(prev.currencyPinned || prev.currency === regional ? {} : { currency: regional }),
+    }))
+  }, [fundingMethods.country, setBuyForm])
 
   const tokenSymbol = getAssetSymbol(selectedToken)
   const tokenName = (selectedToken.metadata?.name as string) || tokenSymbol

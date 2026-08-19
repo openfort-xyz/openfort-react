@@ -34,10 +34,19 @@ export type StripeKycInfo = {
   birth_country?: string
 }
 
+/** How a wallet sheet is offered in the payment element. */
+export type StripeWalletPreference = 'auto' | 'never' | 'always'
+
 /**
  * The subset of Stripe's OnrampCoordinator the widget uses. `authenticate` and
  * `collectPaymentMethod` resolve with elements the caller mounts; the rest are
  * plain calls.
+ *
+ * Hand-written against `@stripe/crypto` because the runtime is script-injected
+ * rather than bundled. Keep member types identical to the published ones: a
+ * narrower copy silently hides capability — this declared the wallet
+ * preferences as 'auto' | 'never', which is why nothing caught the payment
+ * element being asked for a card form on an Apple Pay purchase.
  */
 export type StripeOnrampCoordinator = {
   registerLinkUser: (email: string, phone: string, country: string, fullName?: string) => Promise<{ created: boolean }>
@@ -50,7 +59,7 @@ export type StripeOnrampCoordinator = {
   collectPaymentMethod: (
     options: {
       payment_method_types: string[]
-      wallets: { applePay: 'auto' | 'never'; googlePay: 'auto' | 'never' }
+      wallets: { applePay: StripeWalletPreference; googlePay: StripeWalletPreference }
     },
     onCompletion: (result: StripeCollectPaymentMethodResult) => void
   ) => Promise<HTMLElement>
