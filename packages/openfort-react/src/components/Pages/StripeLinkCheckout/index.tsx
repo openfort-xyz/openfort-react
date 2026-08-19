@@ -27,6 +27,7 @@ import LabeledField from '../../Common/LabeledField'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import PhoneField from '../../Common/PhoneField'
 import SquircleSpinner from '../../Common/SquircleSpinner'
+import StepProgress from '../../Common/StepProgress'
 import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
@@ -41,6 +42,14 @@ import {
   type StepUp,
   stepUpFor,
 } from './euIdentifiers'
+
+/** Two short fields side by side, so a taller input doesn't double the page. */
+const FieldRow = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+`
 
 /** The provider's required consent line, sized to sit under a field. */
 const ConsentText = styled.div`
@@ -476,6 +485,14 @@ const StripeLinkCheckout: React.FC = () => {
   const setKycField = (field: keyof typeof kyc) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setKyc((prev) => ({ ...prev, [field]: e.target.value }))
 
+  // The identity form is long enough that facing it whole reads as a wall, so
+  // it runs as two pages: who you are, then where you live.
+  const [kycPage, setKycPage] = useState<0 | 1>(0)
+  const identityPageComplete =
+    Boolean(kyc.firstName.trim() && kyc.lastName.trim() && kyc.dob.trim()) &&
+    (!isEU || Boolean(kyc.birthCity.trim() && kyc.birthCountry.trim() && kyc.nationality.trim()))
+  const addressPageComplete = Boolean(kyc.line1.trim() && kyc.city.trim() && kyc.postalCode.trim())
+
   const handleKycSubmit = async () => {
     const coordinator = coordinatorRef.current
     if (!coordinator) {
@@ -634,6 +651,7 @@ const StripeLinkCheckout: React.FC = () => {
       event.preventDefault()
       paymentMounted.current = false
       setError(null)
+      setKycPage(0)
       setStep('kyc')
     }
     window.addEventListener('unhandledrejection', onRejection)
@@ -669,6 +687,7 @@ const StripeLinkCheckout: React.FC = () => {
         if (/identity verification/i.test(message)) {
           commitStarted.current = false
           setError(null)
+          setKycPage(0)
           setStep('kyc')
           return
         }
@@ -818,10 +837,12 @@ const StripeLinkCheckout: React.FC = () => {
         </>
       )}
 
-      {step === 'kyc' && (
+      {step === 'kyc' && kycPage === 0 && (
         <>
+          <StepProgress current={1} total={2} />
           <ModalBody>Verify your identity to finish setting up purchases.</ModalBody>
           <LabeledField
+            large
             label="First name"
             value={kyc.firstName}
             onChange={setKycField('firstName')}
@@ -830,6 +851,7 @@ const StripeLinkCheckout: React.FC = () => {
             autoComplete="given-name"
           />
           <LabeledField
+            large
             label="Last name"
             value={kyc.lastName}
             onChange={setKycField('lastName')}
@@ -838,6 +860,7 @@ const StripeLinkCheckout: React.FC = () => {
             autoComplete="family-name"
           />
           <LabeledField
+            large
             label="Date of birth"
             value={kyc.dob}
             onChange={setKycField('dob')}
@@ -846,7 +869,62 @@ const StripeLinkCheckout: React.FC = () => {
             placeholder="YYYY-MM-DD"
             autoComplete="bday"
           />
+          {isEU ? (
+            <FieldRow>
+              <LabeledField
+                large
+                label="City of birth"
+                value={kyc.birthCity}
+                onChange={setKycField('birthCity')}
+                type="text"
+                placeholder="Madrid"
+              />
+              <LabeledField
+                large
+                label="Country of birth"
+                value={kyc.birthCountry}
+                onChange={setKycField('birthCountry')}
+                type="text"
+                placeholder="ES"
+                autoComplete="country"
+              />
+            </FieldRow>
+          ) : (
+            <LabeledField
+              large
+              label="Social Security number"
+              value={kyc.ssn}
+              onChange={setKycField('ssn')}
+              type="text"
+              inputMode="numeric"
+              placeholder={isTestMode ? '000000000' : '\u2022\u2022\u2022-\u2022\u2022-\u2022\u2022\u2022\u2022'}
+            />
+          )}
+          {isEU && (
+            <LabeledField
+              large
+              label="Nationality"
+              value={kyc.nationality}
+              onChange={setKycField('nationality')}
+              type="text"
+              placeholder="ES"
+            />
+          )}
+          <ContinueButtonWrapper>
+            <Button variant="primary" onClick={() => setKycPage(1)} disabled={!identityPageComplete}>
+              Continue
+            </Button>
+          </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
+        </>
+      )}
+
+      {step === 'kyc' && kycPage === 1 && (
+        <>
+          <StepProgress current={2} total={2} />
+          <ModalBody>Where do you live?</ModalBody>
           <LabeledField
+            large
             label="Street address"
             value={kyc.line1}
             onChange={setKycField('line1')}
@@ -854,16 +932,28 @@ const StripeLinkCheckout: React.FC = () => {
             placeholder={isTestMode ? 'address_full_match' : '123 Main St'}
             autoComplete="address-line1"
           />
-          <LabeledField
-            label="City"
-            value={kyc.city}
-            onChange={setKycField('city')}
-            type="text"
-            placeholder="San Francisco"
-            autoComplete="address-level2"
-          />
+          <FieldRow>
+            <LabeledField
+              large
+              label="City"
+              value={kyc.city}
+              onChange={setKycField('city')}
+              type="text"
+              placeholder="San Francisco"
+              autoComplete="address-level2"
+            />
+            <LabeledField
+              large
+              label={isEU ? 'Postal code' : 'ZIP code'}
+              value={kyc.postalCode}
+              onChange={setKycField('postalCode')}
+              type="text"
+              autoComplete="postal-code"
+            />
+          </FieldRow>
           {!isEU && (
             <LabeledField
+              large
               label="State"
               value={kyc.state}
               onChange={setKycField('state')}
@@ -872,60 +962,19 @@ const StripeLinkCheckout: React.FC = () => {
               autoComplete="address-level1"
             />
           )}
-          <LabeledField
-            label={isEU ? 'Postal code' : 'ZIP code'}
-            value={kyc.postalCode}
-            onChange={setKycField('postalCode')}
-            type="text"
-            inputMode="numeric"
-            placeholder={isEU ? '28001' : '94103'}
-            autoComplete="postal-code"
-          />
-          {isEU ? (
-            <>
-              <LabeledField
-                label="City of birth"
-                value={kyc.birthCity}
-                onChange={setKycField('birthCity')}
-                type="text"
-                placeholder="Madrid"
-              />
-              <LabeledField
-                label="Country of birth"
-                value={kyc.birthCountry}
-                onChange={setKycField('birthCountry')}
-                type="text"
-                placeholder="ES"
-                autoComplete="country"
-              />
-              <LabeledField
-                label="Nationality"
-                value={kyc.nationality}
-                onChange={setKycField('nationality')}
-                type="text"
-                placeholder="ES"
-              />
-            </>
-          ) : (
-            <LabeledField
-              label="Social Security number"
-              value={kyc.ssn}
-              onChange={setKycField('ssn')}
-              type="text"
-              inputMode="numeric"
-              placeholder={isTestMode ? '000000000' : '•••-••-••••'}
-            />
-          )}
           <ContinueButtonWrapper>
-            <Button
-              variant="primary"
-              onClick={handleKycSubmit}
-              disabled={!kyc.firstName.trim() || !kyc.lastName.trim() || !kyc.dob.trim()}
-              waiting={loading}
-            >
+            <Button variant="primary" onClick={handleKycSubmit} disabled={!addressPageComplete} waiting={loading}>
               Continue
             </Button>
           </ContinueButtonWrapper>
+          <FooterTextButton
+            onClick={() => {
+              // Going back mid-submit would strand the in-flight request.
+              if (!loading) setKycPage(0)
+            }}
+          >
+            <FooterButtonText>Back</FooterButtonText>
+          </FooterTextButton>
           {error && <ErrorText>{error}</ErrorText>}
         </>
       )}
