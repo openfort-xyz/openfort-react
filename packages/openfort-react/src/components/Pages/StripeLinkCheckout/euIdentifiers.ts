@@ -120,9 +120,24 @@ export const attestationRequired = (requirements: StripeIdentifierRequirements, 
 }
 
 /**
- * Stripe's L2 step-up: proof-of-identity documents. Only the customer record
- * says whether they're outstanding, so no identity lookup means no prompt —
+ * Documents raise L1 to L2, so they are only asked of a buyer who has already
+ * cleared the identity form. Prompting earlier would demand a passport from
+ * someone who hasn't given their name yet. No identity lookup means no prompt —
  * the commit still surfaces the requirement if it turns out to matter.
  */
 export const documentsRequired = (level: string | undefined, providedFields: string[] | undefined): boolean =>
-  level === 'REQUIRES_KYC' && providedFields !== undefined && !providedFields.includes('documents')
+  level === 'L1' && providedFields !== undefined && !providedFields.includes('documents')
+
+/**
+ * Which screen raises this buyer's limit, given the tier they are on.
+ *
+ * The tiers are cumulative: L0 is the starting point and collects NOTHING —
+ * a first purchase inside the L0 limit needs no identity at all. Exceeding it
+ * asks for the identity form (L0 → L1); exceeding L1 asks for documents
+ * (L1 → L2); L2 is the ceiling and has nothing left to offer.
+ */
+export const stepUpTarget = (level: string | undefined): 'kyc' | 'documents' | null => {
+  if (level === 'L2') return null
+  if (level === 'L1') return 'documents'
+  return 'kyc'
+}

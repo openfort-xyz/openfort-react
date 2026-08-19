@@ -5,6 +5,7 @@ import {
   documentsRequired,
   identifierLabel,
   pendingIdentifierTypes,
+  stepUpTarget,
 } from '../components/Pages/StripeLinkCheckout/euIdentifiers'
 import type { StripeIdentifierRequirements } from '../hooks/openfort/stripeCryptoOnramp'
 
@@ -83,23 +84,46 @@ describe('attestationRequired', () => {
 })
 
 describe('documentsRequired', () => {
-  it('asks only when the tier needs raising and documents are outstanding', () => {
-    expect(documentsRequired('REQUIRES_KYC', ['identifiers'])).toBe(true)
+  it('asks a buyer who has cleared the identity form but owes documents', () => {
+    expect(documentsRequired('L1', ['identifiers'])).toBe(true)
   })
 
   it('does not ask once documents are provided', () => {
-    expect(documentsRequired('REQUIRES_KYC', ['documents'])).toBe(false)
+    expect(documentsRequired('L1', ['documents'])).toBe(false)
   })
 
-  it('does not ask at a verified tier, nor while a review is pending', () => {
-    expect(documentsRequired('L1', [])).toBe(false)
+  it('never demands documents before the identity form', () => {
+    // A buyer at L0 has given no name yet — asking for a passport is absurd.
+    expect(documentsRequired('L0', [])).toBe(false)
+    expect(documentsRequired('REQUIRES_KYC', [])).toBe(false)
+  })
+
+  it('does not ask at the ceiling, nor while a review is pending', () => {
     expect(documentsRequired('L2', [])).toBe(false)
     expect(documentsRequired('PENDING', [])).toBe(false)
   })
 
   it('stays silent when the buyer state is unknown — the commit still decides', () => {
-    expect(documentsRequired('REQUIRES_KYC', undefined)).toBe(false)
+    expect(documentsRequired('L1', undefined)).toBe(false)
     expect(documentsRequired(undefined, undefined)).toBe(false)
+  })
+})
+
+describe('stepUpTarget', () => {
+  it('sends an unverified buyer to the identity form, not to documents', () => {
+    // The bug this encodes: a first-time buyer was shown the L1 identity form
+    // before they had exceeded anything at all.
+    expect(stepUpTarget('L0')).toBe('kyc')
+    expect(stepUpTarget('REQUIRES_KYC')).toBe('kyc')
+    expect(stepUpTarget(undefined)).toBe('kyc')
+  })
+
+  it('sends an L1 buyer to documents', () => {
+    expect(stepUpTarget('L1')).toBe('documents')
+  })
+
+  it('has nothing left to offer at the ceiling', () => {
+    expect(stepUpTarget('L2')).toBeNull()
   })
 })
 

@@ -32,7 +32,13 @@ import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox } from '../Buy/styles'
 import { Skeleton, SkeletonStack } from '../Deposit/styles'
 import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
-import { attestationRequired, documentsRequired, identifierLabel, pendingIdentifierTypes } from './euIdentifiers'
+import {
+  attestationRequired,
+  documentsRequired,
+  identifierLabel,
+  pendingIdentifierTypes,
+  stepUpTarget,
+} from './euIdentifiers'
 
 type Step =
   | 'init' // loading Stripe's script + coordinator
@@ -88,9 +94,6 @@ const StripeLinkCheckout: React.FC = () => {
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState('')
   const [fullName, setFullName] = useState('')
-  // Set when this flow registered the Link user — Stripe then needs KYC before
-  // the checkout, so the identity step is shown after authentication.
-  const registeredRef = useRef(false)
 
   const coordinatorRef = useRef<StripeOnrampCoordinator | null>(null)
   const intentIdRef = useRef<string | null>(null)
@@ -232,15 +235,12 @@ const StripeLinkCheckout: React.FC = () => {
       } catch (e) {
         logger.log('[stripe-link] wallet registration skipped', e)
       }
-      // A returning buyer skips the identity form, so this is where their tier
-      // gets checked against what they're trying to spend.
-      if (registeredRef.current) {
-        setStep('kyc')
-      } else if (await needsStepUp(intentId)) {
-        setStep('documents')
-      } else {
-        setStep('payment')
-      }
+      // A new buyer starts at L0, which collects no identity at all — asking
+      // for name, address and date of birth before they have exceeded anything
+      // is the provider's step-up form shown a tier too early. Only an amount
+      // over their limit calls for it, and if the provider disagrees the commit
+      // rejects with "identity verification required" and routes here anyway.
+      setStep((await stepUpStep(intentId)) ?? 'payment')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Link authentication could not be completed.')
       setStep('email')
@@ -310,7 +310,6 @@ const StripeLinkCheckout: React.FC = () => {
     setLoading(true)
     try {
       await coordinator.registerLinkUser(email.trim(), phone.trim(), buyerCountry, fullName.trim() || undefined)
-      registeredRef.current = true
       await startAuthentication(email.trim())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create the Link account.')
@@ -334,23 +333,21 @@ const StripeLinkCheckout: React.FC = () => {
    * Best-effort: an unavailable or unparseable limit means "no opinion", never
    * a block. Provider amounts are in CENTS.
    */
-  const needsStepUp = async (intentId: string): Promise<boolean> => {
-    if (!client) return false
+  const stepUpStep = async (intentId: string): Promise<'kyc' | 'documents' | null> => {
+    if (!client) return null
     const amount = Number(buyForm.amount)
-    if (!Number.isFinite(amount) || amount <= 0) return false
+    if (!Number.isFinite(amount) || amount <= 0) return null
     try {
       const { limits } = await client.authIntents.limits({ intentId })
       // The provider's own field name here is unconfirmed against live data, so
       // a miss reads as "no opinion" and the commit keeps the final say. Pin the
       // name once a real EU run shows the payload.
       const maximum = limits?.maximum
-      if (typeof maximum !== 'number') return false
-      if (amount * 100 <= maximum) return false
-      // Only worth prompting if documents can actually raise the ceiling.
-      return identityRef.current?.level !== 'L2'
+      if (typeof maximum !== 'number' || amount * 100 <= maximum) return null
+      return stepUpTarget(identityRef.current?.level)
     } catch (e) {
       logger.log('[stripe-link] transaction limits unavailable', e)
-      return false
+      return null
     }
   }
 
@@ -454,6 +451,10 @@ const StripeLinkCheckout: React.FC = () => {
     postalCode: '',
     ssn: '',
     birthCity: '',
+    // Default to the address country: the common case, and both are required
+    // for an EU buyer, so a prefilled field is one less thing to type.
+    birthCountry: buyerCountry,
+    nationality: buyerCountry,
   })
   const setKycField = (field: keyof typeof kyc) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setKyc((prev) => ({ ...prev, [field]: e.target.value }))
@@ -483,7 +484,14 @@ const StripeLinkCheckout: React.FC = () => {
         ...(isEU ? {} : { state: kyc.state.trim() }),
       },
       ...(isEU
-        ? { birth_city: kyc.birthCity.trim(), birth_country: buyerCountry }
+        ? {
+            birth_city: kyc.birthCity.trim(),
+            // Neither of these can be assumed from the address — someone living
+            // in Spain may hold another nationality and have been born
+            // elsewhere. Stripe rejects an EU submission that omits them.
+            birth_country: kyc.birthCountry.trim().toUpperCase(),
+            nationalities: [kyc.nationality.trim().toUpperCase()],
+          }
         : kyc.ssn.trim()
           ? { id_number: { type: 'us_ssn' as const, value: kyc.ssn.replace(/\D/g, '') } }
           : {}),
@@ -862,13 +870,30 @@ const StripeLinkCheckout: React.FC = () => {
             autoComplete="postal-code"
           />
           {isEU ? (
-            <LabeledField
-              label="City of birth"
-              value={kyc.birthCity}
-              onChange={setKycField('birthCity')}
-              type="text"
-              placeholder="Madrid"
-            />
+            <>
+              <LabeledField
+                label="City of birth"
+                value={kyc.birthCity}
+                onChange={setKycField('birthCity')}
+                type="text"
+                placeholder="Madrid"
+              />
+              <LabeledField
+                label="Country of birth"
+                value={kyc.birthCountry}
+                onChange={setKycField('birthCountry')}
+                type="text"
+                placeholder="ES"
+                autoComplete="country"
+              />
+              <LabeledField
+                label="Nationality"
+                value={kyc.nationality}
+                onChange={setKycField('nationality')}
+                type="text"
+                placeholder="ES"
+              />
+            </>
           ) : (
             <LabeledField
               label="Social Security number"
