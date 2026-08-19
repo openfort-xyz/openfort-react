@@ -20,17 +20,28 @@ export type OnrampIdentity = {
   providedFields: string[]
 }
 
+/** Where a buyer stands on raising their spending limit. */
+export type OnrampLimitUpgrade = {
+  status: 'unrequested' | 'resubmit' | 'pending' | 'active' | 'inactive'
+  /** False once the provider has stopped offering the upgrade at all. */
+  available: boolean
+}
+
 /**
- * Spending limits at the buyer's current tier, in the provider's own shape.
- * MONETARY VALUES ARE IN CENTS.
+ * Spending limits for the buyer. `limits` keeps the provider's own shape and is
+ * deliberately not narrowed — the field names have never been seen against live
+ * data, and declaring a shape we haven't observed is how the payment element
+ * ended up being asked for a card form on an Apple Pay purchase.
  *
- * Deliberately not narrowed: the field names have never been seen against real
- * data (reading them needs a completed Link auth, which needs a browser OTP),
- * and declaring a shape we haven't observed is how the payment element ended up
- * being asked for a card form on an Apple Pay purchase. Read it defensively.
+ * The normalized fields beside it ARE safe to read. MONETARY VALUES ARE IN
+ * MINOR UNITS (cents). `remainingTransactions: null` means unlimited, never
+ * zero — the provider reports that as MaxInt32.
  */
 export type OnrampLimits = {
   limits: Record<string, unknown> | null
+  remainingMinor?: number | null
+  remainingTransactions?: number | null
+  upgrade?: OnrampLimitUpgrade | null
 }
 
 /**
@@ -68,7 +79,21 @@ export type FundingClient = {
      * Null limits mean the provider didn't answer — treat as unrestricted
      * rather than blocking the purchase.
      */
-    limits(params: { intentId: string; walletAddress?: string; network?: string }): Promise<OnrampLimits>
+    limits(
+      params:
+        | { intentId: string; walletAddress?: string; network?: string }
+        /** The wallet-pay rail identifies the buyer by their verified phone. */
+        | { phoneNumber: string; method: 'apple_pay' | 'google_pay' }
+    ): Promise<OnrampLimits>
+    /**
+     * Start the provider-hosted identity form that raises the buyer's limit.
+     * Hosted on purpose: the form collects a partial SSN, which must never
+     * reach our code. The returned url is single-use and short-lived.
+     */
+    startLimitUpgrade(params: {
+      phoneNumber: string
+      method: 'apple_pay' | 'google_pay'
+    }): Promise<{ url: string; expiresAt: string }>
   }
   sessions: {
     create(params: { target: FundingTarget }): Promise<FundingSession>
@@ -146,12 +171,26 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
         const res = await fetch(`${baseUrl}/v2/funding/onramp/identity?${query}`, { headers: authHeaders() })
         return readJson<OnrampIdentity>(res)
       },
-      async limits({ intentId, walletAddress, network }) {
-        const query = new URLSearchParams({ authIntentId: intentId })
-        if (walletAddress) query.set('walletAddress', walletAddress)
-        if (network) query.set('network', network)
+      async limits(params) {
+        const query = new URLSearchParams()
+        if ('phoneNumber' in params) {
+          query.set('phoneNumber', params.phoneNumber)
+          query.set('method', params.method)
+        } else {
+          query.set('authIntentId', params.intentId)
+          if (params.walletAddress) query.set('walletAddress', params.walletAddress)
+          if (params.network) query.set('network', params.network)
+        }
         const res = await fetch(`${baseUrl}/v2/funding/onramp/limits?${query}`, { headers: authHeaders() })
         return readJson<OnrampLimits>(res)
+      },
+      async startLimitUpgrade(params) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/limits/upgrade`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(params),
+        })
+        return readJson<{ url: string; expiresAt: string }>(res)
       },
     },
     sessions: {

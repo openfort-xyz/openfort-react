@@ -8,8 +8,10 @@ import {
   storeOnrampVerification,
   submitOnrampVerification,
 } from '../../../hooks/openfort/onrampVerificationsApi'
+import { useFundingClient } from '../../../hooks/openfort/useFunding'
 import { useUser } from '../../../hooks/openfort/useUser'
 import styled from '../../../styles/styled'
+import { logger } from '../../../utils/logger'
 import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
 import Checkbox from '../../Common/Checkbox'
@@ -18,7 +20,7 @@ import { ErrorText } from '../../Common/ErrorText'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import { OtpInputStandalone } from '../../Common/OTPInput'
 import PhoneField from '../../Common/PhoneField'
-import { routes } from '../../Openfort/types'
+import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper } from '../Buy/styles'
@@ -55,8 +57,9 @@ const OtpSpacing = styled.div`
  * verification ids, and hands off to the commit screen.
  */
 const WalletPayContact: React.FC = () => {
-  const { setBuyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
+  const { buyForm, setBuyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
   const { user } = useUser()
+  const client = useFundingClient({ useBackendUrl: true })
   // Sandbox destinations (Coinbase test rails) are only meaningful on test keys.
   const isTestMode = getPublishableKeyEnvironment(publishableKey) === 'test'
 
@@ -163,7 +166,7 @@ const WalletPayContact: React.FC = () => {
     const trimmed = phone.trim()
     const stored = storedOnrampVerification('sms', trimmed)
     if (stored) {
-      completeWith(stored)
+      void completeWith(stored)
       return
     }
     setPhone(trimmed)
@@ -182,7 +185,7 @@ const WalletPayContact: React.FC = () => {
       })
       storeOnrampVerification('sms', phone.trim(), record)
       setVerified(true)
-      completeWith(record.verificationId)
+      void completeWith(record.verificationId)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Verification failed. Try again.')
     } finally {
@@ -205,15 +208,51 @@ const WalletPayContact: React.FC = () => {
     setStep(step === 'emailCode' ? 'email' : 'phone')
   }
 
+  /**
+   * Where this purchase stands against the buyer's wallet-pay limits. The
+   * verified phone is the identity the provider keys them on, so this is the
+   * first point the question can be asked — and the last before an order is
+   * minted that the limit would refuse.
+   *
+   * Best-effort: an unreadable limit means "no opinion", never a block. The
+   * commit still surfaces a real refusal.
+   */
+  const limitVerdict = async (verifiedPhone: string): Promise<'ok' | 'upgrade' | string> => {
+    if (!client) return 'ok'
+    const amount = Number(buyForm.amount)
+    if (!Number.isFinite(amount) || amount <= 0) return 'ok'
+    const method = buyForm.method === FundingMethod.GOOGLE_PAY ? 'google_pay' : 'apple_pay'
+    try {
+      const limits = await client.authIntents.limits({ phoneNumber: verifiedPhone, method })
+      const overSpend = typeof limits.remainingMinor === 'number' && amount * 100 > limits.remainingMinor
+      // null means unlimited here, never "none left".
+      const outOfPurchases = limits.remainingTransactions === 0
+      if (!overSpend && !outOfPurchases) return 'ok'
+
+      const upgrade = limits.upgrade
+      if (upgrade?.available && (upgrade.status === 'unrequested' || upgrade.status === 'resubmit')) return 'upgrade'
+      if (upgrade?.status === 'pending') {
+        return 'Your limit increase is still under review, so this amount is above what you can buy right now.'
+      }
+      return overSpend
+        ? 'This is more than your current limit allows. Try a smaller amount.'
+        : 'You have reached the maximum number of purchases for this payment method.'
+    } catch (e) {
+      logger.log('[wallet-pay] limits unavailable', e)
+      return 'ok'
+    }
+  }
+
   /** Assemble the order-ready identity and hand off to the commit screen. */
-  const completeWith = (smsVerificationId: string) => {
+  const completeWith = async (smsVerificationId: string) => {
     const now = new Date().toISOString()
+    const verifiedPhone = phone.trim()
     setBuyForm((prev) => ({
       ...prev,
       walletPay: {
         ...prev.walletPay,
         email: email.trim(),
-        phoneNumber: phone.trim(),
+        phoneNumber: verifiedPhone,
         // Coinbase holds the server-side verification record (the id below);
         // the timestamps attest when this widget confirmed identity + consent.
         phoneNumberVerifiedAt: now,
@@ -222,6 +261,15 @@ const WalletPayContact: React.FC = () => {
         ...(emailVerificationId ? { emailVerificationId } : {}),
       },
     }))
+    const verdict = await limitVerdict(verifiedPhone)
+    if (verdict === 'upgrade') {
+      setRoute(routes.BUY_LIMIT_UPGRADE)
+      return
+    }
+    if (verdict !== 'ok') {
+      setError(verdict)
+      return
+    }
     setRoute(routes.BUY_PROCESSING)
   }
 

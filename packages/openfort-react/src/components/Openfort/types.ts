@@ -62,6 +62,7 @@ export const routes = {
   BUY_TOKEN_SELECT: 'buyTokenSelect',
   BUY_WALLET_PAY_CONTACT: 'buyWalletPayContact',
   BUY_STRIPE_LINK: 'buyStripeLink',
+  BUY_LIMIT_UPGRADE: 'buyLimitUpgrade',
   BUY_PROCESSING: 'buyProcessing',
   BUY_COMPLETE: 'buyComplete',
 
