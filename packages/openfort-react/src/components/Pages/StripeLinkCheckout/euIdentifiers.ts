@@ -129,15 +129,29 @@ export const documentsRequired = (level: string | undefined, providedFields: str
   level === 'L1' && providedFields !== undefined && !providedFields.includes('documents')
 
 /**
+ * What to do about a buyer whose purchase is over their tier limit: either the
+ * screen that raises it, or the reason nothing here can.
+ */
+export type StepUp = { step: 'kyc' | 'documents' } | { blocked: string }
+
+/**
  * Which screen raises this buyer's limit, given the tier they are on.
  *
  * The tiers are cumulative: L0 is the starting point and collects NOTHING —
  * a first purchase inside the L0 limit needs no identity at all. Exceeding it
  * asks for the identity form (L0 → L1); exceeding L1 asks for documents
- * (L1 → L2); L2 is the ceiling and has nothing left to offer.
+ * (L1 → L2); L2 is the ceiling.
+ *
+ * A review already in flight or refused is NOT a form problem — re-showing the
+ * identity step there asks the buyer to redo work that is sitting with the
+ * provider, so those say why instead.
  */
-export const stepUpTarget = (level: string | undefined): 'kyc' | 'documents' | null => {
-  if (level === 'L2') return null
-  if (level === 'L1') return 'documents'
-  return 'kyc'
+export const stepUpFor = (level: string | undefined): StepUp => {
+  if (level === 'PENDING') return { blocked: 'Your identity check is still being reviewed. Try again shortly.' }
+  if (level === 'REJECTED') {
+    return { blocked: "We couldn't verify your identity, so this amount isn't available." }
+  }
+  if (level === 'L2') return { blocked: 'This is more than your purchase limit allows. Try a smaller amount.' }
+  if (level === 'L1') return { step: 'documents' }
+  return { step: 'kyc' }
 }

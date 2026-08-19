@@ -5,7 +5,7 @@ import {
   documentsRequired,
   identifierLabel,
   pendingIdentifierTypes,
-  stepUpTarget,
+  stepUpFor,
 } from '../components/Pages/StripeLinkCheckout/euIdentifiers'
 import type { StripeIdentifierRequirements } from '../hooks/openfort/stripeCryptoOnramp'
 
@@ -109,21 +109,33 @@ describe('documentsRequired', () => {
   })
 })
 
-describe('stepUpTarget', () => {
+describe('stepUpFor', () => {
   it('sends an unverified buyer to the identity form, not to documents', () => {
     // The bug this encodes: a first-time buyer was shown the L1 identity form
     // before they had exceeded anything at all.
-    expect(stepUpTarget('L0')).toBe('kyc')
-    expect(stepUpTarget('REQUIRES_KYC')).toBe('kyc')
-    expect(stepUpTarget(undefined)).toBe('kyc')
+    expect(stepUpFor('L0')).toEqual({ step: 'kyc' })
+    expect(stepUpFor('REQUIRES_KYC')).toEqual({ step: 'kyc' })
+    expect(stepUpFor(undefined)).toEqual({ step: 'kyc' })
   })
 
   it('sends an L1 buyer to documents', () => {
-    expect(stepUpTarget('L1')).toBe('documents')
+    expect(stepUpFor('L1')).toEqual({ step: 'documents' })
   })
 
-  it('has nothing left to offer at the ceiling', () => {
-    expect(stepUpTarget('L2')).toBeNull()
+  it('explains the ceiling instead of sending the buyer nowhere', () => {
+    const result = stepUpFor('L2')
+    expect(result).toHaveProperty('blocked')
+    expect('blocked' in result && result.blocked).toMatch(/smaller amount/i)
+  })
+
+  it('never re-asks for identity while a review is in flight or refused', () => {
+    // Re-showing the form would ask the buyer to redo work sitting with the
+    // provider — neither state is something another form can fix.
+    for (const level of ['PENDING', 'REJECTED']) {
+      const result = stepUpFor(level)
+      expect(result).toHaveProperty('blocked')
+      expect(result).not.toHaveProperty('step')
+    }
   })
 })
 

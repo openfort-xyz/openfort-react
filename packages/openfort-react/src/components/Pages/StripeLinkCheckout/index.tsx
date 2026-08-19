@@ -38,7 +38,8 @@ import {
   documentsRequired,
   identifierLabel,
   pendingIdentifierTypes,
-  stepUpTarget,
+  type StepUp,
+  stepUpFor,
 } from './euIdentifiers'
 
 /** The provider's required consent line, sized to sit under a field. */
@@ -249,7 +250,14 @@ const StripeLinkCheckout: React.FC = () => {
       // is the provider's step-up form shown a tier too early. Only an amount
       // over their limit calls for it, and if the provider disagrees the commit
       // rejects with "identity verification required" and routes here anyway.
-      setStep((await stepUpStep(intentId)) ?? 'payment')
+      const stepUp = await overLimitStepUp(intentId)
+      if (stepUp && 'blocked' in stepUp) {
+        // Nothing on this screen raises the ceiling, so end the attempt with the
+        // reason — "Try again" returns to the amount, which is the actual fix.
+        setFailed(stepUp.blocked)
+        return
+      }
+      setStep(stepUp?.step ?? 'payment')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Link authentication could not be completed.')
       setStep('email')
@@ -342,7 +350,7 @@ const StripeLinkCheckout: React.FC = () => {
    * Best-effort: an unavailable or unparseable limit means "no opinion", never
    * a block. Provider amounts are in CENTS.
    */
-  const stepUpStep = async (intentId: string): Promise<'kyc' | 'documents' | null> => {
+  const overLimitStepUp = async (intentId: string): Promise<StepUp | null> => {
     if (!client) return null
     const amount = Number(buyForm.amount)
     if (!Number.isFinite(amount) || amount <= 0) return null
@@ -353,7 +361,7 @@ const StripeLinkCheckout: React.FC = () => {
       // name once a real EU run shows the payload.
       const maximum = limits?.maximum
       if (typeof maximum !== 'number' || amount * 100 <= maximum) return null
-      return stepUpTarget(identityRef.current?.level)
+      return stepUpFor(identityRef.current?.level)
     } catch (e) {
       logger.log('[stripe-link] transaction limits unavailable', e)
       return null
