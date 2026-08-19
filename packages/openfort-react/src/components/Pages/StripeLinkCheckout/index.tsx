@@ -17,6 +17,7 @@ import {
 import { useFundingClient } from '../../../hooks/openfort/useFunding'
 import { useOnramp } from '../../../hooks/openfort/useOnramp'
 import { useUser } from '../../../hooks/openfort/useUser'
+import styled from '../../../styles/styled'
 import { logger } from '../../../utils/logger'
 import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
 import Button from '../../Common/Button'
@@ -40,10 +41,19 @@ import {
   stepUpTarget,
 } from './euIdentifiers'
 
+/** The provider's required consent line, sized to sit under a field. */
+const ConsentText = styled.div`
+  margin: 10px auto 0;
+  text-align: center;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ck-body-color-muted, #999999);
+`
+
 type Step =
   | 'init' // loading Stripe's script + coordinator
   | 'email' // collect the Link email
-  | 'register' // first-time buyer: phone (+ name) to create the Link user
+  | 'register' // first-time buyer: phone, to create the Link user
   | 'auth' // Stripe's Link authentication element (OTP)
   | 'kyc' // first-time buyer: identity Stripe requires before checkout
   | 'identifiers' // EU: the national identifiers MiCA / CARF require
@@ -93,7 +103,6 @@ const StripeLinkCheckout: React.FC = () => {
 
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState('')
-  const [fullName, setFullName] = useState('')
 
   const coordinatorRef = useRef<StripeOnrampCoordinator | null>(null)
   const intentIdRef = useRef<string | null>(null)
@@ -309,7 +318,7 @@ const StripeLinkCheckout: React.FC = () => {
     setError(null)
     setLoading(true)
     try {
-      await coordinator.registerLinkUser(email.trim(), phone.trim(), buyerCountry, fullName.trim() || undefined)
+      await coordinator.registerLinkUser(email.trim(), phone.trim(), buyerCountry)
       await startAuthentication(email.trim())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create the Link account.')
@@ -738,14 +747,9 @@ const StripeLinkCheckout: React.FC = () => {
       {step === 'register' && (
         <>
           <PhoneField value={phone} onChange={setPhone} defaultCountry={buyerCountry.toLowerCase() as CountryIso2} />
-          <LabeledField
-            label="Full name"
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            type="text"
-            placeholder={isTestMode ? 'John Verified' : 'Jane Doe'}
-            autoComplete="name"
-          />
+          {/* The name is collected on the identity step, where it is actually
+              required — asking here made the phone screen look like a form. */}
+          <ConsentText>By continuing, you agree to the Link crypto onramp terms and privacy policy.</ConsentText>
           <ContinueButtonWrapper>
             <Button variant="primary" onClick={handleRegister} disabled={!phone.trim()} waiting={loading}>
               Continue
