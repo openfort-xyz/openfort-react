@@ -4,9 +4,11 @@ import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CountryIso2 } from 'react-international-phone'
 import Logos from '../../../assets/logos'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import {
   createStripeOnrampCoordinator,
+  type StripeIdentifierRequirements,
   type StripeKycInfo,
   type StripeOnrampCoordinator,
   stripeNetworkForChain,
@@ -29,6 +31,7 @@ import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox } from '../Buy/styles'
 import { Skeleton, SkeletonStack } from '../Deposit/styles'
 import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
+import { attestationRequired, identifierLabel, pendingIdentifierTypes } from './euIdentifiers'
 
 type Step =
   | 'init' // loading Stripe's script + coordinator
@@ -36,6 +39,8 @@ type Step =
   | 'register' // first-time buyer: phone (+ name) to create the Link user
   | 'auth' // Stripe's Link authentication element (OTP)
   | 'kyc' // first-time buyer: identity Stripe requires before checkout
+  | 'identifiers' // EU: the national identifiers MiCA / CARF require
+  | 'attestation' // EU: Stripe's CARF self-declaration element
   | 'payment' // Stripe's collectPaymentMethod element
   | 'checkout' // commit + performCheckout + settlement polling
 
@@ -56,6 +61,7 @@ const StripeLinkCheckout: React.FC = () => {
   const { buyForm, setRoute, triggerResize, publishableKey, uiConfig, mode } = useOpenfort()
   const { user } = useUser()
   const client = useFundingClient({ useBackendUrl: true })
+  const embeddedWallet = useEthereumEmbeddedWallet()
   const onramp = useOnramp(buyForm.session, backendMethodId(buyForm.method), { useBackendUrl: true })
   const isTestMode = getPublishableKeyEnvironment(publishableKey) === 'test'
   // Prefer the country the SERVER resolved when it listed the methods — it is
@@ -196,7 +202,15 @@ const StripeLinkCheckout: React.FC = () => {
       try {
         const full = await client.sessions.get(session.id, { clientSecret: session.clientSecret })
         const network = stripeNetworkForChain(full.target.chain)
-        if (network) await coordinator.registerWalletAddress(full.target.address, network)
+        if (network) {
+          const wallet = await coordinator.registerWalletAddress(full.target.address, network)
+          // EU travel rule: the buyer must prove they control the destination.
+          // The destination IS the embedded wallet, so we sign the challenge
+          // ourselves — the buyer never sees this step.
+          if (isEU && wallet && wallet.verified_ownership !== true) {
+            await verifyWalletOwnership(coordinator, full.target.address, network)
+          }
+        }
       } catch (e) {
         logger.log('[stripe-link] wallet registration skipped', e)
       }
@@ -206,6 +220,39 @@ const StripeLinkCheckout: React.FC = () => {
       setStep('email')
     } finally {
       setLoading(false)
+    }
+  }
+
+  /**
+   * Answer Stripe's wallet-ownership challenge by signing it with the embedded
+   * wallet that is the destination. Integrators whose destination is an
+   * external wallet have to send the buyer away to sign; here the signer is
+   * ours, so the travel rule costs the buyer nothing.
+   *
+   * Best-effort by design: if Stripe genuinely requires the proof, the commit
+   * fails with its own message — better than blocking a buyer here over a
+   * signature Stripe might not have asked for.
+   */
+  const verifyWalletOwnership = async (
+    coordinator: StripeOnrampCoordinator,
+    walletAddress: string,
+    network: string
+  ) => {
+    try {
+      const challenge = await coordinator.getWalletOwnershipChallenge({ walletAddress, network })
+      const provider = await embeddedWallet.activeWallet?.getProvider()
+      if (!provider) {
+        logger.log('[stripe-link] no embedded provider to sign the ownership challenge')
+        return
+      }
+      const signature = (await provider.request({
+        method: 'personal_sign',
+        params: [challenge.message, walletAddress],
+      })) as string
+      await coordinator.submitWalletOwnershipSignature({ challengeId: challenge.challengeId, signature })
+      logger.log('[stripe-link] wallet ownership verified')
+    } catch (e) {
+      logger.log('[stripe-link] wallet ownership verification skipped', e)
     }
   }
 
@@ -241,6 +288,90 @@ const StripeLinkCheckout: React.FC = () => {
       await startAuthentication(email.trim())
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not create the Link account.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ---- EU national identifiers (MiCA / CARF) ----
+  // The types Stripe is still waiting for, and what the buyer has typed for
+  // each. `carfType` is separate because carf_tin_required names no type — the
+  // buyer's country decides which tax number to ask for.
+  const [identifierTypes, setIdentifierTypes] = useState<string[]>([])
+  const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({})
+
+  /**
+   * Ask Stripe what identifiers are outstanding and, if any are, show the form.
+   * Returns true when it took over the flow, so callers stop advancing.
+   */
+  const enterIdentifiersIfRequired = async (coordinator: StripeOnrampCoordinator): Promise<boolean> => {
+    let requirements: StripeIdentifierRequirements
+    try {
+      requirements = await coordinator.getMissingIdentifiers()
+    } catch (e) {
+      // An account without the identifier feature answers with an error rather
+      // than an empty list; that buyer simply owes nothing.
+      logger.log('[stripe-link] identifier requirements unavailable', e)
+      return false
+    }
+    const types = pendingIdentifierTypes(requirements, buyerCountry)
+    if (types.length === 0) {
+      // Nothing to type in, but CARF may still want the declaration.
+      if (!attestationRequired(requirements)) return false
+      setStep('attestation')
+      return true
+    }
+    setIdentifierTypes(types)
+    setIdentifierValues({})
+    setStep('identifiers')
+    return true
+  }
+
+  const handleIdentifiersSubmit = async () => {
+    const coordinator = coordinatorRef.current
+    if (!coordinator) {
+      setError('The Stripe checkout is no longer active — close and reopen the purchase.')
+      return
+    }
+    const identifiers = identifierTypes
+      .map((type) => ({ type, value: identifierValues[type]?.trim() ?? '' }))
+      .filter((i) => i.value.length > 0)
+    if (identifiers.length !== identifierTypes.length) {
+      setError('Fill in every identifier to continue.')
+      return
+    }
+    setError(null)
+    setLoading(true)
+    try {
+      const result = await coordinator.updateKycInfo(identifiers)
+      if (result.invalid_identifiers.length > 0) {
+        const names = result.invalid_identifiers.map(identifierLabel).join(', ')
+        setIdentifierTypes(pendingIdentifierTypes(result, buyerCountry))
+        setError(`Check these and try again: ${names}.`)
+        return
+      }
+      if (!result.completed) {
+        // Satisfying one requirement can reveal another (Stripe re-evaluates
+        // alternatives as values land) — stay on the form with the new list.
+        const next = pendingIdentifierTypes(result, buyerCountry)
+        if (next.length > 0) {
+          setIdentifierTypes(next)
+          setIdentifierValues({})
+          return
+        }
+      }
+      if (attestationRequired(result)) {
+        setStep('attestation')
+        return
+      }
+      if (paymentTokenRef.current) {
+        commitStarted.current = false
+        setStep('checkout')
+      } else {
+        setStep('payment')
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Those identifiers could not be verified.')
     } finally {
       setLoading(false)
     }
@@ -295,6 +426,9 @@ const StripeLinkCheckout: React.FC = () => {
     setLoading(true)
     try {
       await coordinator.submitKycInfo(info)
+      // EU buyers owe national identifiers on top of the basic details; Stripe
+      // itself says which, so ask before assuming identity is complete.
+      if (isEU && (await enterIdentifiersIfRequired(coordinator))) return
       // Reached from the commit's identity-verification rejection (payment
       // already collected)? Retry the checkout; otherwise collect payment next.
       if (paymentTokenRef.current) {
@@ -309,6 +443,34 @@ const StripeLinkCheckout: React.FC = () => {
       setLoading(false)
     }
   }
+
+  // ---- CARF attestation element ----
+  const attestationMounted = useRef(false)
+  useEffect(() => {
+    const coordinator = coordinatorRef.current
+    if (step !== 'attestation' || !coordinator || attestationMounted.current) return
+    attestationMounted.current = true
+    setElementReady(false)
+    coordinator
+      .promptUserAttestation('eu_carf', (result) => {
+        if (result.result !== 'confirmed') {
+          // Abandoning is a decision, not a failure — the purchase simply can't
+          // proceed without the declaration.
+          setError('The declaration is required before you can continue.')
+          return
+        }
+        if (paymentTokenRef.current) {
+          commitStarted.current = false
+          setStep('checkout')
+        } else {
+          setStep('payment')
+        }
+      })
+      .then(mountElement)
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : 'Could not load the declaration.')
+      })
+  }, [step])
 
   // ---- Payment collection element ----
   const paymentMounted = useRef(false)
@@ -486,6 +648,40 @@ const StripeLinkCheckout: React.FC = () => {
               Continue
             </Button>
           </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
+        </>
+      )}
+
+      {step === 'identifiers' && (
+        <>
+          <ModalBody>Your country requires these details before you can buy crypto.</ModalBody>
+          {identifierTypes.map((type) => (
+            <LabeledField
+              key={type}
+              label={identifierLabel(type)}
+              value={identifierValues[type] ?? ''}
+              onChange={(e) => setIdentifierValues((prev) => ({ ...prev, [type]: e.target.value }))}
+              type="text"
+            />
+          ))}
+          <ContinueButtonWrapper>
+            <Button variant="primary" onClick={handleIdentifiersSubmit} waiting={loading}>
+              Continue
+            </Button>
+          </ContinueButtonWrapper>
+          {error && <ErrorText>{error}</ErrorText>}
+        </>
+      )}
+
+      {step === 'attestation' && (
+        <>
+          {!elementReady && (
+            <SkeletonStack>
+              <Skeleton $h="16px" $w="70%" />
+              <Skeleton $h="80px" />
+            </SkeletonStack>
+          )}
+          <div ref={elementHostRef} />
           {error && <ErrorText>{error}</ErrorText>}
         </>
       )}

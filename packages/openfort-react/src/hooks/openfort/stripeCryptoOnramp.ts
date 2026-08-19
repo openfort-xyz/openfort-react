@@ -37,6 +37,53 @@ export type StripeKycInfo = {
 /** How a wallet sheet is offered in the payment element. */
 export type StripeWalletPreference = 'auto' | 'never' | 'always'
 
+/** The EU regimes that make Stripe ask for more than basic identity. */
+export type StripeRegulationType = 'eu_carf' | 'eu_mica'
+
+/** One national identifier, e.g. `{ type: 'de_stn', value: '…' }`. */
+export type StripeIdentifier = { type: string; value: string }
+
+export type StripeIdentifierRequirement = { type: string; regulation: StripeRegulationType }
+
+/**
+ * A requirement Stripe will accept in more than one form — e.g. Malta takes an
+ * identity card OR a passport. Satisfying any member of the alternative set
+ * clears the originals.
+ */
+export type StripeAlternativeGroup = {
+  original_missing_identifiers: string[]
+  alternative_missing_identifiers: string[]
+}
+
+export type StripeIdentifierRequirements = {
+  identifiers: StripeIdentifierRequirement[]
+  alternatives: StripeAlternativeGroup[]
+  carf_tin_required: boolean
+}
+
+/** updateKycInfo's verdict: `completed` ends the loop, anything listed repeats it. */
+export type StripeUpdateKycResult = StripeIdentifierRequirements & {
+  completed: boolean
+  invalid_identifiers: string[]
+}
+
+/** The destination wallet as Link holds it; unverified ones need a signature. */
+export type StripeConsumerWallet = {
+  id: string
+  verified_ownership?: boolean
+}
+
+/** A message the buyer's wallet must sign to prove ownership (EU travel rule). */
+export type StripeWalletOwnershipChallenge = {
+  challengeId: string
+  message: string
+  walletAddress?: string
+  network?: string
+  expiresAt?: string
+}
+
+export type StripeAttestationResult = { result: 'confirmed' | 'abandoned' }
+
 /**
  * The subset of Stripe's OnrampCoordinator the widget uses. `authenticate` and
  * `collectPaymentMethod` resolve with elements the caller mounts; the rest are
@@ -55,7 +102,21 @@ export type StripeOnrampCoordinator = {
     onCompletion: (result: StripeAuthenticationResult) => void
   ) => Promise<HTMLElement | null>
   submitKycInfo: (params: StripeKycInfo) => Promise<void>
-  registerWalletAddress: (walletAddress: string, network: string) => Promise<{ id: string }>
+  registerWalletAddress: (walletAddress: string, network: string) => Promise<StripeConsumerWallet>
+  /** Which national identifiers this buyer still owes, per EU regulation. */
+  getMissingIdentifiers: () => Promise<StripeIdentifierRequirements>
+  /** Submit identifiers; repeat while `completed` is false. */
+  updateKycInfo: (identifiers: StripeIdentifier[]) => Promise<StripeUpdateKycResult>
+  /** Mounts the CARF/CRS self-declaration element the buyer confirms. */
+  promptUserAttestation: (
+    regulation: StripeRegulationType,
+    onCompletion: (result: StripeAttestationResult) => void
+  ) => Promise<HTMLElement>
+  getWalletOwnershipChallenge: (params: {
+    walletAddress: string
+    network: string
+  }) => Promise<StripeWalletOwnershipChallenge>
+  submitWalletOwnershipSignature: (params: { challengeId: string; signature: string }) => Promise<void>
   collectPaymentMethod: (
     options: {
       payment_method_types: string[]
