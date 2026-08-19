@@ -719,7 +719,31 @@ const StripeLinkCheckout: React.FC = () => {
       })
   }, [providerSessionId])
 
+  /**
+   * The step to retrace to. Only steps whose predecessor is one of OUR forms
+   * appear here — anything past a provider handoff (auth, attestation,
+   * documents, payment) leaves the flow instead, because the buyer has already
+   * given that work to Stripe and re-showing it would either strand it or
+   * force a needless re-authentication. Leaving lands on the amount screen,
+   * which is what someone backing out of a payment usually wants to change.
+   */
+  const previousStep: Partial<Record<Step, Step>> = {
+    register: 'email',
+    identifiers: 'kyc',
+  }
+
   const handleBack = () => {
+    // Inside the identity form, back belongs to its own pages first.
+    if (step === 'kyc' && kycPage === 1) {
+      setKycPage(0)
+      return
+    }
+    const previous = previousStep[step]
+    if (previous) {
+      setError(null)
+      setStep(previous)
+      return
+    }
     onramp.reset()
     setRoute(routes.BUY)
   }
@@ -791,6 +815,7 @@ const StripeLinkCheckout: React.FC = () => {
           <ModalBody>Your country requires these details before you can buy crypto.</ModalBody>
           {identifierTypes.map((type) => (
             <LabeledField
+              large
               key={type}
               label={identifierLabel(type)}
               value={identifierValues[type] ?? ''}
@@ -809,13 +834,7 @@ const StripeLinkCheckout: React.FC = () => {
 
       {step === 'attestation' && (
         <>
-          {!elementReady && (
-            <SkeletonStack>
-              <Skeleton $h="16px" $w="70%" />
-              <Skeleton $h="80px" />
-            </SkeletonStack>
-          )}
-          <div ref={elementHostRef} />
+          <ModalBody>One last declaration before you pay.</ModalBody>
           {error && <ErrorText>{error}</ErrorText>}
         </>
       )}
@@ -981,7 +1000,7 @@ const StripeLinkCheckout: React.FC = () => {
 
       {/* Stripe's elements carry their own headings and copy — nothing is
           repeated above them. A skeleton stands in while the element loads. */}
-      {(step === 'auth' || step === 'payment') && (
+      {(step === 'auth' || step === 'payment' || step === 'attestation') && (
         <>
           {error && <ErrorText>{error}</ErrorText>}
           {!elementReady && (
@@ -995,7 +1014,10 @@ const StripeLinkCheckout: React.FC = () => {
       )}
       {/* Stripe's elements mount here (auth OTP + card form). Kept in the tree
           across steps so an element never unmounts mid-callback. */}
-      <div ref={elementHostRef} style={{ display: step === 'auth' || step === 'payment' ? 'block' : 'none' }} />
+      <div
+        ref={elementHostRef}
+        style={{ display: step === 'auth' || step === 'payment' || step === 'attestation' ? 'block' : 'none' }}
+      />
       {step === 'auth' && elementReady && (
         <FooterTextButton>
           <FooterButtonText type="button" onClick={handleChangeEmail}>
