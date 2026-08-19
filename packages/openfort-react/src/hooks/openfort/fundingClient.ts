@@ -10,6 +10,30 @@ import type {
 } from './useFunding'
 
 /**
+ * Where a buyer stands with the onramp provider's identity checks.
+ * `providedFields` names the requirements already satisfied (e.g.
+ * `identifiers`, `attestation`), so the widget asks only for what's left.
+ */
+export type OnrampIdentity = {
+  region: 'us' | 'eu' | null
+  level: 'L0' | 'L1' | 'L2' | 'PENDING' | 'REJECTED' | 'REQUIRES_KYC'
+  providedFields: string[]
+}
+
+/**
+ * Spending limits at the buyer's current tier, in the provider's own shape.
+ * MONETARY VALUES ARE IN CENTS.
+ *
+ * Deliberately not narrowed: the field names have never been seen against real
+ * data (reading them needs a completed Link auth, which needs a browser OTP),
+ * and declaring a shape we haven't observed is how the payment element ended up
+ * being asked for a card form on an Apple Pay purchase. Read it defensively.
+ */
+export type OnrampLimits = {
+  limits: Record<string, unknown> | null
+}
+
+/**
  * The funding client surface, mirroring the `openfort.funding.*` namespace in
  * `@openfort/openfort-js`:
  *
@@ -32,6 +56,19 @@ export type FundingClient = {
   authIntents: {
     create(params: { email: string }): Promise<{ id: string }>
     exchangeToken(intentId: string): Promise<{ exchanged: boolean }>
+    /**
+     * The buyer's verification state with the provider: which region's rules
+     * apply, the tier they have reached, and which requirements they have
+     * already satisfied. Drives the EU sub-steps — without it the widget has to
+     * guess which ones a buyer still owes.
+     */
+    identity(params: { intentId: string; customerRef: string }): Promise<OnrampIdentity>
+    /**
+     * What the buyer may spend at their current tier. Amounts are in CENTS.
+     * Null limits mean the provider didn't answer — treat as unrestricted
+     * rather than blocking the purchase.
+     */
+    limits(params: { intentId: string; walletAddress?: string; network?: string }): Promise<OnrampLimits>
   }
   sessions: {
     create(params: { target: FundingTarget }): Promise<FundingSession>
@@ -103,6 +140,18 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
           headers: authHeaders(),
         })
         return readJson<{ exchanged: boolean }>(res)
+      },
+      async identity({ intentId, customerRef }) {
+        const query = new URLSearchParams({ authIntentId: intentId, customerRef })
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/identity?${query}`, { headers: authHeaders() })
+        return readJson<OnrampIdentity>(res)
+      },
+      async limits({ intentId, walletAddress, network }) {
+        const query = new URLSearchParams({ authIntentId: intentId })
+        if (walletAddress) query.set('walletAddress', walletAddress)
+        if (network) query.set('network', network)
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/limits?${query}`, { headers: authHeaders() })
+        return readJson<OnrampLimits>(res)
       },
     },
     sessions: {

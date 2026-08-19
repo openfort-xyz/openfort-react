@@ -110,9 +110,19 @@ export function pendingIdentifierTypes(requirements: StripeIdentifierRequirement
 
 /**
  * CARF also wants a self-declaration, which Stripe renders as its own element.
- * `carf_tin_required` is the only signal this widget has for it — the
- * authoritative `provided_fields` list lives on the customer endpoint, which we
- * don't read, so a buyer who already declared may see the element again.
+ * `providedFields` is authoritative once we have it — a buyer who already
+ * declared must not be asked twice. Without it (identity lookup unavailable),
+ * fall back to the CARF flag, which over-asks rather than under-asks.
  */
-export const attestationRequired = (requirements: StripeIdentifierRequirements): boolean =>
-  requirements.carf_tin_required
+export const attestationRequired = (requirements: StripeIdentifierRequirements, providedFields?: string[]): boolean => {
+  if (providedFields) return !providedFields.includes('attestation')
+  return requirements.carf_tin_required
+}
+
+/**
+ * Stripe's L2 step-up: proof-of-identity documents. Only the customer record
+ * says whether they're outstanding, so no identity lookup means no prompt —
+ * the commit still surfaces the requirement if it turns out to matter.
+ */
+export const documentsRequired = (level: string | undefined, providedFields: string[] | undefined): boolean =>
+  level === 'REQUIRES_KYC' && providedFields !== undefined && !providedFields.includes('documents')

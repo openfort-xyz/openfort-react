@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CountryIso2 } from 'react-international-phone'
 import Logos from '../../../assets/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import type { OnrampIdentity } from '../../../hooks/openfort/fundingClient'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import {
   createStripeOnrampCoordinator,
@@ -31,7 +32,7 @@ import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox } from '../Buy/styles'
 import { Skeleton, SkeletonStack } from '../Deposit/styles'
 import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
-import { attestationRequired, identifierLabel, pendingIdentifierTypes } from './euIdentifiers'
+import { attestationRequired, documentsRequired, identifierLabel, pendingIdentifierTypes } from './euIdentifiers'
 
 type Step =
   | 'init' // loading Stripe's script + coordinator
@@ -41,6 +42,7 @@ type Step =
   | 'kyc' // first-time buyer: identity Stripe requires before checkout
   | 'identifiers' // EU: the national identifiers MiCA / CARF require
   | 'attestation' // EU: Stripe's CARF self-declaration element
+  | 'documents' // step-up: Stripe's document-verification element
   | 'payment' // Stripe's collectPaymentMethod element
   | 'checkout' // commit + performCheckout + settlement polling
 
@@ -92,6 +94,9 @@ const StripeLinkCheckout: React.FC = () => {
 
   const coordinatorRef = useRef<StripeOnrampCoordinator | null>(null)
   const intentIdRef = useRef<string | null>(null)
+  // The provider's own view of this buyer's verification state, read once after
+  // auth. Null when the lookup was unavailable — every consumer degrades.
+  const identityRef = useRef<OnrampIdentity | null>(null)
   const cryptoCustomerIdRef = useRef<string | null>(null)
   const paymentTokenRef = useRef<string | null>(null)
   const elementHostRef = useRef<HTMLDivElement | null>(null)
@@ -196,6 +201,19 @@ const StripeLinkCheckout: React.FC = () => {
     setError(null)
     try {
       await client.authIntents.exchangeToken(intentId)
+      // What the provider already holds for this buyer. Best-effort: without it
+      // the EU steps fall back to over-asking, which is recoverable; failing the
+      // purchase because a status lookup was unavailable is not.
+      if (cryptoCustomerIdRef.current) {
+        try {
+          identityRef.current = await client.authIntents.identity({
+            intentId,
+            customerRef: cryptoCustomerIdRef.current,
+          })
+        } catch (e) {
+          logger.log('[stripe-link] identity lookup unavailable', e)
+        }
+      }
       // Register the session's destination wallet with the Link user so the
       // headless session can deliver to it. Best-effort: an already-registered
       // wallet errors harmlessly and the commit surfaces anything real.
@@ -214,7 +232,15 @@ const StripeLinkCheckout: React.FC = () => {
       } catch (e) {
         logger.log('[stripe-link] wallet registration skipped', e)
       }
-      setStep(registeredRef.current ? 'kyc' : 'payment')
+      // A returning buyer skips the identity form, so this is where their tier
+      // gets checked against what they're trying to spend.
+      if (registeredRef.current) {
+        setStep('kyc')
+      } else if (await needsStepUp(intentId)) {
+        setStep('documents')
+      } else {
+        setStep('payment')
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Link authentication could not be completed.')
       setStep('email')
@@ -301,6 +327,51 @@ const StripeLinkCheckout: React.FC = () => {
   const [identifierValues, setIdentifierValues] = useState<Record<string, string>>({})
 
   /**
+   * Whether this purchase exceeds what the buyer's current tier allows, so the
+   * document step-up should run before payment rather than letting the commit
+   * fail with the provider's own limit error.
+   *
+   * Best-effort: an unavailable or unparseable limit means "no opinion", never
+   * a block. Provider amounts are in CENTS.
+   */
+  const needsStepUp = async (intentId: string): Promise<boolean> => {
+    if (!client) return false
+    const amount = Number(buyForm.amount)
+    if (!Number.isFinite(amount) || amount <= 0) return false
+    try {
+      const { limits } = await client.authIntents.limits({ intentId })
+      // The provider's own field name here is unconfirmed against live data, so
+      // a miss reads as "no opinion" and the commit keeps the final say. Pin the
+      // name once a real EU run shows the payload.
+      const maximum = limits?.maximum
+      if (typeof maximum !== 'number') return false
+      if (amount * 100 <= maximum) return false
+      // Only worth prompting if documents can actually raise the ceiling.
+      return identityRef.current?.level !== 'L2'
+    } catch (e) {
+      logger.log('[stripe-link] transaction limits unavailable', e)
+      return false
+    }
+  }
+
+  /**
+   * The remaining identity steps once identifiers are settled, in the order
+   * Stripe wants them. Returns true when one of them took over the flow.
+   */
+  const advancePastIdentifiers = (requirements: StripeIdentifierRequirements): boolean => {
+    const identity = identityRef.current
+    if (attestationRequired(requirements, identity?.providedFields)) {
+      setStep('attestation')
+      return true
+    }
+    if (documentsRequired(identity?.level, identity?.providedFields)) {
+      setStep('documents')
+      return true
+    }
+    return false
+  }
+
+  /**
    * Ask Stripe what identifiers are outstanding and, if any are, show the form.
    * Returns true when it took over the flow, so callers stop advancing.
    */
@@ -316,10 +387,8 @@ const StripeLinkCheckout: React.FC = () => {
     }
     const types = pendingIdentifierTypes(requirements, buyerCountry)
     if (types.length === 0) {
-      // Nothing to type in, but CARF may still want the declaration.
-      if (!attestationRequired(requirements)) return false
-      setStep('attestation')
-      return true
+      // Nothing to type in, but the declaration or documents may still be due.
+      return advancePastIdentifiers(requirements)
     }
     setIdentifierTypes(types)
     setIdentifierValues({})
@@ -360,10 +429,7 @@ const StripeLinkCheckout: React.FC = () => {
           return
         }
       }
-      if (attestationRequired(result)) {
-        setStep('attestation')
-        return
-      }
+      if (advancePastIdentifiers(result)) return
       if (paymentTokenRef.current) {
         commitStarted.current = false
         setStep('checkout')
@@ -469,6 +535,35 @@ const StripeLinkCheckout: React.FC = () => {
       .then(mountElement)
       .catch((e) => {
         setError(e instanceof Error ? e.message : 'Could not load the declaration.')
+      })
+  }, [step])
+
+  // ---- Document verification (step-up) ----
+  // Unlike the other elements this one resolves rather than calling back, and
+  // Stripe reviews the documents afterwards — a submitted buyer is 'pending',
+  // not verified, so the purchase continues and the commit decides.
+  const documentsMounted = useRef(false)
+  useEffect(() => {
+    const coordinator = coordinatorRef.current
+    if (step !== 'documents' || !coordinator || documentsMounted.current) return
+    documentsMounted.current = true
+    setElementReady(false)
+    coordinator
+      .verifyDocuments()
+      .then((result) => {
+        if (result.result !== 'success') {
+          setError('Identity documents are required before you can continue.')
+          return
+        }
+        if (paymentTokenRef.current) {
+          commitStarted.current = false
+          setStep('checkout')
+        } else {
+          setStep('payment')
+        }
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : 'Could not start document verification.')
       })
   }, [step])
 
@@ -682,6 +777,23 @@ const StripeLinkCheckout: React.FC = () => {
             </SkeletonStack>
           )}
           <div ref={elementHostRef} />
+          {error && <ErrorText>{error}</ErrorText>}
+        </>
+      )}
+
+      {step === 'documents' && (
+        <>
+          <ModalBody>Confirm your identity to raise your purchase limit.</ModalBody>
+          <PendingContainer>
+            <SquircleSpinner
+              logo={
+                <SpinnerLogoBox>
+                  <Logos.Openfort />
+                </SpinnerLogoBox>
+              }
+              connecting={true}
+            />
+          </PendingContainer>
           {error && <ErrorText>{error}</ErrorText>}
         </>
       )}

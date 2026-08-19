@@ -112,6 +112,8 @@ export type StripeOnrampCoordinator = {
     regulation: StripeRegulationType,
     onCompletion: (result: StripeAttestationResult) => void
   ) => Promise<HTMLElement>
+  /** Mounts the document-capture element for the L2 step-up. */
+  verifyDocuments: () => Promise<{ result: 'success' | 'abandoned' }>
   getWalletOwnershipChallenge: (params: {
     walletAddress: string
     network: string

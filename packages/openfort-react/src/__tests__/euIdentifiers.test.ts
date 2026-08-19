@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   attestationRequired,
   carfIdentifierForCountry,
+  documentsRequired,
   identifierLabel,
   pendingIdentifierTypes,
 } from '../components/Pages/StripeLinkCheckout/euIdentifiers'
@@ -65,9 +66,40 @@ describe('pendingIdentifierTypes', () => {
 })
 
 describe('attestationRequired', () => {
-  it('follows the CARF flag', () => {
-    expect(attestationRequired(requirements({ carf_tin_required: true }))).toBe(true)
-    expect(attestationRequired(requirements())).toBe(false)
+  it('never re-asks a buyer who already declared', () => {
+    expect(attestationRequired(requirements({ carf_tin_required: true }), ['attestation'])).toBe(false)
+  })
+
+  it('asks when the provider says the declaration is still outstanding', () => {
+    expect(attestationRequired(requirements({ carf_tin_required: true }), ['identifiers'])).toBe(true)
+    // Authoritative even when the CARF flag is clear.
+    expect(attestationRequired(requirements(), [])).toBe(true)
+  })
+
+  it('falls back to the CARF flag when the buyer state is unknown', () => {
+    expect(attestationRequired(requirements({ carf_tin_required: true }), undefined)).toBe(true)
+    expect(attestationRequired(requirements(), undefined)).toBe(false)
+  })
+})
+
+describe('documentsRequired', () => {
+  it('asks only when the tier needs raising and documents are outstanding', () => {
+    expect(documentsRequired('REQUIRES_KYC', ['identifiers'])).toBe(true)
+  })
+
+  it('does not ask once documents are provided', () => {
+    expect(documentsRequired('REQUIRES_KYC', ['documents'])).toBe(false)
+  })
+
+  it('does not ask at a verified tier, nor while a review is pending', () => {
+    expect(documentsRequired('L1', [])).toBe(false)
+    expect(documentsRequired('L2', [])).toBe(false)
+    expect(documentsRequired('PENDING', [])).toBe(false)
+  })
+
+  it('stays silent when the buyer state is unknown — the commit still decides', () => {
+    expect(documentsRequired('REQUIRES_KYC', undefined)).toBe(false)
+    expect(documentsRequired(undefined, undefined)).toBe(false)
   })
 })
 
