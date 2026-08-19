@@ -14,7 +14,7 @@ import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
-import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
+import { evmBuyCurrencies } from '../Buy/evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { formatBalanceWithSymbol, getAssetDecimals, getAssetSymbol } from '../Send/utils'
@@ -59,7 +59,7 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
   // Until the probes settle every candidate shows; assets that resolve to no
   // method are then dropped rather than failing at commit.
   const [buyable, setBuyable] = useState<Record<string, boolean> | null>(null)
-  const buyCandidates = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : EVM_BUY_CURRENCIES
+  const buyCandidates = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : evmBuyCurrencies(fundingTarget.chain)
   useEffect(() => {
     if (!isBuyFlow) return
     let active = true

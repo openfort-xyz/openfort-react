@@ -22,7 +22,7 @@ import { PageContent } from '../../PageContent'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { LogoSelect } from '../Deposit/LogoSelect'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
-import { EVM_BUY_CURRENCIES } from './evmCurrencies'
+import { evmBuyCurrencies } from './evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
 import {
   BigAmountInput,
@@ -73,8 +73,9 @@ const Buy = () => {
   const isWalletPay = isWalletPayMethod(buyForm.method)
   // The selectable BUY list per chain family — the same list the token selector
   // shows, so a picked token always matches (the wallet's indexed assets are
-  // irrelevant when buying).
-  const buyList = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : EVM_BUY_CURRENCIES
+  // irrelevant when buying). The EVM list carries the TARGET chain's own USDC.
+  const fundingTargetForList = useFundingTarget()
+  const buyList = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : evmBuyCurrencies(fundingTargetForList.chain)
 
   // The wallet fixes the destination; only its logo is shown (in the heading).
   const ethereumWallet = useEthereumEmbeddedWallet()
@@ -98,7 +99,7 @@ const Buy = () => {
   )
   const selectedToken = matchedToken ?? buyList[0]
 
-  const defaultTarget = useFundingTarget()
+  const defaultTarget = fundingTargetForList
   const target = useMemo(
     () => ({
       chain: defaultTarget.chain,

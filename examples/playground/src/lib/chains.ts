@@ -139,6 +139,17 @@ export function getFundingTargetForChain(
 export const DEFAULT_EVM_FUNDING_TARGET = getFundingTargetForChain(base.id)!
 
 /**
+ * Ethereum mainnet USDC as a simulated funding target. Not in the chain
+ * switcher (no wallet ops on mainnet); exists because Stripe's EU delivery is
+ * USDC·Ethereum only, so this is the one target that exercises the Stripe
+ * embedded flow from an EU funding scenario.
+ */
+export const ETHEREUM_FUNDING_TARGET = {
+  targetChain: 'eip155:1',
+  targetCurrency: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+}
+
+/**
  * Testnet Deposit-hub target: Base Sepolia native ETH — the one EVM testnet Relay's
  * rail reliably delivers to. On a test key the target is pinned here regardless of
  * the active chain, so the deposit address always resolves (following the active

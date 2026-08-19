@@ -6,7 +6,9 @@ import { useAppStore } from '@/lib/useAppStore'
  * The three routing outcomes the fiat rails actually produce, verified against
  * the funding api. Region is the only lever the simulation has — the buyer picks
  * the method in the widget — so each preset pins a country and lists what the
- * three method rows should resolve to there.
+ * three method rows should resolve to there. Routes assume the default deposit
+ * target (Base USDC): routing is target-dependent, and with chained (Relay)
+ * routes off a provider only wins a row when it delivers that target directly.
  *
  * Every preset also sets `mainnetTarget` (fiat coverage is mainnet-only, so a
  * test key pinned to Base Sepolia shows no fiat rows at all) and `fakeApplePay`
@@ -26,9 +28,13 @@ const SCENARIOS = [
   {
     country: 'DE',
     label: 'Europe (DE)',
+    // Stripe's EU delivery is USDC·Ethereum ONLY and chained (Relay-bridged)
+    // routes are switched off, so with the default Base target every method
+    // falls to the hosted popup. Point the deposit at Ethereum USDC to see the
+    // Stripe embedded flow here.
     routes: [
-      ['Apple / Google Pay', 'Stripe — embedded'],
-      ['Card', 'Stripe — embedded'],
+      ['Apple / Google Pay', 'Coinbase — hosted popup (Stripe embedded on ETH USDC)'],
+      ['Card', 'Coinbase — hosted popup (Stripe embedded on ETH USDC)'],
       ['Bank transfer', 'Coinbase — hosted popup (SEPA)'],
     ],
   },
@@ -81,7 +87,7 @@ export function FundingScenarios() {
 
         {active ? (
           <dl className="rounded-md border p-3 text-xs">
-            {active.routes.map(([method, route]) => (
+            {active.routes.map(([method, route]: readonly [string, string]) => (
               <div key={method} className="flex justify-between gap-3 py-0.5">
                 <dt className="text-muted-foreground">{method}</dt>
                 <dd className="text-right font-mono">{route}</dd>
@@ -118,6 +124,22 @@ export function FundingScenarios() {
             />
             Mainnet target
           </label>
+          {simulation.mainnetTarget && (
+            <label className="flex items-center gap-2">
+              Target
+              <select
+                className="rounded-md border bg-transparent px-2 py-1 text-sm"
+                value={simulation.mainnetTargetChain ?? 'base'}
+                onChange={(e) =>
+                  setSimulation({ ...simulation, mainnetTargetChain: e.target.value as 'base' | 'ethereum' })
+                }
+              >
+                <option value="base">Base USDC</option>
+                {/* Stripe's EU delivery is USDC·Ethereum only — pick this to see the embedded flow from the EU. */}
+                <option value="ethereum">Ethereum USDC</option>
+              </select>
+            </label>
+          )}
           <label className="flex items-center gap-2">
             <input
               type="checkbox"

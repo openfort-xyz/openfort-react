@@ -17,6 +17,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
 import {
   DEFAULT_EVM_FUNDING_TARGET,
+  ETHEREUM_FUNDING_TARGET,
   getFundingTargetForChain,
   isTestKey,
   PLAYGROUND_EVM_CHAINS,
@@ -162,7 +163,9 @@ function FundingTargetSync() {
     // way a test key ever shows fiat rows; the country override stands in for the
     // CDN geo header localhost never has.
     const target = simulation.mainnetTarget
-      ? DEFAULT_EVM_FUNDING_TARGET
+      ? simulation.mainnetTargetChain === 'ethereum'
+        ? ETHEREUM_FUNDING_TARGET
+        : DEFAULT_EVM_FUNDING_TARGET
       : IS_TEST_KEY
         ? TESTNET_FUNDING_TARGET
         : (getFundingTargetForChain(chainId) ?? DEFAULT_EVM_FUNDING_TARGET)

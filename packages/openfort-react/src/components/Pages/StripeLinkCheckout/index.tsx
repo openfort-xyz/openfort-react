@@ -691,6 +691,14 @@ const StripeLinkCheckout: React.FC = () => {
           setStep('kyc')
           return
         }
+        // The L2 tier: the buyer outgrew L1 (amount or accumulated purchases)
+        // and Stripe wants documents — mount its capture element and retry.
+        if (/document verification/i.test(message)) {
+          commitStarted.current = false
+          setError(null)
+          setStep('documents')
+          return
+        }
         setFailed(message)
       })
   }, [step])

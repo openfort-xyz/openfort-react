@@ -7,6 +7,7 @@ import logos from '../../../assets/logos'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { useResolvedFundingMethods } from '../../../hooks/openfort/useResolvedFundingMethods'
 import useIsMobile from '../../../hooks/useIsMobile'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
@@ -15,7 +16,7 @@ import PoweredByFooter from '../../Common/PoweredByFooter'
 import { FundingMethod, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
+import { evmBuyCurrencies } from '../Buy/evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { canPresentApplePay, type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
 import {
@@ -72,6 +73,7 @@ const Deposit = () => {
   const { isAvailable } = useFunding()
   const { chains } = useFundingChains()
   const { loaded, availableMethodIds } = useResolvedFundingMethods()
+  const fundingTarget = useFundingTarget()
 
   // Wallet pay is device/browser gated, independent of region. Apple Pay has a
   // real capability API (ApplePaySession — Safari on macOS/iOS, so desktop Safari
@@ -149,7 +151,7 @@ const Deposit = () => {
       // resolves to the wallet's (often empty) asset list — "no supported tokens" —
       // and the Solana native default would resolve to SOL (isSameToken treats any
       // two natives as equal).
-      asset: chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES[0] : EVM_BUY_CURRENCIES[0],
+      asset: chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES[0] : evmBuyCurrencies(fundingTarget.chain)[0],
     }))
     setRoute(routes.BUY)
   }

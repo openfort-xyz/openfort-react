@@ -147,6 +147,12 @@ const defaultProviderOptions: Parameters<typeof OpenfortProvider>[0] = {
 export interface FundingSimulation {
   country?: string
   mainnetTarget: boolean
+  /**
+   * Which mainnet the simulated target lands on. 'ethereum' exists to exercise
+   * the Stripe embedded flow from the EU (Stripe's EU delivery is USDC·Ethereum
+   * only); everything else uses the Base default.
+   */
+  mainnetTargetChain?: 'base' | 'ethereum'
   /** Polyfill ApplePaySession.canMakePayments so the Apple Pay row shows on non-Apple-Pay devices. */
   fakeApplePay?: boolean
 }
@@ -163,6 +169,7 @@ function readFundingSimulation(): FundingSimulation {
     return {
       country: typeof parsed.country === 'string' && parsed.country ? parsed.country : undefined,
       mainnetTarget: parsed.mainnetTarget !== false,
+      mainnetTargetChain: parsed.mainnetTargetChain === 'ethereum' ? 'ethereum' : 'base',
       fakeApplePay: parsed.fakeApplePay === true,
     }
   } catch {
