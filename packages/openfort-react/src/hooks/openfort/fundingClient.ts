@@ -21,7 +21,7 @@ export type OnrampIdentity = {
 }
 
 /** Where a buyer stands on raising their spending limit. */
-export type OnrampLimitUpgrade = {
+type OnrampLimitUpgrade = {
   status: 'unrequested' | 'resubmit' | 'pending' | 'active' | 'inactive'
   /** False once the provider has stopped offering the upgrade at all. */
   available: boolean
@@ -37,7 +37,7 @@ export type OnrampLimitUpgrade = {
  * MINOR UNITS (cents). `remainingTransactions: null` means unlimited, never
  * zero — the provider reports that as MaxInt32.
  */
-export type OnrampLimits = {
+type OnrampLimits = {
   limits: Record<string, unknown> | null
   remainingMinor?: number | null
   remainingTransactions?: number | null

@@ -33,7 +33,7 @@ export type FundingTarget = {
 }
 
 /** The route the user commits to sending from. */
-export type FundingSource = {
+type FundingSource = {
   /** CAIP-2 chain id the user sends from, e.g. "eip155:137". */
   chain: string
   /** Token contract the user sends, or the zero address for native. */
@@ -51,7 +51,7 @@ export type SessionStatus =
   | 'bounced'
   | 'expired'
 
-export type FundingFee = {
+type FundingFee = {
   kind: 'gas' | 'relayerGas' | 'relayerService' | 'app'
   amount: string
   currency: string
@@ -101,13 +101,11 @@ export type PaymentMethodInput =
       }
     }
 
-export type PaymentMethodType = PaymentMethodInput['type']
-
 /** A prefilled deeplink into a source wallet app (e.g. Trust Wallet). */
-export type WalletDeeplink = { app: string; label: string; url: string }
+type WalletDeeplink = { app: string; label: string; url: string }
 
 /** Per-exchange guidance for the guided CEX flow. */
-export type CexGuidance = {
+type CexGuidance = {
   exchange: string
   network: string
   minWithdrawal: string | null

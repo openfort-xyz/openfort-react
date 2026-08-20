@@ -21,7 +21,7 @@ export type OpenfortStoreState = {
   recoveryError: Error | null
 }
 
-export type OpenfortStoreActions = {
+type OpenfortStoreActions = {
   setUser: (user: User | null) => void
   setLinkedAccounts: (accounts: UserAccount[]) => void
   setEmbeddedState: (state: EmbeddedState) => void

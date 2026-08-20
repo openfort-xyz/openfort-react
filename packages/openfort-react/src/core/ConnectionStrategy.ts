@@ -19,7 +19,7 @@ export interface ConnectionStrategyState {
   embeddedState?: EmbeddedState
 }
 
-export type ConnectRoute = 'embedded' | 'external-wallets'
+type ConnectRoute = 'embedded' | 'external-wallets'
 
 export interface ConnectionStrategy {
   readonly kind: 'bridge' | 'embedded'

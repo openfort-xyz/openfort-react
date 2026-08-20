@@ -57,7 +57,7 @@
     "@changesets/changelog-github": "^0.5.1",
     "@changesets/cli": "^2.29.7",
     "@playwright/test": "^1.61.0",
-    "knip": "^5.64.0",
+    "knip": "^6.32.2",
     "rollup": "^2.80.0",
     "simple-git-hooks": "^2.13.1",
     "typescript": "^5.0.4",
@@ -143,20 +143,7 @@
     }
   },
   "knip": {
-    "workspaces": {
-      "examples/playground": {
-        "ignoreDependencies": [
-          "typedoc"
-        ],
-        "ignoreBinaries": [
-          "vite",
-          "typedoc"
-        ]
-      }
-    },
     "ignore": [
-      "packages/openfort-react/rollup.config.dev.js",
-      "packages/openfort-react/rollup.config.prod.js",
       "packages/create-openfort/template/**",
       "examples/playground/src/components/ui/**",
       "examples/playground/tests/auth/auth.setup.solana.ts",
@@ -167,8 +154,6 @@
       "@solana-program/system",
       "@solana-program/token",
       "@solana/kora",
-      "rollup-plugin-peer-deps-external",
-      "rollup-plugin-typescript2",
       "typescript-plugin-styled-components",
       "buffer",
       "wagmi",

@@ -401,7 +401,7 @@ export enum FundingMethod {
 }
 
 /** Where Deposit-hub funding lands. Defaults to USDC on Base when omitted. */
-export type FundingUIOptions = {
+type FundingUIOptions = {
   /**
    * Destination CAIP-2 chain id for deposits.
    * @default "eip155:8453" (Base)
