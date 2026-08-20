@@ -2,6 +2,7 @@ import { logger } from '../../utils/logger'
 import type {
   FundingSession,
   FundingTarget,
+  OnrampAngle,
   OnrampMethodId,
   OnrampQuote,
   PayLinkParams,
@@ -103,7 +104,10 @@ export type FundingClient = {
     ): Promise<FundingSession>
     get(id: string, params?: { clientSecret?: string }): Promise<FundingSession>
     /** Resolve the fiat methods for this session's destination + buyer region. */
-    methods(id: string, params: { clientSecret: string; country?: string }): Promise<ResolvedFundingMethods>
+    methods(
+      id: string,
+      params: { clientSecret: string; country?: string; angles?: OnrampAngle[] }
+    ): Promise<ResolvedFundingMethods>
     /**
      * Embedded (headless) checkout: confirm the committed headless onramp
      * with mandate acceptance and get the provider client secret for
@@ -121,10 +125,115 @@ export type FundingClient = {
         /** ISO-4217 fiat currency, e.g. "USD". */
         sourceCurrency: string
         country?: string
+        /** Angles this client can execute — must match the commit's `angles`. */
+        angles?: OnrampAngle[]
       }
     ): Promise<OnrampQuote>
   }
   payLink(params: PayLinkParams): Promise<string>
+}
+
+/**
+ * The `openfort.funding` namespace shape in `@openfort/openfort-js` ≥ 2.2 —
+ * structurally typed here because the installed SDK major predates it. Names
+ * differ from {@link FundingClient} where the SDK chose its own vocabulary:
+ * `sessions.checkout` (vs `onrampCheckout`), `embedded.*` (vs `authIntents`),
+ * and `authIntentId` (vs `intentId`).
+ */
+type SdkFundingNamespace = {
+  sessions: {
+    create(params: { target: FundingTarget }): Promise<FundingSession>
+    setPaymentMethod(
+      id: string,
+      params: { clientSecret?: string; paymentMethod: PaymentMethodInput }
+    ): Promise<FundingSession>
+    get(id: string, params?: { clientSecret?: string }): Promise<FundingSession>
+    methods(
+      id: string,
+      params?: { clientSecret?: string; country?: string; angles?: OnrampAngle[] }
+    ): Promise<ResolvedFundingMethods>
+    quote(
+      id: string,
+      params: {
+        method: OnrampMethodId
+        sourceAmount: string
+        sourceCurrency: string
+        country?: string
+        angles?: OnrampAngle[]
+        clientSecret?: string
+      }
+    ): Promise<OnrampQuote>
+    checkout(id: string, params?: { clientSecret?: string }): Promise<{ clientSecret: string }>
+  }
+  embedded: {
+    createAuthIntent(params: { email: string }): Promise<{ id: string }>
+    exchangeToken(intentId: string): Promise<void>
+    identity(params: { authIntentId: string; customerRef: string }): Promise<OnrampIdentity>
+  }
+  limits(
+    params:
+      | { authIntentId: string; walletAddress?: string; network?: string }
+      | { phoneNumber: string; method: 'apple_pay' | 'google_pay' }
+  ): Promise<OnrampLimits>
+  startLimitUpgrade(params: {
+    phoneNumber: string
+    method: 'apple_pay' | 'google_pay'
+  }): Promise<{ url: string; expiresAt: string }>
+  payLink(params: PayLinkParams): Promise<string>
+}
+
+const isFn = (value: unknown): value is (...args: never[]) => unknown => typeof value === 'function'
+
+/**
+ * Adopt the SDK's `openfort.funding` namespace as the {@link FundingClient},
+ * or return null when the installed SDK predates any part of the surface —
+ * partial adoption once shipped a `sessions` object without `onrampCheckout`
+ * and broke the embedded checkout, so this is all-or-nothing.
+ */
+export function adoptSdkFundingClient(candidate: unknown): FundingClient | null {
+  const sdk = candidate as SdkFundingNamespace | undefined
+  const sessions = sdk?.sessions
+  const complete =
+    sessions &&
+    isFn(sessions.create) &&
+    isFn(sessions.setPaymentMethod) &&
+    isFn(sessions.get) &&
+    isFn(sessions.methods) &&
+    isFn(sessions.quote) &&
+    isFn(sessions.checkout) &&
+    isFn(sdk?.embedded?.createAuthIntent) &&
+    isFn(sdk?.embedded?.exchangeToken) &&
+    isFn(sdk?.embedded?.identity) &&
+    isFn(sdk?.limits) &&
+    isFn(sdk?.startLimitUpgrade) &&
+    isFn(sdk?.payLink)
+  if (!sdk || !complete) return null
+  return {
+    authIntents: {
+      create: (params) => sdk.embedded.createAuthIntent(params),
+      exchangeToken: async (intentId) => {
+        await sdk.embedded.exchangeToken(intentId)
+        return { exchanged: true }
+      },
+      identity: ({ intentId, customerRef }) => sdk.embedded.identity({ authIntentId: intentId, customerRef }),
+      limits: (params) =>
+        sdk.limits(
+          'phoneNumber' in params
+            ? params
+            : { authIntentId: params.intentId, walletAddress: params.walletAddress, network: params.network }
+        ),
+      startLimitUpgrade: (params) => sdk.startLimitUpgrade(params),
+    },
+    sessions: {
+      create: (params) => sdk.sessions.create(params),
+      setPaymentMethod: (id, params) => sdk.sessions.setPaymentMethod(id, params),
+      get: (id, params) => sdk.sessions.get(id, params),
+      methods: (id, params) => sdk.sessions.methods(id, params),
+      onrampCheckout: (id, params) => sdk.sessions.checkout(id, params),
+      quote: (id, params) => sdk.sessions.quote(id, params),
+    },
+    payLink: (params) => sdk.payLink(params),
+  }
 }
 
 async function readJson<T>(res: Response): Promise<T> {
@@ -216,9 +325,10 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
           await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}${query}`, { headers: authHeaders() })
         )
       },
-      async methods(id, { clientSecret, country }) {
+      async methods(id, { clientSecret, country, angles }) {
         const query = new URLSearchParams({ clientSecret })
         if (country) query.set('country', country)
+        if (angles?.length) query.set('angles', angles.join(','))
         return readJson<ResolvedFundingMethods>(
           await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/methods?${query.toString()}`, {
             headers: authHeaders(),

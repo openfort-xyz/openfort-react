@@ -82,33 +82,75 @@ export type { StoreCredentialsResult } from './hooks/openfort/auth/useOAuth'
 export { useOAuth } from './hooks/openfort/auth/useOAuth'
 export { usePhoneOtpAuth } from './hooks/openfort/auth/usePhoneOtpAuth'
 export { useSignOut } from './hooks/openfort/auth/useSignOut'
-export type { FundingClient } from './hooks/openfort/fundingClient'
+export type { StepUp } from './hooks/openfort/euIdentifiers'
+export {
+  attestationRequired,
+  carfIdentifierForCountry,
+  documentsRequired,
+  identifierLabel,
+  pendingIdentifierTypes,
+  stepUpFor,
+} from './hooks/openfort/euIdentifiers'
+export type { FundingClient, OnrampIdentity, OnrampLimits, OnrampLimitUpgrade } from './hooks/openfort/fundingClient'
+export type { ResolvedOnrampMethod } from './hooks/openfort/onrampMethodsApi'
+export { backendMethodId, fetchOnrampMethods } from './hooks/openfort/onrampMethodsApi'
+export type {
+  OnrampVerificationChannel,
+  OnrampVerificationRecord,
+  OnrampVerificationStart,
+} from './hooks/openfort/onrampVerificationsApi'
+export {
+  startOnrampVerification,
+  storedOnrampVerification,
+  storeOnrampVerification,
+  submitOnrampVerification,
+} from './hooks/openfort/onrampVerificationsApi'
+export type {
+  StripeAuthenticationResult,
+  StripeCollectPaymentMethodResult,
+  StripeIdentifierRequirements,
+  StripeKycInfo,
+  StripeOnrampCoordinator,
+  StripeWalletPreference,
+} from './hooks/openfort/stripeCryptoOnramp'
+export { createStripeOnrampCoordinator, stripeNetworkForChain } from './hooks/openfort/stripeCryptoOnramp'
 export {
   type SignAuthorizationParameters,
   type SignAuthorizationReturnType,
   use7702Authorization,
 } from './hooks/openfort/use7702Authorization'
 export type {
+  CexGuidance,
   CryptoPaymentMethod,
+  FundingFee,
   FundingSession,
+  FundingSource,
   FundingTarget,
   OnrampAngle,
   OnrampMethodId,
   OnrampPaymentMethod,
   OnrampQuote,
+  PayLinkParams,
   PaymentMethod,
   PaymentMethodInput,
   ResolvedFundingMethod,
   ResolvedFundingMethods,
+  SessionStatus,
   UseFunding,
   UseFundingOptions,
+  WalletDeeplink,
 } from './hooks/openfort/useFunding'
-export { cryptoPaymentMethod, useFunding } from './hooks/openfort/useFunding'
+export { cryptoPaymentMethod, useFunding, useFundingClient } from './hooks/openfort/useFunding'
+export type { FundingChain, FundingCurrency } from './hooks/openfort/useFundingChains'
+export { curateChains, nominalUnits, useFundingChains } from './hooks/openfort/useFundingChains'
 export type { FundingSessionRef, UseFundingMethods, UseFundingMethodsOptions } from './hooks/openfort/useFundingMethods'
 export { useFundingMethods } from './hooks/openfort/useFundingMethods'
+export { useFundingTarget } from './hooks/openfort/useFundingTarget'
 export { useGrantPermissions } from './hooks/openfort/useGrantPermissions'
 export type { OnrampOpenParams, UseOnramp, UseOnrampOptions } from './hooks/openfort/useOnramp'
 export { useOnramp } from './hooks/openfort/useOnramp'
+export { totalFee, useOnrampQuote } from './hooks/openfort/useOnrampQuote'
+export { useResolvedFundingMethods } from './hooks/openfort/useResolvedFundingMethods'
 export { useRevokePermissions } from './hooks/openfort/useRevokePermissions'
 export { useSignMessage } from './hooks/openfort/useSignMessage'
 export { useUI } from './hooks/openfort/useUI'

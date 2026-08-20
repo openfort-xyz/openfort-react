@@ -6,7 +6,7 @@ import {
   identifierLabel,
   pendingIdentifierTypes,
   stepUpFor,
-} from '../components/Pages/StripeLinkCheckout/euIdentifiers'
+} from '../hooks/openfort/euIdentifiers'
 import type { StripeIdentifierRequirements } from '../hooks/openfort/stripeCryptoOnramp'
 
 const requirements = (over: Partial<StripeIdentifierRequirements> = {}): StripeIdentifierRequirements => ({

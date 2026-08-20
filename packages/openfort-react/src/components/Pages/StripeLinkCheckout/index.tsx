@@ -5,6 +5,14 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CountryIso2 } from 'react-international-phone'
 import Logos from '../../../assets/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import {
+  attestationRequired,
+  documentsRequired,
+  identifierLabel,
+  pendingIdentifierTypes,
+  type StepUp,
+  stepUpFor,
+} from '../../../hooks/openfort/euIdentifiers'
 import type { OnrampIdentity } from '../../../hooks/openfort/fundingClient'
 import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
 import {
@@ -34,14 +42,6 @@ import { PageContent } from '../../PageContent'
 import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox } from '../Buy/styles'
 import { Skeleton, SkeletonStack } from '../Deposit/styles'
 import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
-import {
-  attestationRequired,
-  documentsRequired,
-  identifierLabel,
-  pendingIdentifierTypes,
-  type StepUp,
-  stepUpFor,
-} from './euIdentifiers'
 
 /** Two short fields side by side, so a taller input doesn't double the page. */
 const FieldRow = styled.div`

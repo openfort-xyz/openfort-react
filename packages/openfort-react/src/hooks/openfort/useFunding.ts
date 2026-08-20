@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useOpenfort } from '../../components/Openfort/useOpenfort'
 import { useOpenfortCore } from '../../openfort/useOpenfort'
 import { logger } from '../../utils/logger'
-import { createFetchFundingClient, type FundingClient } from './fundingClient'
+import { adoptSdkFundingClient, createFetchFundingClient, type FundingClient } from './fundingClient'
 
 /**
  * Funding session client — adapted from the openfort-funding prototype.
@@ -85,8 +85,26 @@ export type PaymentMethodInput =
       sourceCurrency?: string
       /** Buyer-country override (ISO-3166 alpha-2); defaults to the request IP. */
       country?: string
+      /**
+       * Integration angles this client can execute; omit for no restriction.
+       * A client that can't run a flow (React Native has no DOM for `embedded`
+       * elements) sends `['popup']` — routing then skips providers whose flow
+       * resolves to an excluded angle, falling back to the hosted popup.
+       */
+      angles?: OnrampAngle[]
       /** URL the provider redirects back to after checkout. */
       redirectUrl?: string
+      /** OTP-verified buyer email — wallet pay (`apple_pay`/`google_pay`) only. */
+      email?: string
+      /** OTP-verified US mobile in E.164 — wallet pay only. */
+      phoneNumber?: string
+      /** ISO-8601 time the phone OTP was verified — wallet pay only. */
+      phoneNumberVerifiedAt?: string
+      /** ISO-8601 time the buyer accepted the checkout terms — wallet pay only. */
+      agreementAcceptedAt?: string
+      /** Verification record ids from the OTP endpoints — wallet pay only. */
+      smsVerificationId?: string
+      emailVerificationId?: string
       /**
        * Embedded (headless) element flow: present after the client
        * authenticated the buyer with the provider's embedded auth element and
@@ -310,10 +328,11 @@ export type UseFundingOptions = {
 /**
  * Resolve the funding client every funding hook shares, in order of preference:
  *   1. an explicitly injected client (tests / custom backends),
- *   2. the SDK's `openfort.funding` namespace once available,
+ *   2. the SDK's `openfort.funding` namespace, when the installed SDK covers
+ *      the FULL surface (all-or-nothing — see {@link adoptSdkFundingClient}),
  *   3. the fetch adapter over `uiConfig.fundingBaseUrl` / the API backend.
- * The SDK namespace covers sessions; pay-links stay on the backend adapter
- * until the API exposes them (CEX is deferred), so the two are composed.
+ * A custom `uiConfig.fundingBaseUrl` keeps the fetch adapter — the SDK client
+ * only talks to the Openfort backend.
  */
 export function useFundingClient(options?: UseFundingOptions): FundingClient | null {
   const { uiConfig, publishableKey } = useOpenfort()
@@ -322,21 +341,17 @@ export function useFundingClient(options?: UseFundingOptions): FundingClient | n
   // integrators can point the crypto rails at a custom service via
   // uiConfig.fundingBaseUrl. The CEX rail always uses the backend (Coinbase pay-link).
   const backendUrl = SDKConfiguration.getInstance()?.backendUrl || 'https://api.openfort.io'
-  const baseUrl = options?.useBackendUrl ? backendUrl : uiConfig.fundingBaseUrl || backendUrl
+  const customBaseUrl = !options?.useBackendUrl && uiConfig.fundingBaseUrl ? uiConfig.fundingBaseUrl : null
+  const baseUrl = customBaseUrl ?? backendUrl
   const injected = options?.client
   return useMemo<FundingClient | null>(() => {
     if (injected) return injected
-    const sdkFunding = (coreClient as unknown as { funding?: Pick<FundingClient, 'sessions'> } | undefined)?.funding
-    const fetchClient = baseUrl ? createFetchFundingClient(baseUrl, publishableKey) : null
-    // Only adopt the SDK namespace once it covers the full session surface
-    // (an older SDK without methods/quote would break the fiat hooks).
-    if (sdkFunding && typeof sdkFunding.sessions?.methods === 'function' && fetchClient) {
-      // The SDK namespace covers sessions; embedded auth + pay-links stay on
-      // the fetch adapter until the SDK exposes them.
-      return { sessions: sdkFunding.sessions, authIntents: fetchClient.authIntents, payLink: fetchClient.payLink }
+    if (!customBaseUrl) {
+      const adopted = adoptSdkFundingClient((coreClient as unknown as { funding?: unknown } | undefined)?.funding)
+      if (adopted) return adopted
     }
-    return fetchClient
-  }, [injected, coreClient, baseUrl, publishableKey])
+    return baseUrl ? createFetchFundingClient(baseUrl, publishableKey) : null
+  }, [injected, coreClient, baseUrl, customBaseUrl, publishableKey])
 }
 
 /**
