@@ -50,9 +50,38 @@ export type FundingFee = {
 }
 
 /**
+ * Fiat web2 funding methods — the rail the user sees, never the provider.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampMethodId } from '@openfort/react'
+ *
+ * const method: OnrampMethodId = 'card'
+ * ```
+ */
+export type OnrampMethodId = 'apple_pay' | 'google_pay' | 'card' | 'bank_transfer'
+
+/**
+ * How a resolved onramp executes: open a hosted `url`, an in-page provider SDK,
+ * or Stripe's Link element flow.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampAngle } from '@openfort/react'
+ *
+ * const angle: OnrampAngle = 'popup'
+ * ```
+ */
+export type OnrampAngle = 'popup' | 'native' | 'embedded'
+
+/**
  * The source and rail selected for a funding session.
- * `evm` and `solana` routes include wallet deeplinks; `cex` routes include
- * exchange-withdrawal guidance.
+ * `evm` and `solana` routes are self-custody wallet sends (they get wallet
+ * deeplinks); `cex` is an exchange withdrawal (no deeplink — exchanges can't be
+ * deeplinked into); `onramp` is a fiat purchase — the server resolves the
+ * provider (buyer region + destination + project config) and the session
+ * advances through the same lifecycle, driven by provider settlement webhooks
+ * and server-side polls.
  *
  * @example
  * ```ts
@@ -68,8 +97,31 @@ export type PaymentMethodInput =
   | { type: 'evm'; source: FundingSource }
   | { type: 'solana'; source: FundingSource }
   | { type: 'cex'; cex: string; source: FundingSource }
-
-export type PaymentMethodType = PaymentMethodInput['type']
+  | {
+      type: 'onramp'
+      /** The fiat method the user picked (from `useFundingMethods`). */
+      method: OnrampMethodId
+      /** Fiat amount to prefill in the checkout, human units (e.g. "100.00"). */
+      sourceAmount?: string
+      /** ISO-4217 fiat currency for `sourceAmount`. */
+      sourceCurrency?: string
+      /** Buyer-country override (ISO-3166 alpha-2); defaults to the request IP. */
+      country?: string
+      /** URL the provider redirects back to after checkout. */
+      redirectUrl?: string
+      /**
+       * Embedded (headless) element flow: present after the client
+       * authenticated the buyer with the provider's embedded auth element and
+       * collected a payment method. The commit then creates a HEADLESS
+       * provider session; redeem its secret via `sessions.onrampCheckout` for
+       * performCheckout.
+       */
+      embedded?: {
+        authIntentId: string
+        customerRef: string
+        paymentToken: string
+      }
+    }
 
 /** A prefilled deeplink into a source wallet app (e.g. Trust Wallet). */
 export type WalletDeeplink = { app: string; label: string; url: string }
@@ -83,19 +135,19 @@ export type CexGuidance = {
 }
 
 /**
- * A resolved funding route with receiver details, fees, and wallet links.
+ * A resolved crypto funding route with receiver details, fees, and wallet links.
  *
  * @example
  * ```ts
- * import type { PaymentMethod } from '@openfort/react'
+ * import type { CryptoPaymentMethod } from '@openfort/react'
  *
- * function receiverFor(method: PaymentMethod) {
+ * function receiverFor(method: CryptoPaymentMethod) {
  *   return method.receiverAddress
  * }
  * ```
  */
-export type PaymentMethod = {
-  type: PaymentMethodType
+export type CryptoPaymentMethod = {
+  type: 'evm' | 'solana' | 'cex'
   source: FundingSource
   /** Address the user (or their CEX/wallet) sends to. */
   receiverAddress: string
@@ -110,6 +162,169 @@ export type PaymentMethod = {
   fees: FundingFee[]
   /** Minimum to send for this route (source base units), or null. */
   minAmount: string | null
+}
+
+/**
+ * A committed fiat onramp. The executing provider was resolved server-side and
+ * is never part of the response — render per `angle` and watch the session
+ * status; the server advances it from settlement webhooks and provider polls.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampPaymentMethod } from '@openfort/react'
+ *
+ * function checkoutUrl(method: OnrampPaymentMethod) {
+ *   return method.angle === 'popup' ? method.url : null
+ * }
+ * ```
+ */
+export type OnrampPaymentMethod = {
+  type: 'onramp'
+  method: OnrampMethodId
+  angle: OnrampAngle
+  /** Hosted checkout URL to open, or null. */
+  url: string | null
+  /**
+   * The provider's own session id for this commit — the Stripe Link (v2) flow
+   * passes it to the coordinator's `performCheckout`.
+   */
+  providerSessionId?: string | null
+  fees: FundingFee[]
+  minAmount: string | null
+}
+
+/**
+ * The payment method set on a funding session: a crypto route or a fiat onramp.
+ *
+ * @example
+ * ```ts
+ * import type { PaymentMethod } from '@openfort/react'
+ *
+ * function isFiat(method: PaymentMethod) {
+ *   return method.type === 'onramp'
+ * }
+ * ```
+ */
+export type PaymentMethod = CryptoPaymentMethod | OnrampPaymentMethod
+
+/**
+ * The crypto payment method of a session, or null (none set, or fiat).
+ *
+ * @example
+ * ```ts
+ * import { cryptoPaymentMethod } from '@openfort/react'
+ *
+ * const receiver = cryptoPaymentMethod(session.paymentMethod)?.receiverAddress
+ * ```
+ */
+export function cryptoPaymentMethod(pm: PaymentMethod | null | undefined): CryptoPaymentMethod | null {
+  return pm && pm.type !== 'onramp' ? pm : null
+}
+
+/**
+ * One fiat method row to render, resolved by the server for the session's
+ * destination and the buyer's region. `provider` is telemetry — never shown.
+ *
+ * @example
+ * ```ts
+ * import type { ResolvedFundingMethod } from '@openfort/react'
+ *
+ * function rowLabel(row: ResolvedFundingMethod) {
+ *   return row.label
+ * }
+ * ```
+ */
+export type ResolvedFundingMethod = {
+  method: OnrampMethodId
+  provider: string
+  angle: OnrampAngle
+  /** Server-resolved display label; bank_transfer shows the regional rail. */
+  label: string
+  /** The regional bank rail behind `label`, for bank_transfer. */
+  rail?: 'ach' | 'sepa' | 'interac'
+  /** Gate the row on device capability client-side (e.g. Apple Pay on Safari). */
+  requiresDeviceCheck?: boolean
+  /**
+   * Provider PUBLISHABLE key for `embedded` rows — the pre-commit elements
+   * (Stripe's Link auth) initialize with it. Public by design.
+   */
+  providerPublishableKey?: string
+}
+
+/**
+ * The fiat methods resolved for a session + region.
+ *
+ * @example
+ * ```ts
+ * import type { ResolvedFundingMethods } from '@openfort/react'
+ *
+ * function hasFiat(resolved: ResolvedFundingMethods) {
+ *   return resolved.methods.length > 0
+ * }
+ * ```
+ */
+export type ResolvedFundingMethods = {
+  /** Resolved ISO-3166 alpha-2 country, or null for rest-of-world. */
+  country: string | null
+  methods: ResolvedFundingMethod[]
+}
+
+/**
+ * A priced onramp route: what the entered fiat buys after fees.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampQuote } from '@openfort/react'
+ *
+ * function receives(quote: OnrampQuote) {
+ *   return `${quote.destinationAmount} ${quote.destinationCurrency}`
+ * }
+ * ```
+ */
+export type OnrampQuote = {
+  provider: string
+  sourceAmount: string
+  sourceCurrency: string
+  destinationAmount: string
+  destinationCurrency: string
+  destinationNetwork: string
+  fees: Array<{ type: string; amount: string; currency: string }>
+  exchangeRate: string
+}
+
+/**
+ * Where a buyer stands with the onramp provider's identity checks.
+ * `providedFields` names the requirements already satisfied (e.g.
+ * `identifiers`, `attestation`), so the widget asks only for what's left.
+ */
+export type OnrampIdentity = {
+  region: 'us' | 'eu' | null
+  level: 'L0' | 'L1' | 'L2' | 'PENDING' | 'REJECTED' | 'REQUIRES_KYC'
+  providedFields: string[]
+}
+
+/** Where a buyer stands on raising their spending limit. */
+type OnrampLimitUpgrade = {
+  status: 'unrequested' | 'resubmit' | 'pending' | 'active' | 'inactive'
+  /** False once the provider has stopped offering the upgrade at all. */
+  available: boolean
+}
+
+/**
+ * Spending limits for the buyer. `limits` keeps the provider's own shape and is
+ * deliberately not narrowed — the field names have never been seen against live
+ * data, and declaring a shape we haven't observed is how the payment element
+ * ended up being asked for a card form on an Apple Pay purchase.
+ *
+ * The normalized fields beside it ARE safe to read. MONETARY VALUES ARE IN
+ * MINOR UNITS (cents). `remainingTransactions: null` means unlimited, never
+ * zero — the provider reports that as MaxInt32.
+ */
+type OnrampLimits = {
+  limits: Record<string, unknown> | null
+  remainingMinor?: number | null
+  remainingTransactions?: number | null
+  upgrade?: OnrampLimitUpgrade | null
 }
 
 /**
@@ -150,14 +365,17 @@ export type PayLinkParams = {
 }
 
 /**
- * Client interface used by the funding hooks:
+ * Client interface used by the funding hooks, mirroring the `openfort.funding.*`
+ * namespace in `@openfort/openfort-js`:
  *
  *   openfort.funding.sessions.create({ target })
  *   openfort.funding.sessions.setPaymentMethod(id, { clientSecret, paymentMethod })
  *   openfort.funding.sessions.get(id, { clientSecret? })
+ *   openfort.funding.sessions.methods(id, { clientSecret, country? })
+ *   openfort.funding.sessions.quote(id, { clientSecret, method, sourceAmount, sourceCurrency })
  *   openfort.funding.payLink(params)
  *
- * `useFunding` depends only on this interface, allowing callers to supply any
+ * The hooks depend only on this interface, allowing callers to supply any
  * transport that implements the session and pay-link operations.
  *
  * @example
@@ -170,6 +388,41 @@ export type PayLinkParams = {
  * ```
  */
 export type FundingClient = {
+  /**
+   * Provider-neutral embedded auth for the onramp's element flow. Both
+   * 501/400 until the deployment configures the provider's embedded access.
+   */
+  authIntents: {
+    create(params: { email: string }): Promise<{ id: string }>
+    exchangeToken(intentId: string): Promise<{ exchanged: boolean }>
+    /**
+     * The buyer's verification state with the provider: which region's rules
+     * apply, the tier they have reached, and which requirements they have
+     * already satisfied. Drives the EU sub-steps — without it the widget has to
+     * guess which ones a buyer still owes.
+     */
+    identity(params: { intentId: string; customerRef: string }): Promise<OnrampIdentity>
+    /**
+     * What the buyer may spend at their current tier. Amounts are in CENTS.
+     * Null limits mean the provider didn't answer — treat as unrestricted
+     * rather than blocking the purchase.
+     */
+    limits(
+      params:
+        | { intentId: string; walletAddress?: string; network?: string }
+        /** The wallet-pay rail identifies the buyer by their verified phone. */
+        | { phoneNumber: string; method: 'apple_pay' | 'google_pay' }
+    ): Promise<OnrampLimits>
+    /**
+     * Start the provider-hosted identity form that raises the buyer's limit.
+     * Hosted on purpose: the form collects a partial SSN, which must never
+     * reach our code. The returned url is single-use and short-lived.
+     */
+    startLimitUpgrade(params: {
+      phoneNumber: string
+      method: 'apple_pay' | 'google_pay'
+    }): Promise<{ url: string; expiresAt: string }>
+  }
   sessions: {
     create(params: { target: FundingTarget }): Promise<FundingSession>
     setPaymentMethod(
@@ -177,6 +430,27 @@ export type FundingClient = {
       params: { clientSecret: string; paymentMethod: PaymentMethodInput }
     ): Promise<FundingSession>
     get(id: string, params?: { clientSecret?: string }): Promise<FundingSession>
+    /** Resolve the fiat methods for this session's destination + buyer region. */
+    methods(id: string, params: { clientSecret: string; country?: string }): Promise<ResolvedFundingMethods>
+    /**
+     * Embedded (headless) checkout: confirm the committed headless onramp
+     * with mandate acceptance and get the provider client secret for
+     * performCheckout. One-shot; only valid after an `embedded` commit.
+     */
+    onrampCheckout(id: string, params: { clientSecret: string }): Promise<{ clientSecret: string }>
+    /** Price a fiat route with the exact provider a commit would resolve. */
+    quote(
+      id: string,
+      params: {
+        clientSecret: string
+        method: OnrampMethodId
+        /** Fiat amount in human units, e.g. "100.00". */
+        sourceAmount: string
+        /** ISO-4217 fiat currency, e.g. "USD". */
+        sourceCurrency: string
+        country?: string
+      }
+    ): Promise<OnrampQuote>
   }
   payLink(params: PayLinkParams): Promise<string>
 }
@@ -201,6 +475,49 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
   const authHeaders = (): Record<string, string> =>
     publishableKey ? { authorization: `Bearer ${publishableKey}` } : {}
   return {
+    authIntents: {
+      async create({ email }) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/auth_intents`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ email }),
+        })
+        return readJson<{ id: string }>(res)
+      },
+      async exchangeToken(intentId) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/auth_intents/${encodeURIComponent(intentId)}/tokens`, {
+          method: 'POST',
+          headers: authHeaders(),
+        })
+        return readJson<{ exchanged: boolean }>(res)
+      },
+      async identity({ intentId, customerRef }) {
+        const query = new URLSearchParams({ authIntentId: intentId, customerRef })
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/identity?${query}`, { headers: authHeaders() })
+        return readJson<OnrampIdentity>(res)
+      },
+      async limits(params) {
+        const query = new URLSearchParams()
+        if ('phoneNumber' in params) {
+          query.set('phoneNumber', params.phoneNumber)
+          query.set('method', params.method)
+        } else {
+          query.set('authIntentId', params.intentId)
+          if (params.walletAddress) query.set('walletAddress', params.walletAddress)
+          if (params.network) query.set('network', params.network)
+        }
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/limits?${query}`, { headers: authHeaders() })
+        return readJson<OnrampLimits>(res)
+      },
+      async startLimitUpgrade(params) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/limits/upgrade`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(params),
+        })
+        return readJson<{ url: string; expiresAt: string }>(res)
+      },
+    },
     sessions: {
       async create({ target }) {
         const res = await fetch(`${baseUrl}/v2/funding/sessions`, {
@@ -223,6 +540,31 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
         return readJson<FundingSession>(
           await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}${query}`, { headers: authHeaders() })
         )
+      },
+      async methods(id, { clientSecret, country }) {
+        const query = new URLSearchParams({ clientSecret })
+        if (country) query.set('country', country)
+        return readJson<ResolvedFundingMethods>(
+          await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/methods?${query.toString()}`, {
+            headers: authHeaders(),
+          })
+        )
+      },
+      async onrampCheckout(id, { clientSecret }) {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/onramp_checkout`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ clientSecret }),
+        })
+        return readJson<{ clientSecret: string }>(res)
+      },
+      async quote(id, params) {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/quotes`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(params),
+        })
+        return readJson<OnrampQuote>(res)
       },
     },
     async payLink(params) {

@@ -4,7 +4,8 @@ import { AccountTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types.js'
-import type { PaymentMethodInput } from '../../../hooks/openfort/fundingClient.js'
+import { cryptoPaymentMethod, type PaymentMethodInput } from '../../../hooks/openfort/fundingClient.js'
+import { isSolana } from '../../../hooks/openfort/fundingSources.js'
 import { useFunding } from '../../../hooks/openfort/useFunding.js'
 import {
   type FundingChain,
@@ -12,10 +13,9 @@ import {
   nominalUnits,
   useFundingChains,
 } from '../../../hooks/openfort/useFundingChains.js'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget.js'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { logger } from '../../../utils/logger.js'
-import { isSolana } from './sources.js'
-import { useFundingTarget } from './useFundingTarget.js'
 
 function paymentMethodFor(chain: string, currency: FundingCurrency): PaymentMethodInput {
   const source = { chain, currency: currency.address, amount: nominalUnits(currency.decimals, currency.native) }
@@ -86,10 +86,9 @@ export function useDepositRoute() {
   // the recipient family already matches the target, and EOAs are always usable.
   const targetChainId = isSolana(target.chain) ? null : Number(target.chain.split(':')[1])
   const accountUnusableOnTarget = targetChainId != null && !accountUsableOnChain(ethWallet.activeWallet, targetChainId)
-  const receiverAddress: string | null = sameChain
-    ? (address ?? null)
-    : (session?.paymentMethod?.receiverAddress ?? null)
-  const pm = session?.paymentMethod ?? null
+  // This route only ever commits crypto payment methods; narrow away onramp.
+  const pm = cryptoPaymentMethod(session?.paymentMethod)
+  const receiverAddress: string | null = sameChain ? (address ?? null) : (pm?.receiverAddress ?? null)
 
   useEffect(() => {
     if (!address || !isAvailable || !activeChain || !activeCurrency) return

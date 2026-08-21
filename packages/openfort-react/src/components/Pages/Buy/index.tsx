@@ -1,47 +1,153 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useMemo, useState } from 'react'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
-import useLocales from '../../../hooks/useLocales.js'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { NATIVE_TOKEN_ADDRESS } from '../../../hooks/openfort/fundingSources.js'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi.js'
+import { useFunding } from '../../../hooks/openfort/useFunding.js'
+import { useFundingMethods } from '../../../hooks/openfort/useFundingMethods.js'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget.js'
+import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import { isWalletPayMethod } from '../../../hooks/openfort/walletPay.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import Button from '../../Common/Button/index.js'
 import { Arrow, ArrowChevron } from '../../Common/Button/styles.js'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
-import { routes } from '../../Openfort/types.js'
+import { FundingMethod, routes } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent } from '../../PageContent/index.js'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo.js'
+import { LogoSelect } from '../Deposit/LogoSelect.js'
 import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils.js'
+import { reserveBuyPopup } from './buyPopup.js'
+import { evmBuyCurrencies } from './evmCurrencies.js'
 import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies.js'
 import {
-  AmountCard,
-  AmountInput,
+  BigAmountInput,
+  BigAmountRow,
+  BigAmountSymbol,
+  BuyHeadingButton,
+  BuyHeadingLogo,
+  CenteredRow,
   ContinueButtonWrapper,
-  CurrencySymbol,
-  PresetButton,
-  PresetList,
-  Section,
-  SectionLabel,
-  SelectorButton,
-  SelectorContent,
-  SelectorRight,
-  SelectorSubtitle,
-  SelectorTitle,
+  FlagBadge,
+  MethodRowButton,
+  SummaryLabel,
+  SummaryRow,
+  SummarySection,
 } from './styles.js'
-import { createCurrencyFormatter, getCurrencySymbol } from './utils.js'
+import { amountInputWidth, createCurrencyFormatter, defaultCurrencyForCountry, getCurrencySymbol } from './utils.js'
 
-const amountPresets = [10, 20, 50]
+// Fiat source currencies the onramp actually settles. GBP is omitted on
+// purpose: the provider accepts it as a parameter but currently quotes no
+// destination pairs for it, so offering it only produces a dead end.
+const SOURCE_CURRENCIES = ['USD', 'EUR']
+
+// Flag shown in the currency pill (display only — the selector drives the value).
+const CURRENCY_FLAG: Record<string, string> = {
+  USD: '🇺🇸',
+  EUR: '🇪🇺',
+}
+
+// The payment-method switch below the amount ("Pay with card") — plain grey
+// text back to the method picker, not a required step.
+const METHOD_LABEL: Partial<Record<FundingMethod, string>> = {
+  [FundingMethod.APPLE_PAY]: 'Apple Pay',
+  [FundingMethod.GOOGLE_PAY]: 'Google Pay',
+  [FundingMethod.CARD]: 'card',
+  [FundingMethod.BANK_TRANSFER]: 'bank transfer',
+}
 
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
-  const locales = useLocales()
   const chainType = useOpenfortCore((s) => s.chainType)
-  const { data: ethAssets } = useEthereumWalletAssets()
-  // Solana wallets buy Solana currencies (USDC default, then SOL); EVM reads its
-  // own assets. Both hooks run unconditionally; the active chain picks the list.
-  const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
+  const { user } = useUser()
 
-  const [pressedPreset, setPressedPreset] = useState<number | null>(null)
+  // Apple/Google Pay MAY commit a Coinbase NATIVE order (US buyer + project
+  // CDP creds) — the contact screen then collects Coinbase's Guest-Checkout
+  // consent and the OTP-verified identity before the commit. Everywhere else
+  // the server resolves them to an embedded or hosted checkout, which needs
+  // neither; the resolved angle decides.
+  const isWalletPay = isWalletPayMethod(buyForm.method)
+  // The selectable BUY list per chain family — the same list the token selector
+  // shows, so a picked token always matches (the wallet's indexed assets are
+  // irrelevant when buying). The EVM list carries the TARGET chain's own USDC.
+  const fundingTargetForList = useFundingTarget()
+  const buyList = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : evmBuyCurrencies(fundingTargetForList.chain)
+
+  // The wallet fixes the destination; only its logo is shown (in the heading).
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
+  const address = wallet.status === 'connected' ? wallet.address : undefined
+  const chainId =
+    wallet.status === 'connected' && chainType === ChainTypeEnum.EVM
+      ? (wallet as typeof ethereumWallet).chainId
+      : undefined
+  const chainLogo = chainLogoUrl(chainId)
+
+  // The fiat rail commits into a funding session (same state machine as the
+  // crypto rails). A session accepts a single payment method, so this screen
+  // mints a fresh one per mount — returning here after an attempt re-mints.
+  // The DELIVERED currency is the selected token (on the wallet's active
+  // chain); chaining covers tokens the provider can't deliver directly.
+  const matchedToken = useMemo(
+    () => buyList.find((asset) => isSameToken(asset, buyForm.asset)),
+    [buyList, buyForm.asset]
+  )
+  const selectedToken = matchedToken ?? buyList[0]
+
+  const defaultTarget = fundingTargetForList
+  const target = useMemo(
+    () => ({
+      chain: defaultTarget.chain,
+      currency: selectedToken.type === 'native' ? NATIVE_TOKEN_ADDRESS : (selectedToken.address as string),
+    }),
+    [defaultTarget.chain, selectedToken]
+  )
+  const { createSession, isAvailable } = useFunding({ useBackendUrl: true })
+  const [session, setSession] = useState<{ id: string; clientSecret: string } | null>(null)
+  const sessionKey = useRef('')
+  const createSessionRef = useRef(createSession)
+  createSessionRef.current = createSession
+  useEffect(() => {
+    if (!isAvailable || !address) return
+    const key = `${target.chain}|${target.currency}|${address}`
+    if (sessionKey.current === key) return
+    sessionKey.current = key
+    let cancelled = false
+    setSession(null)
+    void createSessionRef.current({ chain: target.chain, currency: target.currency, address }).then((result) => {
+      if (cancelled) return
+      // On error the quote and Continue stay disabled; the commit screen surfaces errors.
+      setSession('error' in result ? null : { id: result.session.id, clientSecret: result.session.clientSecret })
+    })
+    return () => {
+      cancelled = true
+      sessionKey.current = ''
+    }
+  }, [isAvailable, address, target.chain, target.currency])
+
+  // How THIS buyer's method executes — server-decided per region + project
+  // creds. Wallet pay branches on native vs hosted (identity capture); every
+  // method branches on Stripe's v2 element flow (`embedded` + publishable key).
+  // Until the resolve lands (or when the row is missing) wallet pay assumes
+  // native, the safe direction: identity capture is never skipped when the
+  // commit requires it.
+  const fundingMethods = useFundingMethods(session, { useBackendUrl: true })
+  const methodId = backendMethodId(buyForm.method)
+  const resolvedRow = fundingMethods.methods.find((m) => m.method === methodId)
+  // Hold Continue only while the resolve is in flight; once settled, a missing
+  // row (resolve failed / older backend) keeps the native assumption.
+  const walletPayAngleKnown = !isWalletPay || fundingMethods.loaded
+  const isNativeWalletPay = isWalletPay && (resolvedRow ? resolvedRow.angle === 'native' : true)
+  // Stripe's v2 Link-auth flow: the elements collect auth + payment in the
+  // widget BEFORE the commit, so it needs its own screen (and the row's key).
+  const stripeLinkKey =
+    resolvedRow?.angle === 'embedded' && resolvedRow.providerPublishableKey ? resolvedRow.providerPublishableKey : null
 
   const fiatAmount = useMemo(() => {
     const normalizedAmount = sanitizeForParsing(sanitizeAmountInput(buyForm.amount))
@@ -56,24 +162,45 @@ const Buy = () => {
     triggerResize()
   }, [triggerResize])
 
-  const matchedToken = useMemo(
-    () => assets?.find((asset) => isSameToken(asset, buyForm.asset)),
-    [assets, buyForm.asset]
-  )
-
-  const selectedTokenOption = matchedToken ?? assets?.[0]
-  const selectedToken = selectedTokenOption ?? buyForm.asset
+  // Price in the buyer's regional currency once the server resolves their
+  // country (it accounts for the IP and any override, so it is the same region
+  // the commit will route with). A currency the buyer picked themselves wins.
+  // The country itself is carried on the form for the checkout screens, which
+  // otherwise fall back to the optional configured country.
+  useEffect(() => {
+    if (!fundingMethods.country) return
+    const regional = defaultCurrencyForCountry(fundingMethods.country)
+    setBuyForm((prev) => ({
+      ...prev,
+      buyerCountry: fundingMethods.country,
+      ...(prev.currencyPinned || prev.currency === regional ? {} : { currency: regional }),
+    }))
+  }, [fundingMethods.country, setBuyForm])
 
   const tokenSymbol = getAssetSymbol(selectedToken)
   const tokenName = (selectedToken.metadata?.name as string) || tokenSymbol
+  const tokenLogo = currencyLogoUrl(tokenSymbol)
 
   const currencyFormatter = useMemo(() => createCurrencyFormatter(buyForm.currency), [buyForm.currency])
   const currencySymbol = useMemo(() => getCurrencySymbol(buyForm.currency), [buyForm.currency])
 
+  // A real quote priced by the provider the commit would resolve — refreshes as
+  // the amount/currency settle; shown only as the fee line (the amount itself
+  // always stays in the buyer's chosen fiat currency).
+  const { quote } = useOnrampQuote({
+    session,
+    method: methodId,
+    sourceCurrency: buyForm.currency,
+    amount: fiatAmount,
+  })
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the quote is a re-measure trigger, not an input — the fee line appears or changes height when it lands
+  useEffect(() => {
+    triggerResize()
+  }, [quote, triggerResize])
+
   const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
     if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
-      setPressedPreset(null)
       setBuyForm((prev) => ({
         ...prev,
         amount: raw,
@@ -94,21 +221,48 @@ const Buy = () => {
     }
   }
 
-  const handlePresetClick = (value: number) => {
-    setPressedPreset(value)
-    setBuyForm((prev) => ({
-      ...prev,
-      amount: value.toFixed(2),
-    }))
-  }
-
   const handleOpenTokenSelector = () => {
     setRoute(routes.BUY_TOKEN_SELECT)
   }
 
   const handleContinue = () => {
-    if (fiatAmount === null || fiatAmount <= 0) return
-    setRoute(routes.BUY_SELECT_PROVIDER)
+    if (fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown) return
+    if (isNativeWalletPay) {
+      // The contact screen owns the identity: Coinbase's Guest-Checkout consent
+      // plus OTP-verified email + phone. Pieces already verified (60-day
+      // records) are skipped there, so the fast path is one consent tap.
+      setBuyForm((prev) => ({
+        ...prev,
+        session,
+        walletPayAngle: 'native',
+        walletPay: { email: user?.email, phoneNumber: user?.phoneNumber },
+      }))
+      setRoute(routes.BUY_WALLET_PAY_CONTACT)
+      return
+    }
+    // Stripe's v2 element flow authenticates + collects the payment method in
+    // the widget before committing — its screen owns the whole checkout.
+    if (stripeLinkKey) {
+      setBuyForm((prev) => ({
+        ...prev,
+        session,
+        walletPayAngle: isWalletPay ? 'popup' : null,
+        stripeLink: { publishableKey: stripeLinkKey },
+      }))
+      setRoute(routes.BUY_STRIPE_LINK)
+      return
+    }
+    // Card, bank transfer, and embedded/hosted wallet pay commit directly — the
+    // server resolves the provider (never shown to the user) and the checkout
+    // collects its own consent, so no identity capture here.
+    //
+    // A hosted checkout opens in a window. Reserve it here, inside the click,
+    // while the browser still treats this as user-activated: the commit screen
+    // navigates it once the session resolves — by then the activation has
+    // expired and a fresh window.open is blocked.
+    if (resolvedRow?.angle === 'popup') reserveBuyPopup()
+    setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'popup' : null, stripeLink: null }))
+    setRoute(routes.BUY_PROCESSING)
   }
 
   const handleBack = () => {
@@ -116,60 +270,88 @@ const Buy = () => {
     setRoute(routes.DEPOSIT)
   }
 
-  const isPresetSelected = (value: number) => pressedPreset === value
-  const step1Disabled = fiatAmount === null || fiatAmount <= 0
+  // "Pay with card" — jump back to the method picker for a last-minute switch;
+  // the entered amount survives in buyForm.
+  const handleChangeMethod = () => {
+    setRoute(routes.DEPOSIT)
+  }
+  const methodLabel = METHOD_LABEL[buyForm.method]
+
+  const step1Disabled = fiatAmount === null || fiatAmount <= 0 || !session || !walletPayAngleKnown
+
+  const feeText = quote ? currencyFormatter.format(totalFee(quote)) : null
 
   return (
     <PageContent onBack={handleBack}>
-      <ModalHeading>{locales.buyScreen_heading}</ModalHeading>
-      <ModalBody>{locales.buyScreen_subheading}</ModalBody>
+      {/* Token first: the heading carries the decided destination token and
+          re-opens the token selector — everything below is amount + payment. */}
+      <CenteredRow style={{ marginTop: 0 }}>
+        <BuyHeadingButton type="button" onClick={handleOpenTokenSelector} title={tokenName}>
+          <BuyHeadingLogo>
+            <AssetChainLogo assetLogo={tokenLogo ?? ''} chainLogo={chainLogo ?? ''} symbol={tokenSymbol} />
+          </BuyHeadingLogo>
+          Buy {tokenSymbol || '—'}
+          <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ArrowChevron
+              stroke="currentColor"
+              d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </Arrow>
+        </BuyHeadingButton>
+      </CenteredRow>
 
-      <Section>
-        <SectionLabel>Amount</SectionLabel>
-        <AmountCard>
-          <CurrencySymbol>{currencySymbol}</CurrencySymbol>
-          <AmountInput
-            value={buyForm.amount}
-            onChange={handleAmountChange}
-            onBlur={handleAmountBlur}
-            placeholder="0.00"
-            inputMode="decimal"
-            autoComplete="off"
+      <BigAmountRow>
+        <BigAmountSymbol>{currencySymbol}</BigAmountSymbol>
+        <BigAmountInput
+          value={buyForm.amount}
+          onChange={handleAmountChange}
+          onBlur={handleAmountBlur}
+          placeholder="0"
+          inputMode="decimal"
+          autoComplete="off"
+          style={{ width: amountInputWidth(buyForm.amount) }}
+        />
+      </BigAmountRow>
+
+      <CenteredRow>
+        <div style={{ width: 120 }}>
+          <LogoSelect
+            value={buyForm.currency}
+            onChange={(currency) => setBuyForm((prev) => ({ ...prev, currency, currencyPinned: true }))}
+            options={SOURCE_CURRENCIES.map((c) => ({
+              value: c,
+              label: c,
+              logo: null,
+              icon: <FlagBadge aria-hidden>{CURRENCY_FLAG[c] ?? '💱'}</FlagBadge>,
+            }))}
           />
-        </AmountCard>
-        <PresetList>
-          {amountPresets.map((preset) => (
-            <PresetButton
-              key={preset}
-              type="button"
-              onClick={() => handlePresetClick(preset)}
-              $active={isPresetSelected(preset)}
-            >
-              {currencyFormatter.format(preset)}
-            </PresetButton>
-          ))}
-        </PresetList>
-      </Section>
+        </div>
+      </CenteredRow>
 
-      <Section>
-        <SectionLabel>Currency</SectionLabel>
-        <SelectorButton type="button" onClick={handleOpenTokenSelector}>
-          <SelectorContent>
-            <SelectorTitle>{tokenSymbol || 'Select currency'}</SelectorTitle>
-            <SelectorSubtitle>{tokenName}</SelectorSubtitle>
-          </SelectorContent>
-          <SelectorRight>
-            <Arrow width="13" height="12" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <ArrowChevron
-                stroke="currentColor"
-                d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </Arrow>
-          </SelectorRight>
-        </SelectorButton>
-      </Section>
+      {methodLabel && (
+        <MethodRowButton type="button" onClick={handleChangeMethod}>
+          Pay with {methodLabel}
+          <Arrow width="11" height="10" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ArrowChevron
+              stroke="currentColor"
+              d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+              strokeWidth="2"
+              strokeLinecap="round"
+            />
+          </Arrow>
+        </MethodRowButton>
+      )}
+
+      {feeText && (
+        <SummarySection>
+          <SummaryRow>
+            <SummaryLabel>Fee</SummaryLabel>
+            <SummaryLabel>{feeText}</SummaryLabel>
+          </SummaryRow>
+        </SummarySection>
+      )}
 
       <ContinueButtonWrapper>
         <Button variant="primary" onClick={handleContinue} disabled={step1Disabled}>

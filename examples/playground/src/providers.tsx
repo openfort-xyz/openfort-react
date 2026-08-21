@@ -17,6 +17,7 @@ import { ThemeProvider } from '@/components/theme-provider'
 import { EthereumAddressProviderEmbedded, EthereumAddressProviderWagmi } from '@/contexts/EthereumAddressContext'
 import {
   DEFAULT_EVM_FUNDING_TARGET,
+  ETHEREUM_FUNDING_TARGET,
   getFundingTargetForChain,
   isTestKey,
   PLAYGROUND_EVM_CHAINS,
@@ -122,6 +123,27 @@ const wagmiConfig = createConfig(
 const MODE_TO_CHAIN = { evm: ChainTypeEnum.EVM, svm: ChainTypeEnum.SVM } as const
 
 /**
+ * Local-dev polyfill: the Deposit hub hides the Apple Pay row unless
+ * `ApplePaySession.canMakePayments()` is true (Safari on an Apple-Pay-capable
+ * device). Faking it lets any browser exercise the wallet-pay flow — the
+ * actual payment still requires a real capable device.
+ */
+function WalletPaySimulation() {
+  const fakeApplePay = useAppStore((s) => s.fundingSimulation.fakeApplePay)
+  useEffect(() => {
+    if (!fakeApplePay) return
+    try {
+      const w = window as unknown as { ApplePaySession?: { canMakePayments?: () => boolean } }
+      if (w.ApplePaySession) w.ApplePaySession.canMakePayments = () => true
+      else w.ApplePaySession = { canMakePayments: () => true }
+    } catch {
+      // Browser refuses the override — the row stays device-gated.
+    }
+  }, [fakeApplePay])
+  return null
+}
+
+/**
  * Keeps the Deposit-hub funding target in sync with the active EVM chain, so
  * switching networks in the OpenfortButton lands deposits on that chain. Mainnet
  * chains target their USDC; testnet chains target native ETH (Relay's testnet rail
@@ -134,25 +156,38 @@ function FundingTargetSync() {
   const chainId = useChainId()
   const providerOptions = useAppStore((s) => s.providerOptions)
   const setProviderOptions = useAppStore((s) => s.setProviderOptions)
+  const simulation = useAppStore((s) => s.fundingSimulation)
 
   useEffect(() => {
     // On testnet the rail only delivers to a couple of chains, so pin the target to
-    // Base Sepolia regardless of the active chain; on live keys follow the active chain.
-    const target = IS_TEST_KEY
-      ? TESTNET_FUNDING_TARGET
-      : (getFundingTargetForChain(chainId) ?? DEFAULT_EVM_FUNDING_TARGET)
+    // Base Sepolia regardless of the active chain; on live keys follow the active
+    // chain. The funding SIMULATION (provider settings page) overrides both: fiat
+    // onramp coverage is mainnet-only, so simulating a mainnet target is the only
+    // way a test key ever shows fiat rows; the country override stands in for the
+    // CDN geo header localhost never has.
+    const target = simulation.mainnetTarget
+      ? simulation.mainnetTargetChain === 'ethereum'
+        ? ETHEREUM_FUNDING_TARGET
+        : DEFAULT_EVM_FUNDING_TARGET
+      : IS_TEST_KEY
+        ? TESTNET_FUNDING_TARGET
+        : (getFundingTargetForChain(chainId) ?? DEFAULT_EVM_FUNDING_TARGET)
     const funding = providerOptions.uiConfig?.funding
-    if (funding?.targetChain === target.targetChain && funding?.targetCurrency === target.targetCurrency) {
+    if (
+      funding?.targetChain === target.targetChain &&
+      funding?.targetCurrency === target.targetCurrency &&
+      funding?.country === simulation.country
+    ) {
       return
     }
     setProviderOptions({
       ...providerOptions,
       uiConfig: {
         ...providerOptions.uiConfig,
-        funding: { ...funding, ...target },
+        funding: { ...funding, ...target, country: simulation.country },
       },
     })
-  }, [chainId, providerOptions, setProviderOptions])
+  }, [chainId, providerOptions, setProviderOptions, simulation])
 
   return null
 }
@@ -170,12 +205,17 @@ function FundingTargetSync() {
 function SolanaFundingTargetSync() {
   const providerOptions = useAppStore((s) => s.providerOptions)
   const setProviderOptions = useAppStore((s) => s.setProviderOptions)
+  const simulation = useAppStore((s) => s.fundingSimulation)
 
   useEffect(() => {
     const funding = providerOptions.uiConfig?.funding
+    // The country override has to be re-checked here too, not just the target:
+    // switching funding scenario while in Solana mode is otherwise a no-op,
+    // because the target already matches and this effect returns early.
     if (
       funding?.targetChain === SOLANA_FUNDING_TARGET.targetChain &&
-      funding?.targetCurrency === SOLANA_FUNDING_TARGET.targetCurrency
+      funding?.targetCurrency === SOLANA_FUNDING_TARGET.targetCurrency &&
+      funding?.country === simulation.country
     ) {
       return
     }
@@ -183,10 +223,10 @@ function SolanaFundingTargetSync() {
       ...providerOptions,
       uiConfig: {
         ...providerOptions.uiConfig,
-        funding: { ...funding, ...SOLANA_FUNDING_TARGET },
+        funding: { ...funding, ...SOLANA_FUNDING_TARGET, country: simulation.country },
       },
     })
-  }, [providerOptions, setProviderOptions])
+  }, [providerOptions, setProviderOptions, simulation.country])
 
   return null
 }
@@ -252,6 +292,7 @@ function WagmiProviders({ children }: { children: React.ReactNode }) {
             <OpenfortProvider {...options}>
               <FundingTargetSync />
               <SelectedChainSync />
+              <WalletPaySimulation />
               <EthereumAddressProviderWagmi>{children}</EthereumAddressProviderWagmi>
             </OpenfortProvider>
           </OpenfortWagmiBridge>
@@ -279,6 +320,7 @@ function OpenfortOnlyProviders({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <OpenfortProvider {...options}>
           <SolanaFundingTargetSync />
+          <WalletPaySimulation />
           <EthereumAddressProviderEmbedded>{children}</EthereumAddressProviderEmbedded>
         </OpenfortProvider>
       </QueryClientProvider>

@@ -35,7 +35,7 @@ vi.mock('../../utils/validation.js', () => ({
   getPublishableKeyEnvironment: () => 'live',
 }))
 
-vi.mock('../../components/Pages/Deposit/useFundingTarget.js', () => ({
+vi.mock('../../hooks/openfort/useFundingTarget.js', () => ({
   useFundingTarget: () => ({ chain: 'eip155:8453', currency: '0x0000000000000000000000000000000000000002' }),
 }))
 

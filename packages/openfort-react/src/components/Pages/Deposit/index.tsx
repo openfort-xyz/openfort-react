@@ -2,10 +2,13 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { type ReactNode, type SyntheticEvent, useEffect } from 'react'
-import { BuyIcon, DollarIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons.js'
+import { BankIcon, BuyIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons.js'
 import logos from '../../../assets/logos.js'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi.js'
 import { useFunding } from '../../../hooks/openfort/useFunding.js'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains.js'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget.js'
+import { useResolvedFundingMethods } from '../../../hooks/openfort/useResolvedFundingMethods.js'
 import useIsMobile from '../../../hooks/useIsMobile.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
 import { ModalHeading } from '../../Common/Modal/styles.js'
@@ -13,9 +16,9 @@ import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
 import { FundingMethod, routes } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent } from '../../PageContent/index.js'
-import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies.js'
+import { evmBuyCurrencies } from '../Buy/evmCurrencies.js'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies.js'
-import { type DepositMethodTarget, getPaymentOptions } from './paymentOptions.js'
+import { canPresentApplePay, type DepositMethodTarget, getPaymentOptions } from './paymentOptions.js'
 import {
   DepositContent,
   LogoCluster,
@@ -27,19 +30,22 @@ import {
   OptionSubtitle,
   OptionTitle,
 } from './styles.js'
-import { UnsupportedNetworkNotice } from './UnsupportedNetworkNotice.js'
-import { useFundingTarget } from './useFundingTarget.js'
 
-/** The action icon shown in each row's left badge (icons default to 20×20). */
+/**
+ * The icon in each row's left badge (icons default to 20×20). Fiat rows carry
+ * their brand mark HERE — no logo previews on the right for the cash rails.
+ */
 const METHOD_ICON: Record<FundingMethod, ReactNode> = {
-  [FundingMethod.APPLE_PAY]: <DollarIcon />,
+  [FundingMethod.APPLE_PAY]: <logos.Apple />,
+  [FundingMethod.GOOGLE_PAY]: <logos.Google />,
   [FundingMethod.CARD]: <BuyIcon />,
+  [FundingMethod.BANK_TRANSFER]: <BankIcon />,
   [FundingMethod.WALLET]: <WalletIcon />,
   [FundingMethod.ADDRESS]: <ReceiveIcon />,
   [FundingMethod.EXCHANGE]: <ExternalLinkIcon />,
 }
 
-/** Brand logos previewed on the right of each row (vendored SVGs, no external URLs). */
+/** Brand logos previewed on the right of the CRYPTO rows (vendored SVGs, no external URLs). */
 const BRAND_LOGOS: Partial<Record<FundingMethod, ReactNode[]>> = {
   [FundingMethod.WALLET]: [
     <logos.MetaMask key="mm" background />,
@@ -49,8 +55,6 @@ const BRAND_LOGOS: Partial<Record<FundingMethod, ReactNode[]>> = {
     <logos.Rainbow key="rb" round />,
   ],
   [FundingMethod.EXCHANGE]: [<logos.Coinbase key="cb" background />, <logos.Binance key="bn" />],
-  [FundingMethod.CARD]: [<logos.Visa key="visa" />, <logos.Mastercard key="mc" />],
-  [FundingMethod.APPLE_PAY]: [<logos.Apple key="apple" />],
 }
 
 const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
@@ -67,26 +71,39 @@ const Deposit = () => {
   const chainType = useOpenfortCore((s) => s.chainType)
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
-  const { chains, railChains, isLoading: chainsLoading } = useFundingChains()
-  const target = useFundingTarget()
+  const { chains } = useFundingChains()
+  const { loaded, availableMethodIds } = useResolvedFundingMethods()
+  const fundingTarget = useFundingTarget()
 
-  // The rail can only deliver to chains it lists. If the embedded wallet's target
-  // chain (e.g. Polygon Amoy or a Solana testnet) isn't one of them, there's no
-  // deposit route at all — show the explanation instead of any method options.
-  const targetUnsupported = !chainsLoading && railChains.length > 0 && !railChains.some((c) => c.id === target.chain)
-
-  // Content swaps between the option list and the notice once chains resolve; the
-  // modal only re-measures on an explicit resize, so nudge it when that flips.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `targetUnsupported` is the trigger, not an input
-  useEffect(() => {
-    triggerResize()
-  }, [targetUnsupported, triggerResize])
-
+  // Wallet pay is device/browser gated, independent of region. Apple Pay has a
+  // real capability API (ApplePaySession — Safari on macOS/iOS, so desktop Safari
+  // shows the row too). Google Pay's isReadyToPay needs Google's script; until
+  // that's wired, Android is the honest approximation.
   const options = getPaymentOptions({
     isMobile,
     fundingAvailable: isAvailable,
+    canApplePay: canPresentApplePay(),
+    canGooglePay: typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent),
     methods: uiConfig.funding?.methods,
   })
+
+  // Fiat rows render ONLY once Openfort has resolved them for the buyer's
+  // region + destination — a row must always be executable when tapped. Until
+  // the resolve settles (and whenever it fails or returns nothing), the crypto
+  // rails stand alone; there is deliberately NO static fiat fallback: showing a
+  // method the region doesn't support is a compliance bug, not a UX nicety.
+  // Crypto rows are NOT chain-gated here — each rail page runs its own
+  // supported-network check when opened.
+  const visibleOptions = options.filter(
+    (o) => o.target.kind !== 'buy' || (loaded && availableMethodIds.has(backendMethodId(o.id) ?? ''))
+  )
+
+  // Fiat rows appearing changes the modal height; it only re-measures on an
+  // explicit resize, so nudge it when the resolve settles.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `loaded` is the trigger, not an input — fiat rows appearing changes the page height
+  useEffect(() => {
+    triggerResize()
+  }, [loaded, triggerResize])
 
   // Distinct source-currency logos (USDC, USDT, ETH, …) for the "from address" row.
   const currencyLogos: string[] = []
@@ -124,16 +141,18 @@ const Deposit = () => {
       setRoute(routes.DEPOSIT_CEX)
       return
     }
-    // Fiat rails reuse the existing Buy flow; preselect the chosen provider so
-    // Apple Pay / Card land on the right rail.
+    // Fiat rails go through the Buy flow, which mints a funding session and
+    // commits `{ type: 'onramp', method }` — the provider is resolved
+    // server-side and never shown to the user.
     setBuyForm((prev) => ({
       ...prev,
-      providerId: target.providerId,
+      method: target.method,
+      session: null,
       // Default the card-buy to USDC per chain family. Without this the EVM default
       // resolves to the wallet's (often empty) asset list — "no supported tokens" —
       // and the Solana native default would resolve to SOL (isSameToken treats any
       // two natives as equal).
-      asset: chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES[0] : EVM_BUY_CURRENCIES[0],
+      asset: chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES[0] : evmBuyCurrencies(fundingTarget.chain)[0],
     }))
     setRoute(routes.BUY)
   }
@@ -141,26 +160,22 @@ const Deposit = () => {
   return (
     <PageContent onBack={routes.CONNECTED}>
       <ModalHeading>Add funds</ModalHeading>
-      {targetUnsupported ? (
-        <UnsupportedNetworkNotice targetChain={target.chain} railChains={railChains} />
-      ) : (
-        <DepositContent>
-          <OptionList>
-            {options.map((option) => (
-              <OptionButton key={option.id} type="button" disabled={option.disabled} onClick={() => go(option.target)}>
-                <OptionLeft>
-                  <OptionIconBadge>{METHOD_ICON[option.id]}</OptionIconBadge>
-                  <OptionInfo>
-                    <OptionTitle>{option.title}</OptionTitle>
-                    <OptionSubtitle>{option.disabledReason ?? option.subtitle}</OptionSubtitle>
-                  </OptionInfo>
-                </OptionLeft>
-                <LogoCluster>{clusterFor(option.id)}</LogoCluster>
-              </OptionButton>
-            ))}
-          </OptionList>
-        </DepositContent>
-      )}
+      <DepositContent>
+        <OptionList>
+          {visibleOptions.map((option) => (
+            <OptionButton key={option.id} type="button" disabled={option.disabled} onClick={() => go(option.target)}>
+              <OptionLeft>
+                <OptionIconBadge>{METHOD_ICON[option.id]}</OptionIconBadge>
+                <OptionInfo>
+                  <OptionTitle>{option.title}</OptionTitle>
+                  <OptionSubtitle>{option.disabledReason ?? option.subtitle}</OptionSubtitle>
+                </OptionInfo>
+              </OptionLeft>
+              {option.target.kind !== 'buy' && <LogoCluster>{clusterFor(option.id)}</LogoCluster>}
+            </OptionButton>
+          ))}
+        </OptionList>
+      </DepositContent>
       <PoweredByFooter />
     </PageContent>
   )

@@ -1,6 +1,7 @@
 import { ChainTypeEnum, useOpenfort, useSignOut, useUser } from '@openfort/react'
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
+import { FundingScenarios } from '@/components/FundingScenarios'
 import { ConnectExternalWalletCard } from '@/components/Showcase/app/ConnectExternalWalletCard'
 import { OpenfortUICard } from '@/components/Showcase/app/OpenfortUICard'
 import { SendTransactionCardSolana } from '@/components/Showcase/app/SendTransactionCardSolana'
@@ -81,6 +82,7 @@ export const App = () => {
           </>
         )}
         {!isSVM && !hasWagmi && <SetActiveWalletsCardEthereum />}
+        <FundingScenarios />
       </div>
     </div>
   )

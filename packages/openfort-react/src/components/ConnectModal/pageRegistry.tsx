@@ -46,7 +46,9 @@ type RoutePages = Partial<Record<ValueOf<typeof routes>, React.ReactNode>>
 const LazyBuy = lazy(() => import('../Pages/Buy/index.js'))
 const LazyBuyComplete = lazy(() => import('../Pages/BuyComplete/index.js'))
 const LazyBuyProcessing = lazy(() => import('../Pages/BuyProcessing/index.js'))
-const LazyBuySelectProvider = lazy(() => import('../Pages/BuySelectProvider/index.js'))
+const LazyStripeLinkCheckout = lazy(() => import('../Pages/StripeLinkCheckout/index.js'))
+const LazyWalletPayContact = lazy(() => import('../Pages/WalletPayContact/index.js'))
+const LazyWalletPayLimitUpgrade = lazy(() => import('../Pages/WalletPayLimitUpgrade/index.js'))
 const LazyDeposit = lazy(() => import('../Pages/Deposit/index.js'))
 const LazyDepositCex = lazy(() => import('../Pages/DepositCex/index.js'))
 const LazyDepositCrypto = lazy(() => import('../Pages/DepositCrypto/index.js'))
@@ -98,7 +100,9 @@ export const sharedPages: RoutePages = {
   sendConfirmation: withPageLoading(<LazySendConfirmation />),
   sendTokenSelect: withPageLoading(<LazySelectToken isBuyFlow={false} />),
   buyTokenSelect: withPageLoading(<LazySelectToken isBuyFlow={true} />),
-  buySelectProvider: withPageLoading(<LazyBuySelectProvider />),
+  buyWalletPayContact: withPageLoading(<LazyWalletPayContact />),
+  buyStripeLink: withPageLoading(<LazyStripeLinkCheckout />),
+  buyLimitUpgrade: withPageLoading(<LazyWalletPayLimitUpgrade />),
   buyProcessing: withPageLoading(<LazyBuyProcessing />),
   buyComplete: withPageLoading(<LazyBuyComplete />),
   receive: <Receive />,

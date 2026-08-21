@@ -44,14 +44,14 @@ export interface OpenfortEmbeddedEthereumWalletProvider {
   removeListener(event: EIP1193EventName | string, handler: EIP1193EventHandler): void
 }
 
-export type EIP1193RequestArguments = {
+type EIP1193RequestArguments = {
   readonly method: string
   readonly params?: readonly unknown[] | object
 }
 
-export type EIP1193EventName = 'accountsChanged' | 'chainChanged' | 'connect' | 'disconnect' | 'message'
+type EIP1193EventName = 'accountsChanged' | 'chainChanged' | 'connect' | 'disconnect' | 'message'
 
-export type EIP1193EventHandler = (...args: unknown[]) => void
+type EIP1193EventHandler = (...args: unknown[]) => void
 
 type SimpleAccount = {
   id: string
@@ -105,7 +105,7 @@ export interface EthereumWalletActions {
   exportPrivateKey(options?: ExportPrivateKeyOptions): Promise<ExportPrivateKeyResult>
 }
 
-export type EthereumWalletStateBase =
+type EthereumWalletStateBase =
   | (EthereumWalletActions & {
       status: 'disconnected'
       activeWallet: null

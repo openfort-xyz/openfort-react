@@ -24,7 +24,9 @@ vi.mock('../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
 vi.mock('../solana/hooks/useSolanaEmbeddedWallet', () => ({
   useSolanaEmbeddedWallet: () => mockSolWallet,
 }))
-vi.mock('../hooks/openfort/useFunding', () => ({
+vi.mock('../hooks/openfort/useFunding', async (importOriginal) => ({
+  // Keep the real pure helpers (cryptoPaymentMethod); stub only the hook.
+  ...(await importOriginal<typeof import('../hooks/openfort/useFunding.js')>()),
   useFunding: () => ({
     session: null,
     error: null,
@@ -47,7 +49,7 @@ vi.mock('../hooks/openfort/useFundingChains', () => ({
   }),
   nominalUnits: (decimals: number) => `1${'0'.repeat(decimals + 1)}`,
 }))
-vi.mock('../components/Pages/Deposit/useFundingTarget', () => ({
+vi.mock('../hooks/openfort/useFundingTarget', () => ({
   useFundingTarget: () => ({
     chain: mockChainType === ChainTypeEnum.SVM ? 'solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp' : 'eip155:8453',
     currency: '0xUSDC',

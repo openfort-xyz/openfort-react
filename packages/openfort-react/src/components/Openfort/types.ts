@@ -57,7 +57,9 @@ export const routes = {
   DEPOSIT_CEX: 'depositCex',
   BUY: 'buy',
   BUY_TOKEN_SELECT: 'buyTokenSelect',
-  BUY_SELECT_PROVIDER: 'buySelectProvider',
+  BUY_WALLET_PAY_CONTACT: 'buyWalletPayContact',
+  BUY_STRIPE_LINK: 'buyStripeLink',
+  BUY_LIMIT_UPGRADE: 'buyLimitUpgrade',
   BUY_PROCESSING: 'buyProcessing',
   BUY_COMPLETE: 'buyComplete',
 
@@ -369,10 +371,14 @@ type WalletRecoveryOptionsExtended = {
  * which appear and in what order — like `authProviders` for the auth modal.
  */
 export enum FundingMethod {
-  /** Apple Pay (fiat onramp; mobile only). */
+  /** Apple Pay (fiat onramp; Coinbase native sheet in the US, Coinbase hosted checkout elsewhere). */
   APPLE_PAY = 'applePay',
+  /** Google Pay (fiat onramp; Coinbase native sheet in the US, Coinbase hosted checkout elsewhere). */
+  GOOGLE_PAY = 'googlePay',
   /** Card (fiat onramp). */
   CARD = 'card',
+  /** Bank transfer (fiat onramp; shows the regional rail — ACH/SEPA/Interac). */
+  BANK_TRANSFER = 'bankTransfer',
   /** Transfer from wallet — prefilled wallet deeplinks. */
   WALLET = 'wallet',
   /** Transfer from address — cross-chain deposit address + QR. */
@@ -382,7 +388,7 @@ export enum FundingMethod {
 }
 
 /** Where Deposit-hub funding lands. Defaults to USDC on Base when omitted. */
-export type FundingUIOptions = {
+type FundingUIOptions = {
   /**
    * Destination CAIP-2 chain id for deposits.
    * @default "eip155:8453" (Base)
@@ -426,6 +432,14 @@ export type FundingUIOptions = {
    * @example "https://yourapp.com/deposit.html"
    */
   depositPageUrl?: string
+  /**
+   * Buyer-country override (ISO-3166 alpha-2) for fiat-method region routing.
+   * For apps that already know their user's region (or QA) — skips IP detection,
+   * which resolves to rest-of-world when no country can be determined (e.g.
+   * local dev without a CDN geo header).
+   * @example "US"
+   */
+  country?: string
 }
 
 export type CustomizableRoutes = typeof routes.CONNECTED
@@ -547,13 +561,71 @@ export type SignRequest = (
   settle: (result: { signature: string } | { error: OpenfortError }) => void
 }
 
-export type BuyProviderId = 'moonpay' | 'coinbase' | 'stripe'
+/**
+ * OTP-verified buyer identity Coinbase's native wallet-pay (Apple/Google Pay)
+ * order requires. The OTPs are Coinbase-issued (Verification API, proxied by
+ * the Openfort api); the widget stamps the timestamps at the moment of
+ * verification / consent and attaches the verification record ids.
+ */
+export type WalletPayIdentity = {
+  email: string
+  /** E.164, US mobile. */
+  phoneNumber: string
+  /** ISO-8601 — stamped when the phone OTP is verified (Coinbase's 60-day window). */
+  phoneNumberVerifiedAt: string
+  /** ISO-8601 — stamped when the buyer accepts Coinbase's Guest Checkout terms. */
+  agreementAcceptedAt: string
+  /** Coinbase Verification API record for the phone (valid 60 days). */
+  smsVerificationId?: string
+  /** Coinbase Verification API record for the email (valid 60 days). */
+  emailVerificationId?: string
+}
+
+/** A wallet-pay identity assembled across the consent + OTP steps. */
+export type WalletPayDraft = Partial<WalletPayIdentity>
 
 export type BuyFormState = {
   amount: string
   currency: string
+  /**
+   * The buyer chose the currency themselves, so the region default must stop
+   * overwriting it — the amount screen otherwise re-applies it on every mount.
+   */
+  currencyPinned?: boolean
+  /**
+   * Buyer country as the SERVER resolved it (IP plus any override) while
+   * listing methods — the same region the commit routes with. Downstream
+   * screens must prefer this over the configured country, which is optional and
+   * would otherwise silently make everyone American.
+   */
+  buyerCountry?: string | null
   asset: Asset
-  providerId: BuyProviderId
+  /** The fiat method being bought with. The provider is resolved server-side. */
+  method: FundingMethod
+  /**
+   * The funding session the buy commits into, minted when the amount screen
+   * mounts. Consumed by the commit — every attempt gets a fresh session.
+   */
+  session: { id: string; clientSecret: string } | null
+  /**
+   * Buyer identity for the native wallet-pay (Apple/Google Pay) angle, gathered
+   * across the consent (amount step) + OTP-capture screens before the commit.
+   * Null / partial for card & bank transfer, which don't need it.
+   */
+  walletPay?: WalletPayDraft | null
+  /**
+   * How the amount step resolved a wallet-pay method for THIS buyer: 'native'
+   * (Coinbase sheet — identity required) or 'popup' (hosted checkout — none).
+   * Null/absent for non-wallet-pay methods or before resolution; the commit
+   * screen treats unknown as native, the safe direction.
+   */
+  walletPayAngle?: 'native' | 'popup' | null
+  /**
+   * Set when the amount step resolved the method to Stripe's v2 Link-auth flow
+   * (`embedded` angle with a publishable key) — the Stripe checkout screen
+   * initializes its elements with it. Null/absent for every other route.
+   */
+  stripeLink?: { publishableKey: string } | null
 }
 
 export const defaultBuyFormState: BuyFormState = {
@@ -563,5 +635,7 @@ export const defaultBuyFormState: BuyFormState = {
     type: 'native',
     balance: BigInt(0),
   },
-  providerId: 'coinbase',
+  method: FundingMethod.CARD,
+  session: null,
+  walletPay: null,
 }

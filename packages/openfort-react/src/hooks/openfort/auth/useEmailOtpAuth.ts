@@ -33,6 +33,11 @@ type RequestEmailOtpOptions = {
 } & OpenfortHookOptions<EmailOtpAuthResult> &
   CreateWalletPostAuthOptions
 
+type VerifyEmailOtpOptions = {
+  email: string
+  otp: string
+} & OpenfortHookOptions<EmailOtpAuthResult>
+
 type UseEmailOtpHookOptions = OpenfortHookOptions<EmailOtpAuthResult> & CreateWalletPostAuthOptions
 
 export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = NO_HOOK_OPTIONS) => {
@@ -201,9 +206,78 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = NO_HOOK_OP
     [client]
   )
 
+  const verifyEmailOtp = useCallback(
+    async (options: VerifyEmailOtpOptions): Promise<EmailOtpAuthResult> => {
+      try {
+        setStatus({
+          status: 'loading',
+        })
+
+        if (!options.email || !options.otp) {
+          const error = new MissingParameterError({ params: ['email', 'otp'] })
+          setStatus({
+            status: 'error',
+            error,
+          })
+          return onError<EmailOtpAuthResult>({
+            hookOptions: hookOptionsRef.current,
+            options,
+            error,
+          })
+        }
+
+        if (!isValidEmail(options.email)) {
+          const error = new InvalidEmailError()
+          setStatus({
+            status: 'error',
+            error,
+          })
+          return onError<EmailOtpAuthResult>({
+            hookOptions: hookOptionsRef.current,
+            options,
+            error,
+          })
+        }
+
+        // Verifies ownership of the address without creating a session — for
+        // callers that are already authenticated (e.g. wallet-pay capture).
+        await client.auth.verifyEmailOtp({
+          email: options.email,
+          otp: options.otp,
+        })
+
+        await updateUser()
+
+        setStatus({
+          status: 'success',
+        })
+        return onSuccess<EmailOtpAuthResult>({
+          data: {},
+          hookOptions: hookOptionsRef.current,
+          options,
+        })
+      } catch (e) {
+        const error = new AuthenticationError('Failed to verify email OTP.', { cause: toError(e) })
+
+        setStatus({
+          status: 'error',
+          error,
+        })
+
+        return onError({
+          hookOptions: hookOptionsRef.current,
+          options,
+          error,
+        })
+      }
+    },
+    [client, updateUser]
+  )
+
   return {
     signInEmailOtp,
     requestEmailOtp,
+    verifyEmailOtp,
 
     reset,
     isRequesting: status.status === 'requesting',

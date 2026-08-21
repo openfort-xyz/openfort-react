@@ -33,7 +33,7 @@ export type SolanaCommitment = 'processed' | 'confirmed' | 'finalized'
 /**
  * UI options for Solana-connected views (e.g. SolanaConnected page)
  */
-export type SolanaUIOptions = {
+type SolanaUIOptions = {
   /** Custom avatar component; receives address for display */
   customAvatar?: React.ComponentType<{ address: string }>
 }
@@ -207,7 +207,7 @@ export interface SolanaWalletActions {
   exportPrivateKey(options?: ExportPrivateKeyOptions): Promise<ExportPrivateKeyResult>
 }
 
-export type SolanaWalletStateBase =
+type SolanaWalletStateBase =
   | (SolanaWalletActions & {
       status: 'disconnected'
       activeWallet: null
@@ -268,7 +268,7 @@ export type SolanaWalletStateBase =
     })
 
 /** Derived booleans + optional RPC URL (Solana-specific). */
-export type SolanaWalletDerived = WalletDerived & { rpcUrl?: string }
+type SolanaWalletDerived = WalletDerived & { rpcUrl?: string }
 
 export type SolanaWalletState = SolanaWalletStateBase & SolanaWalletDerived & ConnectedWalletState
 

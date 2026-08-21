@@ -31,7 +31,9 @@ export const SolanaOpenfortUICard = ({ hook }: { hook?: string }) => {
     <Card>
       <CardHeader>
         <CardTitle>Openfort UI</CardTitle>
-        <CardDescription>Prebuilt modal screens — sign, send, receive — instead of headless calls.</CardDescription>
+        <CardDescription>
+          Prebuilt modal screens — sign, send, receive, add funds — instead of headless calls.
+        </CardDescription>
         {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
       <CardContent className="space-y-2">
@@ -44,6 +46,12 @@ export const SolanaOpenfortUICard = ({ hook }: { hook?: string }) => {
           </Button>
           <Button variant="outline" onClick={() => ui.openReceive()}>
             Receive
+          </Button>
+          <Button variant="outline" onClick={() => ui.openFunding()}>
+            Add funds (hub)
+          </Button>
+          <Button variant="outline" onClick={() => ui.openBuy()}>
+            Buy with fiat
           </Button>
         </div>
         <InputMessage

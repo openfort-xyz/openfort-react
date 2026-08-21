@@ -2,48 +2,81 @@ import { describe, expect, it } from 'vitest'
 import { FundingMethod } from '../components/Openfort/types.js'
 import { getPaymentOptions } from '../components/Pages/Deposit/paymentOptions.js'
 
-const ids = (opts: ReturnType<typeof getPaymentOptions>) => opts.map((o) => o.id)
+type Ctx = Parameters<typeof getPaymentOptions>[0]
+
+// Capability flags default to true so cases that don't exercise device gating
+// still surface the wallet-pay rows; the Deposit hub passes the real UA-derived
+// values (Apple Pay on Apple/Safari, Google Pay on Android/Chrome).
+const ctx = (over: Partial<Ctx> = {}): Ctx => ({
+  isMobile: false,
+  fundingAvailable: true,
+  canApplePay: true,
+  canGooglePay: true,
+  ...over,
+})
+
+const ids = (over?: Partial<Ctx>) => getPaymentOptions(ctx(over)).map((o) => o.id)
 
 describe('getPaymentOptions', () => {
-  it('shows all methods by default on desktop (Apple Pay is mobile-only, hidden)', () => {
-    const opts = getPaymentOptions({ isMobile: false, fundingAvailable: true })
-    expect(ids(opts)).toEqual([FundingMethod.CARD, FundingMethod.WALLET, FundingMethod.ADDRESS, FundingMethod.EXCHANGE])
+  it('shows wallet pay wherever the device can present it — desktop Safari included', () => {
+    expect(ids()).toEqual([
+      FundingMethod.APPLE_PAY,
+      FundingMethod.GOOGLE_PAY,
+      FundingMethod.CARD,
+      FundingMethod.BANK_TRANSFER,
+      FundingMethod.WALLET,
+      FundingMethod.ADDRESS,
+      FundingMethod.EXCHANGE,
+    ])
   })
 
-  it('floats Apple Pay first on mobile when the order is not explicit', () => {
-    const opts = getPaymentOptions({ isMobile: true, fundingAvailable: true })
-    expect(ids(opts)[0]).toBe(FundingMethod.APPLE_PAY)
+  it('gates each wallet-pay row on its device capability', () => {
+    const apple = ids({ canApplePay: true, canGooglePay: false })
+    expect(apple).toContain(FundingMethod.APPLE_PAY)
+    expect(apple).not.toContain(FundingMethod.GOOGLE_PAY)
+
+    const google = ids({ canApplePay: false, canGooglePay: true })
+    expect(google).toContain(FundingMethod.GOOGLE_PAY)
+    expect(google).not.toContain(FundingMethod.APPLE_PAY)
+  })
+
+  it('hides both wallet-pay rows when neither capability is present', () => {
+    const none = ids({ canApplePay: false, canGooglePay: false })
+    expect(none).not.toContain(FundingMethod.APPLE_PAY)
+    expect(none).not.toContain(FundingMethod.GOOGLE_PAY)
+    expect(none).toContain(FundingMethod.CARD)
+    expect(none).toContain(FundingMethod.BANK_TRANSFER)
+  })
+
+  it('floats wallet pay first on mobile when the order is not explicit', () => {
+    const first = ids({ isMobile: true })[0]
+    expect([FundingMethod.APPLE_PAY, FundingMethod.GOOGLE_PAY]).toContain(first)
   })
 
   it('shows only the integrator-selected methods, in the given order', () => {
-    const opts = getPaymentOptions({
-      isMobile: false,
-      fundingAvailable: true,
-      methods: [FundingMethod.EXCHANGE, FundingMethod.WALLET],
-    })
-    expect(ids(opts)).toEqual([FundingMethod.EXCHANGE, FundingMethod.WALLET])
+    const order = [FundingMethod.EXCHANGE, FundingMethod.WALLET]
+    expect(ids({ methods: order })).toEqual(order)
   })
 
-  it('preserves an explicit order on mobile (no Apple-Pay reorder)', () => {
-    const opts = getPaymentOptions({
-      isMobile: true,
-      fundingAvailable: true,
-      methods: [FundingMethod.WALLET, FundingMethod.APPLE_PAY],
-    })
-    expect(ids(opts)).toEqual([FundingMethod.WALLET, FundingMethod.APPLE_PAY])
+  it('preserves an explicit order on mobile (no wallet-pay reorder)', () => {
+    const order = [FundingMethod.WALLET, FundingMethod.APPLE_PAY]
+    expect(ids({ isMobile: true, methods: order })).toEqual(order)
   })
 
-  it('still applies the mobile-only gate to explicit methods (Apple Pay hidden on desktop)', () => {
-    const opts = getPaymentOptions({
-      isMobile: false,
-      fundingAvailable: true,
-      methods: [FundingMethod.APPLE_PAY, FundingMethod.ADDRESS],
-    })
-    expect(ids(opts)).toEqual([FundingMethod.ADDRESS])
+  it('still applies the capability gate to explicit methods', () => {
+    expect(ids({ canApplePay: false, methods: [FundingMethod.APPLE_PAY, FundingMethod.ADDRESS] })).toEqual([
+      FundingMethod.ADDRESS,
+    ])
+  })
+
+  it('keeps fiat targets provider-agnostic (no providerId on the row)', () => {
+    const card = getPaymentOptions(ctx()).find((o) => o.id === FundingMethod.CARD)
+    expect(card?.target).toEqual({ kind: 'buy', method: FundingMethod.CARD })
+    expect(card?.target).not.toHaveProperty('providerId')
   })
 
   it('disables the Relay-backed rails with a reason when funding is unavailable', () => {
-    const opts = getPaymentOptions({ isMobile: false, fundingAvailable: false })
+    const opts = getPaymentOptions(ctx({ fundingAvailable: false }))
     const wallet = opts.find((o) => o.id === FundingMethod.WALLET)
     expect(wallet?.disabled).toBe(true)
     expect(wallet?.disabledReason).toBe('Coming soon')
@@ -52,11 +85,6 @@ describe('getPaymentOptions', () => {
   })
 
   it('ignores unknown method ids', () => {
-    const opts = getPaymentOptions({
-      isMobile: false,
-      fundingAvailable: true,
-      methods: ['nope' as FundingMethod, FundingMethod.CARD],
-    })
-    expect(ids(opts)).toEqual([FundingMethod.CARD])
+    expect(ids({ methods: ['nope' as FundingMethod, FundingMethod.CARD] })).toEqual([FundingMethod.CARD])
   })
 })

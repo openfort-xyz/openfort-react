@@ -1,6 +1,6 @@
 'use client'
 
-import type { PaymentMethod, SessionStatus } from '../../../hooks/openfort/fundingClient.js'
+import type { CryptoPaymentMethod, SessionStatus } from '../../../hooks/openfort/fundingClient.js'
 import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton.js'
 import CustomQRCode from '../../Common/CustomQRCode/index.js'
 import { AssetChainLogo } from './AssetChainLogo.js'
@@ -14,7 +14,7 @@ type DepositAddressBlockProps = {
   assetLogo: string | null
   chainLogo: string | null
   receiverAddress: string | null
-  pm: PaymentMethod | null
+  pm: CryptoPaymentMethod | null
   /** Source currency (symbol + decimals) for formatting the Details fee/min. */
   sourceCurrency: { symbol: string; decimals: number } | null
   /** Cross-chain routes carry a fee/min Details panel; same-chain transfers don't. */

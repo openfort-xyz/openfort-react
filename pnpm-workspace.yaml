@@ -15,6 +15,7 @@ packages:
 overrides:
   bn.js: '>=5.2.3'
   axios: '>=1.18.1'
+  hono: '>=4.12.34'
   react: 18.3.1
   react-dom: 18.3.1
   '@types/react': 18.3.1
@@ -25,9 +26,9 @@ overrides:
   '@tanstack/query-core': ^5.99.2
   use-sync-external-store: ^1.6.0
   typescript: ^5.9.3
-  protobufjs: '>=8.6.0'
+  protobufjs: '>=8.6.6'
   follow-redirects: '>=1.16.0'
-  '@hono/node-server': '>=1.19.13'
+  '@hono/node-server': '>=2.0.10'
   cross-spawn: '>=6.0.6'
   got: '>=11.8.5'
   esbuild: '>=0.28.1'
@@ -60,17 +61,24 @@ overrides:
   postcss@<8.5.23: '>=8.5.23'
   ws: '>=8.21.0'
   vitest@<4.1.0: '>=4.1.0'
-  shell-quote@>=1.1.0 <=1.8.3: '>=1.8.4'
+  shell-quote@>=1.1.0 <=1.8.4: '>=1.9.0'
   '@grpc/grpc-js@<1.9.16': '>=1.9.16'
   form-data@>=4.0.0 <4.0.6: '>=4.0.6'
   vite@<6.4.3: '>=6.4.3'
-  js-yaml@>=4.0.0 <4.3.0: '>=4.3.0 <5'
+  js-yaml@>=4.0.0 <4.3.1: '>=4.3.1 <5'
   # read-yaml-file 1.1 calls the js-yaml 3 safeLoad API, which 4.x removed, so
   # this path stays on the 3.x line. 3.15.1 carries the merge-key backport.
   'read-yaml-file@1.1.0>js-yaml': 3.15.1
-  dompurify@<3.4.11: '>=3.4.11'
+  dompurify@<3.4.13: '>=3.4.13'
   '@opentelemetry/core@<2.8.0': '>=2.8.0'
   '@babel/core@<7.29.6': '>=7.29.6 <8'
+  body-parser@<1.20.6: '>=1.20.6 <2'
+  nanoid@<3.3.18: '>=3.3.18 <4'
+  seroval@<1.5.3: '>=1.5.3'
+  valibot@<1.4.2: '>=1.4.2'
+  websocket-driver@<0.7.5: '>=0.7.5'
+  deepmerge-ts@<8.0.0: '>=8.0.0'
+  better-auth@<1.6.22: '>=1.6.22'
 
 # Seven days. A compromised publish is usually caught and unpublished within
 # hours to days, so waiting a week means the registry has almost always sorted

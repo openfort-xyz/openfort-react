@@ -6,10 +6,12 @@ import { parseUnits } from 'viem'
 import logos from '../../../assets/logos.js'
 import { toDisplayMessage } from '../../../errors/base.js'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { isSolana } from '../../../hooks/openfort/fundingSources.js'
 import useIsMobile from '../../../hooks/useIsMobile.js'
 import styled from '../../../styles/styled/index.js'
 import { isIOS } from '../../../utils/index.js'
 import { isHttpsUrl } from '../../../utils/urlSecurity.js'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles.js'
 import {
   ConnectorButton,
   ConnectorIcon,
@@ -21,19 +23,10 @@ import { ScrollArea } from '../../Common/ScrollArea/index.js'
 import { routes } from '../../Openfort/types.js'
 import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import { PageContent } from '../../PageContent/index.js'
-import {
-  AmountCard,
-  AmountInput,
-  CurrencySymbol,
-  PresetButton,
-  PresetList,
-  Section,
-  SectionLabel,
-} from '../Buy/styles.js'
-import { AddressPageLink } from '../Deposit/AddressPageLink.js'
+import { BigAmountInput, BigAmountRow, BigAmountSymbol, MethodRowButton } from '../Buy/styles.js'
+import { amountInputWidth } from '../Buy/utils.js'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress.js'
 import { RouteSelectors } from '../Deposit/RouteSelectors.js'
-import { isSolana } from '../Deposit/sources.js'
 import { Skeleton, StepDivider } from '../Deposit/styles.js'
 import { TestnetNotice } from '../Deposit/TestnetNotice.js'
 import { AccountChainNotice, UnsupportedNetworkNotice } from '../Deposit/UnsupportedNetworkNotice.js'
@@ -89,9 +82,6 @@ const WALLET_LOGO: Record<string, ReactNode> = {
   rabby: <logos.Rabby />,
 }
 
-/** Preset deposit amounts, in the selected source token's units. */
-const PRESETS = [10, 25, 50]
-
 /**
  * Transfer from wallet. Pick a source chain/token and an amount, then choose the
  * wallet to send from. On mobile that's open-dApp deeplinks into the wallet app's
@@ -100,7 +90,7 @@ const PRESETS = [10, 25, 50]
  * available below.
  */
 const DepositWallet = () => {
-  const { triggerResize, uiConfig } = useOpenfort()
+  const { triggerResize, uiConfig, setRoute } = useOpenfort()
   const isMobile = useIsMobile()
   const route = useDepositRoute()
   // The desktop send path goes through the wagmi bridge (browser-extension wallets).
@@ -110,7 +100,6 @@ const DepositWallet = () => {
   // Prefill a sensible default so the wallet deeplinks are immediately actionable
   // (the funding deposit-address mint uses a fixed nominal amount regardless).
   const [amount, setAmount] = useState('1')
-  const [pressedPreset, setPressedPreset] = useState<number | null>(null)
 
   const depositPageUrl = uiConfig.funding?.depositPageUrl ?? OPENFORT_DEPOSIT_PAGE_URL
   // Solana sources have no numeric chain id and no desktop EVM-extension send, so
@@ -123,14 +112,8 @@ const DepositWallet = () => {
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
     if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
-      setPressedPreset(null)
       setAmount(raw)
     }
-  }
-
-  const handlePreset = (value: number) => {
-    setPressedPreset(value)
-    setAmount(String(value))
   }
 
   // Open-dApp deeplinks: prefer backend-provided ones; otherwise build them from
@@ -200,31 +183,29 @@ const DepositWallet = () => {
 
             {!route.isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
 
-            <Section>
-              <SectionLabel>Amount</SectionLabel>
-              <AmountCard>
-                <CurrencySymbol>{route.activeCurrency?.symbol ?? ''}</CurrencySymbol>
-                <AmountInput
-                  value={amount}
-                  onChange={handleAmountChange}
-                  placeholder="0.00"
-                  inputMode="decimal"
-                  autoComplete="off"
+            <BigAmountRow>
+              <BigAmountInput
+                value={amount}
+                onChange={handleAmountChange}
+                placeholder="0"
+                inputMode="decimal"
+                autoComplete="off"
+                style={{ width: amountInputWidth(amount) }}
+              />
+              <BigAmountSymbol>{route.activeCurrency?.symbol ?? ''}</BigAmountSymbol>
+            </BigAmountRow>
+
+            <MethodRowButton type="button" onClick={() => setRoute(routes.DEPOSIT)}>
+              Other payment methods
+              <Arrow width="11" height="10" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <ArrowChevron
+                  stroke="currentColor"
+                  d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+                  strokeWidth="2"
+                  strokeLinecap="round"
                 />
-              </AmountCard>
-              <PresetList>
-                {PRESETS.map((preset) => (
-                  <PresetButton
-                    key={preset}
-                    type="button"
-                    $active={pressedPreset === preset}
-                    onClick={() => handlePreset(preset)}
-                  >
-                    {preset}
-                  </PresetButton>
-                ))}
-              </PresetList>
-            </Section>
+              </Arrow>
+            </MethodRowButton>
 
             <StepDivider>Then select the wallet you want to use</StepDivider>
           </TopFixed>
@@ -279,8 +260,6 @@ const DepositWallet = () => {
           </ProvidersRegion>
 
           <FixedFooter>
-            <AddressPageLink label="Or send to a deposit address" />
-
             {route.error && (
               <ModalBody style={{ color: '#dc2626', marginTop: 12 }}>{toDisplayMessage(route.error)}</ModalBody>
             )}

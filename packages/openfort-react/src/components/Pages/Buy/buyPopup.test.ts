@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { closeBuyPopup, navigateBuyPopup, reserveBuyPopup, takeBuyPopup } from './buyPopup'
+import { closeBuyPopup, navigateBuyPopup, reserveBuyPopup, takeBuyPopup } from './buyPopup.js'
 
 const fakePopup = () => ({
   closed: false,

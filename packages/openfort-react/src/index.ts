@@ -118,12 +118,20 @@ export { useOAuth } from './hooks/openfort/auth/useOAuth.js'
 export { usePhoneOtpAuth } from './hooks/openfort/auth/usePhoneOtpAuth.js'
 export { useSignOut } from './hooks/openfort/auth/useSignOut.js'
 export type {
+  CryptoPaymentMethod,
   FundingClient,
   FundingSession,
   FundingTarget,
+  OnrampAngle,
+  OnrampMethodId,
+  OnrampPaymentMethod,
+  OnrampQuote,
   PaymentMethod,
   PaymentMethodInput,
+  ResolvedFundingMethod,
+  ResolvedFundingMethods,
 } from './hooks/openfort/fundingClient.js'
+export { cryptoPaymentMethod } from './hooks/openfort/fundingClient.js'
 export {
   type SignAuthorizationOptions,
   type SignAuthorizationParameters,
@@ -139,7 +147,15 @@ export type {
   UseFundingOptions,
 } from './hooks/openfort/useFunding.js'
 export { useFunding } from './hooks/openfort/useFunding.js'
+export type {
+  FundingSessionRef,
+  UseFundingMethods,
+  UseFundingMethodsOptions,
+} from './hooks/openfort/useFundingMethods.js'
+export { useFundingMethods } from './hooks/openfort/useFundingMethods.js'
 export { useGrantPermissions } from './hooks/openfort/useGrantPermissions.js'
+export type { OnrampOpenParams, UseOnramp, UseOnrampOptions } from './hooks/openfort/useOnramp.js'
+export { useOnramp } from './hooks/openfort/useOnramp.js'
 export { useRevokePermissions } from './hooks/openfort/useRevokePermissions.js'
 export type { SignMessageResult, UseSignMessageOptions } from './hooks/openfort/useSignMessage.js'
 export { useSignMessage } from './hooks/openfort/useSignMessage.js'

@@ -13,6 +13,7 @@ import { getTrustedFundingProviderUrl } from '../../utils/fundingProviderUrl.js'
 import { logger } from '../../utils/logger.js'
 import {
   createFetchFundingClient,
+  cryptoPaymentMethod,
   type FundingClient,
   type FundingSession,
   type FundingTarget,
@@ -25,6 +26,25 @@ import { notifyHookCallback } from './hookConsistency.js'
 /** Pay-links aren't exposed by the SDK funding namespace yet (CEX is API-deferred). */
 const sdkPayLinkUnavailable = async (): Promise<string> => {
   throw new UnsupportedOperationError({ operation: 'Exchange pay-links' })
+}
+
+/** Embedded onramp auth isn't exposed by the SDK funding namespace yet. */
+const sdkAuthIntentsUnavailable: FundingClient['authIntents'] = {
+  create: async () => {
+    throw new UnsupportedOperationError({ operation: 'Onramp auth intents' })
+  },
+  exchangeToken: async () => {
+    throw new UnsupportedOperationError({ operation: 'Onramp auth intents' })
+  },
+  identity: async () => {
+    throw new UnsupportedOperationError({ operation: 'Onramp identity' })
+  },
+  limits: async () => {
+    throw new UnsupportedOperationError({ operation: 'Onramp limits' })
+  },
+  startLimitUpgrade: async () => {
+    throw new UnsupportedOperationError({ operation: 'Onramp limit upgrade' })
+  },
 }
 
 const TERMINAL: SessionStatus[] = ['succeeded', 'bounced', 'expired']
@@ -168,10 +188,10 @@ export type UseFundingOptions = {
  * React surface over the funding session API.
  *
  * A session is one deposit attempt against a destination. The hook creates a
- * session, sets one payment method (a source the user commits to sending from),
- * then polls until the session reaches a terminal state. The response carries
- * everything the UI (or an agent) needs: a receiver address, a scannable URI,
- * prefilled wallet deeplinks, and CEX guidance.
+ * session, sets one payment method (a source the user commits to sending from,
+ * or a fiat onramp method), then polls until the session reaches a terminal
+ * state. The response carries everything the UI (or an agent) needs: a receiver
+ * address, a scannable URI, prefilled wallet deeplinks, and CEX guidance.
  *
  * The hook depends on a {@link FundingClient}, not on `fetch` directly, so a
  * custom backend or a test double can be injected through
@@ -200,31 +220,44 @@ export type UseFundingOptions = {
  * }
  * ```
  */
-export function useFunding(options?: UseFundingOptions): UseFunding {
+/**
+ * Resolve the funding client every funding hook shares, in order of preference:
+ *   1. an explicitly injected client (tests / custom backends),
+ *   2. the SDK's `openfort.funding` namespace once it covers the full session
+ *      surface (an older SDK without methods/quote would break the fiat hooks),
+ *   3. the fetch adapter over `uiConfig.fundingBaseUrl` / the API backend.
+ * The SDK namespace covers sessions; embedded auth and pay-links stay on the
+ * fetch adapter until the SDK exposes them (CEX is deferred), so the two are
+ * composed.
+ */
+export function useFundingClient(options?: UseFundingOptions): FundingClient | null {
   const { uiConfig, publishableKey } = useOpenfort()
   const coreClient = useOpenfortCore((s) => s.client)
-  const { captureAuthSession } = useAuthTransitions()
   // The funding JSON API defaults to the Openfort backend (api.openfort.io);
   // integrators can point the crypto rails at a custom service via
   // uiConfig.fundingBaseUrl. The CEX rail always uses the backend (Coinbase pay-link).
   const backendUrl = getOpenfortBackendUrl()
   const baseUrl = options?.useBackendUrl ? backendUrl : uiConfig.fundingBaseUrl || backendUrl
   const injected = options?.client
-  // Resolve the client, in order of preference:
-  //   1. an explicitly injected client (tests / custom backends),
-  //   2. the SDK's `openfort.funding` namespace once available,
-  //   3. the fetch adapter over uiConfig.fundingBaseUrl.
-  // The SDK namespace covers sessions; pay-links stay on the backend adapter
-  // until the API exposes them (CEX is deferred), so we compose the two.
-  const client = useMemo<FundingClient | null>(() => {
+  return useMemo<FundingClient | null>(() => {
     if (injected) return injected
     const sdkFunding = (coreClient as unknown as { funding?: Pick<FundingClient, 'sessions'> } | undefined)?.funding
     const fetchClient = baseUrl ? createFetchFundingClient(baseUrl, publishableKey) : null
-    if (sdkFunding) {
-      return { sessions: sdkFunding.sessions, payLink: fetchClient?.payLink ?? sdkPayLinkUnavailable }
+    if (sdkFunding && typeof sdkFunding.sessions?.methods === 'function') {
+      return {
+        sessions: sdkFunding.sessions,
+        authIntents: fetchClient?.authIntents ?? sdkAuthIntentsUnavailable,
+        payLink: fetchClient?.payLink ?? sdkPayLinkUnavailable,
+      }
     }
     return fetchClient
   }, [injected, coreClient, baseUrl, publishableKey])
+}
+
+export function useFunding(options?: UseFundingOptions): UseFunding {
+  const coreClient = useOpenfortCore((s) => s.client)
+  const { captureAuthSession } = useAuthTransitions()
+  const client = useFundingClient(options)
   const isAvailable = client != null
 
   const [session, setSession] = useState<FundingSession | null>(null)
@@ -280,8 +313,9 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         currency: target.currency,
         address: target.address,
         paymentMethod: paymentMethod.type,
-        sourceChain: paymentMethod.source.chain,
-        amount: paymentMethod.source.amount,
+        ...(paymentMethod.type === 'onramp'
+          ? { method: paymentMethod.method }
+          : { sourceChain: paymentMethod.source.chain, amount: paymentMethod.source.amount }),
       })
       try {
         if (!client) {
@@ -300,7 +334,7 @@ export function useFunding(options?: UseFundingOptions): UseFunding {
         logger.log('[funding] payment method set', {
           sessionId: current.id,
           status: current.status,
-          receiverAddress: current.paymentMethod?.receiverAddress,
+          receiverAddress: cryptoPaymentMethod(current.paymentMethod)?.receiverAddress,
         })
         // The session status encodes both hops: waiting_payment (awaiting the source
         // deposit, e.g. the Coinbase withdrawal) → processing (deposit arrived on-chain,
