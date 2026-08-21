@@ -936,8 +936,8 @@ importers:
   packages/openfort-react:
     dependencies:
       '@openfort/openfort-js':
-        specifier: ^2.1.0
-        version: 2.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
+        specifier: ^2.2.0
+        version: 2.2.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)
       '@solana-program/compute-budget':
         specifier: ^0.12.0 || ^0.13.0
         version: 0.13.0(@solana/kit@6.10.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6))
@@ -2290,8 +2290,8 @@ packages:
       better-auth: '>=1.6.22'
       zod: ^3.24.2 || ^4
 
-  '@openfort/openfort-js@2.1.0':
-    resolution: {integrity: sha512-L5DqKejbjJgxb5w7mlL6fUrz2k40X0etctQ6WAey4a09pWHZh4lQp+YXIJ09VPl00A3EysBKNB90VKSQhuOWng==}
+  '@openfort/openfort-js@2.2.0':
+    resolution: {integrity: sha512-5xKcP2AjU+HC6qR3b8EyHCUpCcMgKYmgXS+Q2blJMUD6mqvDrBvLXvahXaOB/OIA2Xpx3l7Toj2GcTy5loECCg==}
     peerDependencies:
       typescript: ^5.9.3
     peerDependenciesMeta:
@@ -9539,7 +9539,7 @@ snapshots:
       better-auth: 1.6.25(@opentelemetry/api@1.9.1)(better-sqlite3@12.11.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(vitest@4.1.8)
       zod: 4.3.6
 
-  '@openfort/openfort-js@2.1.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
+  '@openfort/openfort-js@2.2.0(bufferutil@4.1.0)(typescript@5.9.3)(utf-8-validate@6.0.6)':
     dependencies:
       '@ethersproject/abi': 5.8.0
       '@ethersproject/bytes': 5.8.0
