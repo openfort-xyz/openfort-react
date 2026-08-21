@@ -65,13 +65,9 @@ const WalletPayContact: React.FC = () => {
 
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState(user?.phoneNumber ?? '')
-  const [emailVerificationId, setEmailVerificationId] = useState<string | null>(() =>
-    user?.email ? storedOnrampVerification('email', user.email) : null
-  )
+  const [emailVerificationId, setEmailVerificationId] = useState<string | null>(null)
   const [pendingVerificationId, setPendingVerificationId] = useState<string | null>(null)
-  const [step, setStep] = useState<Step>(() =>
-    user?.email && storedOnrampVerification('email', user.email) ? 'phone' : 'email'
-  )
+  const [step, setStep] = useState<Step>('email')
   const [consented, setConsented] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -86,10 +82,36 @@ const WalletPayContact: React.FC = () => {
   }, [phone, isTestMode])
   // A stored (60-day) phone verification means no code will be sent — the
   // button completes directly, so it reads "Continue" instead of "Send code".
-  const storedSmsId = useMemo(
-    () => (phoneValid ? storedOnrampVerification('sms', phone.trim()) : null),
-    [phone, phoneValid]
-  )
+  const [storedSmsId, setStoredSmsId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!phoneValid) {
+      setStoredSmsId(null)
+      return
+    }
+    let active = true
+    void storedOnrampVerification('sms', phone.trim()).then((stored) => {
+      if (active) setStoredSmsId(stored)
+    })
+    return () => {
+      active = false
+    }
+  }, [phone, phoneValid])
+
+  // The signed-in email may already be verified within Coinbase's 60-day window:
+  // skip straight to the phone step once the store confirms it.
+  const userEmail = user?.email
+  useEffect(() => {
+    if (!userEmail) return
+    let active = true
+    void storedOnrampVerification('email', userEmail).then((stored) => {
+      if (!active || !stored) return
+      setEmailVerificationId(stored)
+      setStep((current) => (current === 'email' ? 'phone' : current))
+    })
+    return () => {
+      active = false
+    }
+  }, [userEmail])
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: step and error are re-measure triggers, not inputs — each swaps in a differently sized body
   useEffect(() => {
@@ -123,7 +145,7 @@ const WalletPayContact: React.FC = () => {
     }
     const trimmed = email.trim()
     // Already verified within Coinbase's 60-day window — no code needed.
-    const stored = storedOnrampVerification('email', trimmed)
+    const stored = await storedOnrampVerification('email', trimmed)
     if (stored) {
       setEmail(trimmed)
       setEmailVerificationId(stored)
@@ -144,7 +166,7 @@ const WalletPayContact: React.FC = () => {
         otpCode: otp,
         publishableKey,
       })
-      storeOnrampVerification('email', email, record)
+      await storeOnrampVerification('email', email, record)
       setEmailVerificationId(record.verificationId)
       setPendingVerificationId(null)
       setStep('phone')
@@ -165,7 +187,7 @@ const WalletPayContact: React.FC = () => {
       return
     }
     const trimmed = phone.trim()
-    const stored = storedOnrampVerification('sms', trimmed)
+    const stored = await storedOnrampVerification('sms', trimmed)
     if (stored) {
       void completeWith(stored)
       return
@@ -184,7 +206,7 @@ const WalletPayContact: React.FC = () => {
         otpCode: otp,
         publishableKey,
       })
-      storeOnrampVerification('sms', phone.trim(), record)
+      await storeOnrampVerification('sms', phone.trim(), record)
       setVerified(true)
       void completeWith(record.verificationId)
     } catch (e) {
