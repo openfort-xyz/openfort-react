@@ -1,7 +1,7 @@
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FundingClient } from '../hooks/openfort/fundingClient'
-import type { ResolvedFundingMethod } from '../hooks/openfort/useFunding'
+import type { FundingClient } from '../hooks/openfort/fundingClient.js'
+import type { ResolvedFundingMethod } from '../hooks/openfort/useFunding.js'
 
 const mockUiConfig: { fundingBaseUrl?: string; funding?: { country?: string } } = {}
 vi.mock('../components/Openfort/useOpenfort', () => ({
@@ -11,7 +11,7 @@ vi.mock('../openfort/useOpenfort', () => ({
   useOpenfortCore: () => ({ client: undefined }),
 }))
 
-const { useFundingMethods } = await import('../hooks/openfort/useFundingMethods')
+const { useFundingMethods } = await import('../hooks/openfort/useFundingMethods.js')
 
 const sessionRef = { id: 'fnd_1', clientSecret: 'cs_1' }
 const cardRow: ResolvedFundingMethod = { method: 'card', provider: 'stripe', angle: 'popup', label: 'Card' }

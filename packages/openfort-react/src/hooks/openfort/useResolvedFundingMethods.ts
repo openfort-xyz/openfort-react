@@ -1,7 +1,9 @@
+'use client'
+
 import { useEffect, useState } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { fetchOnrampMethods, type ResolvedOnrampMethod } from './onrampMethodsApi'
-import { useFundingTarget } from './useFundingTarget'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { fetchOnrampMethods, type ResolvedOnrampMethod } from './onrampMethodsApi.js'
+import { useFundingTarget } from './useFundingTarget.js'
 
 type ResolvedFundingMethods = {
   /** True once the resolve request has completed (success or failure). */

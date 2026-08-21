@@ -1,0 +1,8 @@
+template/backend/node_modules
+template/backend/dist
+template/backend/.cache
+template/backend/.turbo
+template/openfort-templates/*/node_modules
+template/openfort-templates/*/dist
+template/openfort-templates/*/.cache
+template/openfort-templates/*/.turbo

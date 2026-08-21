@@ -1,7 +1,10 @@
+'use client'
+
 import { useEffect, useState } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { type OnrampMethodId, type OnrampQuote, useFundingClient } from './useFunding'
-import type { FundingSessionRef } from './useFundingMethods'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import type { OnrampMethodId, OnrampQuote } from './fundingClient.js'
+import { useFundingClient } from './useFunding.js'
+import type { FundingSessionRef } from './useFundingMethods.js'
 
 type UseOnrampQuoteParams = {
   /** The session the buy would commit into; null disables fetching. */

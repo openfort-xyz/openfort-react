@@ -1,6 +1,6 @@
 import type { Hex } from 'viem'
-import { DEST_USDC } from '../../../hooks/openfort/fundingSources'
-import type { Asset } from '../../Openfort/types'
+import { DEST_USDC } from '../../../hooks/openfort/fundingSources.js'
+import type { Asset } from '../../Openfort/types.js'
 
 /**
  * Native USDC per mainnet chain, mirroring the api's onramp route table
@@ -25,7 +25,7 @@ const USDC_BY_CHAIN: Record<string, Hex> = {
  * always has options, even for a freshly created wallet with no indexed token
  * balances.
  */
-export function evmBuyCurrencies(targetChain: string): Asset[] {
+export function evmBuyCurrencies(targetChain: string): [Asset, ...Asset[]] {
   return [
     {
       type: 'erc20',

@@ -17,14 +17,17 @@ interface PlaygroundEvmChain {
 // (a test key rejects mainnet chainIds) and the e2e can still switch *to* Base
 // Sepolia. Base mainnet stays available for the funding deposit demo
 // (funding.targetChain is independent of this order).
-export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
+const BASE_EVM_CHAINS: PlaygroundEvmChain[] = [
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
-    // polygon.technology's public Amoy endpoint went dark (empty replies) and the
-    // SDK's provider init retries detectNetwork against it forever, so the wallet
-    // never connects — publicnode matches the other chains' endpoints here.
-    rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com',
+    // Third Amoy endpoint in this slot: polygon.technology went dark (empty
+    // replies) and publicnode now answers 503 "no available nodes found for
+    // platform polygon-amoy-bor". The SDK's provider init retries detectNetwork
+    // forever against a dead endpoint, so the wallet never connects and every
+    // EVM live test times out. drpc is not a candidate — its free tier refuses
+    // `eth_blockNumber`.
+    rpcUrl: 'https://polygon-amoy.gateway.tenderly.co',
     explorerUrl: 'https://amoy.polygonscan.com',
     viemChain: polygonAmoy,
   },
@@ -52,6 +55,15 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
     viemChain: baseSepolia,
   },
 ]
+
+export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = BASE_EVM_CHAINS
+
+/**
+ * Public RPC endpoints. The embedded signer's iframe and Openfort's backend
+ * resolve these URLs from outside this machine, so they must always point at
+ * reachable public nodes.
+ */
+export const WALLET_RPC_URLS: Record<number, string> = Object.fromEntries(BASE_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
 
 /**
  * Restrict the EVM chains to those matching the publishable key environment:
@@ -108,7 +120,7 @@ export const EVM_CHAIN_BY_ID: Record<number, PlaygroundEvmChain> = Object.fromEn
   PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c])
 )
 
-export const RPC_URLS: Record<number, string> = Object.fromEntries(PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
+const RPC_URLS: Record<number, string> = Object.fromEntries(PLAYGROUND_EVM_CHAINS.map((c) => [c.id, c.rpcUrl]))
 
 /**
  * Deposit-hub funding target (CAIP-2 chain + currency) for an active chain.

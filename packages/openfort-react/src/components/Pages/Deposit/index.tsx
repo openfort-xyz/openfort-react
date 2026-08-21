@@ -2,23 +2,23 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { type ReactNode, type SyntheticEvent, useEffect } from 'react'
-import { BankIcon, BuyIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons'
-import logos from '../../../assets/logos'
-import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
-import { useFunding } from '../../../hooks/openfort/useFunding'
-import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
-import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
-import { useResolvedFundingMethods } from '../../../hooks/openfort/useResolvedFundingMethods'
-import useIsMobile from '../../../hooks/useIsMobile'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { ModalHeading } from '../../Common/Modal/styles'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { FundingMethod, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { evmBuyCurrencies } from '../Buy/evmCurrencies'
-import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
-import { canPresentApplePay, type DepositMethodTarget, getPaymentOptions } from './paymentOptions'
+import { BankIcon, BuyIcon, ExternalLinkIcon, ReceiveIcon, WalletIcon } from '../../../assets/icons.js'
+import logos from '../../../assets/logos.js'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi.js'
+import { useFunding } from '../../../hooks/openfort/useFunding.js'
+import { useFundingChains } from '../../../hooks/openfort/useFundingChains.js'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget.js'
+import { useResolvedFundingMethods } from '../../../hooks/openfort/useResolvedFundingMethods.js'
+import useIsMobile from '../../../hooks/useIsMobile.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { FundingMethod, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { evmBuyCurrencies } from '../Buy/evmCurrencies.js'
+import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies.js'
+import { canPresentApplePay, type DepositMethodTarget, getPaymentOptions } from './paymentOptions.js'
 import {
   DepositContent,
   LogoCluster,
@@ -29,7 +29,7 @@ import {
   OptionList,
   OptionSubtitle,
   OptionTitle,
-} from './styles'
+} from './styles.js'
 
 /**
  * The icon in each row's left badge (icons default to 20×20). Fiat rows carry
@@ -68,7 +68,7 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
  */
 const Deposit = () => {
   const { setRoute, setBuyForm, uiConfig, triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const isMobile = useIsMobile()
   const { isAvailable } = useFunding()
   const { chains } = useFundingChains()
@@ -100,6 +100,7 @@ const Deposit = () => {
 
   // Fiat rows appearing changes the modal height; it only re-measures on an
   // explicit resize, so nudge it when the resolve settles.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `loaded` is the trigger, not an input — fiat rows appearing changes the page height
   useEffect(() => {
     triggerResize()
   }, [loaded, triggerResize])

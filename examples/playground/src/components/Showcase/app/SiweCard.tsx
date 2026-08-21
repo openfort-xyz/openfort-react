@@ -32,7 +32,12 @@ export const SiweCard = ({ hook }: { hook?: string }) => {
     try {
       const message = createSIWEMessage(address, generateSiweNonce(), chainId)
       if (!message) throw new Error('Could not build the SIWE message')
-      const signature = await signMessage(message)
+      const signResult = await signMessage(message)
+      if ('error' in signResult) {
+        setError(signResult.error)
+        return
+      }
+      const signature = signResult.signature
       // EOA verification via signer recovery. Smart accounts sign via EIP-1271
       // (recovery won't match) — that's verified server-side, so don't fail here.
       let verified = false

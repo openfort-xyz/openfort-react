@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import defaultTheme from '../../../constants/defaultTheme'
-import styled from '../../../styles/styled'
+import defaultTheme from '../../../constants/defaultTheme.js'
+import styled from '../../../styles/styled/index.js'
 
 export const SpinnerContainer = styled(motion.div)`
   position: absolute;
@@ -23,7 +23,7 @@ export const Arrow = styled.svg`
   vertical-align: middle;
   margin-left: 9px;
   margin-right: 1px;
-  transition: all 100ms ease;
+  transition: transform 100ms ease-out, opacity 100ms ease-out;
   transform: translateX(var(--x, -3px));
   color: currentColor;
   opacity: 0.4;
@@ -174,6 +174,7 @@ export const ButtonContainer = styled.button<{
         );
       `
     }
+    return undefined
   }}
 
   appearance: none;
@@ -191,8 +192,8 @@ export const ButtonContainer = styled.button<{
   font-weight: var(--font-weight,500);
   text-decoration: none;
   white-space: nowrap;
-  transition: 100ms ease;
-  transition-property: box-shadow, background-color;
+  transition: 120ms ease-out;
+  transition-property: box-shadow, background-color, transform;
   color: var(--color);
   background: var(--background);
   border-radius: var(--border-radius);
@@ -239,13 +240,15 @@ export const ButtonContainer = styled.button<{
     }
     &:active {
       box-shadow: var(--ck-secondary-button-active-box-shadow, var(--hover-box-shadow));
+      transform: scale(var(--ck-press-scale, 0.97));
     }
   }
   @media only screen and (max-width: ${defaultTheme.mobileWidth}px) {
-    transition: transform 100ms ease;
+    transition: transform 100ms ease-out;
     transform: scale(1);
     font-size: 17px;
     &:active {
+      transform: scale(var(--ck-press-scale, 0.97));
     }
   }
 `

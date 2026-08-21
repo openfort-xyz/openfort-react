@@ -2,28 +2,29 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { NATIVE_TOKEN_ADDRESS } from '../../../hooks/openfort/fundingSources'
-import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
-import { useFunding } from '../../../hooks/openfort/useFunding'
-import { useFundingMethods } from '../../../hooks/openfort/useFundingMethods'
-import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
-import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote'
-import { useUser } from '../../../hooks/openfort/useUser'
-import { isWalletPayMethod } from '../../../hooks/openfort/walletPay'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import Button from '../../Common/Button'
-import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import { FundingMethod, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { AssetChainLogo } from '../Deposit/AssetChainLogo'
-import { LogoSelect } from '../Deposit/LogoSelect'
-import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
-import { evmBuyCurrencies } from './evmCurrencies'
-import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { NATIVE_TOKEN_ADDRESS } from '../../../hooks/openfort/fundingSources.js'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi.js'
+import { useFunding } from '../../../hooks/openfort/useFunding.js'
+import { useFundingMethods } from '../../../hooks/openfort/useFundingMethods.js'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget.js'
+import { totalFee, useOnrampQuote } from '../../../hooks/openfort/useOnrampQuote.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import { isWalletPayMethod } from '../../../hooks/openfort/walletPay.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import Button from '../../Common/Button/index.js'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles.js'
+import { FundingMethod, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo.js'
+import { LogoSelect } from '../Deposit/LogoSelect.js'
+import { getAssetSymbol, isSameToken, sanitizeAmountInput, sanitizeForParsing } from '../Send/utils.js'
+import { reserveBuyPopup } from './buyPopup.js'
+import { evmBuyCurrencies } from './evmCurrencies.js'
+import { SOLANA_BUY_CURRENCIES } from './solanaCurrencies.js'
 import {
   BigAmountInput,
   BigAmountRow,
@@ -37,8 +38,8 @@ import {
   SummaryLabel,
   SummaryRow,
   SummarySection,
-} from './styles'
-import { amountInputWidth, createCurrencyFormatter, defaultCurrencyForCountry, getCurrencySymbol } from './utils'
+} from './styles.js'
+import { amountInputWidth, createCurrencyFormatter, defaultCurrencyForCountry, getCurrencySymbol } from './utils.js'
 
 // Fiat source currencies the onramp actually settles. GBP is omitted on
 // purpose: the provider accepts it as a parameter but currently quotes no
@@ -62,7 +63,7 @@ const METHOD_LABEL: Partial<Record<FundingMethod, string>> = {
 
 const Buy = () => {
   const { buyForm, setBuyForm, setRoute, triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const { user } = useUser()
 
   // Apple/Google Pay MAY commit a Coinbase NATIVE order (US buyer + project
@@ -119,15 +120,11 @@ const Buy = () => {
     sessionKey.current = key
     let cancelled = false
     setSession(null)
-    createSessionRef
-      .current({ chain: target.chain, currency: target.currency, address })
-      .then((s) => {
-        if (!cancelled) setSession({ id: s.id, clientSecret: s.clientSecret })
-      })
-      .catch(() => {
-        // The quote and Continue stay disabled; the commit screen surfaces errors.
-        if (!cancelled) setSession(null)
-      })
+    void createSessionRef.current({ chain: target.chain, currency: target.currency, address }).then((result) => {
+      if (cancelled) return
+      // On error the quote and Continue stay disabled; the commit screen surfaces errors.
+      setSession('error' in result ? null : { id: result.session.id, clientSecret: result.session.clientSecret })
+    })
     return () => {
       cancelled = true
       sessionKey.current = ''
@@ -196,6 +193,7 @@ const Buy = () => {
     sourceCurrency: buyForm.currency,
     amount: fiatAmount,
   })
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the quote is a re-measure trigger, not an input — the fee line appears or changes height when it lands
   useEffect(() => {
     triggerResize()
   }, [quote, triggerResize])
@@ -257,6 +255,12 @@ const Buy = () => {
     // Card, bank transfer, and embedded/hosted wallet pay commit directly — the
     // server resolves the provider (never shown to the user) and the checkout
     // collects its own consent, so no identity capture here.
+    //
+    // A hosted checkout opens in a window. Reserve it here, inside the click,
+    // while the browser still treats this as user-activated: the commit screen
+    // navigates it once the session resolves — by then the activation has
+    // expired and a fresh window.open is blocked.
+    if (resolvedRow?.angle === 'popup') reserveBuyPopup()
     setBuyForm((prev) => ({ ...prev, session, walletPayAngle: isWalletPay ? 'popup' : null, stripeLink: null }))
     setRoute(routes.BUY_PROCESSING)
   }

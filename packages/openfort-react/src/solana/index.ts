@@ -7,12 +7,17 @@
  * @packageDocumentation
  */
 
-export type { SolanaUserWallet } from '../hooks/openfort/walletTypes'
+export type { SolanaUserWallet } from '../hooks/openfort/walletTypes.js'
 export type {
   CreateEmbeddedWalletOptions,
   CreateEmbeddedWalletResult,
-} from '../shared/types'
-export { useSolanaEmbeddedWallet } from './hooks/useSolanaEmbeddedWallet'
+} from '../shared/types.js'
+export { useSolanaEmbeddedWallet } from './hooks/useSolanaEmbeddedWallet.js'
+export type {
+  SolanaAsset,
+  UseSolanaWalletAssetsResult,
+} from './hooks/useSolanaWalletAssets.js'
+export { useSolanaWalletAssets } from './hooks/useSolanaWalletAssets.js'
 export type {
   // Wallet types
   ConnectedEmbeddedSolanaWallet,
@@ -33,4 +38,4 @@ export type {
   SolanaWalletActions,
   SolanaWalletState,
   UseEmbeddedSolanaWalletOptions,
-} from './types'
+} from './types.js'

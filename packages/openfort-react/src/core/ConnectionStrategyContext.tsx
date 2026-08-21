@@ -1,7 +1,7 @@
 'use client'
 
 import { createContext, type ReactNode, useContext } from 'react'
-import type { ConnectionStrategy } from './ConnectionStrategy'
+import type { ConnectionStrategy } from './ConnectionStrategy.js'
 
 const ConnectionStrategyContext = createContext<ConnectionStrategy | null>(null)
 

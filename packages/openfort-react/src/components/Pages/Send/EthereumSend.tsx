@@ -8,16 +8,16 @@
 
 import { useEffect, useMemo } from 'react'
 import { formatUnits, isAddress, parseUnits } from 'viem'
-import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import Button from '../../Common/Button'
-import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import { ModalHeading } from '../../Common/Modal/styles'
-import { type Asset, routes, type SendFormState } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { AssetChainLogo } from '../Deposit/AssetChainLogo'
+import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import Button from '../../Common/Button/index.js'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import { type Asset, routes, type SendFormState } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo.js'
 import {
   AmountField,
   AmountMeta,
@@ -34,8 +34,8 @@ import {
   TokenPill,
   ToRow,
   UseMaxButton,
-} from './styles'
-import { formatBalance, isSameToken, sanitizeAmountInput, sanitizeForParsing } from './utils'
+} from './styles.js'
+import { formatBalance, isSameToken, sanitizeAmountInput, sanitizeForParsing } from './utils.js'
 
 export const EthereumSend = () => {
   const { sendForm, setSendForm, setRoute, triggerResize } = useOpenfort()

@@ -1,4 +1,4 @@
-import { getBackendUrl } from './onrampMethodsApi'
+import { getBackendUrl } from './onrampMethodsApi.js'
 
 /**
  * Coinbase-issued OTP verification for native wallet pay (Apple/Google Pay),

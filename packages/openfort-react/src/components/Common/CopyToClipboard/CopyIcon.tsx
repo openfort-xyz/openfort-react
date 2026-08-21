@@ -1,7 +1,7 @@
 import { type MotionStyle, motion } from 'framer-motion'
 import { css } from 'styled-components'
-import { CopyToClipboardIcon as Icon } from '../../../assets/icons'
-import styled from '../../../styles/styled'
+import { CopyToClipboardIcon as Icon } from '../../../assets/icons.js'
+import styled from '../../../styles/styled/index.js'
 
 const IconWrapper = styled(motion.div)<{ $copied?: boolean }>`
   display: flex;
@@ -9,7 +9,7 @@ const IconWrapper = styled(motion.div)<{ $copied?: boolean }>`
   justify-content: center;
   width: 16px;
   height: 16px;
-  transition: all 220ms ease;
+  transition: color 220ms ease;
 
   svg {
     display: block;
@@ -18,21 +18,21 @@ const IconWrapper = styled(motion.div)<{ $copied?: boolean }>`
   }
 
   svg path:first-child {
-    transition: all 220ms ease;
+    transition: fill 220ms ease, stroke 220ms ease, opacity 220ms ease, transform 220ms ease;
     fill: var(--bg, var(--ck-body-background));
     stroke: var(--color, var(--ck-copytoclipboard-stroke));
     transform-origin: 50% 50%;
   }
 
   svg rect {
-    transition: all 220ms ease;
+    transition: fill 220ms ease, stroke 220ms ease, opacity 220ms ease, transform 220ms ease;
     fill: var(--bg, var(--ck-body-background));
     stroke: var(--color, var(--ck-copytoclipboard-stroke));
     transform-origin: 53% 63%;
   }
 
   svg path:last-child {
-    transition: all 220ms ease;
+    transition: fill 220ms ease, stroke 220ms ease, opacity 220ms ease, transform 220ms ease;
     opacity: ${(props) => (props.$copied ? 1 : 0)};
     stroke: var(--ck-body-background);
     transform: translate(11.75px, 10px) rotate(90deg) scale(0.6);

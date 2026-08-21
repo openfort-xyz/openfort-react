@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FundingClient } from '../hooks/openfort/fundingClient'
-import type { FundingSession, OnrampPaymentMethod } from '../hooks/openfort/useFunding'
+import type { FundingClient } from '../hooks/openfort/fundingClient.js'
+import type { FundingSession, OnrampPaymentMethod } from '../hooks/openfort/useFunding.js'
 
 const mockUiConfig: { fundingBaseUrl?: string; funding?: { country?: string } } = {}
 vi.mock('../components/Openfort/useOpenfort', () => ({
@@ -11,7 +11,7 @@ vi.mock('../openfort/useOpenfort', () => ({
   useOpenfortCore: () => ({ client: undefined }),
 }))
 
-const { useOnramp } = await import('../hooks/openfort/useOnramp')
+const { useOnramp } = await import('../hooks/openfort/useOnramp.js')
 
 const sessionRef = { id: 'fnd_1', clientSecret: 'cs_1' }
 

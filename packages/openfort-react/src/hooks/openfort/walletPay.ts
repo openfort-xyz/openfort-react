@@ -1,4 +1,4 @@
-import { FundingMethod, type WalletPayDraft, type WalletPayIdentity } from '../../components/Openfort/types'
+import { FundingMethod, type WalletPayDraft, type WalletPayIdentity } from '../../components/Openfort/types.js'
 
 /**
  * Helpers for the Coinbase native wallet-pay (Apple/Google Pay) identity the

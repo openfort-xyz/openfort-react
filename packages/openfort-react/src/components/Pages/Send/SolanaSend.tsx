@@ -10,15 +10,15 @@
 
 import { useEffect, useMemo } from 'react'
 import { formatUnits, parseUnits } from 'viem'
-import { currencyLogoUrl } from '../../../constants/logos'
-import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
-import Button from '../../Common/Button'
-import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import { ModalHeading } from '../../Common/Modal/styles'
-import { type Asset, routes, type SendFormState } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { AssetChainLogo } from '../Deposit/AssetChainLogo'
+import { currencyLogoUrl } from '../../../constants/logos.js'
+import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets.js'
+import Button from '../../Common/Button/index.js'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import { type Asset, routes, type SendFormState } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo.js'
 import {
   AmountField,
   AmountMeta,
@@ -35,8 +35,8 @@ import {
   TokenPill,
   ToRow,
   UseMaxButton,
-} from './styles'
-import { formatBalance, sanitizeAmountInput, sanitizeForParsing } from './utils'
+} from './styles.js'
+import { formatBalance, sanitizeAmountInput, sanitizeForParsing } from './utils.js'
 
 const SOL_DECIMALS = 9
 

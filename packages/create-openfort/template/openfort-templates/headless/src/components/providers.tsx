@@ -9,7 +9,7 @@ const config = createConfig(
     appName: 'Openfort React demo',
     chains: [polygonAmoy, beamTestnet], // The chains you want to support
     walletConnectProjectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID, // The WalletConnect Project ID
-  }),
+  })
 )
 
 const queryClient = new QueryClient()
@@ -20,7 +20,7 @@ const walletConfig = {
     ethereumFeeSponsorshipId: import.meta.env.VITE_FEE_SPONSORSHIP_ID, // The fee sponsorship ID for sponsoring transactions
   },
   // If you want to use AUTOMATIC embedded wallet recovery, an encryption session is required.
-  // See: https://www.openfort.io/docs/products/embedded-wallet/react-native/quickstart/automatic
+  // See: https://www.openfort.io/docs/products/embedded-wallet/server/automatic-recovery-session
   // For backend setup, check: https://github.com/openfort-xyz/openfort-backend-quickstart
   createEncryptedSessionEndpoint: import.meta.env.VITE_CREATE_ENCRYPTED_SESSION_ENDPOINT,
   connectOnLogin: true,

@@ -3,37 +3,37 @@
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { CountryIso2 } from 'react-international-phone'
-import Logos from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import type { OnrampIdentity } from '../../../hooks/openfort/fundingClient'
-import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
+import Logos from '../../../assets/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import type { OnrampIdentity } from '../../../hooks/openfort/fundingClient.js'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi.js'
 import {
   createStripeOnrampCoordinator,
   type StripeIdentifierRequirements,
   type StripeKycInfo,
   type StripeOnrampCoordinator,
   stripeNetworkForChain,
-} from '../../../hooks/openfort/stripeCryptoOnramp'
-import { useFundingClient } from '../../../hooks/openfort/useFunding'
-import { useOnramp } from '../../../hooks/openfort/useOnramp'
-import { useUser } from '../../../hooks/openfort/useUser'
-import styled from '../../../styles/styled'
-import { logger } from '../../../utils/logger'
-import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
-import Button from '../../Common/Button'
-import EmailField from '../../Common/EmailField'
-import { ErrorText } from '../../Common/ErrorText'
-import LabeledField from '../../Common/LabeledField'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import PhoneField from '../../Common/PhoneField'
-import SquircleSpinner from '../../Common/SquircleSpinner'
-import StepProgress from '../../Common/StepProgress'
-import { FundingMethod, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox } from '../Buy/styles'
-import { Skeleton, SkeletonStack } from '../Deposit/styles'
-import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
+} from '../../../hooks/openfort/stripeCryptoOnramp.js'
+import { useFundingClient } from '../../../hooks/openfort/useFunding.js'
+import { useOnramp } from '../../../hooks/openfort/useOnramp.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import styled from '../../../styles/styled/index.js'
+import { logger } from '../../../utils/logger.js'
+import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation.js'
+import Button from '../../Common/Button/index.js'
+import EmailField from '../../Common/EmailField/index.js'
+import { ErrorText } from '../../Common/ErrorText/index.js'
+import LabeledField from '../../Common/LabeledField/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import PhoneField from '../../Common/PhoneField/index.js'
+import SquircleSpinner from '../../Common/SquircleSpinner/index.js'
+import StepProgress from '../../Common/StepProgress/index.js'
+import { FundingMethod, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox } from '../Buy/styles.js'
+import { Skeleton, SkeletonStack } from '../Deposit/styles.js'
+import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles.js'
 import {
   attestationRequired,
   documentsRequired,
@@ -41,7 +41,7 @@ import {
   pendingIdentifierTypes,
   type StepUp,
   stepUpFor,
-} from './euIdentifiers'
+} from './euIdentifiers.js'
 
 /** Two short fields side by side, so a taller input doesn't double the page. */
 const FieldRow = styled.div`
@@ -123,11 +123,13 @@ const StripeLinkCheckout: React.FC = () => {
   const paymentTokenRef = useRef<string | null>(null)
   const elementHostRef = useRef<HTMLDivElement | null>(null)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: step and error are re-measure triggers, not inputs — each swaps in a differently sized body
   useEffect(() => {
     triggerResize()
   }, [triggerResize, step, error])
 
   // Boot the coordinator from the publishable key the method row carried.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the coordinator is created once per mount from the key the method row carried; re-creating it on form or theme changes would tear down live Stripe elements
   useEffect(() => {
     const key = buyForm.stripeLink?.publishableKey
     if (!key || !buyForm.session) {
@@ -172,6 +174,7 @@ const StripeLinkCheckout: React.FC = () => {
   }
 
   /** Mint the LinkAuthIntent and mount the authentication element. */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: mountElement and completeAuthentication are plain functions re-created each render that read the latest refs; listing them would re-create this callback every render
   const startAuthentication = useCallback(
     async (forEmail: string) => {
       const coordinator = coordinatorRef.current
@@ -554,6 +557,7 @@ const StripeLinkCheckout: React.FC = () => {
 
   // ---- CARF attestation element ----
   const attestationMounted = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once when `step` enters this phase (guarded by the mounted ref); the other values are read from refs at that moment and must not re-trigger the mount
   useEffect(() => {
     const coordinator = coordinatorRef.current
     if (step !== 'attestation' || !coordinator || attestationMounted.current) return
@@ -611,6 +615,7 @@ const StripeLinkCheckout: React.FC = () => {
 
   // ---- Payment collection element ----
   const paymentMounted = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once when `step` enters this phase (guarded by the mounted ref); the other values are read from refs at that moment and must not re-trigger the mount
   useEffect(() => {
     const coordinator = coordinatorRef.current
     if (step !== 'payment' || !coordinator || paymentMounted.current) return
@@ -661,6 +666,7 @@ const StripeLinkCheckout: React.FC = () => {
   // ---- Commit + checkout + settlement ----
   const [failed, setFailed] = useState<string | null>(null)
   const commitStarted = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once when `step` enters checkout (guarded by commitStarted); the order form and identity refs are read at that moment and must not re-trigger the commit
   useEffect(() => {
     if (step !== 'checkout' || commitStarted.current) return
     const intentId = intentIdRef.current
@@ -709,6 +715,7 @@ const StripeLinkCheckout: React.FC = () => {
   const checkoutStarted = useRef(false)
   const committedPm = onramp.session?.paymentMethod
   const providerSessionId = committedPm?.type === 'onramp' ? (committedPm.providerSessionId ?? null) : null
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs once when the provider session id lands (guarded by checkoutStarted); the client and session are read at that moment and must not re-trigger the checkout
   useEffect(() => {
     const coordinator = coordinatorRef.current
     const session = buyForm.session

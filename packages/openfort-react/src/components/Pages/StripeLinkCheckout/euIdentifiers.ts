@@ -1,4 +1,4 @@
-import type { StripeIdentifierRequirements } from '../../../hooks/openfort/stripeCryptoOnramp'
+import type { StripeIdentifierRequirements } from '../../../hooks/openfort/stripeCryptoOnramp.js'
 
 /**
  * National identifiers Stripe collects from EU buyers, under two regimes:

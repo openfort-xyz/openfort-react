@@ -1,5 +1,5 @@
 import { RecoveryMethod } from '@openfort/openfort-js'
-import { FingerPrintIcon, KeyIcon, LockIcon } from '../../../assets/icons'
+import { FingerPrintIcon, KeyIcon, LockIcon } from '../../../assets/icons.js'
 
 export const RECOVERY_METHOD_LABEL: Record<RecoveryMethod, string> = {
   [RecoveryMethod.AUTOMATIC]: 'Automatic',

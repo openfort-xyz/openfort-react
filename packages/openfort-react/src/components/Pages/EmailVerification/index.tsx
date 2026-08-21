@@ -2,17 +2,18 @@
 
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { EmailIcon } from '../../../assets/icons'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import { TextLinkButton } from '../../Common/Button/styles'
-import Loader from '../../Common/Loading'
-import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
-import { FloatingGraphic } from '../../FloatingGraphic'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { EmailIcon } from '../../../assets/icons.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { logger } from '../../../utils/logger.js'
+import { stripCallbackParams } from '../../../utils/urlSecurity.js'
+import Button from '../../Common/Button/index.js'
+import { TextLinkButton } from '../../Common/Button/styles.js'
+import Loader from '../../Common/Loading/index.js'
+import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
+import { FloatingGraphic } from '../../FloatingGraphic/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 // TODO: Localize
 type VerificationResponse = {
@@ -20,14 +21,31 @@ type VerificationResponse = {
   error?: string
 }
 
+/**
+ * Error codes the verification endpoint appends to the callback URL when it
+ * rejects a link.
+ *
+ * A `Map`, not an object literal: the code comes from the URL, so a lookup for
+ * `__proto__` on a plain object returns `Object.prototype` — a truthy value
+ * that React then throws on when it is rendered as a child.
+ */
+const EMAIL_VERIFICATION_ERRORS = new Map<string, string>([
+  ['TOKEN_EXPIRED', 'This verification link has expired. Request a new one.'],
+  ['INVALID_TOKEN', 'This verification link is not valid. Request a new one.'],
+  ['USER_NOT_FOUND', 'No account matches this verification link.'],
+  ['INVALID_USER', 'This verification link belongs to a different account.'],
+])
+
 const EmailVerification: React.FC = () => {
   const { setRoute, emailInput, setEmailInput } = useOpenfort()
-  const { user } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
   const isLinkFlow = !!user
 
   const [loading, setLoading] = useState(true)
   const [verificationResponse, setVerificationResponse] = useState<VerificationResponse | null>(null)
 
+  // `isVerifying` keeps this to a single pass: the effect consumes the verification query
+  // parameters and then strips them from the URL, so a second run has nothing left to read.
   const isVerifying = useRef(false)
   useEffect(() => {
     if (isVerifying.current) return
@@ -43,14 +61,25 @@ const EmailVerification: React.FC = () => {
 
     // Verify email flow
     const email = url.searchParams.get('email')
+    const errorCode = url.searchParams.get('error')
 
     const removeParams = () => {
-      ;['state', 'openfortEmailVerificationUI', 'email', 'openfortAuthProvider'].forEach((key) => {
-        url.searchParams.delete(key)
-      })
+      stripCallbackParams(url)
       window.history.replaceState({}, document.title, url.toString())
     }
-    logger.log('Email verification', email)
+    logger.log('Starting email verification')
+
+    // A rejected link redirects back here with `error` appended and is otherwise shaped like a
+    // success, so this has to be checked before anything is reported to the user.
+    if (errorCode) {
+      setVerificationResponse({
+        success: false,
+        error: EMAIL_VERIFICATION_ERRORS.get(errorCode) ?? 'There was an error verifying your email. Please try again.',
+      })
+      removeParams()
+      setLoading(false)
+      return
+    }
 
     if (!email) {
       setRoute(routes.EMAIL_LOGIN)
@@ -58,8 +87,8 @@ const EmailVerification: React.FC = () => {
     }
 
     try {
-      // ASSUMING IT WORKS
-      // TODO: TMP FIX
+      // The link was accepted server-side: reaching this callback without an `error` is the only
+      // signal available, since the redirect carries no verification receipt.
       setEmailInput(email)
       setVerificationResponse({
         success: true,
@@ -74,7 +103,7 @@ const EmailVerification: React.FC = () => {
       removeParams()
       setLoading(false)
     }
-  }, [])
+  }, [emailInput, setEmailInput, setRoute])
 
   if (loading) {
     return (

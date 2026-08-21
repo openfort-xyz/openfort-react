@@ -1,14 +1,15 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { socialProviders, UIAuthProvider } from '../../components/Openfort/types'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { logger } from '../../utils/logger'
+import { socialProviders, UIAuthProvider } from '../../components/Openfort/types.js'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { OpenfortConfigError } from '../../errors/config.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { logger } from '../../utils/logger.js'
 
 export function useProviders() {
-  const { user, linkedAccounts } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const linkedAccounts = useOpenfortCore((s) => s.linkedAccounts)
   const { uiConfig: options, thirdPartyAuth, setOpen } = useOpenfort()
 
   const allProviders = options?.authProviders || []
@@ -33,10 +34,9 @@ export function useProviders() {
     if (thirdPartyAuth) {
       setOpen(false)
       logger.error(
-        new OpenfortError(
-          'When using external third party auth providers, openfort Auth providers are not available. Either remove the `thirdPartyAuth` or authenticate your users using Auth hooks.',
-          OpenfortReactErrorType.CONFIGURATION_ERROR
-        )
+        new OpenfortConfigError('Openfort auth providers are unavailable when `thirdPartyAuth` is set.', {
+          metaMessages: ['Remove `thirdPartyAuth`, or authenticate users through the auth hooks instead.'],
+        })
       )
     }
   }, [thirdPartyAuth, setOpen])
@@ -61,17 +61,21 @@ export function useProviders() {
     })
     const social = activeProviders.filter((p) => socialProviders.includes(p))
 
-    // Allow as many non-socials as possible, then fill the rest with socials
+    // Allow as many non-socials as possible, then fill the rest with socials —
+    // but always surface at least one social on the main page (the -1 reserves
+    // a slot for the "Other socials" button). Overflowing maxProviders by one
+    // beats hiding every social behind an extra tap.
     const remainingSlots = maxProviders - nonSocial.length
-    const remainingSocialProviders = social.slice(Math.max(0, remainingSlots - 1))
+    const mainSocialCount = social.length > 0 ? Math.max(1, remainingSlots - 1) : 0
+    const remainingSocialProviders = social.slice(mainSocialCount)
     return {
-      mainProviders: [...nonSocial, ...social.slice(0, Math.max(0, remainingSlots - 1))].sort((a, b) => {
+      mainProviders: [...nonSocial, ...social.slice(0, mainSocialCount)].sort((a, b) => {
         // sort them in the original order
         const indexA = activeProviders.indexOf(a)
         const indexB = activeProviders.indexOf(b)
         return indexA - indexB
       }),
-      hasExcessProviders: social.length > remainingSlots - 1,
+      hasExcessProviders: remainingSocialProviders.length > 0,
       remainingSocialProviders,
     }
   }, [user, availableProviders, allProviders, maxProviders])

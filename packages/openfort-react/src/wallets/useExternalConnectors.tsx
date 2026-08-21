@@ -1,11 +1,13 @@
-import { createElement } from 'react'
-import { useConnectionStrategy } from '../core/ConnectionStrategyContext'
+'use client'
+
+import { createElement, useEffect, useState } from 'react'
+import { useConnectionStrategy } from '../core/ConnectionStrategyContext.js'
 import type {
   OpenfortEthereumBridgeConnector,
   OpenfortEthereumBridgeValue,
-} from '../ethereum/OpenfortEthereumBridgeContext'
-import { isCoinbaseWalletConnector, isInjectedConnector } from '../utils'
-import { type WalletConfigProps, walletConfigs } from './walletConfigs'
+} from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { isCoinbaseWalletConnector, isInjectedConnector } from '../utils/index.js'
+import { type WalletConfigProps, walletConfigs } from './walletConfigs.js'
 
 export type ExternalConnectorProps = {
   id: string
@@ -33,8 +35,7 @@ export function mapBridgeConnectorsToWalletProps(
     if (!walletId && connector.id === 'injected' && connector.name) {
       const nameLower = connector.name.toLowerCase()
       if (nameLower.includes('metamask')) {
-        walletId =
-          Object.keys(walletConfigs).find((k) => walletConfigs[k].name?.toLowerCase() === 'metamask') ?? undefined
+        walletId = Object.entries(walletConfigs).find(([, config]) => config.name?.toLowerCase() === 'metamask')?.[0]
       }
     }
 
@@ -102,6 +103,39 @@ export function useExternalConnectors(): ExternalConnectorProps[] {
   const strategy = useConnectionStrategy()
   if (!strategy) return []
   return strategy.getConnectors()
+}
+
+/**
+ * Ids of connectors whose provider is actually reachable right now. Targeted
+ * injected connectors (metaMask, phantom) are registered whether or not the
+ * extension exists, so `isInstalled`/list presence proves nothing — only
+ * `getProvider()` does. Returns null until the probe resolves.
+ */
+export function useDetectedProviders(): Set<string> | null {
+  const strategy = useConnectionStrategy()
+  const [detected, setDetected] = useState<Set<string> | null>(null)
+
+  useEffect(() => {
+    if (!strategy) return
+    let cancelled = false
+    const connectors = strategy.getConnectors()
+    Promise.all(
+      connectors.map(async (c) => {
+        try {
+          return (await c.connector.getProvider?.()) ? c.id : null
+        } catch {
+          return null
+        }
+      })
+    ).then((ids) => {
+      if (!cancelled) setDetected(new Set(ids.filter((id): id is string => id !== null)))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [strategy])
+
+  return detected
 }
 
 /** Single connector by id. */

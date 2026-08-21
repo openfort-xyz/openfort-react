@@ -47,8 +47,8 @@ export const formatWithDynamicDecimals = (amount: number): string => {
   const withoutTrailingZeros = Number.parseFloat(formatted).toString()
 
   // If it has a decimal point, check if we need to pad to MIN_DECIMALS
-  if (withoutTrailingZeros.includes('.')) {
-    const [integer, decimal] = withoutTrailingZeros.split('.')
+  const [integer, decimal] = withoutTrailingZeros.split('.')
+  if (decimal !== undefined) {
     if (decimal.length < MIN_DECIMALS) {
       return `${integer}.${decimal.padEnd(MIN_DECIMALS, '0')}`
     }

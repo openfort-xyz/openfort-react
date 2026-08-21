@@ -1,8 +1,12 @@
 'use client'
 
 import type React from 'react'
-import { EmailIcon } from '../../../assets/icons'
-import { ProviderIcon, ProviderInputInner, ProvidersButton as ProvidersButtonStyle } from '../../Pages/Providers/styles'
+import { EmailIcon } from '../../../assets/icons.js'
+import {
+  ProviderIcon,
+  ProviderInputInner,
+  ProvidersButton as ProvidersButtonStyle,
+} from '../../Pages/Providers/styles.js'
 
 type EmailFieldProps = {
   value: string

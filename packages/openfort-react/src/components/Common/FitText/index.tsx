@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useCallback } from 'react'
-import useFitText from '../../../hooks/useFitText'
+import useFitText from '../../../hooks/useFitText.js'
 
 const FitText = ({
   children,
@@ -17,7 +17,6 @@ const FitText = ({
   const [ready, setReady] = React.useState(false)
   const handleReady = useCallback(() => setReady(true), [])
   const { fontSize, ref: textRef } = useFitText({
-    logLevel: 'none',
     maxFontSize,
     minFontSize,
     onStart: handleReady,

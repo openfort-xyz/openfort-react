@@ -1,4 +1,4 @@
-import type { SignTypedDataPayload } from '@openfort/react'
+import type { SignMessageResult, SignTypedDataPayload } from '@openfort/react'
 import { useSignMessage as useOpenfortSignMessage, useUI } from '@openfort/react'
 import { useState } from 'react'
 import { useChainId } from 'wagmi'
@@ -7,7 +7,6 @@ import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useDisplayEthereumAddress } from '@/hooks/useConnectedEthereumAccount'
-import { toError } from '@/lib/errors'
 
 /** EIP-712 sample for the typed-data sign screen. The domain chainId must match the
  * active chain or the embedded wallet rejects it ("Invalid chainId"), so it's filled
@@ -50,14 +49,12 @@ export const OpenfortUICard = ({ hook }: { hook?: string }) => {
   const [signature, setSignature] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
 
-  const run = async (fn: () => Promise<string>) => {
+  const run = async (fn: () => Promise<SignMessageResult>) => {
     setError(null)
     setSignature(null)
-    try {
-      setSignature(await fn())
-    } catch (err) {
-      setError(toError(err))
-    }
+    const result = await fn()
+    if ('error' in result) setError(result.error)
+    else setSignature(result.signature)
   }
 
   return (

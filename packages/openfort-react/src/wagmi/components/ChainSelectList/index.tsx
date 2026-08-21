@@ -2,14 +2,16 @@
 
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useId, useState } from 'react'
-import { useAccount, useChainId } from 'wagmi'
-import ChainIcons from '../../../assets/chains'
-import Alert from '../../../components/Common/Alert'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
-import { chainConfigs } from '../../../constants/chainConfigs'
-import useLocales from '../../../hooks/useLocales'
-import { isCoinbaseWalletConnector, isMobile } from '../../../utils'
-import { useSwitchChainFiltered } from '../../useSwitchChainFiltered'
+// wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
+// namespace import rather than named bindings.
+import * as wagmi from 'wagmi'
+import ChainIcons from '../../../assets/chains.js'
+import Alert from '../../../components/Common/Alert/index.js'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
+import { chainConfigs } from '../../../constants/chainConfigs.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { isCoinbaseWalletConnector, isMobile } from '../../../utils/index.js'
+import { useSwitchChainFiltered } from '../../useSwitchChainFiltered.js'
 import {
   ChainButton,
   ChainButtonBg,
@@ -20,7 +22,7 @@ import {
   ChainLogoContainer,
   ChainLogoSpinner,
   SwitchNetworksContainer,
-} from './styles'
+} from './styles.js'
 
 const Spinner = () => {
   const id = useId()
@@ -50,8 +52,8 @@ const Spinner = () => {
 }
 
 const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => {
-  const { connector } = useAccount()
-  const activeChainId = useChainId()
+  const { connector } = wagmi.useAccount()
+  const activeChainId = wagmi.useChainId()
   const {
     chains,
     isPending: bridgeIsPending,
@@ -70,9 +72,19 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
     if (!bridgeIsPending) setPendingChainId(undefined)
   }, [bridgeIsPending])
 
-  // biome-ignore lint/complexity/useLiteralKeys: SwitchChainErrorType doesn't expose 'code' property but it exists at runtime
-  const isError = bridgeError?.['code'] === 4902 // Wallet cannot switch networks
-  const disabled = isError || !switchChainFn
+  // The connector has no switch at all — wagmi throws this before it ever reaches
+  // the wallet. Matched by name because it carries no code. Not by 4902: viem's
+  // generic SwitchChainError uses that code for *every* failed switch, so keying
+  // off it told people with a dead RPC that their wallet cannot switch networks.
+  const isUnsupported = bridgeError?.name === 'SwitchChainNotSupportedError'
+  // 4001 is the user declining the wallet prompt. That is a choice, not a
+  // failure, and painting an alert for it tells someone their own action broke.
+  const isUserRejection = !!bridgeError && 'code' in bridgeError && bridgeError.code === 4001
+  // Anything else is a real failure of this one switch — an unreachable RPC, a
+  // backend refusal. Reporting nothing left every one of those silent: the
+  // spinner cleared and the chain simply never changed.
+  const switchFailed = !!bridgeError && !isUnsupported && !isUserRejection
+  const disabled = isUnsupported || !switchChainFn
 
   const handleSwitchNetwork = (chainId: number) => {
     if (switchChainFn) {
@@ -145,7 +157,7 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
                 </span>
                 {variant !== 'secondary' && (
                   <ChainButtonStatus>
-                    <AnimatePresence initial={false} exitBeforeEnter>
+                    <AnimatePresence initial={false} mode="wait">
                       {ch.id === activeChainId && (
                         <motion.span
                           key={`connected-${ch.id}`}
@@ -233,7 +245,7 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
         </ChainButtons>
       </ChainButtonContainer>
       <AnimatePresence>
-        {isError && (
+        {(isUnsupported || switchFailed) && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -247,7 +259,13 @@ const ChainSelectList = ({ variant }: { variant?: 'primary' | 'secondary' }) => 
           >
             <div style={{ paddingTop: 10, paddingBottom: 8 }}>
               <Alert>
-                {locales.warnings_walletSwitchingUnsupported} {locales.warnings_walletSwitchingUnsupportedResolve}
+                {isUnsupported ? (
+                  <>
+                    {locales.warnings_walletSwitchingUnsupported} {locales.warnings_walletSwitchingUnsupportedResolve}
+                  </>
+                ) : (
+                  locales.warnings_walletSwitchingFailed
+                )}
               </Alert>
             </div>
           </motion.div>

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { storedOnrampVerification, storeOnrampVerification } from '../hooks/openfort/onrampVerificationsApi'
+import { storedOnrampVerification, storeOnrampVerification } from '../hooks/openfort/onrampVerificationsApi.js'
 
 describe('onramp verification store', () => {
   afterEach(() => {

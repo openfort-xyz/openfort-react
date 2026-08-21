@@ -1,10 +1,5 @@
 'use client'
 
-import {
-  getEnsAddress as getEnsAddressAction,
-  getEnsAvatar as getEnsAvatarAction,
-  getEnsName as getEnsNameAction,
-} from '@wagmi/core'
 import type React from 'react'
 import { createElement, type PropsWithChildren, useCallback, useMemo, useRef } from 'react'
 import { normalize } from 'viem/ens'
@@ -21,11 +16,17 @@ import {
   useWalletClient,
 } from 'wagmi'
 import {
+  getEnsAddress as getEnsAddressAction,
+  getEnsAvatar as getEnsAvatarAction,
+  getEnsName as getEnsNameAction,
+} from 'wagmi/actions'
+import { ConnectorNotFoundError, ProviderNotFoundError } from '../errors/connection.js'
+import {
   type OpenfortEthereumBridgeConnector,
   OpenfortEthereumBridgeContext,
   type OpenfortEthereumBridgeValue,
-} from '../ethereum/OpenfortEthereumBridgeContext'
-import { shouldExcludeConnector } from './connectorFilter'
+} from '../ethereum/OpenfortEthereumBridgeContext.js'
+import { shouldExcludeConnector } from './connectorFilter.js'
 
 function mapConnector(c: {
   id: string
@@ -83,7 +84,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
   const connectAsyncBridge = useCallback(
     async (params: { connector: OpenfortEthereumBridgeConnector }) => {
       const c = stableConnectors.find((x) => x.id === params.connector.id)
-      if (!c) throw new Error('Connector not found')
+      if (!c) throw new ConnectorNotFoundError({ connectorId: params.connector.id })
       return wagmiConnectAsync({ connector: c })
     },
     [stableConnectors, wagmiConnectAsync]
@@ -94,6 +95,8 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       try {
         return (await getEnsAddressAction(config, { name: normalize(name), chainId: 1 })) ?? undefined
       } catch {
+        // ENS resolution is optional metadata; an unavailable resolver is equivalent
+        // to a name with no address and must not prevent wallet connection.
         return undefined
       }
     },
@@ -105,6 +108,8 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       try {
         return (await getEnsNameAction(config, { address: params.address, chainId: 1 })) ?? undefined
       } catch {
+        // Reverse ENS resolution is optional metadata and intentionally degrades to
+        // an absent name when mainnet RPC lookup is unavailable.
         return undefined
       }
     },
@@ -116,6 +121,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       try {
         return (await getEnsAvatarAction(config, { name: normalize(name), chainId: 1 })) ?? undefined
       } catch {
+        // Avatar lookup is optional metadata and intentionally degrades to no avatar.
         return undefined
       }
     },
@@ -134,7 +140,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
 
   const signMessage = useCallback(
     async (params: { message: string }): Promise<`0x${string}`> => {
-      if (!signMessageAsync) throw new Error('signMessage not available')
+      if (!signMessageAsync) throw new ProviderNotFoundError('`signMessage` is not available on the connected wallet.')
       return signMessageAsync({ message: params.message })
     },
     [signMessageAsync]
@@ -207,6 +213,7 @@ export const OpenfortWagmiBridge: React.FC<PropsWithChildren> = ({ children }) =
       bridgeConnectors,
       chains,
       switchChain,
+      switchChainAsync,
       isSwitchChainPending,
       switchChainError,
       ensName,

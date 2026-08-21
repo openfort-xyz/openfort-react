@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { InputAny } from '@/components/Form/InputAny'
 import { VariableTooltip } from '@/components/Variable/VariableTooltip'
-import { alertFn, logFn } from '@/lib/utils'
-import { cn } from '../../lib/cn'
+import { alertFn, cn, logFn } from '@/lib/utils'
 import { BaseVariable } from '../Variable/Variable'
 
 export type FunctionInputTypeType =
@@ -118,7 +117,7 @@ export const Form = <TOptions extends Record<string, any>, TResult = any>({
 
   const resultError = functionError
     ? { error: functionError }
-    : functionResult && typeof functionResult === 'object' && 'error' in functionResult && !!functionResult.error
+    : functionResult && typeof functionResult === 'object' && 'error' in functionResult && functionResult.error
       ? functionResult
       : null
 

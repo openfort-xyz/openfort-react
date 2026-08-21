@@ -1,4 +1,5 @@
 import Openfort from '@openfort/openfort-node'
+import './env'
 
 if (!process.env.OPENFORT_SECRET_KEY) {
   throw new Error('OPENFORT_SECRET_KEY is not set')

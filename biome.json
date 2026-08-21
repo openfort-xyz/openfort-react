@@ -14,7 +14,6 @@
       "!**/.next",
       "!**/coverage",
       "!**/node_modules",
-      "!packages/openfort-react/src/assets",
       "!examples/quickstarts",
       "!packages/create-openfort/template",
       "!packages/create-openfort/.github",
@@ -36,7 +35,17 @@
       "recommended": true,
       "correctness": {
         "noUnusedVariables": "error",
-        "useExhaustiveDependencies": "off"
+        "useExhaustiveDependencies": {
+          "level": "error",
+          "options": {
+            "hooks": [
+              {
+                "name": "useLatest",
+                "stableResult": true
+              }
+            ]
+          }
+        }
       },
       "performance": {
         "noBarrelFile": "off",
@@ -82,6 +91,16 @@
     }
   },
   "overrides": [
+    {
+      "includes": ["packages/*/scripts/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noConsole": "off"
+          }
+        }
+      }
+    },
     {
       "includes": ["packages/create-openfort/**"],
       "formatter": {

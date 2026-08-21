@@ -4,7 +4,7 @@ import { useWalletAuth } from '@openfort/react/wagmi'
 import { useAccount, useConnect, useDisconnect } from 'wagmi'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { useActiveEthereumEmbeddedWallet } from '@/hooks/useActiveEthereumEmbeddedWallet'
-import { cn } from '@/lib/cn'
+import { cn } from '@/lib/utils'
 import { EmbeddedWalletsList } from './EmbeddedWalletsList'
 
 const FALLBACK_CONNECTOR_ICONS: Record<string, React.ReactNode> = {
@@ -94,7 +94,9 @@ export const ConnectExternalWalletCard = () => {
   const isBusy = ethereum.isLoading
 
   const setActive = async (opts: { address: `0x${string}`; recoveryMethod?: RecoveryMethod; password?: string }) => {
-    await ethereum.setActive(opts)
+    const result = await ethereum.setActive(opts)
+    if (result.error) throw result.error
+    if (result.needsRecovery) return
     if (connector?.id !== embeddedWalletId && openfortConnector) {
       await disconnectAsync()
       connect({ connector: openfortConnector })

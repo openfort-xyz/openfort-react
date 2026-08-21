@@ -2,8 +2,9 @@
 
 import { EmbeddedState } from '@openfort/openfort-js'
 import { useCallback } from 'react'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { handleOAuthConfigError } from '../../utils/oauthErrorHandler'
+import { isAuthenticatedState } from '../../openfort/selectors.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { handleOAuthConfigError } from '../../utils/oauthErrorHandler.js'
 
 /**
  * Returns the current user, linked accounts, auth state, and token helpers.
@@ -26,9 +27,14 @@ import { handleOAuthConfigError } from '../../utils/oauthErrorHandler'
  * ```
  */
 export function useUser() {
-  const { user, client, embeddedState, linkedAccounts, activeEmbeddedAddress, isLoading } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const client = useOpenfortCore((s) => s.client)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const linkedAccounts = useOpenfortCore((s) => s.linkedAccounts)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const isLoading = useOpenfortCore((s) => s.isLoading)
 
-  const isAuthenticated = embeddedState !== EmbeddedState.NONE && embeddedState !== EmbeddedState.UNAUTHENTICATED
+  const isAuthenticated = isAuthenticatedState(embeddedState)
   const isConnected = embeddedState === EmbeddedState.READY && !!activeEmbeddedAddress
 
   const getAccessTokenAndUpdate = useCallback(async () => {

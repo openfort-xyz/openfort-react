@@ -29,7 +29,7 @@ const SPECIAL_CHARACTERS = '!@#$%^&()\\-*+.'
 /**
  * Escape regex metacharacters for safe use inside a character class.
  */
-function escapeForCharClass(str) {
+function escapeForCharClass(str: string): string {
   return str.replace(/[-\\^]/g, '\\$&')
   // escapes -, \, and ^ (the only risky chars in [])
 }

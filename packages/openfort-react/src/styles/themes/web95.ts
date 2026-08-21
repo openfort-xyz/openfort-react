@@ -1,4 +1,4 @@
-import type { CustomTheme } from '../customTheme'
+import type { CustomTheme } from '../customTheme.js'
 
 const web95Theme: CustomTheme = {
   '--ck-font-family': 'Lato',

@@ -4,22 +4,21 @@
  * These types define the Ethereum wallet state machine and related interfaces.
  */
 
-import type {
-  AccountTypeEnum,
-  ChainTypeEnum,
-  EmbeddedAccount,
-  RecoveryMethod,
-  RecoveryParams,
-} from '@openfort/openfort-js'
+import type { AccountTypeEnum, ChainTypeEnum, RecoveryMethod, RecoveryParams } from '@openfort/openfort-js'
 import type { Hex } from 'viem'
 import type {
   ConnectedWalletState,
   CreateEmbeddedWalletOptions,
+  CreateEmbeddedWalletResult,
+  ExportPrivateKeyOptions,
+  ExportPrivateKeyResult,
   ImportEmbeddedWalletOptions,
   SetActiveEmbeddedWalletOptionsBase,
+  SetActiveEmbeddedWalletResult,
+  SetRecoveryResult,
   SetRecoveryOptions as SharedSetRecoveryOptions,
   WalletDerived,
-} from '../shared/types'
+} from '../shared/types.js'
 
 export type FeeSponsorshipConfig = string | Record<number, string>
 
@@ -93,17 +92,17 @@ export type SetActiveEthereumWalletOptions = SetActiveEmbeddedWalletOptionsBase 
  */
 export interface EthereumWalletActions {
   /** Create a new Ethereum embedded wallet */
-  create(options?: CreateEmbeddedWalletOptions): Promise<EmbeddedAccount>
+  create(options?: CreateEmbeddedWalletOptions): Promise<CreateEmbeddedWalletResult>
   /** Import an Ethereum embedded wallet from a hex-encoded private key */
-  import(options: ImportEmbeddedWalletOptions): Promise<EmbeddedAccount>
+  import(options: ImportEmbeddedWalletOptions): Promise<CreateEmbeddedWalletResult>
   /** List of available Ethereum wallets */
   wallets: ConnectedEmbeddedEthereumWallet[]
   /** Set the active wallet */
-  setActive(options: SetActiveEthereumWalletOptions): Promise<void>
+  setActive(options: SetActiveEthereumWalletOptions): Promise<SetActiveEmbeddedWalletResult>
   /** Update recovery method */
-  setRecovery(options: SharedSetRecoveryOptions): Promise<void>
+  setRecovery(options: SharedSetRecoveryOptions): Promise<SetRecoveryResult>
   /** Export the private key (requires user confirmation) */
-  exportPrivateKey(): Promise<string>
+  exportPrivateKey(options?: ExportPrivateKeyOptions): Promise<ExportPrivateKeyResult>
 }
 
 type EthereumWalletStateBase =

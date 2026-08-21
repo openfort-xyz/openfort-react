@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
-import styled from '../../../styles/styled'
-import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles'
+import styled from '../../../styles/styled/index.js'
+import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles.js'
 
 export const ProviderInputInner = styled.div`
   // Styles from react-international-phone (imported here to avoid importing the whole CSS file for nextjs compatibility)
@@ -9,7 +9,7 @@ export const ProviderInputInner = styled.div`
   border-radius: var(--ck-secondary-button-border-radius);
   font-size: 1rem;
   color: var(--ck-body-color);
-  transition: all 0.2s;
+  transition: background 200ms ease, box-shadow 200ms ease;
   width: 100%;
   height: 100%;
   display: flex;
@@ -69,7 +69,7 @@ export const ProviderInputInner = styled.div`
 
 export const EmailInnerButton = styled(motion.button)`
   color: var(--ck-body-action-color);
-  transition: background-color 200ms ease, transform 100ms ease, color 200ms ease, transition 200ms ease, opacity 200ms ease;
+  transition: background-color 200ms ease, transform 100ms ease-out, color 200ms ease, opacity 200ms ease;
   border-radius: 16px;
   
   svg {
@@ -85,7 +85,7 @@ export const EmailInnerButton = styled(motion.button)`
       color: var(--ck-body-action-hover-color);
     }
     &:active {
-      transform: scale(0.9);
+      transform: scale(var(--ck-press-scale, 0.97));
     }
   }
 `

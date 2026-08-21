@@ -2,16 +2,16 @@
 
 import { AnimatePresence, type Variants } from 'framer-motion'
 import React from 'react'
-import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import Input from '../../Common/Input'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { TextContainer } from '../../ConnectButton/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useEmailAuth } from '../../../hooks/openfort/auth/useEmailAuth.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { logger } from '../../../utils/logger.js'
+import Button from '../../Common/Button/index.js'
+import Input from '../../Common/Input/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { TextContainer } from '../../ConnectButton/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 // TODO: Localize
 
@@ -38,7 +38,7 @@ const textVariants: Variants = {
 
 const LinkEmail: React.FC = () => {
   const { setRoute, triggerResize, emailInput: email, setEmailInput: setEmail } = useOpenfort()
-  const { client } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
 
   const [loginLoading, setLoginLoading] = React.useState(false)
   const [loginError, setLoginError] = React.useState<false | string>(false)

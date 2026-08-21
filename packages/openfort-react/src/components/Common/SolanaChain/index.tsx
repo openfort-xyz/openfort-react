@@ -1,9 +1,9 @@
 'use client'
 
-import Logos from '../../../assets/logos'
-import { useSolanaContext } from '../../../solana/SolanaContext'
-import { ChainContainer, LogoContainer, SwitchChainButton } from '../Chain/styles'
-import Tooltip from '../Tooltip'
+import Logos from '../../../assets/logos.js'
+import { useSolanaContext } from '../../../solana/SolanaContext.js'
+import { ChainContainer, LogoContainer, SwitchChainButton } from '../Chain/styles.js'
+import Tooltip from '../Tooltip/index.js'
 
 /** `mainnet-beta` → "Mainnet"; otherwise capitalize the cluster name. */
 function formatCluster(cluster?: string): string {

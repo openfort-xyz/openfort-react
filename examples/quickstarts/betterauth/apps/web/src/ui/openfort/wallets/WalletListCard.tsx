@@ -1,21 +1,17 @@
-import {
-  FingerPrintIcon,
-  KeyIcon,
-  LockClosedIcon,
-} from '@heroicons/react/24/outline'
+import { FingerPrintIcon, KeyIcon, LockClosedIcon } from '@heroicons/react/24/outline'
 import {
   AccountTypeEnum,
-  RecoveryMethod,
   type ConnectedEmbeddedEthereumWallet,
+  RecoveryMethod,
   useSignOut,
   useUser,
 } from '@openfort/react'
+import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useMemo, useState } from 'react'
 import { useAccount } from 'wagmi'
 import { signOut as betterAuthSignOut } from '../../../integrations/betterauth'
-import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
-import { WalletRecoverPasswordSheet } from './WalletPasswordSheets'
 import { CreateWallet, CreateWalletSheet } from './WalletCreation'
+import { WalletRecoverPasswordSheet } from './WalletPasswordSheets'
 
 const ACCOUNT_TYPE_BADGE: Record<AccountTypeEnum, string> = {
   [AccountTypeEnum.EOA]: 'EOA',
@@ -95,12 +91,7 @@ function WalletRow({
 }
 
 export function WalletListCard() {
-  const {
-    wallets,
-    status,
-    activeWallet,
-    setActive,
-  } = useEthereumEmbeddedWallet()
+  const { wallets, status, activeWallet, setActive } = useEthereumEmbeddedWallet()
   const isLoadingWallets = status === 'fetching-wallets'
   const isConnecting = status === 'connecting'
   const { user, isAuthenticated } = useUser()
@@ -108,8 +99,7 @@ export function WalletListCard() {
   const { signOut } = useSignOut()
 
   const [createWalletSheetOpen, setCreateWalletSheetOpen] = useState(false)
-  const [walletToRecover, setWalletToRecover] =
-    useState<ConnectedEmbeddedEthereumWallet | null>(null)
+  const [walletToRecover, setWalletToRecover] = useState<ConnectedEmbeddedEthereumWallet | null>(null)
 
   // Build parent/child hierarchy: Smart Accounts are children of their EOA owner
   const { topLevel, childrenByOwner } = useMemo(() => {
@@ -146,8 +136,7 @@ export function WalletListCard() {
   }
 
   const handleWalletClick = (wallet: ConnectedEmbeddedEthereumWallet) => {
-    const isActive =
-      activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
+    const isActive = activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
     if (isActive || isConnecting) return
 
     if (wallet.recoveryMethod === RecoveryMethod.PASSWORD) {
@@ -161,17 +150,14 @@ export function WalletListCard() {
   return (
     <div className="flex flex-col w-full">
       <h1>Wallets</h1>
-      <p className="mb-4 text-sm text-zinc-400">
-        Select a wallet to connect to your account.
-      </p>
+      <p className="mb-4 text-sm text-zinc-400">Select a wallet to connect to your account.</p>
 
       <div className="space-y-4 pb-4">
         <h2>Your Wallets</h2>
         <div className="flex flex-col space-y-2">
           {topLevel.map((wallet) => {
             const children = childrenByOwner.get(wallet.address.toLowerCase())
-            const isActive =
-              activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
+            const isActive = activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
             return (
               <div key={wallet.id} className="flex flex-col space-y-1">
                 <WalletRow
@@ -181,8 +167,7 @@ export function WalletListCard() {
                   onClick={() => handleWalletClick(wallet)}
                 />
                 {children?.map((child) => {
-                  const isChildActive =
-                    activeWallet?.address.toLowerCase() === child.address.toLowerCase()
+                  const isChildActive = activeWallet?.address.toLowerCase() === child.address.toLowerCase()
                   return (
                     <WalletRow
                       key={child.id}
@@ -214,10 +199,7 @@ export function WalletListCard() {
         onClose={() => setWalletToRecover(null)}
       />
 
-      <CreateWalletSheet
-        open={createWalletSheetOpen}
-        onClose={() => setCreateWalletSheetOpen(false)}
-      />
+      <CreateWalletSheet open={createWalletSheetOpen} onClose={() => setCreateWalletSheetOpen(false)} />
 
       {!isConnected && (
         <button

@@ -2,19 +2,19 @@
 
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { PhoneIcon } from '../../../assets/icons'
-import { usePhoneOtpAuth } from '../../../hooks/openfort/auth/usePhoneOtpAuth'
-import { useUser } from '../../../hooks/openfort/useUser'
-import type { OpenfortError } from '../../../types'
-import { logger } from '../../../utils/logger'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { OtpInputStandalone } from '../../Common/OTPInput'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { FloatingGraphic } from '../../FloatingGraphic'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { Body, FooterButtonText, FooterTextButton, ResultContainer } from './styles'
+import { PhoneIcon } from '../../../assets/icons.js'
+import { usePhoneOtpAuth } from '../../../hooks/openfort/auth/usePhoneOtpAuth.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import type { OpenfortError } from '../../../types.js'
+import { logger } from '../../../utils/logger.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { OtpInputStandalone } from '../../Common/OTPInput/index.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { FloatingGraphic } from '../../FloatingGraphic/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { Body, FooterButtonText, FooterTextButton, ResultContainer } from './styles.js'
 
 // TODO: Localize
 
@@ -61,7 +61,6 @@ const PhoneOTP: React.FC = () => {
   // Handle OTP completion
   const handleComplete = useCallback(
     async (otp: string) => {
-      logger.log('OTP entered:', otp)
       setStatus('loading')
 
       let error: OpenfortError | undefined | null = null
@@ -77,7 +76,9 @@ const PhoneOTP: React.FC = () => {
         logger.error('Error verifying phone OTP:', error)
         setStatus('error')
 
-        if (error.message === 'Invalid OTP') {
+        // The underlying API message lands in `details`; `message` carries the
+        // composed wrapper text and version footer.
+        if (error.details.includes('Invalid OTP')) {
           setErrorMessage('Invalid code. Please try again.')
         } else {
           setErrorMessage('Verification failed. Please try again.')
@@ -86,7 +87,7 @@ const PhoneOTP: React.FC = () => {
         setStatus('success')
       }
     },
-    [phone, logInWithPhoneOtp]
+    [phone, logInWithPhoneOtp, linkPhoneOtp, user]
   )
 
   // Handle status changes and side effects

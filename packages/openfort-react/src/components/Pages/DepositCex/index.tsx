@@ -3,31 +3,40 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import type { ChangeEvent, CSSProperties, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import logos from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { DEST_USDC, isSolana } from '../../../hooks/openfort/fundingSources'
-import { useFunding } from '../../../hooks/openfort/useFunding'
-import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
-import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
-import { invalidateBalance } from '../../../hooks/useBalance'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { logger } from '../../../utils/logger'
-import { getPublishableKeyEnvironment } from '../../../utils/validation'
-import { Arrow, ArrowChevron } from '../../Common/Button/styles'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import Tooltip from '../../Common/Tooltip'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { BigAmountInput, BigAmountRow, BigAmountSymbol, MethodRowButton } from '../Buy/styles'
-import { amountInputWidth } from '../Buy/utils'
-import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains'
-import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
-import { DepositStatus } from '../Deposit/DepositStatus'
-import { walletListBtn } from '../Deposit/formStyles'
-import { ButtonLogo, StepDivider } from '../Deposit/styles'
-import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
+import logos from '../../../assets/logos.js'
+import { toDisplayMessage } from '../../../errors/base.js'
+import { FundingError } from '../../../errors/funding.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { DEST_USDC, isSolana } from '../../../hooks/openfort/fundingSources.js'
+import { useFunding } from '../../../hooks/openfort/useFunding.js'
+import { useFundingChains } from '../../../hooks/openfort/useFundingChains.js'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget.js'
+import { useInvalidateBalance } from '../../../hooks/useBalance.js'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import {
+  clearPersistentOperation,
+  getOrCreatePersistentOperation,
+  hasPersistentOperation,
+} from '../../../shared/utils/persistentOperationRegistry.js'
+import { logger } from '../../../utils/logger.js'
+import { getPublishableKeyEnvironment } from '../../../utils/validation.js'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles.js'
+import { usePageActivity } from '../../Common/Modal/pageActivity.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import Tooltip from '../../Common/Tooltip/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { BigAmountInput, BigAmountRow, BigAmountSymbol, MethodRowButton } from '../Buy/styles.js'
+import { amountInputWidth } from '../Buy/utils.js'
+import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains.js'
+import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress.js'
+import { DepositStatus } from '../Deposit/DepositStatus.js'
+import { walletListBtn } from '../Deposit/formStyles.js'
+import { ButtonLogo, StepDivider } from '../Deposit/styles.js'
+import { TestnetNotice } from '../Deposit/TestnetNotice.js'
+import { sanitizeAmountInput, sanitizeForParsing } from '../Send/utils.js'
 
 /** Exchange rails. Binance is gated until its rail lands. */
 const EXCHANGES = [
@@ -61,6 +70,7 @@ const errorHelper: CSSProperties = { fontSize: 12, color: '#dc2626' }
  * success / failed screen. No Relay routing; Binance is gated until its rail lands.
  */
 const DepositCex = () => {
+  const pageActive = usePageActivity()
   const { triggerResize, publishableKey, setRoute } = useOpenfort()
   // Coinbase onramp settles real funds on mainnet, so a test key can't deliver here.
   // Keep the button live for the demo but block the hand-off with a testnet notice.
@@ -70,13 +80,39 @@ const DepositCex = () => {
   // standalone funding service — resolve this rail's base URL from the API backend.
   const { isAvailable, createSession, track, payLink, status } = useFunding({ useBackendUrl: true })
   const wallet = useEthereumEmbeddedWallet()
-  const { embeddedAccounts } = useOpenfortCore()
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
+  const client = useOpenfortCore((s) => s.client)
+  const { captureAuthSession } = useAuthTransitions()
   const { chains } = useFundingChains()
+  const invalidateBalance = useInvalidateBalance()
 
   const [amount, setAmount] = useState(String(MIN_AMOUNT))
   const [session, setSession] = useState<{ id: string; clientSecret: string } | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [opened, setOpened] = useState(false)
+  const pageActiveRef = useRef(pageActive)
+  const pendingPopupRef = useRef<Window | null>(null)
+  const payLinkInFlightRef = useRef(false)
+  const payLinkAttemptRef = useRef(0)
+  pageActiveRef.current = pageActive
+
+  useEffect(() => {
+    if (pageActive) return
+    pendingPopupRef.current?.close()
+    pendingPopupRef.current = null
+    payLinkAttemptRef.current += 1
+    payLinkInFlightRef.current = false
+  }, [pageActive])
+
+  useEffect(
+    () => () => {
+      pendingPopupRef.current?.close()
+      pendingPopupRef.current = null
+      payLinkAttemptRef.current += 1
+      payLinkInFlightRef.current = false
+    },
+    []
+  )
 
   // Resolve the destination by chain family: EVM targets use the EVM embedded
   // wallet, Solana targets the Solana (SVM) embedded account — never cross families
@@ -118,21 +154,39 @@ const DepositCex = () => {
     let cancelled = false
     setSession(null)
     setError(null)
-    createSessionRef
-      .current({ chain: target.chain, currency: target.currency, address })
-      .then((s) => {
-        if (!cancelled) setSession({ id: s.id, clientSecret: s.clientSecret })
-      })
-      .catch((e) => {
-        if (!cancelled) setError(e instanceof Error ? e : new Error(String(e)))
-      })
+    const operationKey = `funding-session:${key}`
+    const authSession = captureAuthSession()
+    const operation = getOrCreatePersistentOperation({
+      owner: client,
+      key: operationKey,
+      principalIsCurrent: authSession.isCurrent,
+      start: () => createSessionRef.current({ chain: target.chain, currency: target.currency, address }),
+    })
+    operation.promise.then((result) => {
+      if (cancelled || !authSession.isCurrent() || !operation.isCurrent()) return
+      if ('error' in result) {
+        clearPersistentOperation(client, operationKey)
+        setError(result.error)
+        return
+      }
+      setSession({ id: result.session.id, clientSecret: result.session.clientSecret })
+    })
     return () => {
       cancelled = true
       // Clear the key so a genuine destination change re-creates the session;
       // without this the guard above would block the retry after this cancel.
       sessionKey.current = ''
     }
-  }, [isAvailable, address, chainSupported, testnet, target.chain, target.currency])
+  }, [isAvailable, address, chainSupported, testnet, target.chain, target.currency, captureAuthSession, client])
+
+  useEffect(() => {
+    if (!pageActive || !session) return
+    const trackKey = `funding-track:${session.id}`
+    const trackIntentKey = `funding-track-intent:${session.id}`
+    if (hasPersistentOperation(client, trackKey) || hasPersistentOperation(client, trackIntentKey)) {
+      void track({ id: session.id, clientSecret: session.clientSecret })
+    }
+  }, [client, pageActive, session, track])
 
   const fiatAmount = useMemo(() => {
     const normalized = sanitizeForParsing(sanitizeAmountInput(amount))
@@ -147,6 +201,7 @@ const DepositCex = () => {
   const payReady = infraReady && amountValid
 
   // Resize when a block that changes the modal's height toggles.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     triggerResize()
   }, [isAvailable, chainSupported, session, error, opened, amountTooLow, triggerResize])
@@ -155,7 +210,9 @@ const DepositCex = () => {
   // without a manual reload.
   useEffect(() => {
     if (status === 'succeeded') invalidateBalance()
-  }, [status])
+    if (!session || !['succeeded', 'bounced', 'expired'].includes(status)) return
+    clearPersistentOperation(client, `funding-track-intent:${session.id}`)
+  }, [client, invalidateBalance, session, status])
 
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
@@ -172,35 +229,87 @@ const DepositCex = () => {
   }
 
   const openExchange = () => {
-    if (!session || fiatAmount === null || !amountValid) return
+    if (!session || fiatAmount === null || !amountValid || payLinkInFlightRef.current || !pageActiveRef.current) return
     // Open the tab up-front (sync) so the popup blocker permits it. Passing
     // `noopener` makes window.open return null, leaving the tab stuck on
     // about:blank — keep the handle and sever the opener link manually instead.
     const w = window.open('about:blank', '_blank')
     if (w) w.opener = null
+    pendingPopupRef.current = w
+    const attempt = ++payLinkAttemptRef.current
+    payLinkInFlightRef.current = true
     logger.log('[funding:cex] open pay-link', { sessionId: session.id, amount: fiatAmount, asset: destAssetLabel })
-    void payLink({
-      sessionId: session.id,
-      clientSecret: session.clientSecret,
-      amount: String(fiatAmount),
-      ...(destAssetLabel ? { asset: destAssetLabel } : {}),
+    const operationKey = `funding-pay-link:${session.id}:${fiatAmount}:${destAssetLabel ?? ''}`
+    const operationLane = `funding-pay-link:${session.id}`
+    const authSession = captureAuthSession()
+    const operation = getOrCreatePersistentOperation({
+      owner: client,
+      key: operationKey,
+      lane: operationLane,
+      principalIsCurrent: authSession.isCurrent,
+      start: () =>
+        payLink({
+          sessionId: session.id,
+          clientSecret: session.clientSecret,
+          amount: String(fiatAmount),
+          ...(destAssetLabel ? { asset: destAssetLabel } : {}),
+        }),
     })
-      .then((url) => {
-        if (!url) {
-          w?.close() // no URL resolved — don't strand the popup on "undefined"
+    void operation.promise.then(
+      (result) => {
+        if (
+          !authSession.isCurrent() ||
+          !operation.isCurrent() ||
+          payLinkAttemptRef.current !== attempt ||
+          !pageActiveRef.current ||
+          pendingPopupRef.current !== w
+        ) {
+          w?.close()
           return
         }
-        if (w) w.location.href = url
-        else window.location.assign(url) // popup blocked — fall back to this tab
+        payLinkInFlightRef.current = false
+        clearPersistentOperation(client, operationKey)
+        if ('error' in result) {
+          w?.close()
+          pendingPopupRef.current = null
+          setError(result.error)
+          return
+        }
+        if (!w) {
+          pendingPopupRef.current = null
+          setError(new FundingError('The Coinbase window was blocked. Allow popups and try again.'))
+          return
+        }
+        w.location.href = result.url
+        pendingPopupRef.current = null
         setOpened(true)
-        // Watch the destination-bound session settle so the modal can show the
-        // success / failed outcome instead of stranding the user on the form.
-        if (session) void track({ id: session.id, clientSecret: session.clientSecret }).catch(() => {})
-      })
-      .catch((e) => {
+        getOrCreatePersistentOperation({
+          owner: client,
+          key: `funding-track-intent:${session.id}`,
+          principalIsCurrent: authSession.isCurrent,
+          start: async () => true,
+          settledRetentionMs: 24 * 60 * 60 * 1000,
+        })
+        void track({ id: session.id, clientSecret: session.clientSecret })
+      },
+      (cause) => {
+        if (
+          !authSession.isCurrent() ||
+          !operation.isCurrent() ||
+          payLinkAttemptRef.current !== attempt ||
+          !pageActiveRef.current ||
+          pendingPopupRef.current !== w
+        ) {
+          w?.close()
+          return
+        }
+        payLinkInFlightRef.current = false
+        clearPersistentOperation(client, operationKey)
         w?.close()
-        setError(e instanceof Error ? e : new Error(String(e)))
-      })
+        pendingPopupRef.current = null
+        setError(cause instanceof Error ? cause : new FundingError('Failed to create a Coinbase pay link.'))
+      }
+    )
   }
 
   // Once the deposit lands, the session-status flow takes over the modal with the
@@ -249,7 +358,7 @@ const DepositCex = () => {
       {!testnet && isAvailable && !chainSupported && (
         <ModalBody>Coinbase can't deliver to {destChainName} yet.</ModalBody>
       )}
-      {!testnet && error && <ModalBody style={{ color: '#dc2626' }}>{error.message}</ModalBody>}
+      {!testnet && error && <ModalBody style={{ color: '#dc2626' }}>{toDisplayMessage(error)}</ModalBody>}
 
       <StepDivider>Then open an exchange</StepDivider>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>

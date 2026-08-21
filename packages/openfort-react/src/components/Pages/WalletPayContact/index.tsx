@@ -7,24 +7,24 @@ import {
   storedOnrampVerification,
   storeOnrampVerification,
   submitOnrampVerification,
-} from '../../../hooks/openfort/onrampVerificationsApi'
-import { useFundingClient } from '../../../hooks/openfort/useFunding'
-import { useUser } from '../../../hooks/openfort/useUser'
-import styled from '../../../styles/styled'
-import { logger } from '../../../utils/logger'
-import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
-import Button from '../../Common/Button'
-import Checkbox from '../../Common/Checkbox'
-import EmailField from '../../Common/EmailField'
-import { ErrorText } from '../../Common/ErrorText'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { OtpInputStandalone } from '../../Common/OTPInput'
-import PhoneField from '../../Common/PhoneField'
-import { FundingMethod, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper } from '../Buy/styles'
-import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
+} from '../../../hooks/openfort/onrampVerificationsApi.js'
+import { useFundingClient } from '../../../hooks/openfort/useFunding.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import styled from '../../../styles/styled/index.js'
+import { logger } from '../../../utils/logger.js'
+import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation.js'
+import Button from '../../Common/Button/index.js'
+import Checkbox from '../../Common/Checkbox/index.js'
+import EmailField from '../../Common/EmailField/index.js'
+import { ErrorText } from '../../Common/ErrorText/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { OtpInputStandalone } from '../../Common/OTPInput/index.js'
+import PhoneField from '../../Common/PhoneField/index.js'
+import { FundingMethod, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ContinueButtonWrapper } from '../Buy/styles.js'
+import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles.js'
 
 // US mobile in E.164 — mirrors the server guard (`/^\+1[2-9]\d{9}$/`).
 const US_E164 = /^\+1[2-9]\d{9}$/
@@ -91,6 +91,7 @@ const WalletPayContact: React.FC = () => {
     [phone, phoneValid]
   )
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: step and error are re-measure triggers, not inputs — each swaps in a differently sized body
   useEffect(() => {
     triggerResize()
   }, [triggerResize, step, error])

@@ -1,9 +1,9 @@
 'use client'
 
 import React from 'react'
-import { EyeIcon, EyeOffIcon } from '../../../assets/icons'
-import { IconButton, InputContainer, Input as StyledInput } from './styles'
-import type { InputProps } from './types'
+import { EyeIcon, EyeOffIcon } from '../../../assets/icons.js'
+import { IconButton, InputContainer, Input as StyledInput } from './styles.js'
+import type { InputProps } from './types.js'
 
 const PasswordInput: React.FC<InputProps> = ({ ...props }) => {
   const [showPassword, setShowPassword] = React.useState(false)

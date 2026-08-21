@@ -1,13 +1,13 @@
 import { Link } from '@tanstack/react-router'
 import { Code2 } from 'lucide-react'
-import { cn } from '@/lib/cn'
-import type { FileRoutesByFullPath } from '@/routeTree.gen'
+import { cn } from '@/lib/utils'
+import type { FileRoutesByTo } from '@/routeTree.gen'
 
 type HookBadgeProps = {
   /** Hook name, e.g. "useSignMessage". */
   hook: string
   /** When set, the chip links to that hook's inspector page. */
-  href?: keyof FileRoutesByFullPath
+  href?: keyof FileRoutesByTo
   /** Optional function/value to focus when navigating to the inspector. */
   fn?: string
   className?: string

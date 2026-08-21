@@ -1,7 +1,8 @@
 import type { ChainTypeEnum, EmbeddedAccount, EmbeddedState, Openfort, User } from '@openfort/openfort-js'
 import { baseSepolia, sepolia } from 'viem/chains'
-import type { OpenfortWalletConfig } from '../components/Openfort/types'
-import type { ExternalConnectorProps } from '../wallets/useExternalConnectors'
+import type { OpenfortWalletConfig } from '../components/Openfort/types.js'
+import type { EmbeddedSignerOperationContext } from '../shared/utils/embeddedSignerOperationQueue.js'
+import type { ExternalConnectorProps } from '../wallets/useExternalConnectors.js'
 
 /** Default chain when EVM without Wagmi and walletConfig.ethereum.chainId is missing. Sepolia. */
 export const DEFAULT_DEV_CHAIN_ID = sepolia.id
@@ -19,8 +20,6 @@ export interface ConnectionStrategyState {
   embeddedState?: EmbeddedState
 }
 
-type ConnectRoute = 'embedded' | 'external-wallets'
-
 export interface ConnectionStrategy {
   readonly kind: 'bridge' | 'embedded'
   readonly chainType: ChainTypeEnum
@@ -28,12 +27,15 @@ export interface ConnectionStrategy {
   isConnected(state: ConnectionStrategyState): boolean
   getChainId(): number | undefined
   getAddress(state: ConnectionStrategyState): string | undefined
-  /** When 'external-wallets', ConnectModal may show Connectors page; when 'embedded' only, skip to providers. */
-  getConnectRoutes(): ConnectRoute[]
   /** External wallet connectors; only when wagmi/bridge exists. Otherwise []. */
   getConnectors(): ExternalConnectorProps[]
 
   /** @param chainId - Current chain for EVM; when provided, uses this for fee sponsorship/rpc instead of config default. */
-  initProvider(openfort: Openfort, walletConfig: OpenfortWalletConfig, chainId?: number): Promise<void>
+  initProvider(
+    openfort: Openfort,
+    walletConfig: OpenfortWalletConfig,
+    chainId: number | undefined,
+    operation: EmbeddedSignerOperationContext
+  ): Promise<void>
   disconnect(openfort: Openfort): Promise<void>
 }

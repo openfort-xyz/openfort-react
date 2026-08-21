@@ -1,23 +1,25 @@
+'use client'
+
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { embeddedWalletId } from '../../../constants/openfort'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
-import { toSolanaUserWallet } from '../../../hooks/openfort/walletTypes'
-import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types'
-import styled from '../../../styles/styled'
-import { truncateEthAddress } from '../../../utils'
-import { walletConfigs } from '../../../wallets/walletConfigs'
-import Button from '../../Common/Button'
-import { ModalHeading } from '../../Common/Modal/styles'
-import { RECOVERY_METHOD_LABEL, WalletRecoveryIcon } from '../../Common/WalletRecoveryIcon'
-import { recoverRoute } from '../../Openfort/routeHelpers'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ProviderIcon, ProviderLabel, ProvidersButton } from '../Providers/styles'
+import { embeddedWalletId } from '../../../constants/openfort.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types.js'
+import { toSolanaUserWallet } from '../../../hooks/openfort/walletTypes.js'
+import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types.js'
+import styled from '../../../styles/styled/index.js'
+import { truncateEthAddress } from '../../../utils/index.js'
+import { walletConfigs } from '../../../wallets/walletConfigs.js'
+import Button from '../../Common/Button/index.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import { RECOVERY_METHOD_LABEL, WalletRecoveryIcon } from '../../Common/WalletRecoveryIcon/index.js'
+import { recoverRoute } from '../../Openfort/routeHelpers.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ProviderIcon, ProviderLabel, ProvidersButton } from '../Providers/styles.js'
 
 const RecoveryTag = styled.span`
   display: inline-flex;
@@ -112,7 +114,7 @@ function WalletRow({
 const CONNECTED_ROUTES = new Set<string>([routes.CONNECTED, routes.ETH_CONNECTED, routes.SOL_CONNECTED])
 
 export default function SelectWalletToRecover() {
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const { previousRoute } = useOpenfort()
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()

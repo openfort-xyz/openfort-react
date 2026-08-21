@@ -15,7 +15,7 @@ type InputAnyProps = InputAnyType &
 
 export const InputAny = (input: InputAnyProps) => {
   const { name } = input
-  if (!input || !input.type) {
+  if (!input?.type) {
     return null // or handle the case where input is not defined
   }
 

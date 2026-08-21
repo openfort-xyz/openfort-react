@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { getPublishableKeyEnvironment } from '../../utils/validation'
+import { getPublishableKeyEnvironment } from '../../utils/validation.js'
 
 const UUID = '00000000-0000-0000-0000-000000000000'
 

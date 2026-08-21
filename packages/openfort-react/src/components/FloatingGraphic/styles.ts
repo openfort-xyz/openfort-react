@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { keyframes } from 'styled-components'
-import defaultTheme from '../../constants/defaultTheme'
-import styled from '../../styles/styled'
+import defaultTheme from '../../constants/defaultTheme.js'
+import styled from '../../styles/styled/index.js'
 
 export const Graphic = styled(motion.div)<{ $height?: string; $marginBottom?: string; $marginTop?: string }>`
   position: relative;

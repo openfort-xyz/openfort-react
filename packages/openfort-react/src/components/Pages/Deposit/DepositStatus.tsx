@@ -1,8 +1,8 @@
 'use client'
 
-import type { SessionStatus } from '../../../hooks/openfort/useFunding'
-import styled from '../../../styles/styled'
-import { Spinner } from '../../Common/Spinner'
+import type { SessionStatus } from '../../../hooks/openfort/fundingClient.js'
+import styled from '../../../styles/styled/index.js'
+import { Spinner } from '../../Common/Spinner/index.js'
 
 type Tone = 'pending' | 'success' | 'warn' | 'muted'
 

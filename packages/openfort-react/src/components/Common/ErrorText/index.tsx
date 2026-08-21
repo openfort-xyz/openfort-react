@@ -1,6 +1,6 @@
 'use client'
 
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 /**
  * The widget's inline error style: quiet, centered, and placed BELOW the

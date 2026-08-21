@@ -1,26 +1,32 @@
 'use client'
 
-import {
-  ChainTypeEnum,
-  RecoveryMethod,
-  type SDKOverrides,
-  type ThirdPartyAuthConfiguration,
-} from '@openfort/openfort-js'
-import { Buffer } from 'buffer'
+import { ChainTypeEnum, RecoveryMethod, type ThirdPartyAuthConfiguration } from '@openfort/openfort-js'
 import type React from 'react'
 import { lazy, Suspense, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useState } from 'react'
-import { DEFAULT_DEV_CHAIN_ID } from '../../core/ConnectionStrategy'
+import { DEFAULT_DEV_CHAIN_ID } from '../../core/ConnectionStrategy.js'
 
-import { OpenfortEthereumBridgeContext } from '../../ethereum/OpenfortEthereumBridgeContext'
-import { useThemeFont } from '../../hooks/useGoogleFont'
-import { CoreOpenfortProvider } from '../../openfort/CoreOpenfortProvider'
-import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes'
-import type { CustomTheme, Languages, Mode, Theme } from '../../types'
-import { logger } from '../../utils/logger'
-import { buildChainFromConfig } from '../../utils/rpc'
-import { isFamily } from '../../utils/wallets'
+import { OpenfortConfigError } from '../../errors/config.js'
+import { OpenfortEthereumBridgeContext } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useThemeFont } from '../../hooks/useGoogleFont.js'
+import { CoreOpenfortProvider } from '../../openfort/CoreOpenfortProvider.js'
+import type { useConnectCallbackProps } from '../../openfort/connectCallbackTypes.js'
+import type { CustomTheme, Languages, Mode, SDKOverrides, Theme } from '../../types.js'
+import { logger, setDebugLogsEnabled } from '../../utils/logger.js'
+import { buildChainFromConfig } from '../../utils/rpc.js'
+import { isFamily } from '../../utils/wallets.js'
 
-import { type ContextValue, OpenfortContext, UIContext, type UIContextValue } from './context'
+import {
+  type ConfigContextValue,
+  FormContext,
+  type FormContextValue,
+  OpenfortContext,
+  RoutingContext,
+  type RoutingContextValue,
+  SignRequestContext,
+  type SignRequestContextValue,
+  type ThemeContextValue,
+  ThemeStateContext,
+} from './context.js'
 import {
   type BuyFormState,
   type ConnectUIOptions,
@@ -36,7 +42,7 @@ import {
   type SetRouteOptions,
   type SignRequest,
   UIAuthProvider,
-} from './types'
+} from './types.js'
 
 // These chunks are lazy-loaded with static specifiers so every bundler (Vite, Rollup, webpack)
 // can resolve and code-split them. Do NOT add a vite-ignore hint to these imports: it makes
@@ -44,16 +50,16 @@ import {
 // node_modules/.vite/deps instead of the package and the provider fails to load in dev
 // ("Failed to resolve import ../../solana/SolanaContext.js"), blanking any Vite app.
 const SolanaContextProvider = lazy(() =>
-  import('../../solana/SolanaContext').then((m) => ({ default: m.SolanaContextProvider }))
+  import('../../solana/SolanaContext.js').then((m) => ({ default: m.SolanaContextProvider }))
 )
 
 const LazyEmbeddedWalletWagmiSync = lazy(() =>
-  import('../../wagmi/useEmbeddedWalletWagmiSync').then((m) => ({
+  import('../../wagmi/useEmbeddedWalletWagmiSync.js').then((m) => ({
     default: m.EmbeddedWalletWagmiSync,
   }))
 )
 
-const LazyConnectKitModal = lazy(() => import('../ConnectModal'))
+const LazyConnectKitModal = lazy(() => import('../ConnectModal/index.js'))
 
 /** {@link OpenfortProvider} props. */
 type OpenfortProviderProps = {
@@ -67,6 +73,10 @@ type OpenfortProviderProps = {
 } & useConnectCallbackProps
 
 let openfortProviderWarnedNoWagmi = false
+let openfortProviderWarnedNoAutomaticRecovery = false
+
+/** Placeholder connector for a modal session that has not picked one yet. */
+const initialConnector: RoutingContextValue['connector'] = { id: '' }
 
 /**
  * Root provider for Openfort. Wrap your app with this to enable connect modal, auth, and wallet features.
@@ -103,7 +113,9 @@ export const OpenfortProvider = ({
   // Only allow for mounting OpenfortProvider once, so we avoid weird global
   // state collisions.
   if (useContext(OpenfortContext)) {
-    throw new Error('Multiple, nested usages of OpenfortProvider detected. Please use only one.')
+    throw new OpenfortConfigError('Multiple, nested usages of `OpenfortProvider` detected.', {
+      metaMessages: ['Render exactly one `OpenfortProvider` at the root of the app.'],
+    })
   }
 
   const debugModeOptions: Required<DebugModeOptions & { debugRoutes?: boolean }> = useMemo(() => {
@@ -123,9 +135,12 @@ export const OpenfortProvider = ({
               openfortReactDebugMode: debugMode.openfortReactDebugMode ?? false,
               debugRoutes: debugMode.debugRoutes ?? false,
             }
-    logger.enabled = result.openfortReactDebugMode
     return result
   }, [debugMode])
+
+  useEffect(() => {
+    setDebugLogsEnabled(debugModeOptions.openfortReactDebugMode)
+  }, [debugModeOptions.openfortReactDebugMode])
 
   const injectedConnector = bridge?.connectors?.find((c) => c.id === 'injected')
   const allowAutomaticRecovery = !!(walletConfig?.createEncryptedSessionEndpoint || walletConfig?.getEncryptionSession)
@@ -139,24 +154,15 @@ export const OpenfortProvider = ({
       hideBalance: false,
       hideTooltips: false,
       hideQuestionMarkCTA: false,
-      hideNoWalletCTA: false,
       walletConnectCTA: 'link',
       hideRecentBadge: false,
       avoidLayoutShift: true,
       embedGoogleFonts: false,
-      truncateLongENSAddress: true,
       walletConnectName: undefined,
-      reducedMotion: false,
       disclaimer: null,
       bufferPolyfill: true,
       customAvatar: undefined,
       enforceSupportedChains: false,
-      ethereumOnboardingUrl: undefined,
-      walletOnboardingUrl: undefined,
-      buyWithCardUrl: undefined,
-      buyFromExchangeUrl: undefined,
-      buyTroubleshootingUrl: undefined,
-      disableSiweRedirect: false,
       walletRecovery: {
         allowedMethods: [RecoveryMethod.PASSWORD, ...(allowAutomaticRecovery ? [RecoveryMethod.AUTOMATIC] : [])],
         defaultMethod: allowAutomaticRecovery ? RecoveryMethod.AUTOMATIC : RecoveryMethod.PASSWORD,
@@ -186,16 +192,35 @@ export const OpenfortProvider = ({
     }
     if (walletRecovery.allowedMethods.includes(RecoveryMethod.AUTOMATIC) && !allowAutomaticRecovery) {
       walletRecovery.allowedMethods = walletRecovery.allowedMethods.filter((m) => m !== RecoveryMethod.AUTOMATIC)
-      logger.warn(
-        'Automatic recovery method was removed from allowedMethods because no recovery options are configured in the walletConfig. Please provide either createEncryptedSessionEndpoint or getEncryptionSession to enable automatic recovery.'
-      )
+      // An inline uiConfig literal gives this memo a new input every render, so
+      // the warning needs its own latch to stay a one-off.
+      if (!openfortProviderWarnedNoAutomaticRecovery) {
+        openfortProviderWarnedNoAutomaticRecovery = true
+        logger.warn(
+          'Automatic recovery method was removed from allowedMethods because no recovery options are configured in the walletConfig. Please provide either createEncryptedSessionEndpoint or getEncryptionSession to enable automatic recovery.'
+        )
+      }
+    }
+    if (walletRecovery.allowedMethods.length === 0) {
+      walletRecovery.allowedMethods = [RecoveryMethod.PASSWORD]
+    }
+    if (!walletRecovery.allowedMethods.includes(walletRecovery.defaultMethod)) {
+      walletRecovery.defaultMethod = walletRecovery.allowedMethods[0] ?? defaultUIOptions.walletRecovery.defaultMethod
     }
     return { ...merged, authProviders, walletRecovery }
   }, [defaultUIOptions, uiConfig, hasExternalWallets, allowAutomaticRecovery])
 
+  // Imported on demand rather than at module scope: a static import puts the
+  // ~50 kB shim in every consumer's bundle, including the majority whose
+  // bundler needs no polyfill at all.
   useEffect(() => {
-    if (typeof window !== 'undefined' && safeUiConfig.bufferPolyfill && !window.Buffer) {
-      window.Buffer = Buffer
+    if (typeof window === 'undefined' || !safeUiConfig.bufferPolyfill || window.Buffer) return
+    let cancelled = false
+    void import('buffer').then(({ Buffer }) => {
+      if (!cancelled && !window.Buffer) window.Buffer = Buffer
+    })
+    return () => {
+      cancelled = true
     }
   }, [safeUiConfig.bufferPolyfill])
 
@@ -204,8 +229,7 @@ export const OpenfortProvider = ({
   const [ckCustomTheme, setCustomTheme] = useState<CustomTheme | undefined>(safeUiConfig.customTheme ?? {})
   const [ckLang, setLang] = useState<Languages>('en-US')
   const [open, setOpenWithoutHistory] = useState<boolean>(false)
-  const initialConnector: ContextValue['connector'] = { id: '' }
-  const [connector, setConnector] = useState<ContextValue['connector']>(initialConnector)
+  const [connector, setConnector] = useState<RoutingContextValue['connector']>(initialConnector)
   const [route, setRoute] = useState<RouteOptions>({ route: routes.LOADING })
   const [routeHistory, setRouteHistory] = useState<RouteOptions[]>([])
 
@@ -252,7 +276,7 @@ export const OpenfortProvider = ({
       return chainIds.map((id) => buildChainFromConfig(id, rpcUrls))
     }
     return []
-  }, [bridge?.switchChain?.chains, walletConfig?.ethereum?.rpcUrls, walletConfig?.ethereum?.chainId])
+  }, [bridge?.switchChain?.chains, walletConfig?.ethereum])
 
   const chain = bridge?.account.chain
   const isConnected = bridge?.account.isConnected ?? false
@@ -263,7 +287,7 @@ export const OpenfortProvider = ({
       setOpen(true)
       setRoute({ route: routes.ETH_SWITCH_NETWORK })
     }
-  }, [hasWagmi, isConnected, isChainSupported, safeUiConfig.enforceSupportedChains, setOpen, setRoute])
+  }, [hasWagmi, isConnected, isChainSupported, safeUiConfig.enforceSupportedChains, setOpen])
 
   useEffect(() => {
     if (hasWagmi && isFamily() && injectedConnector && bridge) {
@@ -281,6 +305,11 @@ export const OpenfortProvider = ({
       const lastRoute = prev.length > 0 ? prev[prev.length - 1] : null
       if (lastRoute && lastRoute.route === route) return prev
       if (notStoredInHistoryRoutes.includes(route)) return prev
+      // Navigating to the route directly beneath the top of the stack is a back
+      // step — several pages "back" via setRoute instead of setPreviousRoute.
+      // Pop instead of pushing a duplicate so the depth-driven page transition
+      // plays the pop animation and the stack cannot grow on the way back.
+      if (prev.length > 1 && prev[prev.length - 2]?.route === route) return prev.slice(0, -1)
       return [...prev, routeObj]
     })
   }, [])
@@ -289,11 +318,8 @@ export const OpenfortProvider = ({
     setRouteHistory((prev) => {
       const newHistory = [...prev]
       newHistory.pop()
-      if (newHistory.length > 0) {
-        setRoute(newHistory[newHistory.length - 1])
-      } else {
-        setRoute({ route: routes.CONNECTED })
-      }
+      const previous = newHistory[newHistory.length - 1]
+      setRoute(previous ?? { route: routes.CONNECTED })
       return newHistory
     })
   }, [])
@@ -304,16 +330,22 @@ export const OpenfortProvider = ({
 
   const [onBack, setOnBack] = useState<(() => void) | null>(null)
 
-  const value: ContextValue = useMemo(
+  const themeValue: ThemeContextValue = useMemo(
     () => ({
       setTheme,
-      chainType,
-      setChainType,
       mode: ckMode,
       setMode,
       setCustomTheme,
       lang: ckLang,
       setLang,
+    }),
+    [ckMode, ckLang]
+  )
+
+  const routingValue: RoutingContextValue = useMemo(
+    () => ({
+      chainType,
+      setChainType,
       open,
       setOpen,
       route,
@@ -322,20 +354,33 @@ export const OpenfortProvider = ({
       setOnBack,
       headerLeftSlot,
       setHeaderLeftSlot,
-      previousRoute: routeHistory.length > 1 ? routeHistory[routeHistory.length - 2] : null,
+      previousRoute: routeHistory[routeHistory.length - 2] ?? null,
       setPreviousRoute,
       routeHistory,
       setRouteHistory,
       connector,
       setConnector,
-      debugMode: debugModeOptions,
       resize,
       triggerResize,
-      publishableKey,
-      uiConfig: safeUiConfig,
-      walletConfig,
-      overrides,
-      thirdPartyAuth,
+    }),
+    [
+      chainType,
+      open,
+      setOpen,
+      route,
+      typedSetRoute,
+      onBack,
+      headerLeftSlot,
+      routeHistory,
+      setPreviousRoute,
+      connector,
+      resize,
+      triggerResize,
+    ]
+  )
+
+  const formValue: FormContextValue = useMemo(
+    () => ({
       emailInput,
       setEmailInput,
       phoneInput,
@@ -344,159 +389,138 @@ export const OpenfortProvider = ({
       setSendForm,
       buyForm,
       setBuyForm,
-      signRequest,
-      setSignRequest,
-      onConnect,
-      onDisconnect,
-      chains,
     }),
-    [
-      ckMode,
-      ckLang,
-      chainType,
-      setChainType,
-      open,
-      setOpen,
-      route,
-      typedSetRoute,
-      onBack,
-      setPreviousRoute,
-      routeHistory,
-      connector,
-      debugModeOptions,
-      resize,
-      triggerResize,
-      safeUiConfig,
+    [emailInput, phoneInput, sendForm, buyForm]
+  )
+
+  const signRequestValue: SignRequestContextValue = useMemo(() => ({ signRequest, setSignRequest }), [signRequest])
+
+  const configValue: ConfigContextValue = useMemo(
+    () => ({
+      debugMode: debugModeOptions,
       publishableKey,
+      uiConfig: safeUiConfig,
       walletConfig,
       overrides,
       thirdPartyAuth,
-      emailInput,
-      phoneInput,
-      sendForm,
-      buyForm,
-      signRequest,
-      headerLeftSlot,
+      onConnect,
+      onDisconnect,
+      chains,
+    }),
+    [
+      debugModeOptions,
+      publishableKey,
+      safeUiConfig,
+      walletConfig,
+      overrides,
+      thirdPartyAuth,
       onConnect,
       onDisconnect,
       chains,
     ]
   )
 
-  const connectUIValue: UIContextValue = useMemo(
-    () => ({
-      isOpen: open,
-      openModal: () => setOpen(true),
-      closeModal: () => setOpen(false),
-      currentRoute: route,
-      navigate: typedSetRoute,
-      goBack: setPreviousRoute,
-      routeHistory,
-      theme: ckTheme,
-      mode: safeUiConfig.mode ?? ckMode,
-      setTheme,
-      setMode,
-      forms: { send: sendForm, buy: buyForm },
-      updateSendForm: (updates) => setSendForm((prev) => ({ ...prev, ...updates })),
-      updateBuyForm: (updates) => setBuyForm((prev) => ({ ...prev, ...updates })),
-      triggerResize,
-    }),
+  const innerChildren = useMemo(
+    () => (
+      <>
+        {hasWagmi && (
+          <Suspense fallback={null}>
+            <LazyEmbeddedWalletWagmiSync />
+          </Suspense>
+        )}
+        {debugModeOptions.debugRoutes && (
+          <pre
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              fontSize: '14px',
+              color: 'gray',
+              background: 'white',
+              zIndex: 9999,
+            }}
+          >
+            {JSON.stringify(
+              routeHistory.map((item) =>
+                Object.fromEntries(
+                  Object.entries(item).map(([key, value]) => [
+                    key,
+                    typeof value === 'object' && value !== null ? '[object]' : value,
+                  ])
+                )
+              ),
+              null,
+              2
+            )}
+          </pre>
+        )}
+        {children}
+        <Suspense fallback={null}>
+          <LazyConnectKitModal
+            lang={ckLang}
+            theme={ckTheme}
+            mode={safeUiConfig.mode ?? ckMode}
+            customTheme={ckCustomTheme}
+          />
+        </Suspense>
+      </>
+    ),
     [
-      open,
-      setOpen,
-      route,
-      typedSetRoute,
-      setPreviousRoute,
+      hasWagmi,
+      debugModeOptions.debugRoutes,
       routeHistory,
+      children,
+      ckLang,
       ckTheme,
       safeUiConfig.mode,
       ckMode,
-      setTheme,
-      setMode,
-      sendForm,
-      buyForm,
-      setSendForm,
-      setBuyForm,
-      triggerResize,
+      ckCustomTheme,
     ]
   )
 
-  const innerChildren = (
-    <>
-      {hasWagmi && (
-        <Suspense fallback={null}>
-          <LazyEmbeddedWalletWagmiSync />
-        </Suspense>
-      )}
-      {debugModeOptions.debugRoutes && (
-        <pre
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            fontSize: '14px',
-            color: 'gray',
-            background: 'white',
-            zIndex: 9999,
-          }}
-        >
-          {JSON.stringify(
-            routeHistory.map((item) =>
-              Object.fromEntries(
-                Object.entries(item).map(([key, value]) => [
-                  key,
-                  typeof value === 'object' && value !== null ? '[object]' : value,
-                ])
-              )
-            ),
-            null,
-            2
-          )}
-        </pre>
-      )}
-      {children}
-      <Suspense fallback={null}>
-        <LazyConnectKitModal
-          lang={ckLang}
-          theme={ckTheme}
-          mode={safeUiConfig.mode ?? ckMode}
-          customTheme={ckCustomTheme}
-        />
-      </Suspense>
-    </>
+  const coreOpenfortConfig = useMemo(
+    () => ({
+      baseConfiguration: { publishableKey },
+      shieldConfiguration: walletConfig
+        ? {
+            shieldPublishableKey: walletConfig.shieldPublishableKey,
+            debug: debugModeOptions.shieldDebugMode,
+            ...(walletConfig.passkeyDisplayName && {
+              passkeyRpName: walletConfig.passkeyDisplayName,
+            }),
+          }
+        : undefined,
+      debug: debugModeOptions.openfortCoreDebugMode,
+      overrides,
+      thirdPartyAuth,
+    }),
+    [publishableKey, walletConfig, debugModeOptions, overrides, thirdPartyAuth]
+  )
+
+  const coreProviderTree = useMemo(
+    () => (
+      <CoreOpenfortProvider openfortConfig={coreOpenfortConfig} onConnect={onConnect} onDisconnect={onDisconnect}>
+        {hasSolana ? (
+          <Suspense fallback={null}>
+            <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
+          </Suspense>
+        ) : (
+          innerChildren
+        )}
+      </CoreOpenfortProvider>
+    ),
+    [coreOpenfortConfig, onConnect, onDisconnect, hasSolana, walletConfig, innerChildren]
   )
 
   return (
-    <UIContext.Provider value={connectUIValue}>
-      <OpenfortContext.Provider value={value}>
-        <CoreOpenfortProvider
-          openfortConfig={{
-            baseConfiguration: { publishableKey },
-            shieldConfiguration: walletConfig
-              ? {
-                  shieldPublishableKey: walletConfig.shieldPublishableKey,
-                  debug: debugModeOptions.shieldDebugMode,
-                  ...(walletConfig.passkeyDisplayName && {
-                    passkeyRpName: walletConfig.passkeyDisplayName,
-                  }),
-                }
-              : undefined,
-            debug: debugModeOptions.openfortCoreDebugMode,
-            overrides,
-            thirdPartyAuth,
-          }}
-          onConnect={onConnect}
-          onDisconnect={onDisconnect}
-        >
-          {hasSolana ? (
-            <Suspense fallback={null}>
-              <SolanaContextProvider config={walletConfig!.solana!}>{innerChildren}</SolanaContextProvider>
-            </Suspense>
-          ) : (
-            innerChildren
-          )}
-        </CoreOpenfortProvider>
-      </OpenfortContext.Provider>
-    </UIContext.Provider>
+    <OpenfortContext.Provider value={configValue}>
+      <ThemeStateContext.Provider value={themeValue}>
+        <RoutingContext.Provider value={routingValue}>
+          <SignRequestContext.Provider value={signRequestValue}>
+            <FormContext.Provider value={formValue}>{coreProviderTree}</FormContext.Provider>
+          </SignRequestContext.Provider>
+        </RoutingContext.Provider>
+      </ThemeStateContext.Provider>
+    </OpenfortContext.Provider>
   )
 }

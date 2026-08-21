@@ -1,5 +1,5 @@
 import { keyframes } from 'styled-components'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 /** Sizes to the content so short method lists don't leave a cut-looking gap. */
 export const DepositContent = styled.div`

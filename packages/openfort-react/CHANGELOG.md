@@ -1,5 +1,127 @@
 # Changelog
 
+## 2.0.2
+
+### Patch Changes
+
+- [#333](https://github.com/openfort-xyz/openfort-react/pull/333) [`3802ca2`](https://github.com/openfort-xyz/openfort-react/commit/3802ca24f7beb5a68a6a3cd799206fd0a28de397) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Updated @openfort/openfort-js to 2.1.0.
+
+## 2.0.1
+
+### Patch Changes
+
+- [#331](https://github.com/openfort-xyz/openfort-react/pull/331) [`9ae943d`](https://github.com/openfort-xyz/openfort-react/commit/9ae943ddbefbfc4e0cd0f86adf06214d94412edd) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Added compatibility with Solana Kit 6 and its current program packages.
+
+## 2.0.0
+
+### Major Changes
+
+- [#322](https://github.com/openfort-xyz/openfort-react/pull/322) [`9b884ca`](https://github.com/openfort-xyz/openfort-react/commit/9b884ca4a394a3e89e67b933973f71a6dfd94eaf) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Typed action results, a TanStack Query data layer, and a narrower supported runtime.
+
+  **Breaking**
+
+  - `@openfort/react` requires React `>=18.3.1 <20`, viem `>=2.52.2 <3` and Node.js `>=20`. React 17 and Node.js 18 are no longer supported. `create-openfort` needs Node.js `^20.19.0 || >=22.12.0`, because the project it scaffolds builds on Vite 8.
+  - `@tanstack/react-query` `>=5.99.2 <6` is now a required peer dependency. `OpenfortProvider` reuses the application's `QueryClient` when one is in scope and creates its own otherwise.
+  - Embedded-wallet actions resolve instead of rejecting: create and import return `{ account } | { error }`, activation `{ needsRecovery } | { error }`, recovery `{} | { error }` and export `{ privateKey } | { error }`. Branch on `error` before advancing a success path.
+  - Removed `OpenfortHookOptions.throwOnError`, `invalidateBalance()` (use the `useInvalidateBalance()` hook) and the `openfort:balance-invalidate` event.
+  - `openfortKeys` factories take a single parameters object, except `user(scope?)` and `embeddedAccounts(scope?)`, which still take a positional string. `useEthereumWalletAssets` and `useSolanaWalletAssets` return the full TanStack query result, renaming `loading` to `isLoading`.
+  - Removed the `OpenfortReactErrorType` enum, its `OpenfortErrorType` alias and the `type` field on every error. Narrow with `instanceof` or `error.name` against the exported error classes instead — `error.type === OpenfortErrorType.WALLET_ERROR` becomes `error instanceof WalletError`.
+  - Store internals (`StoreContext`, `OpenfortStore`, `OpenfortStoreState` and the `select*` selectors) are only available from `@openfort/react/internal`; the root re-exports are gone.
+  - Removed the `useOpenfortCore` alias (use `useOpenfort`), the `wallets` alias in `@openfort/react/wagmi` (use `getDefaultConnectors`), the no-op `setDefaultClient()` and the ignored `sessionKey` option on `useGrantPermissions`.
+  - `useSignMessage` and `use7702Authorization` resolve instead of rejecting. `signMessage`/`signTypedData` return `{ signature } | { error }` and `signAuthorization` returns a `{ status }` result, so a dismissed prompt no longer rejects — branch on the result rather than relying on `try`/`catch`.
+  - Removed `OpenfortError.data`. The replacement fields are `shortMessage`, `details`, `metaMessages` and `cause`.
+  - `logger.warn` and `logger.error` always emit, regardless of `debugMode`. Only `logger.log` remains gated. Credentials are redacted from anything logged and from anything composed into an error message, matched by key name, by header shape and by JWT shape. An `Error` keeps its message and stack when logged.
+  - `getDefaultConfig` sets wagmi's `ssr: true`, so `useAccount()` reports `reconnecting` on the first render instead of `connected`. Gate on `isConnected === false && status !== 'reconnecting'` before showing a signed-out view.
+  - `setEmbeddedWalletProvider` (`@openfort/react/wagmi`) takes the Openfort client as a second argument.
+  - `@wagmi/core` is a new optional peer dependency, installed automatically alongside `wagmi`.
+  - `uiConfig.bufferPolyfill` still defaults to `true`, but the shim is now loaded on demand rather than statically, so `window.Buffer` is assigned a tick later and the ~50 kB module stays out of the bundles of applications whose bundler needs no polyfill. Code that reads `window.Buffer` immediately after `OpenfortProvider` mounts should await it.
+  - `walletConfig.createEncryptedSessionEndpoint` now receives an `Authorization: Bearer <access token>` header. Endpoints that reject unknown headers, or that were relying on being callable anonymously, need updating — see the hardened `create-openfort` backend template.
+  - The external-wallet `Connectors` page moved to `@openfort/react/wagmi` and is now code-split, so embedded-wallet-only apps no longer load it.
+  - Calls that were previously accepted are now rejected, because each could produce an unrecoverable result:
+    - `useGrantPermissions` refuses an empty `permissions` array. An empty whitelist disables the destination check server-side, so the session key could call any contract. List the calls the key may make.
+    - `useGrantPermissions` refuses an `expiry` above ten years. `expiry` is a duration in seconds, not a timestamp; passing a timestamp produced a key valid for decades.
+    - `use7702Authorization` refuses `chainId: 0`, which authorises the delegation on every EIP-7702 chain permanently. Pass `allowAllChains` if that is genuinely intended.
+    - `signTypedData` checks `domain.chainId` against the connected chain, so a payload for another chain no longer signs silently.
+    - Solana transfers refuse a recipient owned by a token program — a mint or a token account — on native and SPL, sponsored and unsponsored.
+    - A second `grantPermissions` or `revokePermissions` while the first is in flight resolves with an error instead of granting twice.
+
+  **Added**
+
+  - 29 exported error classes with composed messages, `cause` traversal and a version footer. Compare against `error.shortMessage`, not `error.message`: the message carries the version footer, so matching on it breaks on every upgrade.
+  - `useAuthCallback`'s `verifyEmail` result carries `confirmed`. It is `true` when the SDK exchanged a state token and `false` when the callback carried none — the endpoint signals success by the absence of an `error` parameter, which anyone able to open the URL can reproduce. Re-check server-side before granting anything on a `false` result.
+  - `@openfort/react/internal` entry point for store internals.
+  - `"use client"` on every client-only module, preserved through the build and guarded by tests.
+
+  **Fixed**
+
+  - A rejected email-verification link no longer reports success. The verification endpoint redirects to the same callback URL on failure with an `error` code appended, which `useAuthCallback` and the modal's verification page both ignored — so an expired or invalid link showed "email verified". Both now fail with the reason and strip `error` from the URL.
+  - Serialized embedded-signer work and credential transitions, so a stale session can no longer publish wallet, user or callback state after logout or a newer sign-in. Operations reserved before a credential transition are invalidated and cannot start; an operation that has already begun is stopped at its next checkpoint rather than mid-flight.
+  - Scoped query keys per client and endpoint, keeping credentialed RPC URLs out of the cache and preventing cross-account reuse.
+  - Restricted funding and onramp links to their expected HTTPS origins.
+  - Connected on the chain the application selected rather than the chain a restored account was recorded with.
+  - Fixed builds for consumers that do not install the optional `wagmi` peer.
+  - `@openfort/react/wagmi` no longer imports `@wagmi/core` and `@wagmi/connectors` directly, so it resolves under pnpm's isolated linker.
+  - Bounded every embedded-signer operation _and_ the credential-transition barrier they queue behind, so neither a request nor a sign-in prompt that never settles can wedge signing for the rest of the session. A timed-out operation is also barred from publishing once the queue has moved on. Plain RPC reads (`eth_call`, `eth_getBalance`, …) bypass the signer queue entirely, and `eth_accounts` reports the current accounts instead of throwing once the pinned account goes stale.
+  - A transaction error now reports its real cause. `-32603` and `-32000` are catch-all wrappers, so the message is consulted before either code: insufficient funds, contract reverts, nonce conflicts and gas failures are each classified instead of reading as "Network error" or "Transaction would fail". A wrapper's code no longer hides a specific one nested in `cause` or `data`, so a user cancellation is reported as a cancellation.
+  - `useBalance` reports `loading` rather than a successful `0` while a query is paused, so an offline app no longer shows an empty balance or blocks a send. A failed background refetch no longer discards a balance already known to be good, so the send screen keeps blocking an over-balance amount.
+  - The modal keeps a failed page load inside itself instead of letting the error reach the host application, and pages that are animating out are inert under React 19 as well as React 18.
+  - Wallet-asset reads use the RPC endpoint the application configured in wagmi before falling back to a public one.
+  - Solana SPL transfers refuse a recipient that is a token account, on both the normal and the fee-sponsored path, pick the token program from the mint so Token-2022 sends work, and honour `walletConfig.solana.commitment`.
+  - A failed `exportPrivateKey` or `setRecovery` reports the error without disconnecting a working wallet.
+  - A rejected wallet-recovery OTP is cleared and the failure shown, on both the wallet-creation and the recovery screen, so the next code can be typed straight away instead of replaying the rejected attempt. A failed recovery now offers a retry rather than only a way back.
+  - Password-reset links carry a correctly encoded address, so plus-addressed emails can complete a reset.
+  - Chain-switch failures surface an error instead of silently leaving the previous chain selected. Declining the wallet prompt (EIP-1193 4001) is treated as a choice, not a failure, and 4902 still triggers the add-chain path.
+  - Action functions keep a stable identity across renders even when the hook is given an inline options object, so an effect depending on one no longer re-fires on every render.
+  - `use7702Authorization` accepts the delegate as `address` as well as `contractAddress`, so `signAuthorization(await prepareAuthorization(...))` works as viem documents it.
+  - The modal contains a failure in any page, not only the code-split ones, and offers a reload when a page's chunk cannot be fetched — the usual cause being a deploy while the tab was open.
+  - Wallet deep links supplied by the funding service are restricted to https.
+
+  `create-openfort` scaffolds on Vite 8 with dependency ranges that satisfy the SDK peer ranges, and refuses to run on an unsupported Node.js version before touching the network or filesystem. It also rejects a project name containing `..` or given as an absolute path, and an unrecognised `--template`, each of which previously wrote outside the working directory.
+
+  **Known issues**
+
+  Found during review of this release and not yet fixed.
+
+  - A chain absent from the SDK's known-chain list falls back to a Sepolia endpoint and reports the result as that chain's balance. Set `walletConfig.ethereum.rpcUrls` for any chain outside the common set.
+
+### Patch Changes
+
+- [#322](https://github.com/openfort-xyz/openfort-react/pull/322) [`9b884ca`](https://github.com/openfort-xyz/openfort-react/commit/9b884ca4a394a3e89e67b933973f71a6dfd94eaf) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Chain-switch failures now show their message. The switch-networks alert built its copy with a template literal over `useLocales` values, which are markdown-parsed React nodes rather than strings, so a failed switch rendered "[object Object] [object Object]". The failure was also misclassified: wagmi wraps every failed switch in viem's `SwitchChainError`, whose code is 4902, so an unreachable RPC or a rejecting backend was reported as "your wallet does not support switching networks from this app". That copy is now reserved for wagmi's `SwitchChainNotSupportedError` — a connector with no switch at all — and everything else reads "Could not switch networks. Please try again." Separately, `Alert` destructured its styled-components props wrong and painted every alert in the danger colour, not just the ones passed `error`. `useLocales` now returns `LocalizedText` (React nodes) instead of claiming to return strings, which is what hid the original bug from the type checker.
+
+## 1.6.5
+
+### Patch Changes
+
+- [#324](https://github.com/openfort-xyz/openfort-react/pull/324) [`af3dc34`](https://github.com/openfort-xyz/openfort-react/commit/af3dc345e4237924389d1477ad9e2599569d3a0b) Thanks [@joalavedra](https://github.com/joalavedra)! - External wallet list: on mobile, wallets render as square tiles in a horizontal strip (the layout the fork inherited but had disabled), with the WalletConnect entry as an "Other" tile that opens the WalletConnect modal; the Deposit "Transfer from wallet" picker uses the same tiles. Rabby is added as a targeted injected connector (extension detection on desktop, WalletConnect on mobile), and injected wallets whose provider isn't actually present are hidden when WalletConnect isn't configured. MetaMask and Phantom are registered as targeted injected connectors whether or not the extension exists, and without WalletConnect there is no QR/modal fallback — clicking them dead-ended on "Wallet connections unavailable". The list now probes each connector's provider and only shows undetected injected wallets when WalletConnect can take over. Also: the Phantom row now renders its logo (the wallet config was keyed on the EIP-6963 rdns only, never matching the targeted connector id, and had no icon), and the recently-used wallet is hoisted to the top of the list again (the sorted list was computed but never rendered).
+
+  The WalletConnect modal no longer renders underneath the Openfort modal: the z-index bump was injected as a style tag, which CSP style-src silently drops in hardened apps; it now uses a constructed stylesheet (CSSOM, exempt from CSP). Auth modal copy: the main page always surfaces at least one social provider (the rest stay behind "Other socials"), the heading reads "Log in or sign up", the wallet button "Connect your wallet", the email placeholder "your@email.com", and the connect status "Successfully connected".
+
+## 1.6.4
+
+### Patch Changes
+
+- [#312](https://github.com/openfort-xyz/openfort-react/pull/312) [`ebc3d3d`](https://github.com/openfort-xyz/openfort-react/commit/ebc3d3dc7ad4ef9cbad997df34241f11852dd959) Thanks [@joalavedra](https://github.com/joalavedra)! - Fix modal content shifting sideways on every page change. During page transitions both pages stay mounted while the modal height animates, transiently overflowing the scrollable page area; wherever scrollbars consume layout width (Windows, macOS with a mouse connected, or host apps that style `::-webkit-scrollbar` globally) the flashing scrollbar shrank the width the centered pages resolve against, nudging all content left and back right on each route change. The page area no longer renders a scrollbar; pages taller than the viewport cap remain wheel/touch-scrollable.
+
+- [#323](https://github.com/openfort-xyz/openfort-react/pull/323) [`284a0b0`](https://github.com/openfort-xyz/openfort-react/commit/284a0b0aba13976a25f1226f2a18d4d40536334b) Thanks [@condor-agent](https://github.com/condor-agent)! - Fix "Failed to create payment session" when buying with card on Safari. The onramp popup was opened after the session request resolved, by which point the browser's transient user activation had expired — Safari blocks `window.open` after ~0.5s — so a successfully created session was reported as a payment failure. The provider window is now reserved synchronously inside the Continue click and navigated once the session resolves. If the browser still refuses the window, a "Popup blocked" screen offers a click-through instead of a false error.
+
+- [#319](https://github.com/openfort-xyz/openfort-react/pull/319) [`10a7ce8`](https://github.com/openfort-xyz/openfort-react/commit/10a7ce851c3fa4e06b613927a42be85514c1b4c9) Thanks [@joalavedra](https://github.com/joalavedra)! - Fix modal page text reflowing during page transitions, most visible in Safari. Pages sat in a fit-content wrapper inside the width-animating modal container, so every transition frame re-resolved their width and re-wrapped their text — button labels vanished mid-transition and lines jumped. The page wrapper now keeps each page at its natural width for the whole transition (the animating rounded box clips instead of reflowing), and is promoted to its own compositing layer to stop Safari's font-smoothing shimmer during the opacity cross-fade. Mobile keeps its explicit full-width layout.
+
+  Fix a re-render loop that made modal transitions stutter for as long as the modal stayed open. The page-measuring callback ref depended on the `inTransition` state it sets itself, so React re-attached it after every flip; each re-attach re-measured, re-observed, and scheduled another `inTransition(false)` timeout that recreated the callback again — a permanent 360ms re-render cycle of the whole modal tree, plus stacked timeouts that were never cleared (the timeout handle lived in a per-render local). The ref is now identity-stable, the timeout handle lives in a ref, dimension updates bail out when the size is unchanged, and only the active page drives the modal size (previously the exiting page could overwrite the measurement, mis-sizing the modal). Frame-time measurements in WebKit across 16 page transitions: dropped frames went from 25 to 5 and the worst frame from 95ms to 47ms. The card background also stops transitioning `box-shadow`/`border-radius` (both constants) and gets its own compositing layer, so Safari no longer re-rasterizes the shadow blur every frame of the resize.
+
+- [#319](https://github.com/openfort-xyz/openfort-react/pull/319) [`10a7ce8`](https://github.com/openfort-xyz/openfort-react/commit/10a7ce851c3fa4e06b613927a42be85514c1b4c9) Thanks [@joalavedra](https://github.com/joalavedra)! - Fix modal page transitions playing the backwards animation on forward navigation. The transition direction is chosen from a route depth, but the depth table only knew about two routes, so nearly every forward step (wallet list → connecting, Connected → Add funds → Buy, Send) played the pop pair — the incoming page shrank down from 1.1× instead of rising from 0.85×. Depth now derives from the route-history stack: forward pushes play the push animation, back steps play the pop, including pages whose back buttons navigate directly instead of popping history. Also for Safari frame delivery: the modal overlay no longer applies a backdrop blur by default (upstream parity — a full-viewport backdrop-filter forces Safari to re-composite the backdrop on every animation frame; opt in via the `blur` prop or `--ck-overlay-backdrop-filter`), and the animating page container is promoted to a compositor layer with upstream's `ease` timing so the cross-fade keeps rendering while the incoming page mounts.
+
+- [#320](https://github.com/openfort-xyz/openfort-react/pull/320) [`ecd021c`](https://github.com/openfort-xyz/openfort-react/commit/ecd021c57fa03ed0dd7c0fd69eeb4d6ffdd03616) Thanks [@condor-agent](https://github.com/condor-agent)! - Pass `walletConfig.ethereum.rpcUrls` when the embedded Ethereum provider is built during wallet creation. The SDK memoizes the provider on its first caller, and during `create()` that caller is `useEthereumEmbeddedWallet` — `EthereumEmbeddedStrategy.initProvider`, the only path that supplied the endpoints, is gated on `EmbeddedState.READY`, which a wallet still being created hasn't reached. The session was therefore pinned to the SDK's public default endpoints, whose chain fallback is Base mainnet regardless of the configured chain, which showed up as intermittent `could not detect network` failures during wallet creation.
+
+- [#313](https://github.com/openfort-xyz/openfort-react/pull/313) [`c928f67`](https://github.com/openfort-xyz/openfort-react/commit/c928f6704769b3cc3e1ed803b6ecbf2257f0a97a) Thanks [@joalavedra](https://github.com/joalavedra)! - Fall back to viem's public default RPCs for common mainnet chains (Ethereum, Base, Polygon, Optimism, Arbitrum, BNB, Beam) instead of throwing "No RPC URL configured". A one-time warning still nudges production apps toward `walletConfig.ethereum.rpcUrls`. Unknown chains without an explicit RPC keep throwing.
+
+## 1.6.3
+
+### Patch Changes
+
+- [#308](https://github.com/openfort-xyz/openfort-react/pull/308) [`df7f782`](https://github.com/openfort-xyz/openfort-react/commit/df7f782047b3023a1459770bc95c47efc1635128) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Fix `personal_sign` failing with "personal_sign requires the signer to be the from address" when a user has multiple embedded smart accounts. The Sign Message modal now derives the `from` address from the provider's active account (via `eth_accounts`) instead of the hook's cached address, and `useEthereumEmbeddedWallet` reconciles its active wallet to the provider's real signing account so the displayed wallet and the actual signer always agree.
+
+- [#307](https://github.com/openfort-xyz/openfort-react/pull/307) [`31ac00f`](https://github.com/openfort-xyz/openfort-react/commit/31ac00f8a21fecc05aeeed342893c7adf67483ec) Thanks [@joalavedra](https://github.com/joalavedra)! - Polish modal and button motion. The connect button and the in-modal primary buttons now scale on press; press feedback is unified behind a `--ck-press-scale` token (was an inconsistent mix of `scale(0.9)`/`0.95`/`0.98`, with the main CTA giving none). Easing is stronger (`--ck-ease-out` replaces the default-strength `ease` on the modal resize and page transitions), `transition: all` is replaced with explicit properties across inputs/buttons/copy controls, the connect-button text swap is faster (400ms → 220ms), the modal exit is snappier than its enter, the backdrop gets a subtle blur, and `prefers-reduced-motion` now swaps the modal's scale/slide for opacity-only fades.
+
 ## 1.6.2
 
 ### Patch Changes

@@ -13,31 +13,34 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
 import { parseUnits } from 'viem'
-import { currencyLogoUrl } from '../../../constants/logos'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData'
-import { getExplorerUrl } from '../../../shared/utils/explorer'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
+import { currencyLogoUrl } from '../../../constants/logos.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { getOpenfortQueryInputScope, getOpenfortQueryScope, openfortKeys } from '../../../query/queryKeys.js'
+import { useQuery } from '../../../query/useQuery.js'
+import { getExplorerUrl } from '../../../shared/utils/explorer.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import {
   estimateSolanaTransferFeeLamports,
   sendSol,
   sendSolGasless,
   sendSplToken,
   sendSplTokenGasless,
-} from '../../../solana/transfer'
-import { truncateSolanaAddress } from '../../../utils'
-import Button from '../../Common/Button'
-import Loader from '../../Common/Loading'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { formatBalance, formatBalanceWithSymbol } from '../Send/utils'
-import { ConfirmationSummary } from './ConfirmationSummary'
-import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesValue, SponsoredText } from './styles'
+} from '../../../solana/transfer.js'
+import { truncateSolanaAddress } from '../../../utils/index.js'
+import Button from '../../Common/Button/index.js'
+import Loader from '../../Common/Loading/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { formatBalance, formatBalanceWithSymbol } from '../Send/utils.js'
+import { ConfirmationSummary } from './ConfirmationSummary.js'
+import { ButtonRow, ErrorContainer, ErrorMessage, ErrorTitle, FeeStrike, FeesValue, SponsoredText } from './styles.js'
 
 const SOL_DECIMALS = 9
 
 export const SolanaSendConfirmation = () => {
+  const client = useOpenfortCore((state) => state.client)
   const { sendForm, setRoute, publishableKey, triggerResize, walletConfig } = useOpenfort()
   const wallet = useSolanaEmbeddedWallet()
 
@@ -45,6 +48,12 @@ export const SolanaSendConfirmation = () => {
   const provider = wallet.status === 'connected' ? wallet.provider : undefined
   const cluster = wallet.cluster ?? 'devnet'
   const rpcUrl = wallet.rpcUrl
+  // walletConfig.solana.commitment is documented as the level transactions are
+  // confirmed at; honour it here rather than letting the transfer helpers fall
+  // back to their own default.
+  const commitment = walletConfig?.solana?.commitment ?? 'confirmed'
+  const clientScope = getOpenfortQueryScope(client)
+  const rpcScope = getOpenfortQueryInputScope(rpcUrl)
 
   const recipient = sendForm.recipient
   const amount = sendForm.amount
@@ -56,8 +65,11 @@ export const SolanaSendConfirmation = () => {
   const isSponsored = Boolean(walletConfig?.solana?.sponsorFees)
 
   // Real network fee from the RPC (getFeeForMessage). Null while loading or on failure.
-  const feeQuery = useAsyncData({
-    queryKey: ['sol-fee', address, recipient, rpcUrl],
+  const feeQuery = useQuery({
+    queryKey:
+      address && recipient && rpcScope
+        ? openfortKeys.solanaFee({ clientScope, address, recipient, rpcScope })
+        : openfortKeys.solanaFee(),
     queryFn: () =>
       address && recipient && rpcUrl
         ? estimateSolanaTransferFeeLamports({ from: address, to: recipient, rpcUrl })
@@ -71,6 +83,7 @@ export const SolanaSendConfirmation = () => {
   const [error, setError] = useState<string | null>(null)
 
   // Re-measure the modal when the result/error appears.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     const id = setTimeout(triggerResize, 10)
     return () => clearTimeout(id)
@@ -108,6 +121,8 @@ export const SolanaSendConfirmation = () => {
               provider,
               cluster,
               publishableKey,
+              rpcUrl: rpcUrl ?? undefined,
+              commitment,
             })
           : await sendSplToken({
               from: address,
@@ -117,6 +132,7 @@ export const SolanaSendConfirmation = () => {
               decimals,
               provider,
               rpcUrl: rpcUrl ?? '',
+              commitment,
             })
       } else {
         sig = isSponsored
@@ -127,8 +143,17 @@ export const SolanaSendConfirmation = () => {
               provider,
               cluster,
               publishableKey,
+              rpcUrl: rpcUrl ?? undefined,
+              commitment,
             })
-          : await sendSol({ from: address, to: recipient, amountSol: amountNum, provider, rpcUrl: rpcUrl ?? '' })
+          : await sendSol({
+              from: address,
+              to: recipient,
+              amountSol: amountNum,
+              provider,
+              rpcUrl: rpcUrl ?? '',
+              commitment,
+            })
       }
       setSignature(sig)
     } catch (err) {

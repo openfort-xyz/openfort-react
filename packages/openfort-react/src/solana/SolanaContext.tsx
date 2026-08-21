@@ -8,8 +8,8 @@
  */
 
 import { createContext, type ReactNode, useContext, useMemo } from 'react'
-import { OpenfortError, OpenfortReactErrorType } from '../core/errors'
-import type { SolanaCluster, SolanaCommitment, SolanaConfig } from './types'
+import { OpenfortConfigError, SolanaClusterNotSupportedError } from '../errors/config.js'
+import type { SolanaCluster, SolanaCommitment, SolanaConfig } from './types.js'
 
 /**
  * Solana context value with resolved configuration
@@ -32,10 +32,7 @@ const DEFAULT_RPC_URLS: Partial<Record<SolanaCluster, string>> = {
 function getDefaultRpcUrl(cluster: SolanaCluster): string {
   const url = DEFAULT_RPC_URLS[cluster]
   if (!url) {
-    throw new OpenfortError(
-      `Unknown Solana cluster "${cluster}". Provide rpcUrls in walletConfig.solana.`,
-      OpenfortReactErrorType.CONFIGURATION_ERROR
-    )
+    throw new SolanaClusterNotSupportedError({ cluster })
   }
   return url
 }
@@ -114,10 +111,9 @@ export function SolanaContextProvider({ config, children }: SolanaContextProvide
 export function useSolanaContext(): SolanaContextValue {
   const context = useContext(SolanaContext)
   if (!context) {
-    throw new Error(
-      'useSolanaContext must be used within a SolanaContextProvider. ' +
-        'Make sure walletConfig.solana is configured in OpenfortProvider.'
-    )
+    throw new OpenfortConfigError('`useSolanaContext` must be used within a `SolanaContextProvider`.', {
+      metaMessages: ['Configure `walletConfig.solana` on `OpenfortProvider`.'],
+    })
   }
   return context
 }

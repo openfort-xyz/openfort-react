@@ -1,19 +1,6 @@
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  FingerPrintIcon,
-  KeyIcon,
-  LockClosedIcon,
-} from '@heroicons/react/24/outline'
-import {
-  RecoveryMethod,
-  useSignOut,
-  useUser,
-} from '@openfort/react'
-import {
-  type ConnectedEmbeddedSolanaWallet,
-  useSolanaEmbeddedWallet,
-} from '@openfort/react/solana'
+import { ChevronDownIcon, ChevronUpIcon, FingerPrintIcon, KeyIcon, LockClosedIcon } from '@heroicons/react/24/outline'
+import { RecoveryMethod, useSignOut, useUser } from '@openfort/react'
+import { type ConnectedEmbeddedSolanaWallet, useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { useState } from 'react'
 import { CreateWallet, CreateWalletSheet } from '../createWallet'
 import { WalletRecoverPasswordSheet } from '../passwordRecovery'
@@ -80,19 +67,13 @@ const WalletItem = ({
 )
 
 export const Wallets = () => {
-  const {
-    wallets,
-    status,
-    activeWallet,
-    setActive,
-  } = useSolanaEmbeddedWallet()
+  const { wallets, status, activeWallet, setActive } = useSolanaEmbeddedWallet()
   const isLoadingWallets = status === 'fetching-wallets'
   const isConnecting = status === 'connecting'
   const { user, isAuthenticated } = useUser()
   const { signOut } = useSignOut()
   const [createWalletSheetOpen, setCreateWalletSheetOpen] = useState(false)
-  const [walletToRecover, setWalletToRecover] =
-    useState<ConnectedEmbeddedSolanaWallet | null>(null)
+  const [walletToRecover, setWalletToRecover] = useState<ConnectedEmbeddedSolanaWallet | null>(null)
   const [showAllWallets, setShowAllWallets] = useState(false)
 
   const handleWalletClick = (wallet: ConnectedEmbeddedSolanaWallet) => {
@@ -119,22 +100,17 @@ export const Wallets = () => {
     )
   }
 
-  const visibleWallets = showAllWallets
-    ? wallets
-    : wallets.slice(0, VISIBLE_WALLET_COUNT)
+  const visibleWallets = showAllWallets ? wallets : wallets.slice(0, VISIBLE_WALLET_COUNT)
 
   return (
     <div className="flex flex-col w-full">
       <h1>Wallets</h1>
-      <p className="mb-4 text-sm text-zinc-400">
-        Select a wallet to connect to your account.
-      </p>
+      <p className="mb-4 text-sm text-zinc-400">Select a wallet to connect to your account.</p>
       <div className="space-y-4 pb-4">
         <h2>Your Wallets</h2>
         <div className="flex flex-col space-y-2">
           {visibleWallets.map((wallet) => {
-            const isActive =
-              activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
+            const isActive = activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
 
             return (
               <WalletItem
@@ -159,8 +135,7 @@ export const Wallets = () => {
                 </>
               ) : (
                 <>
-                  Show {wallets.length - VISIBLE_WALLET_COUNT} more{' '}
-                  <ChevronDownIcon className="h-4 w-4" />
+                  Show {wallets.length - VISIBLE_WALLET_COUNT} more <ChevronDownIcon className="h-4 w-4" />
                 </>
               )}
             </button>
@@ -181,10 +156,7 @@ export const Wallets = () => {
         open={!!walletToRecover}
         onClose={() => setWalletToRecover(null)}
       />
-      <CreateWalletSheet
-        open={createWalletSheetOpen}
-        onClose={() => setCreateWalletSheetOpen(false)}
-      />
+      <CreateWalletSheet open={createWalletSheetOpen} onClose={() => setCreateWalletSheetOpen(false)} />
 
       <button
         onClick={() => {

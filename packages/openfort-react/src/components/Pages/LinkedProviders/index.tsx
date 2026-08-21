@@ -1,22 +1,22 @@
 'use client'
 
 import { useEffect } from 'react'
-import { useProviders } from '../../../hooks/openfort/useProviders'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import Button from '../../Common/Button'
-import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
-import { ProviderHeader } from '../../Common/Providers/ProviderHeader'
-import { ProviderIcon } from '../../Common/Providers/ProviderIcon'
-import type { LinkedAccount } from '../../Openfort/types'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useProviders } from '../../../hooks/openfort/useProviders.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles.js'
+import { ProviderHeader } from '../../Common/Providers/ProviderHeader.js'
+import { ProviderIcon } from '../../Common/Providers/ProviderIcon.js'
+import type { LinkedAccount } from '../../Openfort/types.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 import {
   LinkedProviderButtonContainer,
   LinkedProviderButtonWrapper,
   LinkedProvidersGroupWrapper,
   ProviderIconWrapper,
-} from './styles'
+} from './styles.js'
 
 const LinkedProvider: React.FC<{ account: LinkedAccount }> = ({ account }) => {
   const { setRoute } = useOpenfort()
@@ -46,12 +46,14 @@ const AddLinkedProviderButton: React.FC = () => {
 }
 
 const LinkedProvidersGroup: React.FC = () => {
-  const { linkedAccounts, user, isLoading } = useOpenfortCore()
+  const linkedAccounts = useOpenfortCore((s) => s.linkedAccounts)
+  const user = useOpenfortCore((s) => s.user)
+  const isLoading = useOpenfortCore((s) => s.isLoading)
   const { triggerResize, emailInput: pendingEmail } = useOpenfort()
 
   useEffect(() => {
     if (!isLoading) triggerResize()
-  }, [isLoading])
+  }, [isLoading, triggerResize])
 
   // TODO: Show loading
   if (isLoading) {

@@ -1,9 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { logger } from '../../utils/logger'
-import { type ResolvedFundingMethod, type UseFundingOptions, useFundingClient } from './useFunding'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { logger } from '../../utils/logger.js'
+import type { ResolvedFundingMethod } from './fundingClient.js'
+import { type UseFundingOptions, useFundingClient } from './useFunding.js'
 
 /** The session handle the fiat hooks need — id + its clientSecret. */
 export type FundingSessionRef = { id: string; clientSecret: string }

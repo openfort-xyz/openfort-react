@@ -1,5 +1,7 @@
-import type { Languages as Lang } from './localizations'
-import type { CustomTheme } from './styles/customTheme'
+import type { OpenfortSDKConfiguration } from '@openfort/openfort-js'
+import type { OpenfortError } from './errors/index.js'
+import type { Languages as Lang } from './localizations/index.js'
+import type { CustomTheme } from './styles/customTheme.js'
 
 export type { CustomTheme }
 export type Languages = Lang
@@ -14,57 +16,29 @@ export type All = {
   lang?: Languages
 }
 
-export type { CustomAvatarProps } from './components/Common/Avatar'
-export type {
-  ConnectUIOptions as OpenfortOptions,
-  OpenfortWalletConfig,
-  PhoneConfig,
-} from './components/Openfort/types'
-
-export enum OpenfortReactErrorType {
-  AUTHENTICATION_ERROR = 'AUTHENTICATION_ERROR',
-  WALLET_ERROR = 'WALLET_ERROR',
-  CONFIGURATION_ERROR = 'CONFIGURATION_ERROR',
-  VALIDATION_ERROR = 'VALIDATION_ERROR',
-  UNEXPECTED_ERROR = 'UNEXPECTED_ERROR',
+/** Props for custom avatar rendering (e.g. custom image component). */
+export type CustomAvatarProps = {
+  address?: string | undefined
+  ensName?: string | undefined
+  ensImage?: string
+  size: number
+  radius: number
 }
 
-interface OpenfortErrorData {
-  [key: string]: unknown
-}
+export { OpenfortError } from './errors/index.js'
 
-export class OpenfortError extends Error {
-  type: OpenfortReactErrorType
-  data: OpenfortErrorData
-
-  constructor(message: string, type: OpenfortReactErrorType, data?: OpenfortErrorData) {
-    if (data?.error instanceof OpenfortError) {
-      super(data.error.message)
-      this.data = Object.freeze(data.error.data)
-      this.type = data.error.type
-      this.name = data.error.name
-      return
-    }
-    if (data?.error instanceof Error) {
-      super(data.error.message)
-    } else {
-      super(message)
-    }
-    this.type = type
-    this.data = Object.freeze(data ?? {})
-    this.name = 'OpenfortError'
-  }
-}
-
+/**
+ * Callbacks accepted by every Openfort action hook, at the hook level and again
+ * per call.
+ *
+ * Actions never reject: a failure runs `onError` and resolves to `{ error }`, so
+ * a call site can branch on the result without a try/catch.
+ */
 export type OpenfortHookOptions<T = { error?: OpenfortError }> = {
   onSuccess?: (data: T) => void
   onError?: (error: OpenfortError) => void
-  throwOnError?: boolean
 }
 
 // Re-export important types and enums from openfort-js
-export {
-  OAuthProvider,
-  SDKOverrides,
-  ThirdPartyOAuthProvider,
-} from '@openfort/openfort-js'
+export type SDKOverrides = NonNullable<OpenfortSDKConfiguration['overrides']>
+export { OAuthProvider, ThirdPartyOAuthProvider } from '@openfort/openfort-js'

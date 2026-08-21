@@ -1,10 +1,12 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
-import { useChainId, useSwitchChain } from 'wagmi'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
-import { logger } from '../utils/logger'
-import { getPublishableKeyEnvironment } from '../utils/validation'
+// wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
+// namespace import rather than named bindings.
+import * as wagmi from 'wagmi'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { logger } from '../utils/logger.js'
+import { getPublishableKeyEnvironment } from '../utils/validation.js'
 
 /**
  * Wraps wagmi's `useSwitchChain`, restricting the switchable chains to those
@@ -24,9 +26,9 @@ import { getPublishableKeyEnvironment } from '../utils/validation'
  * unchanged to avoid an empty selector.
  */
 export const useSwitchChainFiltered = () => {
-  const result = useSwitchChain()
+  const result = wagmi.useSwitchChain()
   const { publishableKey } = useOpenfort()
-  const activeChainId = useChainId()
+  const activeChainId = wagmi.useChainId()
 
   const env = getPublishableKeyEnvironment(publishableKey)
   const allChains = result.chains

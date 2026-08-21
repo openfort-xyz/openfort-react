@@ -2,16 +2,16 @@
 
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import React, { useEffect } from 'react'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useTimedOut } from '../../../hooks/useTimedOut'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import Loader from '../../Common/Loading'
-import NotFoundFallback from '../../Common/NotFoundFallback'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useTimedOut } from '../../../hooks/useTimedOut.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import Loader from '../../Common/Loading/index.js'
+import NotFoundFallback from '../../Common/NotFoundFallback/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 // Watchdog: if no state transition routes us away within this window, the modal
 // would otherwise spin forever (e.g. opened while signed out, or a misconfigured SDK).
@@ -19,8 +19,12 @@ const LOADING_TIMEOUT_MS = 10_000
 
 const Loading: React.FC = () => {
   const { setRoute, walletConfig } = useOpenfort()
-  const { user, isLoadingAccounts, isLoading, needsRecovery, embeddedState } = useOpenfortCore()
-  const { chainType } = useOpenfortCore()
+  const user = useOpenfortCore((s) => s.user)
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
+  const isLoading = useOpenfortCore((s) => s.isLoading)
+  const needsRecovery = useOpenfortCore((s) => s.needsRecovery)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const chainType = useOpenfortCore((s) => s.chainType)
   const bridge = useEthereumBridge()
 
   // Use chain-specific hooks
@@ -37,6 +41,7 @@ const Loading: React.FC = () => {
   const [retryCount, setRetryCount] = React.useState(0)
   const timedOut = useTimedOut(LOADING_TIMEOUT_MS)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `retryCount` is the poll trigger from the interval below, not an input — it re-evaluates the routing decision while the SDK settles
   useEffect(() => {
     if (isFirstFrame) return
 
@@ -56,7 +61,19 @@ const Loading: React.FC = () => {
       if (!walletConfig) setRoute({ route: routes.CONNECTORS, connectType: 'connect' })
       else setRoute(routes.LOAD_WALLETS)
     } else setRoute(routes.CONNECTED)
-  }, [embeddedState, isLoadingAccounts, isLoading, user, address, needsRecovery, isFirstFrame, retryCount])
+  }, [
+    embeddedState,
+    isLoadingAccounts,
+    isLoading,
+    user,
+    address,
+    needsRecovery,
+    isFirstFrame,
+    retryCount,
+    bridgeConnected,
+    walletConfig,
+    setRoute,
+  ])
 
   // Retry every 250ms
   useEffect(() => {
@@ -68,7 +85,8 @@ const Loading: React.FC = () => {
 
   useEffect(() => {
     // UX: Wait a bit before showing the next page
-    setTimeout(() => setIsFirstFrame(false), 400)
+    const timer = setTimeout(() => setIsFirstFrame(false), 400)
+    return () => clearTimeout(timer)
   }, [])
 
   if (timedOut) return <NotFoundFallback />

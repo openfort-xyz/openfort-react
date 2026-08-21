@@ -11,7 +11,7 @@ const wagmiConfig = createConfig(
     appName: 'Openfort React demo',
     chains: [beamTestnet, polygonAmoy, sepolia], // Supported chains
     walletConnectProjectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID, // WalletConnect Project ID
-  }),
+  })
 )
 
 const queryClient = new QueryClient()
@@ -37,7 +37,7 @@ const walletConfig = {
     ethereumFeeSponsorshipId: import.meta.env.VITE_FEE_SPONSORSHIP_ID,
   },
   // For AUTOMATIC embedded wallet recovery an encryption session is required.
-  // See: https://www.openfort.io/docs/products/embedded-wallet/react-native/quickstart/automatic
+  // See: https://www.openfort.io/docs/products/embedded-wallet/server/automatic-recovery-session
   // For backend setup: https://github.com/openfort-xyz/openfort-backend-quickstart
   getEncryptionSession: async (): Promise<string> => {
     const session = await authClient.getSession()
@@ -53,7 +53,7 @@ const walletConfig = {
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
-      },
+      }
     )
     if (!response.ok) {
       throw new Error(`Better Auth - Failed to get encryption session: ${response.status}`)

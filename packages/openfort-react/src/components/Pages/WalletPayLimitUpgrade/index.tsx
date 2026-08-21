@@ -2,17 +2,17 @@
 
 import type React from 'react'
 import { useEffect, useRef, useState } from 'react'
-import { useFundingClient } from '../../../hooks/openfort/useFunding'
-import styled from '../../../styles/styled'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import { ErrorText } from '../../Common/ErrorText'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { FundingMethod, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper, StackedButtonWrapper } from '../Buy/styles'
-import { Skeleton, SkeletonStack } from '../Deposit/styles'
+import { useFundingClient } from '../../../hooks/openfort/useFunding.js'
+import styled from '../../../styles/styled/index.js'
+import { logger } from '../../../utils/logger.js'
+import Button from '../../Common/Button/index.js'
+import { ErrorText } from '../../Common/ErrorText/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { FundingMethod, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ContinueButtonWrapper, StackedButtonWrapper } from '../Buy/styles.js'
+import { Skeleton, SkeletonStack } from '../Deposit/styles.js'
 
 // The provider's form reports its own height; this is only the starting box.
 const UPGRADE_FRAME_HEIGHT = 320
@@ -67,6 +67,7 @@ const WalletPayLimitUpgrade: React.FC = () => {
       .catch((e) => setError(e instanceof Error ? e.message : 'Could not start the limit upgrade.'))
   }, [client, phoneNumber, method, setRoute])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — the frame, its height and the error/done states each change the page height
   useEffect(() => {
     triggerResize()
   }, [triggerResize, url, height, error, done, frameSilent])

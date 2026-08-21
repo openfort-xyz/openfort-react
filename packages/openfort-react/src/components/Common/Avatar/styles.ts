@@ -1,6 +1,5 @@
-import { motion } from 'framer-motion'
 import { css } from 'styled-components'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 function addressToNumber(address: string) {
   return (
@@ -13,7 +12,7 @@ function addressToNumber(address: string) {
   )
 }
 
-export const EnsAvatar = styled(motion.div)<{
+export const EnsAvatar = styled.div<{
   $seed?: string
   $size?: number
   $radius?: number
@@ -49,10 +48,11 @@ export const EnsAvatar = styled(motion.div)<{
         );
       `
     }
+    return undefined
   }}
 `
 
-export const ImageContainer = styled(motion.img)<{ $loaded: boolean }>`
+export const ImageContainer = styled.img<{ $loaded: boolean }>`
   display: block;
   position: relative;
   width: 100%;

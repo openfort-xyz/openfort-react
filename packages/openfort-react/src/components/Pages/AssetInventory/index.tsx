@@ -1,15 +1,17 @@
+'use client'
+
 import { motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
 import { formatUnits } from 'viem'
-import { DEFAULT_ASSETS, isStableSymbol } from '../../../constants/defaultAssets'
-import { symbolToColor, TOKEN_LOGO } from '../../../constants/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { getNativeCurrency } from '../../../utils/rpc'
-import Chain from '../../Common/Chain'
-import { ModalHeading } from '../../Common/Modal/styles'
-import type { MultiChainAsset } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
+import { DEFAULT_ASSETS, isStableSymbol } from '../../../constants/defaultAssets.js'
+import { symbolToColor, TOKEN_LOGO } from '../../../constants/logos.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import { getNativeCurrency } from '../../../utils/rpc.js'
+import Chain from '../../Common/Chain/index.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import type { MultiChainAsset } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
 import {
   ChainBadge,
   ChainGroup,
@@ -30,9 +32,9 @@ import {
   TokenPill,
   TokenPillSymbol,
   TokenSymbol,
-} from '../SelectToken/styles'
+} from '../SelectToken/styles.js'
 
-import { getAssetDecimals, getAssetSymbol } from '../Send/utils'
+import { getAssetDecimals, getAssetSymbol } from '../Send/utils.js'
 
 const ZERO = BigInt(0)
 const usdFormatter = new Intl.NumberFormat('en-US', {
@@ -206,7 +208,7 @@ function PillLogo({ symbol }: { symbol: string }) {
   )
 }
 
-export const AssetInventory = () => {
+const AssetInventory = () => {
   const { data, multiChain, isLoading: isBalancesLoading } = useEthereumWalletAssets({ multiChain: true })
   const { triggerResize, chains } = useOpenfort()
   const { chainId } = useEthereumEmbeddedWallet()
@@ -214,11 +216,12 @@ export const AssetInventory = () => {
 
   useEffect(() => {
     if (!isBalancesLoading) triggerResize()
-  }, [isBalancesLoading])
+  }, [isBalancesLoading, triggerResize])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `showDetails` is the trigger — expanding the details panel changes the page height
   useEffect(() => {
     triggerResize()
-  }, [showDetails])
+  }, [showDetails, triggerResize])
 
   const tokens = (multiChain ? data : null) ?? []
 
@@ -320,3 +323,5 @@ export const AssetInventory = () => {
     </SelectTokenContent>
   )
 }
+
+export default AssetInventory

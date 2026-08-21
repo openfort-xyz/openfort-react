@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { defaultCurrencyForCountry } from '../components/Pages/Buy/utils'
+import { defaultCurrencyForCountry } from '../components/Pages/Buy/utils.js'
 
 describe('defaultCurrencyForCountry', () => {
   it('prices EU and EEA buyers in euro', () => {

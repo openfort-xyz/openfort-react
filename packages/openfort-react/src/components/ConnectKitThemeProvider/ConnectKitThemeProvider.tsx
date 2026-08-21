@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, createElement } from 'react'
-import type { CustomTheme, Mode, Theme } from '../../types'
+import type { CustomTheme, Mode, Theme } from '../../types.js'
 
 type ContextValue = {
   theme?: Theme

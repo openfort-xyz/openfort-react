@@ -1,31 +1,98 @@
 name: Run pnpm build
 on:
-    pull_request:
+  pull_request:
+    branches:
+      - main
+  merge_group:
+    branches:
+      - main
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  secret-scan:
+    name: gitleaks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # Full clone so the BASE_SHA..HEAD range below is resolvable; the
+          # scan itself covers only the commits this run introduces.
+          fetch-depth: 0
+
+      # The gitleaks binary is used directly rather than gitleaks-action, which
+      # requires a paid licence for organisation-owned repositories. Rules come
+      # from .gitleaks.toml, which extends the default ruleset.
+      - name: Install gitleaks
+        env:
+          GITLEAKS_VERSION: 8.30.1
+          # Pinned checksum of the release asset; a substituted binary would
+          # otherwise execute as the CI user on every PR.
+          GITLEAKS_SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+        run: |
+          curl -sSfL -o gitleaks.tar.gz \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/gitleaks-bin"
+          tar -xz -C "$RUNNER_TEMP/gitleaks-bin" -f gitleaks.tar.gz gitleaks
+          rm gitleaks.tar.gz
+          echo "$RUNNER_TEMP/gitleaks-bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/gitleaks-bin/gitleaks" version
+
+      - name: Validate secret-scanner coverage
+        run: node scripts/test-gitleaks-config.mjs
+
+      # Only the commits this run introduces are scanned. A full-history scan
+      # would fail on pre-existing findings unrelated to the change. Run
+      # `pnpm scan:secrets` locally for the staged-change equivalent.
+      - name: Scan for secrets
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.merge_group.base_sha }}
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            RANGE="$BASE_SHA..HEAD"
+          else
+            RANGE="HEAD~1..HEAD"
+          fi
+          echo "Scanning $RANGE"
+          gitleaks git --redact -v --exit-code 1 --config .gitleaks.toml --log-opts="$RANGE"
+
   pnpm-build:
     name: pnpm build
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 15
     permissions:
       contents: read
       # packages: read    # required for pulling packages from GHCR
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+          # `changeset status` resolves where HEAD diverged from the base branch,
+          # which a shallow checkout cannot answer.
+          fetch-depth: 0
+
+      # Checkout leaves the base branch as a remote-tracking ref, and changesets
+      # resolves it by plain name.
+      - name: Make the base branch resolvable
+        run: git branch --force main origin/main
 
       - name: Install pnpm
-        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
 
       - name: Set up Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: 24
+          node-version: 20.19.0
           cache: pnpm
           registry-url: https://registry.npmjs.org
 
@@ -33,7 +100,13 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Security audit
+        # Known-debt advisories are allowlisted with justifications under
+        # `auditConfig` in pnpm-workspace.yaml; advisories outside that list and
+        # registry failures both fail this required check.
         run: pnpm audit
+
+      - name: sherif
+        run: pnpm check:repo
 
       - name: Code check (Biome)
         run: pnpm biome check
@@ -41,9 +114,104 @@ jobs:
       - name: Check TypeScript types
         run: pnpm check:types
 
+      - name: Check CLI (tsc + Biome)
+        run: pnpm check:cli
+
+      - name: Run CLI unit tests
+        run: pnpm test:cli
+
+      - name: Check quickstart example
+        run: pnpm check:quickstarts
+
+      - name: Check shipped template parity
+        run: pnpm check:templates
+
+      - name: Check release template gate
+        run: pnpm check:release
+
       - name: Check for unused files and exports
         run: pnpm check:unused
 
       - name: Build project
         run: pnpm build
 
+      - name: Build CLI
+        run: pnpm build:cli
+
+      - name: Check publishable packages (publint + attw)
+        run: pnpm test:build
+
+      # publint and attw inspect packaging metadata and declarations; neither
+      # resolves the exports map or evaluates the output. These workspaces
+      # consume the built package the way a dependent project does.
+      - name: Consume the built package (tsc + node)
+        run: pnpm test:env
+
+      - name: Check bundle-size budgets
+        run: pnpm size
+
+      - name: Build API documentation
+        run: pnpm build:docs
+
+      - name: Set up minimum SDK runtime
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 20.0.0
+
+      - name: Consume the built package on the minimum runtime
+        run: node environments/node/esm.mjs
+
+  types:
+    name: Types (React ${{ matrix.react-version }}, viem ${{ matrix.viem-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      # One failing combination is a useful signal on its own, so let the rest
+      # finish and report.
+      fail-fast: false
+      matrix:
+        # The supported lower bound and the newest release in the other major.
+        react-version: ['18.3.1', '19']
+        # The supported lower bound and the newest compatible viem 2 release.
+        viem-version: ['2.52.2', '2']
+        # TypeScript is not an axis here: the build type-checks through
+        # rollup-plugin-typescript2, which needs the JavaScript implementation
+        # of TypeScript, and TypeScript 7 ships only the native port.
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 20.19.0
+          cache: pnpm
+
+      - name: Install matrix versions
+        # Keep one React type graph across every workspace dependency while
+        # exercising the selected peer versions.
+        env:
+          REACT_VERSION: ${{ matrix.react-version }}
+          VIEM_VERSION: ${{ matrix.viem-version }}
+          TANSTACK_VERSION: 5.99.2
+        run: |
+          node scripts/matrix-versions.mjs apply
+          pnpm install --no-frozen-lockfile
+          node scripts/matrix-versions.mjs verify
+
+      - name: Check types
+        # rollup-plugin-typescript2 type-checks the package sources as it
+        # builds, so a type error under this react/viem pair fails the job.
+        run: pnpm build
+
+      - name: Build standalone Solana React 19 scaffold
+        if: matrix.react-version == '19' && matrix.viem-version == '2.52.2'
+        run: pnpm --filter create-openfort test:standalone-solana

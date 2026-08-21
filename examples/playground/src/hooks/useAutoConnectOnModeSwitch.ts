@@ -44,6 +44,7 @@ export function useAutoConnectOnModeSwitch(mode: OpenfortPlaygroundMode) {
     solanaStatusRef.current = solanaWallet.status
   }, [solanaWallet.status])
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `mode` is the trigger — switching mode clears the latch so the new mode gets its own connect attempt
   useEffect(() => {
     // Reset handled state when mode changes so we try again on the new mode
     handledModeRef.current = null
@@ -71,17 +72,18 @@ export function useAutoConnectOnModeSwitch(mode: OpenfortPlaygroundMode) {
     }
     if (walletStatus === 'connecting' || walletStatus === 'creating') return
 
-    const setActive = mode === 'svm' ? solanaSetActiveRef.current : setActiveRef.current
-
     const automatic = chainAccounts.find((w) => w.recoveryMethod === RecoveryMethod.AUTOMATIC)
     const target = automatic ?? chainAccounts.find((w) => w.recoveryMethod === RecoveryMethod.PASSKEY)
 
     if (!target) return
 
     handledModeRef.current = mode
-    setActive({ address: target.address as string }).catch(() => {
-      // Allow retry on next render cycle
-      handledModeRef.current = null
+    const activate =
+      mode === 'svm'
+        ? solanaSetActiveRef.current({ address: target.address })
+        : setActiveRef.current({ address: target.address as `0x${string}` })
+    activate.then((result) => {
+      if (result.error || result.needsRecovery) handledModeRef.current = null
     })
     // wallet.create() intentionally omitted — autoCreateWalletAfterAuth:false in config.
   }, [mode, user, isLoadingAccounts, embeddedAccounts, connectOnLogin])

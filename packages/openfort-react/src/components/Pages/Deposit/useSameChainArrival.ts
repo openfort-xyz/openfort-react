@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react'
 import { createPublicClient, http } from 'viem'
-import { invalidateBalance } from '../../../hooks/useBalance'
-import { getDefaultEthereumRpcUrl } from '../../../utils/rpc'
-import { useOpenfort } from '../../Openfort/useOpenfort'
+import { useInvalidateBalance } from '../../../hooks/useBalance.js'
+import { getDefaultEthereumRpcUrl } from '../../../utils/rpc.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
 
 /**
  * Backoff schedule (ms) for the waiting poll: brisk at first, easing off so a
@@ -35,10 +35,12 @@ export function useSameChainArrival({
 }): { arrived: boolean } {
   const { walletConfig } = useOpenfort()
   const rpcUrl = walletConfig?.ethereum?.rpcUrls?.[chainId] ?? getDefaultEthereumRpcUrl(chainId)
+  const invalidateBalance = useInvalidateBalance()
 
   const [arrived, setArrived] = useState(false)
   const baselineRef = useRef<bigint | null>(null)
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `chainId` is a restart trigger — the poll below reads balances for the chain whose RPC URL was derived from it, so a chain switch has to start a fresh poll from a new baseline
   useEffect(() => {
     if (!enabled || !address) return
 
@@ -87,7 +89,7 @@ export function useSameChainArrival({
       document.removeEventListener('visibilitychange', onReturn)
       window.removeEventListener('focus', onReturn)
     }
-  }, [enabled, address, chainId, rpcUrl])
+  }, [enabled, address, chainId, rpcUrl, invalidateBalance])
 
   return { arrived }
 }

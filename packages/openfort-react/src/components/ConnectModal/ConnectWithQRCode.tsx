@@ -1,18 +1,18 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
-import { useWalletConnectModal } from '../../hooks/useWalletConnectModal'
-import { truncateEthAddress } from '../../utils'
-import { useConnectWithSiwe } from '../../wagmi/useConnectWithSiwe'
-import { useExternalConnector } from '../../wallets/useExternalConnectors'
-import { CopyText } from '../Common/CopyToClipboard/CopyText'
-import Loader from '../Common/Loading'
-import { ModalBody } from '../Common/Modal/styles'
-import WalletConnectNotConfigured, { useHasWalletConnect } from '../Common/WalletConnectNotConfigured'
-import { routes } from '../Openfort/types'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import { PageContent } from '../PageContent'
+import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useWalletConnectModal } from '../../hooks/useWalletConnectModal.js'
+import { truncateEthAddress } from '../../utils/index.js'
+import { useConnectWithSiwe } from '../../wagmi/useConnectWithSiwe.js'
+import { useExternalConnector } from '../../wallets/useExternalConnectors.js'
+import { CopyText } from '../Common/CopyToClipboard/CopyText.js'
+import Loader from '../Common/Loading/index.js'
+import { ModalBody } from '../Common/Modal/styles.js'
+import WalletConnectNotConfigured, { useHasWalletConnect } from '../Common/WalletConnectNotConfigured/index.js'
+import { routes } from '../Openfort/types.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import { PageContent } from '../PageContent/index.js'
 
 const ConnectWithSiwe = () => {
   const bridge = useEthereumBridge()
@@ -99,9 +99,10 @@ const ConnectWithQRCode = () => {
   const bridge = useEthereumBridge()
   const isConnected = bridge?.account?.isConnected ?? false
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `isConnected` is the trigger — connecting swaps the QR code for the SIWE prompt, which is a different height
   useEffect(() => {
     triggerResize()
-  }, [isConnected])
+  }, [isConnected, triggerResize])
 
   const wallet = useExternalConnector(connector.id)
 

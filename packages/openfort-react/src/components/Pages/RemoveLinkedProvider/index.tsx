@@ -3,19 +3,20 @@
 import type { OAuthProvider } from '@openfort/openfort-js'
 import { useEffect, useMemo, useState } from 'react'
 import type { Hex } from 'viem'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import styled from '../../../styles/styled'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import { CopyText } from '../../Common/CopyToClipboard/CopyText'
-import { ModalBody, ModalContent, ModalH1, ModalHeading } from '../../Common/Modal/styles'
-import { getProviderName } from '../../Common/Providers/getProviderName'
-import { WalletDisplay } from '../../Common/Providers/ProviderHeader'
-import { ProviderIcon } from '../../Common/Providers/ProviderIcon'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ProviderIconContainer, ProviderIconInner, ProviderIconWrapper } from '../LinkedProvider'
+import { useAuthTransitions } from '../../../openfort/authTransitionContext.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import styled from '../../../styles/styled/index.js'
+import { logger } from '../../../utils/logger.js'
+import Button from '../../Common/Button/index.js'
+import { CopyText } from '../../Common/CopyToClipboard/CopyText.js'
+import { ModalBody, ModalContent, ModalH1, ModalHeading } from '../../Common/Modal/styles.js'
+import { getProviderName } from '../../Common/Providers/getProviderName.js'
+import { WalletDisplay } from '../../Common/Providers/ProviderHeader.js'
+import { ProviderIcon } from '../../Common/Providers/ProviderIcon.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ProviderIconContainer, ProviderIconInner, ProviderIconWrapper } from '../LinkedProvider/index.js'
 
 const ButtonWrapper = styled.div`
   display: flex;
@@ -30,7 +31,9 @@ const ErrorMessage = styled.div`
 
 const RemoveLinkedProvider: React.FC = () => {
   const { route, triggerResize, onBack, setOnBack, setRouteHistory, setRoute } = useOpenfort()
-  const { client, updateUser } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
+  const updateUser = useOpenfortCore((s) => s.updateUser)
+  const { captureAuthSession, startAuthenticatedMutation } = useAuthTransitions()
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
 
@@ -43,57 +46,70 @@ const RemoveLinkedProvider: React.FC = () => {
 
   useEffect(() => {
     if (error) triggerResize()
-  }, [error])
+  }, [error, triggerResize])
 
-  useEffect(() => {
-    if (isSuccess) {
-      updateUser()
+  const handleRemove = async () => {
+    if (!provider) return
+    const errorMsg = 'Failed to remove linked provider. Please try again.'
+    const session = captureAuthSession()
+    let mutationIsCurrent: (() => boolean) | undefined
+    const isCurrent = () => session.isCurrent() && (mutationIsCurrent?.() ?? true)
+    const showSuccess = () => {
+      setIsSuccess(true)
       triggerResize()
       setOnBack(() => () => {
         setRouteHistory((prev) => {
           const newHistory = [...prev]
           newHistory.pop()
           newHistory.pop()
-          if (newHistory.length > 0) {
-            setRoute(newHistory[newHistory.length - 1])
-          } else {
-            setRoute({ route: routes.CONNECTED })
-          }
+          const previous = newHistory[newHistory.length - 1]
+          setRoute(previous ?? { route: routes.CONNECTED })
           return newHistory
         })
       })
     }
-  }, [isSuccess])
-
-  const handleRemove = async () => {
-    if (!provider) return
-    const errorMsg = 'Failed to remove linked provider. Please try again.'
     if (provider.provider === 'siwe' || provider.provider === 'wallet') {
       try {
-        const result = await client.auth.unlinkWallet({
-          address: provider.accountId as Hex,
-          chainId: Number(provider.chainId ?? 0),
-        })
+        const transition = startAuthenticatedMutation(() =>
+          client.auth.unlinkWallet({
+            address: provider.accountId as Hex,
+            chainId: Number(provider.chainId ?? 0),
+          })
+        )
+        mutationIsCurrent = transition.isCurrent
+        const result = await transition.result
+        if (!isCurrent()) return
         if (!result.success) {
           setError(errorMsg)
         } else {
-          setIsSuccess(true)
+          await updateUser()
+          if (!isCurrent()) return
+          showSuccess()
         }
       } catch (e) {
+        if (!isCurrent()) return
         logger.error('Unexpected error removing linked provider:', e)
         setError(errorMsg)
       }
     } else {
       try {
-        const result = await client.auth.unlinkOAuth({
-          provider: provider.provider as OAuthProvider,
-        })
+        const transition = startAuthenticatedMutation(() =>
+          client.auth.unlinkOAuth({
+            provider: provider.provider as OAuthProvider,
+          })
+        )
+        mutationIsCurrent = transition.isCurrent
+        const result = await transition.result
+        if (!isCurrent()) return
         if (!result.status) {
           setError(errorMsg)
         } else {
-          setIsSuccess(true)
+          await updateUser()
+          if (!isCurrent()) return
+          showSuccess()
         }
       } catch (e) {
+        if (!isCurrent()) return
         logger.error('Unexpected error removing linked provider:', e)
         setError(errorMsg)
       }

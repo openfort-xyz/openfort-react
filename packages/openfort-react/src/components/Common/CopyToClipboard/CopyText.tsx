@@ -1,8 +1,10 @@
+'use client'
+
 import type React from 'react'
 import type { ComponentProps } from 'react'
-import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard'
-import styled from '../../../styles/styled'
-import { CopyIcon } from './CopyIcon'
+import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard.js'
+import styled from '../../../styles/styled/index.js'
+import { CopyIcon } from './CopyIcon.js'
 
 const Container = styled.div<{ $disabled?: boolean }>`
   display: inline-flex;
@@ -10,7 +12,7 @@ const Container = styled.div<{ $disabled?: boolean }>`
   gap: 4px;
   cursor: ${(props) => (props.$disabled ? 'not-allowed' : 'pointer')};
   opacity: ${(props) => (props.$disabled ? 0.4 : 1)};
-  transition: all 220ms ease;
+  transition: color 220ms ease, opacity 220ms ease;
 
   --color: var(--ck-copytoclipboard-stroke);
 

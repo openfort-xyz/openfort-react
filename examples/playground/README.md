@@ -21,6 +21,12 @@ npx gitpick openfort-xyz/openfort-react/tree/main/examples/playground openfort-p
 
 ## Getting Started
 
+> **Working inside the openfort-react repo?** The playground consumes the SDK's
+> built output (`packages/openfort-react/build/`), not its source. Run
+> `pnpm build` at the repo root after cloning or pulling — a missing or stale
+> build fails here with confusing `MISSING_EXPORT` errors from
+> `@openfort/openfort-js`.
+
 1. **Install dependencies**:
 
    ```bash
