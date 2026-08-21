@@ -4,18 +4,18 @@ import { AccountTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useRef, useState } from 'react'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
-import { type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
+import { isSolana } from '../../../hooks/openfort/fundingSources'
+import { cryptoPaymentMethod, type PaymentMethodInput, useFunding } from '../../../hooks/openfort/useFunding'
 import {
   type FundingChain,
   type FundingCurrency,
   nominalUnits,
   useFundingChains,
 } from '../../../hooks/openfort/useFundingChains'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
 import { logger } from '../../../utils/logger'
 import { isCexDeliverable } from './cexChains'
-import { isSolana } from './sources'
-import { useFundingTarget } from './useFundingTarget'
 
 /** Which rail the route feeds: self-custody wallet send vs exchange withdrawal. */
 type DepositRouteKind = 'crypto' | 'cex'
@@ -90,10 +90,9 @@ export function useDepositRoute(kind: DepositRouteKind) {
   // the recipient family already matches the target, and EOAs are always usable.
   const targetChainId = isSolana(target.chain) ? null : Number(target.chain.split(':')[1])
   const accountUnusableOnTarget = targetChainId != null && !accountUsableOnChain(ethWallet.activeWallet, targetChainId)
-  const receiverAddress: string | null = sameChain
-    ? (address ?? null)
-    : (session?.paymentMethod?.receiverAddress ?? null)
-  const pm = session?.paymentMethod ?? null
+  // This route only ever commits crypto payment methods; narrow away onramp.
+  const pm = cryptoPaymentMethod(session?.paymentMethod)
+  const receiverAddress: string | null = sameChain ? (address ?? null) : (pm?.receiverAddress ?? null)
 
   useEffect(() => {
     if (!address || !isAvailable || !activeChain || !activeCurrency) return

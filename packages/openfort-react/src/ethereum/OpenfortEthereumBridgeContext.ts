@@ -16,7 +16,7 @@ export interface OpenfortEthereumBridgeConnector {
   getProvider?: () => Promise<unknown>
 }
 
-export interface OpenfortEthereumBridgeAccount {
+interface OpenfortEthereumBridgeAccount {
   address: `0x${string}` | undefined
   chain?: OpenfortEthereumBridgeChain
   isConnected: boolean
@@ -32,13 +32,13 @@ interface OpenfortEthereumBridgeStorage {
   setItem: (key: string, value: string) => void
 }
 
-export interface OpenfortEthereumBridgeConfig {
+interface OpenfortEthereumBridgeConfig {
   chains: { id: number }[]
   getClient: (opts: { chainId: number }) => { transport: { url: string } }
   storage?: OpenfortEthereumBridgeStorage
 }
 
-export interface OpenfortEthereumBridgeSwitchChain {
+interface OpenfortEthereumBridgeSwitchChain {
   chains: OpenfortEthereumBridgeChain[]
   switchChain: ((params: { chainId: number }) => void) | undefined
   switchChainAsync?: (params: { chainId: number }) => Promise<unknown>

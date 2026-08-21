@@ -28,6 +28,11 @@ type RequestEmailOtpOptions = {
 } & OpenfortHookOptions<EmailOtpAuthResult> &
   CreateWalletPostAuthOptions
 
+type VerifyEmailOtpOptions = {
+  email: string
+  otp: string
+} & OpenfortHookOptions<EmailOtpAuthResult>
+
 type UseEmailOtpHookOptions = OpenfortHookOptions<EmailOtpAuthResult> & CreateWalletPostAuthOptions
 
 export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = {}) => {
@@ -183,9 +188,80 @@ export const useEmailOtpAuth = (hookOptions: UseEmailOtpHookOptions = {}) => {
     [client, setStatus, updateUser, hookOptions]
   )
 
+  const verifyEmailOtp = useCallback(
+    async (options: VerifyEmailOtpOptions): Promise<EmailOtpAuthResult> => {
+      try {
+        setStatus({
+          status: 'loading',
+        })
+
+        if (!options.email || !options.otp) {
+          const error = new OpenfortError('Email and OTP are required', OpenfortReactErrorType.VALIDATION_ERROR)
+          setStatus({
+            status: 'error',
+            error,
+          })
+          return onError<EmailOtpAuthResult>({
+            hookOptions,
+            options,
+            error,
+          })
+        }
+
+        if (!isValidEmail(options.email)) {
+          const error = new OpenfortError('Invalid email', OpenfortReactErrorType.VALIDATION_ERROR)
+          setStatus({
+            status: 'error',
+            error,
+          })
+          return onError<EmailOtpAuthResult>({
+            hookOptions,
+            options,
+            error,
+          })
+        }
+
+        // Verifies ownership of the address without creating a session — for
+        // callers that are already authenticated (e.g. wallet-pay capture).
+        await client.auth.verifyEmailOtp({
+          email: options.email,
+          otp: options.otp,
+        })
+
+        await updateUser()
+
+        setStatus({
+          status: 'success',
+        })
+        return onSuccess<EmailOtpAuthResult>({
+          data: {},
+          hookOptions,
+          options,
+        })
+      } catch (e) {
+        const error = new OpenfortError('Failed to verify email OTP', OpenfortReactErrorType.AUTHENTICATION_ERROR, {
+          error: e,
+        })
+
+        setStatus({
+          status: 'error',
+          error,
+        })
+
+        return onError({
+          hookOptions,
+          options,
+          error,
+        })
+      }
+    },
+    [client, setStatus, updateUser, hookOptions]
+  )
+
   return {
     signInEmailOtp,
     requestEmailOtp,
+    verifyEmailOtp,
 
     reset,
     isRequesting: status.status === 'requesting',

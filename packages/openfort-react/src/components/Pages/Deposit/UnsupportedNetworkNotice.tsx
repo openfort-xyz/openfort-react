@@ -2,12 +2,12 @@
 
 import { chainConfigs } from '../../../constants/chainConfigs'
 import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
+import { isSolana } from '../../../hooks/openfort/fundingSources'
 import type { FundingChain } from '../../../hooks/openfort/useFundingChains'
 import styled from '../../../styles/styled'
 import { useSwitchChainFiltered } from '../../../wagmi/useSwitchChainFiltered'
 import Chain from '../../Common/Chain'
 import { ScrollArea } from '../../Common/ScrollArea'
-import { isSolana } from './sources'
 
 /** Readable name for a CAIP-2 chain the rail can't deliver to. */
 function chainName(caip: string): string {

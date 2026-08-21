@@ -1,10 +1,10 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL, NATIVE_TOKEN_ADDRESS } from './sources'
+import { useOpenfort } from '../../components/Openfort/useOpenfort'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { useOpenfortCore } from '../../openfort/useOpenfort'
+import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL, NATIVE_TOKEN_ADDRESS } from './fundingSources'
 
 /**
  * The destination route Deposit-hub funding settles into. Integrators override the

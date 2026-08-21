@@ -1,24 +1,24 @@
 import { SDKConfiguration } from '@openfort/openfort-js'
-import { FundingMethod } from '../../Openfort/types'
-import { ONRAMP_API_BASE } from './onrampEndpoints'
+import { FundingMethod } from '../../components/Openfort/types'
+import type { OnrampMethodId, ResolvedFundingMethod } from './useFunding'
 
-const getBackendUrl = (): string => {
+/**
+ * Base path for the fiat-onramp API. The onramp is consolidated under the v2
+ * funding namespace; the `/v1/onramp/*` alias no longer serves `/methods`, so
+ * this widget release requires the v2 api.
+ */
+const ONRAMP_API_BASE = '/v2/funding/onramp'
+
+export const getBackendUrl = (): string => {
   const sdkConfig = SDKConfiguration.getInstance()
   return sdkConfig?.backendUrl || 'https://api.openfort.io'
 }
 
-/** One Openfort-resolved fiat method. The provider is for telemetry — never shown. */
-export type ResolvedOnrampMethod = {
-  method: string
-  provider: string
-  angle: 'iframe' | 'native'
-  label: string
-  rail?: string
-  requiresDeviceCheck?: boolean
-}
+/** The stateless preview returns the same rows as the session-scoped methods endpoint. */
+export type ResolvedOnrampMethod = ResolvedFundingMethod
 
 // The SDK FundingMethod ids are camelCase; the backend uses snake_case.
-const BACKEND_METHOD: Partial<Record<FundingMethod, string>> = {
+const BACKEND_METHOD: Partial<Record<FundingMethod, OnrampMethodId>> = {
   [FundingMethod.APPLE_PAY]: 'apple_pay',
   [FundingMethod.GOOGLE_PAY]: 'google_pay',
   [FundingMethod.CARD]: 'card',
@@ -26,7 +26,7 @@ const BACKEND_METHOD: Partial<Record<FundingMethod, string>> = {
 }
 
 /** The backend (snake_case) id for an SDK FundingMethod, or undefined for crypto rails. */
-export function backendMethodId(method: FundingMethod): string | undefined {
+export function backendMethodId(method: FundingMethod): OnrampMethodId | undefined {
   return BACKEND_METHOD[method]
 }
 
@@ -38,9 +38,10 @@ type FetchOnrampMethodsParams = {
 }
 
 /**
- * GET /v1/onramp/methods — the fiat methods Openfort resolves for the destination
- * and the buyer's region. Never throws: returns [] on any failure so the Deposit
- * hub falls back to its static rows.
+ * GET /v2/funding/onramp/methods — the fiat methods Openfort resolves for the
+ * destination and the buyer's region (the stateless preview behind the Deposit
+ * hub rows). Never throws: returns [] on any failure — the hub then hides the
+ * fiat rows.
  */
 export async function fetchOnrampMethods(params: FetchOnrampMethodsParams): Promise<ResolvedOnrampMethod[]> {
   const { targetChain, targetCurrency, publishableKey, country } = params

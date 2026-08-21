@@ -48,6 +48,14 @@ export const Skeleton = styled.div<{ $w?: string; $h?: string; $r?: string }>`
   animation: ${pulse} 1.4s ease-in-out infinite;
 `
 
+/** A vertical stack of skeleton lines with consistent spacing. */
+export const SkeletonStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 12px;
+`
+
 export const OptionList = styled.div`
   display: flex;
   flex-direction: column;
@@ -99,6 +107,14 @@ export const OptionIconBadge = styled.div`
   align-items: center;
   justify-content: center;
   color: var(--ck-body-color, #1a1a2e);
+
+  /* Brand logos render at their intrinsic size — cap everything to the
+     badge's icon size so e.g. the Apple mark matches the action icons. */
+  svg,
+  img {
+    width: 20px;
+    height: 20px;
+  }
 `
 
 /** Overlapping strip of token/wallet/exchange logos on the right of each row. */

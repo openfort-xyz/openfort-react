@@ -1,20 +1,100 @@
 import { logger } from '../../utils/logger'
-import type { FundingSession, FundingTarget, PayLinkParams, PaymentMethodInput } from './useFunding'
+import type {
+  FundingSession,
+  FundingTarget,
+  OnrampMethodId,
+  OnrampQuote,
+  PayLinkParams,
+  PaymentMethodInput,
+  ResolvedFundingMethods,
+} from './useFunding'
 
 /**
- * The funding client surface, mirroring the planned `openfort.funding.*`
- * namespace in `@openfort/openfort-js`:
+ * Where a buyer stands with the onramp provider's identity checks.
+ * `providedFields` names the requirements already satisfied (e.g.
+ * `identifiers`, `attestation`), so the widget asks only for what's left.
+ */
+export type OnrampIdentity = {
+  region: 'us' | 'eu' | null
+  level: 'L0' | 'L1' | 'L2' | 'PENDING' | 'REJECTED' | 'REQUIRES_KYC'
+  providedFields: string[]
+}
+
+/** Where a buyer stands on raising their spending limit. */
+type OnrampLimitUpgrade = {
+  status: 'unrequested' | 'resubmit' | 'pending' | 'active' | 'inactive'
+  /** False once the provider has stopped offering the upgrade at all. */
+  available: boolean
+}
+
+/**
+ * Spending limits for the buyer. `limits` keeps the provider's own shape and is
+ * deliberately not narrowed — the field names have never been seen against live
+ * data, and declaring a shape we haven't observed is how the payment element
+ * ended up being asked for a card form on an Apple Pay purchase.
+ *
+ * The normalized fields beside it ARE safe to read. MONETARY VALUES ARE IN
+ * MINOR UNITS (cents). `remainingTransactions: null` means unlimited, never
+ * zero — the provider reports that as MaxInt32.
+ */
+type OnrampLimits = {
+  limits: Record<string, unknown> | null
+  remainingMinor?: number | null
+  remainingTransactions?: number | null
+  upgrade?: OnrampLimitUpgrade | null
+}
+
+/**
+ * The funding client surface, mirroring the `openfort.funding.*` namespace in
+ * `@openfort/openfort-js`:
  *
  *   openfort.funding.sessions.create({ target })
  *   openfort.funding.sessions.setPaymentMethod(id, { clientSecret, paymentMethod })
  *   openfort.funding.sessions.get(id, { clientSecret? })
+ *   openfort.funding.sessions.methods(id, { clientSecret, country? })
+ *   openfort.funding.sessions.quote(id, { clientSecret, method, sourceAmount, sourceCurrency })
  *   openfort.funding.payLink(params)
  *
- * `useFunding` depends only on this interface. Today it's backed by the
- * fetch adapter below (the standalone funding service); once the SDK ships the
- * namespace, the adapter is swapped for `coreClient.funding` with no hook change.
+ * The hooks depend only on this interface. Today it's backed by the fetch
+ * adapter below; once the SDK's namespace covers all calls, the adapter is
+ * swapped for `coreClient.funding` with no hook change.
  */
 export type FundingClient = {
+  /**
+   * Provider-neutral embedded auth for the onramp's element flow. Both
+   * 501/400 until the deployment configures the provider's embedded access.
+   */
+  authIntents: {
+    create(params: { email: string }): Promise<{ id: string }>
+    exchangeToken(intentId: string): Promise<{ exchanged: boolean }>
+    /**
+     * The buyer's verification state with the provider: which region's rules
+     * apply, the tier they have reached, and which requirements they have
+     * already satisfied. Drives the EU sub-steps — without it the widget has to
+     * guess which ones a buyer still owes.
+     */
+    identity(params: { intentId: string; customerRef: string }): Promise<OnrampIdentity>
+    /**
+     * What the buyer may spend at their current tier. Amounts are in CENTS.
+     * Null limits mean the provider didn't answer — treat as unrestricted
+     * rather than blocking the purchase.
+     */
+    limits(
+      params:
+        | { intentId: string; walletAddress?: string; network?: string }
+        /** The wallet-pay rail identifies the buyer by their verified phone. */
+        | { phoneNumber: string; method: 'apple_pay' | 'google_pay' }
+    ): Promise<OnrampLimits>
+    /**
+     * Start the provider-hosted identity form that raises the buyer's limit.
+     * Hosted on purpose: the form collects a partial SSN, which must never
+     * reach our code. The returned url is single-use and short-lived.
+     */
+    startLimitUpgrade(params: {
+      phoneNumber: string
+      method: 'apple_pay' | 'google_pay'
+    }): Promise<{ url: string; expiresAt: string }>
+  }
   sessions: {
     create(params: { target: FundingTarget }): Promise<FundingSession>
     setPaymentMethod(
@@ -22,6 +102,27 @@ export type FundingClient = {
       params: { clientSecret: string; paymentMethod: PaymentMethodInput }
     ): Promise<FundingSession>
     get(id: string, params?: { clientSecret?: string }): Promise<FundingSession>
+    /** Resolve the fiat methods for this session's destination + buyer region. */
+    methods(id: string, params: { clientSecret: string; country?: string }): Promise<ResolvedFundingMethods>
+    /**
+     * Embedded (headless) checkout: confirm the committed headless onramp
+     * with mandate acceptance and get the provider client secret for
+     * performCheckout. One-shot; only valid after an `embedded` commit.
+     */
+    onrampCheckout(id: string, params: { clientSecret: string }): Promise<{ clientSecret: string }>
+    /** Price a fiat route with the exact provider a commit would resolve. */
+    quote(
+      id: string,
+      params: {
+        clientSecret: string
+        method: OnrampMethodId
+        /** Fiat amount in human units, e.g. "100.00". */
+        sourceAmount: string
+        /** ISO-4217 fiat currency, e.g. "USD". */
+        sourceCurrency: string
+        country?: string
+      }
+    ): Promise<OnrampQuote>
   }
   payLink(params: PayLinkParams): Promise<string>
 }
@@ -49,6 +150,49 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
   const authHeaders = (): Record<string, string> =>
     publishableKey ? { authorization: `Bearer ${publishableKey}` } : {}
   return {
+    authIntents: {
+      async create({ email }) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/auth_intents`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ email }),
+        })
+        return readJson<{ id: string }>(res)
+      },
+      async exchangeToken(intentId) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/auth_intents/${encodeURIComponent(intentId)}/tokens`, {
+          method: 'POST',
+          headers: authHeaders(),
+        })
+        return readJson<{ exchanged: boolean }>(res)
+      },
+      async identity({ intentId, customerRef }) {
+        const query = new URLSearchParams({ authIntentId: intentId, customerRef })
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/identity?${query}`, { headers: authHeaders() })
+        return readJson<OnrampIdentity>(res)
+      },
+      async limits(params) {
+        const query = new URLSearchParams()
+        if ('phoneNumber' in params) {
+          query.set('phoneNumber', params.phoneNumber)
+          query.set('method', params.method)
+        } else {
+          query.set('authIntentId', params.intentId)
+          if (params.walletAddress) query.set('walletAddress', params.walletAddress)
+          if (params.network) query.set('network', params.network)
+        }
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/limits?${query}`, { headers: authHeaders() })
+        return readJson<OnrampLimits>(res)
+      },
+      async startLimitUpgrade(params) {
+        const res = await fetch(`${baseUrl}/v2/funding/onramp/limits/upgrade`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(params),
+        })
+        return readJson<{ url: string; expiresAt: string }>(res)
+      },
+    },
     sessions: {
       async create({ target }) {
         const res = await fetch(`${baseUrl}/v2/funding/sessions`, {
@@ -71,6 +215,31 @@ export function createFetchFundingClient(baseUrl: string, publishableKey?: strin
         return readJson<FundingSession>(
           await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}${query}`, { headers: authHeaders() })
         )
+      },
+      async methods(id, { clientSecret, country }) {
+        const query = new URLSearchParams({ clientSecret })
+        if (country) query.set('country', country)
+        return readJson<ResolvedFundingMethods>(
+          await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/methods?${query.toString()}`, {
+            headers: authHeaders(),
+          })
+        )
+      },
+      async onrampCheckout(id, { clientSecret }) {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/onramp_checkout`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify({ clientSecret }),
+        })
+        return readJson<{ clientSecret: string }>(res)
+      },
+      async quote(id, params) {
+        const res = await fetch(`${baseUrl}/v2/funding/sessions/${encodeURIComponent(id)}/quotes`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', ...authHeaders() },
+          body: JSON.stringify(params),
+        })
+        return readJson<OnrampQuote>(res)
       },
     },
     async payLink(params) {

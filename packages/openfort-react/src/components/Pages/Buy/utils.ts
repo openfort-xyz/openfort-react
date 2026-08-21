@@ -16,6 +16,12 @@ export const createCurrencyFormatter = (currency: string) => {
   }
 }
 
+/**
+ * CSS width for a BigAmountInput that hugs its value, so the currency symbol
+ * stays attached ($|50|). Clamped to 12ch so an absurd entry can't blow the row.
+ */
+export const amountInputWidth = (value: string): string => `${Math.min(Math.max(value.length, 1), 12)}ch`
+
 export const getCurrencySymbol = (currency: string) => {
   try {
     const parts = new Intl.NumberFormat('en-US', {
@@ -52,3 +58,15 @@ export const formatWithDynamicDecimals = (amount: number): string => {
   // No decimal point, add MIN_DECIMALS
   return amount.toFixed(MIN_DECIMALS)
 }
+
+// EU/EEA, where the onramp prices in euro. Everywhere else falls to USD: the
+// providers settle only usd and eur (gbp is a valid parameter but currently
+// routes no pairs), and non-EU buyers — the UK included — reach the hosted
+// checkout, which picks its own local currency regardless of what we send.
+const EUR_COUNTRIES = new Set(
+  'AT BE BG HR CY CZ DK EE FI FR DE GR HU IE IS IT LI LT LU LV MT NL NO PL PT RO SE SI SK ES'.split(' ')
+)
+
+/** The fiat currency to price a buy in for a resolved buyer country. */
+export const defaultCurrencyForCountry = (country: string | null | undefined): string =>
+  country && EUR_COUNTRIES.has(country.toUpperCase()) ? 'EUR' : 'USD'

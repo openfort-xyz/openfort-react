@@ -89,15 +89,26 @@ export {
   use7702Authorization,
 } from './hooks/openfort/use7702Authorization'
 export type {
+  CryptoPaymentMethod,
   FundingSession,
   FundingTarget,
+  OnrampAngle,
+  OnrampMethodId,
+  OnrampPaymentMethod,
+  OnrampQuote,
   PaymentMethod,
   PaymentMethodInput,
+  ResolvedFundingMethod,
+  ResolvedFundingMethods,
   UseFunding,
   UseFundingOptions,
 } from './hooks/openfort/useFunding'
-export { useFunding } from './hooks/openfort/useFunding'
+export { cryptoPaymentMethod, useFunding } from './hooks/openfort/useFunding'
+export type { FundingSessionRef, UseFundingMethods, UseFundingMethodsOptions } from './hooks/openfort/useFundingMethods'
+export { useFundingMethods } from './hooks/openfort/useFundingMethods'
 export { useGrantPermissions } from './hooks/openfort/useGrantPermissions'
+export type { OnrampOpenParams, UseOnramp, UseOnrampOptions } from './hooks/openfort/useOnramp'
+export { useOnramp } from './hooks/openfort/useOnramp'
 export { useRevokePermissions } from './hooks/openfort/useRevokePermissions'
 export { useSignMessage } from './hooks/openfort/useSignMessage'
 export { useUI } from './hooks/openfort/useUI'

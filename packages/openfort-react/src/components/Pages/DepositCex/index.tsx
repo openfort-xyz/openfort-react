@@ -1,30 +1,32 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import type { ChangeEvent, CSSProperties, ReactNode, SyntheticEvent } from 'react'
+import type { ChangeEvent, CSSProperties, ReactNode } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import logos from '../../../assets/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
+import { DEST_USDC, isSolana } from '../../../hooks/openfort/fundingSources'
 import { useFunding } from '../../../hooks/openfort/useFunding'
 import { useFundingChains } from '../../../hooks/openfort/useFundingChains'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { invalidateBalance } from '../../../hooks/useBalance'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { logger } from '../../../utils/logger'
 import { getPublishableKeyEnvironment } from '../../../utils/validation'
+import { Arrow, ArrowChevron } from '../../Common/Button/styles'
 import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
 import Tooltip from '../../Common/Tooltip'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { AmountCard, AmountInput, PresetButton, PresetList, Section } from '../Buy/styles'
+import { BigAmountInput, BigAmountRow, BigAmountSymbol, MethodRowButton } from '../Buy/styles'
+import { amountInputWidth } from '../Buy/utils'
 import { CEX_CHAIN_NAMES, isCexDeliverable } from '../Deposit/cexChains'
 import { DepositProgress, isDepositFlowActive } from '../Deposit/DepositProgress'
 import { DepositStatus } from '../Deposit/DepositStatus'
 import { walletListBtn } from '../Deposit/formStyles'
-import { DEST_USDC, isSolana } from '../Deposit/sources'
 import { ButtonLogo, StepDivider } from '../Deposit/styles'
 import { TestnetNotice } from '../Deposit/TestnetNotice'
-import { useFundingTarget } from '../Deposit/useFundingTarget'
 import { sanitizeAmountInput, sanitizeForParsing } from '../Send/utils'
 
 /** Exchange rails. Binance is gated until its rail lands. */
@@ -41,7 +43,6 @@ const EXCHANGE_LOGO: Record<string, ReactNode> = {
 
 /** Coinbase Onramp minimum (USD, ≈ USDC units); enforced client-side for UX. */
 const MIN_AMOUNT = 5
-const PRESETS = [10, 25, 50]
 
 function titleCase(s: string): string {
   return s.charAt(0).toUpperCase() + s.slice(1)
@@ -49,11 +50,6 @@ function titleCase(s: string): string {
 
 const helperText: CSSProperties = { fontSize: 12, color: 'var(--ck-body-color-muted, #6b7280)' }
 const errorHelper: CSSProperties = { fontSize: 12, color: '#dc2626' }
-const destinationRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 6, ...helperText }
-const destinationLogo: CSSProperties = { width: 14, height: 14, borderRadius: '50%' }
-const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
-  e.currentTarget.style.display = 'none'
-}
 
 /**
  * Transfer from Exchange — the user enters an amount; "Open Coinbase" hands off to
@@ -65,7 +61,7 @@ const hideBrokenLogo = (e: SyntheticEvent<HTMLImageElement>) => {
  * success / failed screen. No Relay routing; Binance is gated until its rail lands.
  */
 const DepositCex = () => {
-  const { triggerResize, publishableKey } = useOpenfort()
+  const { triggerResize, publishableKey, setRoute } = useOpenfort()
   // Coinbase onramp settles real funds on mainnet, so a test key can't deliver here.
   // Keep the button live for the demo but block the hand-off with a testnet notice.
   const testnet = getPublishableKeyEnvironment(publishableKey) === 'test'
@@ -78,7 +74,6 @@ const DepositCex = () => {
   const { chains } = useFundingChains()
 
   const [amount, setAmount] = useState(String(MIN_AMOUNT))
-  const [pressedPreset, setPressedPreset] = useState<number | null>(null)
   const [session, setSession] = useState<{ id: string; clientSecret: string } | null>(null)
   const [error, setError] = useState<Error | null>(null)
   const [opened, setOpened] = useState(false)
@@ -99,8 +94,6 @@ const DepositCex = () => {
   const destAsset = destChain?.currencies.find((c) => c.address.toLowerCase() === target.currency.toLowerCase())
   const isDefaultUsdc = target.currency.toLowerCase() === DEST_USDC.toLowerCase()
   const destAssetLabel = destAsset?.symbol ?? (isDefaultUsdc ? 'USDC' : null)
-  const destAssetLogo = destAsset?.logo ?? null
-  const destChainLogo = destChain?.logo ?? null
 
   // Mint the destination-bound session up-front (per target wallet), so the click
   // that opens Coinbase is a single fast pay-link call and stays popup-safe.
@@ -167,7 +160,6 @@ const DepositCex = () => {
   const handleAmountChange = (event: ChangeEvent<HTMLInputElement>) => {
     const raw = sanitizeAmountInput(event.target.value)
     if (raw === '' || /^[0-9]*\.?[0-9]*$/.test(raw)) {
-      setPressedPreset(null)
       setAmount(raw)
     }
   }
@@ -177,11 +169,6 @@ const DepositCex = () => {
     if (!normalized) return
     const numeric = Number(normalized)
     if (Number.isFinite(numeric) && numeric > 0) setAmount(numeric.toFixed(2))
-  }
-
-  const handlePreset = (value: number) => {
-    setPressedPreset(value)
-    setAmount(value.toFixed(2))
   }
 
   const openExchange = () => {
@@ -226,71 +213,37 @@ const DepositCex = () => {
 
       <TestnetNotice />
 
-      <Section>
-        <AmountCard style={{ flexDirection: 'column', alignItems: 'stretch' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-            <AmountInput
-              style={{ flex: 1, minWidth: 0, textAlign: 'left' }}
-              value={amount}
-              onChange={handleAmountChange}
-              onBlur={handleAmountBlur}
-              placeholder="0"
-              inputMode="decimal"
-              autoComplete="off"
-            />
-            {destAssetLabel && (
-              <span
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 6,
-                  flex: '0 0 auto',
-                  padding: '8px 14px',
-                  borderRadius: 999,
-                  background: 'var(--ck-body-background-secondary)',
-                  fontWeight: 600,
-                }}
-              >
-                {destAssetLogo && (
-                  <img
-                    src={destAssetLogo}
-                    alt=""
-                    style={{ width: 18, height: 18, borderRadius: 999 }}
-                    onError={hideBrokenLogo}
-                  />
-                )}
-                {destAssetLabel}
-              </span>
-            )}
-          </div>
-          <div style={{ marginTop: 8, fontSize: 15, fontWeight: 500, color: 'var(--ck-body-color-muted)' }}>
-            {fiatAmount !== null ? `$${fiatAmount.toFixed(2)}` : '$0.00'}
-          </div>
-        </AmountCard>
-        <PresetList>
-          {PRESETS.map((preset) => (
-            <PresetButton
-              key={preset}
-              type="button"
-              $active={pressedPreset === preset}
-              onClick={() => handlePreset(preset)}
-            >
-              ${preset}
-            </PresetButton>
-          ))}
-        </PresetList>
+      <BigAmountRow>
+        <BigAmountSymbol>$</BigAmountSymbol>
+        <BigAmountInput
+          value={amount}
+          onChange={handleAmountChange}
+          onBlur={handleAmountBlur}
+          placeholder="0"
+          inputMode="decimal"
+          autoComplete="off"
+          style={{ width: amountInputWidth(amount) }}
+        />
+      </BigAmountRow>
+      <div style={{ textAlign: 'center', marginTop: 8 }}>
         {amountTooLow ? (
           <span style={errorHelper}>Enter at least ${MIN_AMOUNT}.00 — the Coinbase minimum.</span>
         ) : (
           <span style={helperText}>Minimum ${MIN_AMOUNT}.00</span>
         )}
-        {chainSupported && (
-          <span style={destinationRow}>
-            {destAssetLogo && <img src={destAssetLogo} alt="" style={destinationLogo} onError={hideBrokenLogo} />}
-            {destChainLogo && <img src={destChainLogo} alt="" style={destinationLogo} onError={hideBrokenLogo} />}
-          </span>
-        )}
-      </Section>
+      </div>
+
+      <MethodRowButton type="button" onClick={() => setRoute(routes.DEPOSIT)}>
+        Other payment methods
+        <Arrow width="11" height="10" viewBox="0 0 13 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <ArrowChevron
+            stroke="currentColor"
+            d="M7.51431 1.5L11.757 5.74264M7.5 10.4858L11.7426 6.24314"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
+        </Arrow>
+      </MethodRowButton>
 
       {!isAvailable && <ModalBody>Funding isn't available right now.</ModalBody>}
       {!testnet && isAvailable && !chainSupported && (

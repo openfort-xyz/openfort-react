@@ -18,8 +18,10 @@ const ctx = (over: Partial<Ctx> = {}): Ctx => ({
 const ids = (over?: Partial<Ctx>) => getPaymentOptions(ctx(over)).map((o) => o.id)
 
 describe('getPaymentOptions', () => {
-  it('hides wallet pay on desktop; shows card, bank transfer and the crypto rails', () => {
+  it('shows wallet pay wherever the device can present it — desktop Safari included', () => {
     expect(ids()).toEqual([
+      FundingMethod.APPLE_PAY,
+      FundingMethod.GOOGLE_PAY,
       FundingMethod.CARD,
       FundingMethod.BANK_TRANSFER,
       FundingMethod.WALLET,
@@ -28,18 +30,18 @@ describe('getPaymentOptions', () => {
     ])
   })
 
-  it('on mobile, gates Apple Pay to Apple devices and Google Pay to non-Apple', () => {
-    const apple = ids({ isMobile: true, canApplePay: true, canGooglePay: false })
+  it('gates each wallet-pay row on its device capability', () => {
+    const apple = ids({ canApplePay: true, canGooglePay: false })
     expect(apple).toContain(FundingMethod.APPLE_PAY)
     expect(apple).not.toContain(FundingMethod.GOOGLE_PAY)
 
-    const google = ids({ isMobile: true, canApplePay: false, canGooglePay: true })
+    const google = ids({ canApplePay: false, canGooglePay: true })
     expect(google).toContain(FundingMethod.GOOGLE_PAY)
     expect(google).not.toContain(FundingMethod.APPLE_PAY)
   })
 
-  it('hides both wallet-pay rows on mobile when neither capability is present', () => {
-    const none = ids({ isMobile: true, canApplePay: false, canGooglePay: false })
+  it('hides both wallet-pay rows when neither capability is present', () => {
+    const none = ids({ canApplePay: false, canGooglePay: false })
     expect(none).not.toContain(FundingMethod.APPLE_PAY)
     expect(none).not.toContain(FundingMethod.GOOGLE_PAY)
     expect(none).toContain(FundingMethod.CARD)
@@ -61,8 +63,10 @@ describe('getPaymentOptions', () => {
     expect(ids({ isMobile: true, methods: order })).toEqual(order)
   })
 
-  it('still applies the mobile-only gate to explicit methods (Apple Pay hidden on desktop)', () => {
-    expect(ids({ methods: [FundingMethod.APPLE_PAY, FundingMethod.ADDRESS] })).toEqual([FundingMethod.ADDRESS])
+  it('still applies the capability gate to explicit methods', () => {
+    expect(ids({ canApplePay: false, methods: [FundingMethod.APPLE_PAY, FundingMethod.ADDRESS] })).toEqual([
+      FundingMethod.ADDRESS,
+    ])
   })
 
   it('keeps fiat targets provider-agnostic (no providerId on the row)', () => {

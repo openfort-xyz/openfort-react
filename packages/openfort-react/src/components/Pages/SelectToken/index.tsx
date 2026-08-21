@@ -6,12 +6,15 @@ import { formatUnits } from 'viem'
 import { chainLogoUrl, currencyLogoUrl } from '../../../constants/logos'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
 import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
+import { NATIVE_TOKEN_ADDRESS } from '../../../hooks/openfort/fundingSources'
+import { fetchOnrampMethods } from '../../../hooks/openfort/onrampMethodsApi'
+import { useFundingTarget } from '../../../hooks/openfort/useFundingTarget'
 import { useOpenfortCore } from '../../../openfort/useOpenfort'
 import { Arrow, ArrowChevron, TextLinkButton } from '../../Common/Button/styles'
 import { ModalHeading } from '../../Common/Modal/styles'
 import { type Asset, routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
-import { EVM_BUY_CURRENCIES } from '../Buy/evmCurrencies'
+import { evmBuyCurrencies } from '../Buy/evmCurrencies'
 import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
 import { AssetChainLogo } from '../Deposit/AssetChainLogo'
 import { formatBalanceWithSymbol, getAssetDecimals, getAssetSymbol } from '../Send/utils'
@@ -48,14 +51,43 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
   const { chainType } = useOpenfortCore()
   const { chainId } = useEthereumEmbeddedWallet()
   const { data: walletAssets, isLoading: isBalancesLoading } = useEthereumWalletAssets()
+  const { publishableKey, uiConfig } = useOpenfort()
+  const fundingTarget = useFundingTarget()
+
+  // Buy flow: only offer assets the onramp providers can actually deliver for
+  // this destination + the buyer's region (server-resolved; chaining-aware).
+  // Until the probes settle every candidate shows; assets that resolve to no
+  // method are then dropped rather than failing at commit.
+  const [buyable, setBuyable] = useState<Record<string, boolean> | null>(null)
+  const buyCandidates = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : evmBuyCurrencies(fundingTarget.chain)
+  useEffect(() => {
+    if (!isBuyFlow) return
+    let active = true
+    const country = uiConfig.funding?.country
+    Promise.all(
+      buyCandidates.map(async (asset) => {
+        const currency = asset.type === 'native' ? NATIVE_TOKEN_ADDRESS : (asset.address as string)
+        const methods = await fetchOnrampMethods({
+          targetChain: fundingTarget.chain,
+          targetCurrency: currency,
+          publishableKey,
+          country,
+        })
+        return [getAssetSymbol(asset), methods.length > 0] as const
+      })
+    ).then((entries) => {
+      if (active) setBuyable(Object.fromEntries(entries))
+    })
+    return () => {
+      active = false
+    }
+  }, [isBuyFlow, buyCandidates, fundingTarget.chain, publishableKey, uiConfig.funding?.country])
 
   // Buys pick from a fixed buyable-currency list (USDC first, then native) per
   // chain family, so the picker always has options even for a fresh wallet with no
   // indexed balances. The send flow reads the EVM wallet's actual assets.
   const selectableTokens = isBuyFlow
-    ? chainType === ChainTypeEnum.SVM
-      ? SOLANA_BUY_CURRENCIES
-      : EVM_BUY_CURRENCIES
+    ? buyCandidates.filter((asset) => buyable === null || buyable[getAssetSymbol(asset)] !== false)
     : walletAssets || []
 
   const handleSelect = (asset: Asset) => {
@@ -87,6 +119,9 @@ const SelectToken = ({ isBuyFlow }: { isBuyFlow: boolean }) => {
 
   const renderContent = () => {
     if (!selectableTokens.length) {
+      if (isBuyFlow) {
+        return <EmptyState>Buying isn't available for this destination in your region.</EmptyState>
+      }
       if (isBalancesLoading) {
         return <EmptyState>Loading balances…</EmptyState>
       }

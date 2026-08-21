@@ -21,7 +21,10 @@ export const PLAYGROUND_EVM_CHAINS: PlaygroundEvmChain[] = [
   {
     id: polygonAmoy.id,
     name: 'Polygon Amoy',
-    rpcUrl: 'https://rpc-amoy.polygon.technology',
+    // polygon.technology's public Amoy endpoint went dark (empty replies) and the
+    // SDK's provider init retries detectNetwork against it forever, so the wallet
+    // never connects — publicnode matches the other chains' endpoints here.
+    rpcUrl: 'https://polygon-amoy-bor-rpc.publicnode.com',
     explorerUrl: 'https://amoy.polygonscan.com',
     viemChain: polygonAmoy,
   },
@@ -134,6 +137,17 @@ export function getFundingTargetForChain(
  * an EVM recipient makes Relay reject the route.
  */
 export const DEFAULT_EVM_FUNDING_TARGET = getFundingTargetForChain(base.id)!
+
+/**
+ * Ethereum mainnet USDC as a simulated funding target. Not in the chain
+ * switcher (no wallet ops on mainnet); exists because Stripe's EU delivery is
+ * USDC·Ethereum only, so this is the one target that exercises the Stripe
+ * embedded flow from an EU funding scenario.
+ */
+export const ETHEREUM_FUNDING_TARGET = {
+  targetChain: 'eip155:1',
+  targetCurrency: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
+}
 
 /**
  * Testnet Deposit-hub target: Base Sepolia native ETH — the one EVM testnet Relay's

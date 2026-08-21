@@ -65,7 +65,7 @@ export const OpenfortUICard = ({ hook }: { hook?: string }) => {
       <CardHeader>
         <CardTitle>Openfort UI</CardTitle>
         <CardDescription>
-          Prebuilt modal screens — sign, send, receive, export key — instead of headless calls.
+          Prebuilt modal screens — sign, send, receive, add funds, export key — instead of headless calls.
         </CardDescription>
         {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
@@ -90,6 +90,12 @@ export const OpenfortUICard = ({ hook }: { hook?: string }) => {
           </Button>
           <Button variant="outline" onClick={() => ui.openReceive()}>
             Receive
+          </Button>
+          <Button variant="outline" onClick={() => ui.openFunding()}>
+            Add funds (hub)
+          </Button>
+          <Button variant="outline" onClick={() => ui.openBuy()}>
+            Buy with fiat
           </Button>
           <Button variant="outline" onClick={() => ui.openExportKey()}>
             Export key

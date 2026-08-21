@@ -1,253 +1,234 @@
 'use client'
 
-import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 import Logos from '../../../assets/logos'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
+import { useOnramp } from '../../../hooks/openfort/useOnramp'
+import { isCompleteWalletPay, isWalletPayMethod } from '../../../hooks/openfort/walletPay'
+import styled from '../../../styles/styled'
 import Button from '../../Common/Button'
 import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
 import SquircleSpinner from '../../Common/SquircleSpinner'
 import { routes } from '../../Openfort/types'
 import { useOpenfort } from '../../Openfort/useOpenfort'
 import { PageContent } from '../../PageContent'
-import { createCoinbaseSession } from '../Buy/coinbaseApi'
-import { resolveOnrampNetwork } from '../Buy/onrampApi'
-import { SOLANA_BUY_CURRENCIES } from '../Buy/solanaCurrencies'
-import { createStripeSession } from '../Buy/stripeApi'
-import { ContinueButtonWrapper, PendingContainer, StackedButtonWrapper } from '../Buy/styles'
-import { isSameToken } from '../Send/utils'
+import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox, StackedButtonWrapper } from '../Buy/styles'
 
+// In-page mount for the Coinbase native Pay button (Apple/Google Pay). The
+// server returns Coinbase's hosted Pay-button URL; `allow="payment"` lets the
+// wallet-pay sheet run inside the frame. The page renders a single ~44px Pay
+// button centered in the frame's viewport (no resize events), so the frame
+// hugs the button — the wallet-pay sheet itself is a native overlay, not
+// constrained by the frame. When the page falls back to the Apple Pay QR
+// experience (device can't present the sheet), it needs a full viewport.
+// How long the mounted Pay-button frame may stay silent before we assume it
+// never ran. A working frame reports within about a second.
+const FRAME_SILENCE_MS = 6_000
+
+const WalletPayFrame = styled.iframe<{ $qrFallback: boolean }>`
+  width: 100%;
+  height: ${({ $qrFallback }) => ($qrFallback ? '440px' : '60px')};
+  margin-top: 8px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+`
+
+/**
+ * Commit-and-track screen for a fiat buy on the `popup` and `native` angles
+ * (the `embedded` angle runs in StripeLinkCheckout). The amount screen minted
+ * the funding session; this one sets the onramp payment method (the server
+ * resolves the provider), presents the checkout — a hosted popup or the
+ * in-page Pay button — and follows the SESSION status, which the server
+ * advances from settlement webhooks and provider polls.
+ */
 const BuyProcessing = () => {
-  const { buyForm, setRoute, triggerResize, publishableKey } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const { buyForm, setRoute, triggerResize } = useOpenfort()
 
-  // Use chain-specific hooks
-  const ethereumWallet = useEthereumEmbeddedWallet()
-  const solanaWallet = useSolanaEmbeddedWallet()
-  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
-
-  const isConnected = wallet.status === 'connected'
-  const address = isConnected ? wallet.address : undefined
-  const chainId = isConnected && chainType === ChainTypeEnum.EVM ? (wallet as typeof ethereumWallet).chainId : undefined
-  const network = resolveOnrampNetwork(chainType, chainId)
-
-  const [popupWindow, setPopupWindow] = useState<Window | null>(null)
+  const onramp = useOnramp(buyForm.session, backendMethodId(buyForm.method), { useBackendUrl: true })
+  const openRef = useRef(onramp.open)
+  openRef.current = onramp.open
+  const [failed, setFailed] = useState<string | null>(null)
   const [showContinueButton, setShowContinueButton] = useState(false)
-  const [isCreatingSession, setIsCreatingSession] = useState(true)
-  const [sessionError, setSessionError] = useState(false)
+  // Set once the Pay-button frame reports the payment was committed — the
+  // button is done at that point, so the frame gives way to the spinner while
+  // the session poll waits for settlement.
+  const [framePaid, setFramePaid] = useState(false)
 
-  const { data: ethAssets } = useEthereumWalletAssets()
-  const assets = chainType === ChainTypeEnum.SVM ? SOLANA_BUY_CURRENCIES : ethAssets
+  // The frame reported this device can't present the Apple Pay sheet and is
+  // showing the QR-code fallback instead — give it a viewport, not a strip.
+  const [qrFallback, setQrFallback] = useState(false)
 
-  const matchedToken = useMemo(
-    () => assets?.find((asset) => isSameToken(asset, buyForm.asset)),
-    [assets, buyForm.asset]
-  )
+  // The Pay-button frame never said anything. The usual cause is the embedding
+  // origin missing from the provider's frame-ancestors allowlist: the frame is
+  // blocked, which still fires `load` but emits no onramp_api.* message, so
+  // nothing below can tell the difference from a slow network. Offer the same
+  // escape the provider's own sample recommends — open the checkout in a tab.
+  const [frameSilent, setFrameSilent] = useState(false)
+  const frameSpokeRef = useRef(false)
 
-  const selectedTokenOption = matchedToken ?? assets?.[0]
-  const selectedToken = selectedTokenOption ?? buyForm.asset
+  // Native wallet pay mounts the provider's in-page Pay button once the commit
+  // returns its URL and while we await payment; every other angle (and the
+  // post-payment 'processing' delivery) shows the spinner.
+  const showWalletPayFrame =
+    onramp.angle === 'native' && !!onramp.url && onramp.status === 'waiting_payment' && !framePaid
 
-  const fiatAmount = useMemo(() => {
-    const normalized = buyForm.amount
-    if (!normalized) return null
-    const numeric = Number(normalized)
-    if (!Number.isFinite(numeric)) return null
-    return numeric
-  }, [buyForm.amount])
-
-  // Create session and open popup once wallet is ready
-  const sessionStartedRef = useRef(false)
+  // Commit once per mount. A session takes a single payment method, so a retry
+  // goes back to the amount screen, which mints a fresh session.
+  const startedRef = useRef(false)
   useEffect(() => {
-    if (!address || !network) return
-    if (sessionStartedRef.current) return
-    sessionStartedRef.current = true
-
-    const createSessionAndOpenPopup = async () => {
-      if (!fiatAmount || fiatAmount <= 0) {
-        setRoute(routes.BUY)
-        return
-      }
-
-      setIsCreatingSession(true)
-      setSessionError(false)
-
-      try {
-        let onrampUrl: string | null = null
-
-        // Create session based on selected provider
-        if (buyForm.providerId === 'coinbase') {
-          const session = await createCoinbaseSession({
-            token: selectedToken,
-            network,
-            publishableKey,
-            destinationAddress: address,
-            sourceAmount: fiatAmount.toFixed(2),
-            sourceCurrency: buyForm.currency,
-            redirectUrl: `${window.location.origin}?coinbase_onramp=success`,
-          })
-          onrampUrl = session.onrampUrl
-        } else if (buyForm.providerId === 'stripe') {
-          const session = await createStripeSession({
-            token: selectedToken,
-            network,
-            publishableKey,
-            destinationAddress: address,
-            sourceAmount: fiatAmount.toFixed(2),
-            sourceCurrency: buyForm.currency,
-            redirectUrl: `${window.location.origin}?stripe_onramp=success`,
-          })
-          onrampUrl = session.onrampUrl
-        }
-
-        if (!onrampUrl) {
-          setSessionError(true)
-          return
-        }
-
-        // Coinbase onramp rejects requests when fiatCurrency is set to a non-USD currency (e.g. EUR).
-        // Strip the param so it uses the user's default currency instead.
-        const url = new URL(onrampUrl)
-        url.searchParams.delete('fiatCurrency')
-        const sanitizedProviderUrl = url.toString()
-
-        if (typeof window !== 'undefined') {
-          const popupWidth = 500
-          const popupHeight = 700
-          const dualScreenLeft = window.screenLeft !== undefined ? window.screenLeft : window.screenX
-          const dualScreenTop = window.screenTop !== undefined ? window.screenTop : window.screenY
-          const width = window.innerWidth
-            ? window.innerWidth
-            : document.documentElement.clientWidth
-              ? document.documentElement.clientWidth
-              : screen.width
-          const height = window.innerHeight
-            ? window.innerHeight
-            : document.documentElement.clientHeight
-              ? document.documentElement.clientHeight
-              : screen.height
-          const left = width / 2 - popupWidth / 2 + dualScreenLeft
-          const top = height / 2 - popupHeight / 2 + dualScreenTop
-
-          const popup = window.open(
-            sanitizedProviderUrl,
-            'BuyPopup',
-            `scrollbars=yes,width=${popupWidth},height=${popupHeight},top=${top},left=${left}`
-          )
-
-          if (popup) {
-            setPopupWindow(popup)
-          } else {
-            setSessionError(true)
-          }
-        }
-      } catch (_error) {
-        setSessionError(true)
-      } finally {
-        setIsCreatingSession(false)
-      }
+    if (startedRef.current) return
+    if (!buyForm.session) {
+      setRoute(routes.BUY)
+      return
     }
+    // NATIVE wallet pay needs the OTP-verified identity; if it's somehow missing
+    // (e.g. a stale reload), send the buyer back to gather it rather than commit
+    // a request the server will reject. Wallet pay resolved to the HOSTED
+    // checkout ('popup') commits like a card — no identity; unknown angle is
+    // treated as native, the safe direction.
+    const walletPay = isCompleteWalletPay(buyForm.walletPay) ? buyForm.walletPay : undefined
+    if (isWalletPayMethod(buyForm.method) && buyForm.walletPayAngle !== 'popup' && !walletPay) {
+      setRoute(routes.BUY_WALLET_PAY_CONTACT)
+      return
+    }
+    startedRef.current = true
+    const fiatAmount = Number(buyForm.amount)
+    openRef
+      .current({
+        sourceAmount: Number.isFinite(fiatAmount) && fiatAmount > 0 ? fiatAmount.toFixed(2) : undefined,
+        sourceCurrency: buyForm.currency,
+        redirectUrl: typeof window === 'undefined' ? undefined : `${window.location.origin}?onramp=success`,
+        walletPay,
+      })
+      .then((session) => {
+        if (session.status === 'succeeded') {
+          setRoute(routes.BUY_COMPLETE)
+        } else if (session.status === 'bounced') {
+          setFailed('The purchase was reversed and refunded by the provider.')
+        } else if (session.status === 'expired') {
+          setFailed('The purchase was not completed in time.')
+        }
+        // Non-terminal resolution = the poll was interrupted (e.g. a remount),
+        // NOT an outcome — the mounted state machine keeps tracking the session.
+      })
+      .catch((e) => {
+        setFailed(e instanceof Error ? e.message : 'Failed to start the purchase.')
+      })
+  }, [buyForm.session, buyForm.amount, buyForm.currency, buyForm.method, buyForm.walletPay, setRoute])
 
-    createSessionAndOpenPopup()
-  }, [address, network]) // Run when wallet becomes ready
-
-  // Trigger resize on mount and when state changes
+  // Re-measure the modal as the state machine advances.
   useEffect(() => {
     triggerResize()
-  }, [triggerResize, isCreatingSession, showContinueButton, sessionError])
+  }, [
+    triggerResize,
+    onramp.status,
+    failed,
+    showContinueButton,
+    framePaid,
+    qrFallback,
+    onramp.checkoutClosed,
+    frameSilent,
+  ])
 
-  // Show continue button after 2 seconds
+  // Start the silence timer once the frame is actually mounted. FRAME_SILENCE_MS
+  // is generous: a real Pay button reports within a second, so anything past
+  // this is the frame not running at all.
   useEffect(() => {
-    if (isCreatingSession) return
-
-    setShowContinueButton(false)
+    if (!showWalletPayFrame) return
+    frameSpokeRef.current = false
+    setFrameSilent(false)
     const timer = setTimeout(() => {
-      setShowContinueButton(true)
-    }, 2000)
+      if (!frameSpokeRef.current) setFrameSilent(true)
+    }, FRAME_SILENCE_MS)
     return () => clearTimeout(timer)
-  }, [isCreatingSession])
+  }, [showWalletPayFrame])
 
-  // Monitor popup window for redirect or close
+  // The Pay-button page reports its lifecycle via postMessage
+  // (onramp_api.load_* / commit_* / polling_*, per the headless onramp docs) —
+  // the only signal a cross-origin frame gives us. Session polling stays the
+  // source of truth for settlement; these just drive what's on screen.
   useEffect(() => {
-    if (!popupWindow || isCreatingSession) return
-
-    const checkPopup = setInterval(() => {
-      try {
-        // Check if popup is closed
-        if (popupWindow.closed) {
-          clearInterval(checkPopup)
-          setPopupWindow(null)
-          // Only auto-advance for Coinbase
-          if (buyForm.providerId === 'coinbase') {
-            setRoute(routes.BUY_COMPLETE)
-          }
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== 'https://pay.coinbase.com') return
+      let payload: unknown = event.data
+      if (typeof payload === 'string') {
+        try {
+          payload = JSON.parse(payload)
+        } catch {
           return
         }
-
-        // Try to check if popup has redirected to our success URL
-        try {
-          const popupUrl = popupWindow.location.href
-          if (popupUrl.includes('coinbase_onramp=success') || popupUrl.includes('stripe_onramp=success')) {
-            popupWindow.close()
-            setPopupWindow(null)
-            setRoute(routes.BUY_COMPLETE)
-            clearInterval(checkPopup)
-          }
-        } catch (_e) {
-          // Cross-origin error is expected while on provider domain
-          // We can't read the URL until it redirects back to our domain
-        }
-      } catch (_error) {
-        // Handle any other errors
-        clearInterval(checkPopup)
       }
-    }, 500)
-
-    return () => {
-      clearInterval(checkPopup)
+      const { eventName, data } = (payload ?? {}) as {
+        eventName?: string
+        data?: { errorCode?: string; errorMessage?: string }
+      }
+      // Any message at all proves the frame rendered, so the silence timer below
+      // must stand down even for events this screen doesn't otherwise act on.
+      setFrameSilent(false)
+      frameSpokeRef.current = true
+      if (eventName === 'onramp_api.polling_success') {
+        // The provider finished its own polling and the purchase succeeded.
+        // This is the earliest definitive success we get on the native angle —
+        // the session otherwise advances only when the settlement webhook lands,
+        // which can lag badly and never arrives in local development.
+        setFramePaid(true)
+        setRoute(routes.BUY_COMPLETE)
+      } else if (eventName === 'onramp_api.commit_success' || eventName === 'onramp_api.polling_start') {
+        setFramePaid(true)
+      } else if (
+        eventName === 'onramp_api.load_error' ||
+        eventName === 'onramp_api.commit_error' ||
+        eventName === 'onramp_api.polling_error'
+      ) {
+        // Coinbase documents this load error as safe to ignore on web: the frame
+        // falls back to an Apple Pay QR code the buyer scans with their phone.
+        // The QR page needs a real viewport, not the Pay-button strip.
+        if (data?.errorCode === 'ERROR_CODE_GUEST_APPLE_PAY_NOT_SUPPORTED') {
+          setQrFallback(true)
+          return
+        }
+        setFailed(data?.errorMessage ?? 'The payment could not be started. Please try again.')
+      }
     }
-  }, [popupWindow, buyForm.providerId, setRoute, isCreatingSession])
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [])
 
-  const handleCancel = () => {
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close()
+  // Offer a manual advance after a while — settlement webhooks can lag the
+  // provider's own success screen. Suppressed while the native Pay button is
+  // mounted (the buyer is still paying; advancing would skip it); it appears
+  // once payment is received. Closing the checkout window skips the wait: there
+  // is nothing left on screen for the buyer to finish in.
+  useEffect(() => {
+    // A silent frame is the exception: the buyer has nothing to press, so the
+    // escape hatch must appear rather than be suppressed as "still paying".
+    const inPageAwaitingPayment =
+      onramp.angle === 'native' && !framePaid && onramp.status === 'waiting_payment' && !frameSilent
+    if ((onramp.status !== 'waiting_payment' && onramp.status !== 'processing') || inPageAwaitingPayment) return
+    if (onramp.checkoutClosed) {
+      setShowContinueButton(true)
+      return
     }
-    setPopupWindow(null)
-    setRoute(routes.BUY)
-  }
-
-  const handleContinue = () => {
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close()
-    }
-    setPopupWindow(null)
-    setRoute(routes.BUY_COMPLETE)
-  }
+    const timer = setTimeout(() => setShowContinueButton(true), 5_000)
+    return () => clearTimeout(timer)
+  }, [onramp.status, onramp.angle, framePaid, onramp.checkoutClosed])
 
   const handleBack = () => {
-    if (popupWindow && !popupWindow.closed) {
-      popupWindow.close()
-    }
-    setPopupWindow(null)
+    onramp.reset()
     setRoute(routes.BUY)
   }
 
-  if (sessionError) {
+  if (failed) {
     return (
       <PageContent onBack={handleBack}>
         <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
-          <ModalHeading>Error</ModalHeading>
-          <ModalBody>
-            Failed to create payment session.
-            <br />
-            Please try again.
-          </ModalBody>
+          <ModalHeading>Purchase not completed</ModalHeading>
+          <ModalBody>{failed}</ModalBody>
           <ContinueButtonWrapper style={{ marginTop: 24 }}>
             <Button variant="primary" onClick={handleBack}>
-              Go Back
+              Try again
             </Button>
           </ContinueButtonWrapper>
         </ModalContent>
@@ -255,84 +236,100 @@ const BuyProcessing = () => {
     )
   }
 
-  const isStripe = buyForm.providerId === 'stripe'
-  const isCoinbase = buyForm.providerId === 'coinbase'
-  const isProvider = isStripe || isCoinbase
+  const starting = onramp.status === 'idle' || onramp.loading
+  const delivering = onramp.status === 'processing' || framePaid
+  const openInTab = () => {
+    if (onramp.url) window.open(onramp.url, '_blank', 'noopener,noreferrer')
+  }
+  // The buyer shut the hosted checkout before it settled. Not a failure — they
+  // may have paid and closed it, and settlement can still arrive — but the
+  // "finish in the checkout window" copy no longer describes anything on screen.
+  const closedEarly = onramp.checkoutClosed && !delivering
+  const canReopen = closedEarly && onramp.angle === 'popup' && !!onramp.url
 
-  if (isCreatingSession) {
-    return (
-      <PageContent onBack={handleBack}>
-        <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
-          <ModalHeading>Creating Session</ModalHeading>
-          <ModalBody>Please wait...</ModalBody>
+  return (
+    <PageContent onBack={handleBack}>
+      <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
+        <ModalHeading>
+          {starting
+            ? 'Preparing checkout'
+            : showWalletPayFrame
+              ? 'Complete your purchase'
+              : closedEarly
+                ? 'Checkout window closed'
+                : 'Processing purchase'}
+        </ModalHeading>
+        {/* The provider's own Pay button carries its copy — no description is
+            repeated above it. */}
+        {!showWalletPayFrame && (
+          <ModalBody>
+            {starting
+              ? 'Please wait…'
+              : delivering
+                ? 'Payment received — delivering your funds…'
+                : closedEarly
+                  ? "We're still checking for your payment. Reopen the checkout if you haven't finished."
+                  : 'Complete the purchase in the checkout window.'}
+          </ModalBody>
+        )}
+
+        {showWalletPayFrame ? (
+          <>
+            {/* `allow="payment"` is what lets the wallet-pay sheet run in the
+                frame, and is all Coinbase's own sample sets. A `sandbox` here
+                would have to grant popups, forms, modals and top-navigation for
+                the sheet and the QR fallback to work, and `allow-scripts` with
+                `allow-same-origin` lets the frame drop the sandbox anyway — so
+                it bought nothing and risked breaking the sheet. */}
+            <WalletPayFrame
+              src={onramp.url ?? undefined}
+              title="Coinbase Pay"
+              allow="payment"
+              $qrFallback={qrFallback}
+            />
+            {frameSilent && (
+              <>
+                <ModalBody>
+                  The payment button couldn’t load here. Open the checkout in a new tab to finish paying.
+                </ModalBody>
+                <StackedButtonWrapper>
+                  <Button variant="primary" onClick={openInTab}>
+                    Open checkout in a new tab
+                  </Button>
+                </StackedButtonWrapper>
+              </>
+            )}
+          </>
+        ) : (
           <PendingContainer>
             <SquircleSpinner
               logo={
-                isProvider ? (
-                  <div
-                    style={{
-                      padding: '12px',
-                      position: 'relative',
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                    }}
-                  >
-                    {isStripe && <Logos.Stripe />}
-                    {isCoinbase && <Logos.CoinbasePay />}
-                  </div>
-                ) : undefined
+                <SpinnerLogoBox>
+                  <Logos.Openfort />
+                </SpinnerLogoBox>
               }
               connecting={true}
             />
           </PendingContainer>
-        </ModalContent>
-      </PageContent>
-    )
-  }
-
-  return (
-    <PageContent onBack={handleCancel}>
-      <ModalContent style={{ paddingBottom: 18, textAlign: 'center' }}>
-        <ModalHeading>Processing Purchase</ModalHeading>
-        <ModalBody>Complete the purchase in the popup window...</ModalBody>
-
-        <PendingContainer>
-          <SquircleSpinner
-            logo={
-              <div
-                style={{
-                  padding: '12px',
-                  position: 'relative',
-                  width: '100%',
-                  height: '100%',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                {isStripe && <Logos.Stripe />}
-                {isCoinbase && <Logos.CoinbasePay />}
-                {!isStripe && !isCoinbase && <Logos.Openfort />}
-              </div>
-            }
-            connecting={true}
-          />
-        </PendingContainer>
-
-        {showContinueButton && <ModalBody>Click Continue when you are done.</ModalBody>}
+        )}
 
         {showContinueButton && (
           <>
+            {!closedEarly && <ModalBody>Finished in the checkout window?</ModalBody>}
+            {canReopen && (
+              <StackedButtonWrapper>
+                <Button variant="primary" onClick={onramp.present}>
+                  Reopen checkout
+                </Button>
+              </StackedButtonWrapper>
+            )}
             <StackedButtonWrapper>
-              <Button variant="primary" onClick={handleContinue}>
-                Continue
+              <Button variant={canReopen ? 'secondary' : 'primary'} onClick={() => setRoute(routes.BUY_COMPLETE)}>
+                {closedEarly ? "I've completed payment" : 'Continue'}
               </Button>
             </StackedButtonWrapper>
             <StackedButtonWrapper>
-              <Button variant="secondary" onClick={handleCancel}>
+              <Button variant="secondary" onClick={handleBack}>
                 Cancel
               </Button>
             </StackedButtonWrapper>
