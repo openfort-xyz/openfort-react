@@ -84,6 +84,9 @@
         "entry": [
           "scripts/*.{js,mjs}!",
           "typedoc.json!"
+        ],
+        "ignoreBinaries": [
+          "typecheck"
         ]
       },
       "packages/openfort-react": {
