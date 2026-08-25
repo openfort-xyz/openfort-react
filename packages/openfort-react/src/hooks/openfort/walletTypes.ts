@@ -1,8 +1,9 @@
 import { type AccountTypeEnum, ChainTypeEnum, type EmbeddedAccount, type RecoveryMethod } from '@openfort/openfort-js'
 import type { Hex } from 'viem'
-import type { ConnectedEmbeddedEthereumWallet } from '../../ethereum/types'
-import type { ConnectedEmbeddedSolanaWallet } from '../../solana/types'
-import type { BaseFlowState } from './auth/status'
+import { ProviderNotReadyError } from '../../errors/wallet.js'
+import type { ConnectedEmbeddedEthereumWallet } from '../../ethereum/types.js'
+import type { ConnectedEmbeddedSolanaWallet } from '../../solana/types.js'
+import type { BaseFlowState } from './auth/status.js'
 
 export type EthereumUserWallet = ConnectedEmbeddedEthereumWallet
 
@@ -40,7 +41,9 @@ export function embeddedAccountToUserWallet(account: EmbeddedAccount): EthereumU
     walletIndex: 0,
     recoveryMethod: account.recoveryMethod,
     getProvider: async () => {
-      throw new Error('Wallet not yet loaded; use useEthereumEmbeddedWallet to access provider')
+      throw new ProviderNotReadyError('Wallet not yet loaded.', {
+        metaMessages: ['Use `useEthereumEmbeddedWallet` to access the provider.'],
+      })
     },
     isAvailable: true,
     isActive: false,

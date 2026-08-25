@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildDepositPageUrl, buildOpenDappLinks, caipToChainId } from './walletDeeplinks'
+import { buildDepositPageUrl, buildOpenDappLinks, caipToChainId } from './walletDeeplinks.js'
 
 const PAGE = 'https://app.example.com/deposit.html'
 const PARAMS = {

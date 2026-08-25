@@ -1,21 +1,21 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { embeddedWalletId } from '../../constants/openfort'
-import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext'
-import styled from '../../styles/styled'
-import { isAndroid } from '../../utils'
-import { useOnUserReturn } from '../../utils/useOnUserReturn'
-import { useConnectWithSiwe } from '../../wagmi/useConnectWithSiwe'
-import { useExternalConnector } from '../../wallets/useExternalConnectors'
-import { walletConfigs } from '../../wallets/walletConfigs'
-import Button from '../Common/Button'
-import FitText from '../Common/FitText'
-import Loader from '../Common/Loading'
-import WalletConnectNotConfigured, { useHasWalletConnect } from '../Common/WalletConnectNotConfigured'
-import { routes } from '../Openfort/types'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import { PageContent } from '../PageContent'
+import { embeddedWalletId } from '../../constants/openfort.js'
+import { useEthereumBridge } from '../../ethereum/OpenfortEthereumBridgeContext.js'
+import styled from '../../styles/styled/index.js'
+import { isAndroid } from '../../utils/index.js'
+import { useOnUserReturn } from '../../utils/useOnUserReturn.js'
+import { useConnectWithSiwe } from '../../wagmi/useConnectWithSiwe.js'
+import { useExternalConnector } from '../../wallets/useExternalConnectors.js'
+import { walletConfigs } from '../../wallets/walletConfigs.js'
+import Button from '../Common/Button/index.js'
+import FitText from '../Common/FitText/index.js'
+import Loader from '../Common/Loading/index.js'
+import WalletConnectNotConfigured, { useHasWalletConnect } from '../Common/WalletConnectNotConfigured/index.js'
+import { routes } from '../Openfort/types.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import { PageContent } from '../PageContent/index.js'
 
 const states = {
   INIT: 'init',
@@ -99,7 +99,7 @@ const ConnectWithMobile: React.FC = () => {
         })
         break
     }
-  }, [status])
+  }, [status, connectWithSiwe, setRoute, walletId])
 
   if (!hasWalletConnect) return <WalletConnectNotConfigured />
 

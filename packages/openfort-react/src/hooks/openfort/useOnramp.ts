@@ -1,19 +1,19 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { logger } from '../../utils/logger'
-import {
-  type FundingSession,
-  type OnrampAngle,
-  type OnrampMethodId,
-  type OnrampQuote,
-  type ResolvedFundingMethod,
-  type SessionStatus,
-  type UseFundingOptions,
-  useFundingClient,
-} from './useFunding'
-import type { FundingSessionRef } from './useFundingMethods'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { closeBuyPopup, navigateBuyPopup, takeBuyPopup } from '../../components/Pages/Buy/buyPopup.js'
+import { logger } from '../../utils/logger.js'
+import type {
+  FundingSession,
+  OnrampAngle,
+  OnrampMethodId,
+  OnrampQuote,
+  ResolvedFundingMethod,
+  SessionStatus,
+} from './fundingClient.js'
+import { type UseFundingOptions, useFundingClient } from './useFunding.js'
+import type { FundingSessionRef } from './useFundingMethods.js'
 
 const TERMINAL: SessionStatus[] = ['succeeded', 'bounced', 'expired']
 const POLL_MS = 4000
@@ -257,9 +257,21 @@ export function useOnramp(
         // in-page Pay-button link — surfaced via `url`/`angle` for the caller to
         // mount; auto-opening it would break the in-page sheet.
         if (checkoutUrl && angle === 'popup' && mode === 'popup') {
-          popup.current = window.open(checkoutUrl, POPUP_NAME, POPUP_FEATURES)
-        } else if (checkoutUrl && angle === 'popup' && mode === 'redirect') {
-          window.location.href = checkoutUrl
+          // The commit outlives the browser's user-activation window, so a
+          // window reserved inside the originating click (`reserveBuyPopup`) is
+          // navigated instead of opening a new one — which a popup blocker
+          // would refuse. A direct open still serves callers that didn't reserve.
+          const reserved = takeBuyPopup()
+          popup.current =
+            reserved && navigateBuyPopup(reserved, checkoutUrl)
+              ? reserved
+              : window.open(checkoutUrl, POPUP_NAME, POPUP_FEATURES)
+        } else {
+          // No hosted checkout to show in it: release a window reserved for one.
+          closeBuyPopup()
+          if (checkoutUrl && angle === 'popup' && mode === 'redirect') {
+            window.location.href = checkoutUrl
+          }
         }
 
         // Settlement is webhook-driven server-side, so the SESSION is the source
@@ -283,6 +295,7 @@ export function useOnramp(
         logger.log('[onramp] terminal', { sessionId: latest.id, status: latest.status })
         return latest
       } catch (e) {
+        closeBuyPopup()
         const err = e instanceof Error ? e : new Error(String(e))
         if (isCurrent()) {
           setError(err)

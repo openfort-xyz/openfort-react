@@ -2,19 +2,19 @@
 
 import { useEffect, useState } from 'react'
 
-import { DisconnectIcon, GuestIcon, KeyIcon } from '../../../assets/icons'
-import useLocales from '../../../hooks/useLocales'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { LargeButton } from '../../Common/LargeButton'
-import { ModalContent, ModalHeading } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { DisconnectButton } from '../Connected/styles'
+import { DisconnectIcon, GuestIcon, KeyIcon } from '../../../assets/icons.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { LargeButton } from '../../Common/LargeButton/index.js'
+import { ModalContent, ModalHeading } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { DisconnectButton } from '../Connected/styles.js'
 
 const Profile: React.FC = () => {
   const { setOpen, setRoute } = useOpenfort()
-  const { logout } = useOpenfortCore()
+  const logout = useOpenfortCore((s) => s.logout)
 
   const locales = useLocales()
 

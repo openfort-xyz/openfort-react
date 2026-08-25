@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
-import type { Theme } from '../types'
+import type { Theme } from '../types.js'
 
 function useGoogleFont(font: string) {
   useEffect(() => {
@@ -32,7 +32,8 @@ function useGoogleFont(font: string) {
   }, [font])
 }
 
-// OLD_TODO: This could be dynamic if theming wasn't set up as css variables
+// TODO: Let themes declare their own font instead of hard-coding this map.
+// Blocked on theming being expressed as CSS variables rather than objects.
 export function useThemeFont(theme: Theme) {
   const themeFonts: Partial<Record<Theme, string>> = {
     web95: 'Lato',

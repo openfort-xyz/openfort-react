@@ -2,8 +2,12 @@
 
 import type React from 'react'
 import { type CountryIso2, defaultCountries, PhoneInput, parseCountry } from 'react-international-phone'
-import { PhoneIcon } from '../../../assets/icons'
-import { ProviderIcon, ProviderInputInner, ProvidersButton as ProvidersButtonStyle } from '../../Pages/Providers/styles'
+import { PhoneIcon } from '../../../assets/icons.js'
+import {
+  ProviderIcon,
+  ProviderInputInner,
+  ProvidersButton as ProvidersButtonStyle,
+} from '../../Pages/Providers/styles.js'
 
 type PhoneFieldProps = {
   /** E.164 value (react-international-phone emits E.164 on change). */

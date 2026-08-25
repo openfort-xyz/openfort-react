@@ -2,27 +2,34 @@
 
 import { AnimatePresence, type Variants } from 'framer-motion'
 import type React from 'react'
-import { useCallback, useEffect, useState } from 'react'
-import { AlertIcon, RetryIconCircle, TickIcon } from '../../../assets/icons'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import { useUser } from '../../../hooks/openfort/useUser'
-import useLocales from '../../../hooks/useLocales'
-import { useRouteProps } from '../../../hooks/useRouteProps'
-import { detectBrowser, isWalletConnectConnector } from '../../../utils'
-import { logger } from '../../../utils/logger'
-import { useConnectWithSiwe } from '../../../wagmi/useConnectWithSiwe'
-import { useExternalConnector } from '../../../wallets/useExternalConnectors'
-import Alert from '../../Common/Alert'
-import BrowserIcon from '../../Common/BrowserIcon'
-import Button from '../../Common/Button'
-import { ModalBody, ModalContent, ModalContentContainer, ModalH1, ModalHeading } from '../../Common/Modal/styles'
-import SquircleSpinner from '../../Common/SquircleSpinner'
-import Tooltip from '../../Common/Tooltip'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import CircleSpinner from './CircleSpinner'
-import { ConnectingAnimation, ConnectingContainer, Container, Content, RetryButton, RetryIconContainer } from './styles'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { AlertIcon, RetryIconCircle, TickIcon } from '../../../assets/icons.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { useRouteProps } from '../../../hooks/useRouteProps.js'
+import { detectBrowser, isWalletConnectConnector } from '../../../utils/index.js'
+import { logger } from '../../../utils/logger.js'
+import { useConnectWithSiwe } from '../../../wagmi/useConnectWithSiwe.js'
+import { useExternalConnector } from '../../../wallets/useExternalConnectors.js'
+import Alert from '../../Common/Alert/index.js'
+import BrowserIcon from '../../Common/BrowserIcon/index.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalContent, ModalContentContainer, ModalH1, ModalHeading } from '../../Common/Modal/styles.js'
+import SquircleSpinner from '../../Common/SquircleSpinner/index.js'
+import Tooltip from '../../Common/Tooltip/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import CircleSpinner from './CircleSpinner/index.js'
+import {
+  ConnectingAnimation,
+  ConnectingContainer,
+  Container,
+  Content,
+  RetryButton,
+  RetryIconContainer,
+} from './styles.js'
 
 const states = {
   CONNECTED: 'connected',
@@ -77,6 +84,9 @@ const ConnectWithInjector: React.FC<{
   const id = c.id
   const wallet = useExternalConnector(id)
 
+  /** Address the user must reconnect with, when the modal was opened to recover a linked wallet. */
+  const recoverAddress = 'wallet' in props ? props.wallet?.address : undefined
+
   const onConnect = useCallback(() => {
     setStatus(states.CONNECTED)
     setTimeout(() => {
@@ -98,7 +108,7 @@ const ConnectWithInjector: React.FC<{
 
       if (props.connectType === 'recover' && getConnectorAccounts) {
         const acc = await getConnectorAccounts(walletItem.connector)
-        if (acc.some((v) => v === props.wallet?.address)) {
+        if (acc.some((v) => v === recoverAddress)) {
           onConnect()
         } else {
           setStatus(states.RECOVER_ADDRESS_MISMATCH)
@@ -139,15 +149,7 @@ const ConnectWithInjector: React.FC<{
         },
       })
     },
-    [
-      bridge,
-      user,
-      linkedAccounts,
-      onConnect,
-      props.connectType,
-      'wallet' in props ? props.wallet?.address : undefined,
-      connectWithSiwe,
-    ]
+    [bridge, user, linkedAccounts, onConnect, props.connectType, recoverAddress, connectWithSiwe]
   )
 
   const handleConnectError = useCallback((error: { code?: number; message?: string }) => {
@@ -188,15 +190,16 @@ const ConnectWithInjector: React.FC<{
 
   const browser = detectBrowser()
 
-  const extensionUrl = wallet?.downloadUrls?.[browser]
+  const downloadUrls: Partial<Record<string, string>> = wallet?.downloadUrls ?? {}
+  const extensionUrl = downloadUrls[browser]
 
-  const suggestedExtension = wallet?.downloadUrls
+  const [firstDownload] = Object.keys(downloadUrls)
+  const suggestedExtension = firstDownload
     ? {
-        name: Object.keys(wallet?.downloadUrls)[0],
-        label:
-          Object.keys(wallet?.downloadUrls)[0]?.charAt(0).toUpperCase() +
-          Object.keys(wallet?.downloadUrls)[0]?.slice(1), // Capitalise first letter, but this might be better suited as a lookup table
-        url: wallet?.downloadUrls[Object.keys(wallet?.downloadUrls)[0]],
+        name: firstDownload,
+        // Capitalise first letter, but this might be better suited as a lookup table
+        label: firstDownload.charAt(0).toUpperCase() + firstDownload.slice(1),
+        url: downloadUrls[firstDownload],
       }
     : undefined
 
@@ -239,7 +242,15 @@ const ConnectWithInjector: React.FC<{
       logger.log('[ConnectWithInjector] Connect type is:', props.connectType)
       await handleConnectSettled(wallet, connectResult)
     } catch (err: unknown) {
-      logger.error('[ConnectWithInjector] Connection error', err instanceof Error ? err.message : err)
+      // 4001 is the user closing the wallet prompt. `logger.error` always emits
+      // now, so reporting a deliberate choice would put a line in every
+      // consumer's console and error pipeline for normal use.
+      const isUserRejection = !!err && typeof err === 'object' && 'code' in err && err.code === 4001
+      if (isUserRejection) {
+        logger.log('[ConnectWithInjector] Connection declined by the user')
+      } else {
+        logger.error('[ConnectWithInjector] Connection error', err instanceof Error ? err.message : err)
+      }
       handleConnectError(
         err && typeof err === 'object' && 'code' in err
           ? (err as { code?: number; message?: string })
@@ -254,12 +265,20 @@ const ConnectWithInjector: React.FC<{
     setTimeout(triggerResize, 100)
   }, [bridge, wallet, props.connectType, handleConnectSettled, handleConnectError, triggerResize])
 
-  let connectTimeout: any
+  const runConnectRef = useRef(runConnect)
+  useEffect(() => {
+    runConnectRef.current = runConnect
+  })
+
+  // One connect attempt per mount: the guard reads the initial status, and `runConnect` is invoked
+  // through a ref so the delayed call uses the implementation built from the bridge and wallet as
+  // they stand when the timer fires, not as they were at mount.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: single attempt on mount by design, see above
   useEffect(() => {
     if (status === states.UNAVAILABLE) return
 
     // UX: Give user time to see the UI before opening the extension
-    connectTimeout = setTimeout(runConnect, 600)
+    const connectTimeout = setTimeout(() => runConnectRef.current(), 600)
     return () => {
       clearTimeout(connectTimeout)
     }
@@ -300,7 +319,8 @@ const ConnectWithInjector: React.FC<{
     )
   }
 
-  // OLD_TODO: Make this more generic
+  // TODO: Derive this from a connector capability flag rather than matching
+  // WalletConnect by id.
   if (isWalletConnectConnector(wallet?.connector.id)) {
     return (
       <PageContent>

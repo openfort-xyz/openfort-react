@@ -1,19 +1,23 @@
+'use client'
+
 import type React from 'react'
-import { useChainId } from 'wagmi'
-import { DisconnectIcon } from '../../../assets/icons'
-import Button from '../../../components/Common/Button'
-import { OrDivider } from '../../../components/Common/Modal'
-import { ModalBody, ModalContent } from '../../../components/Common/Modal/styles'
-import { PageContent } from '../../../components/PageContent'
-import useLocales from '../../../hooks/useLocales'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSwitchChainFiltered } from '../../useSwitchChainFiltered'
-import ChainSelectList from '../ChainSelectList'
+// wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
+// namespace import rather than named bindings.
+import * as wagmi from 'wagmi'
+import { DisconnectIcon } from '../../../assets/icons.js'
+import Button from '../../../components/Common/Button/index.js'
+import { OrDivider } from '../../../components/Common/Modal/index.js'
+import { ModalBody, ModalContent } from '../../../components/Common/Modal/styles.js'
+import { PageContent } from '../../../components/PageContent/index.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSwitchChainFiltered } from '../../useSwitchChainFiltered.js'
+import ChainSelectList from '../ChainSelectList/index.js'
 
 const SwitchNetworks: React.FC = () => {
-  const chainId = useChainId()
+  const chainId = wagmi.useChainId()
   const { chains } = useSwitchChainFiltered()
-  const { logout } = useOpenfortCore()
+  const logout = useOpenfortCore((s) => s.logout)
   const locales = useLocales({})
 
   const chainIsSupported = chainId != null && chains.some((c) => c.id === chainId)

@@ -11,29 +11,29 @@ import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
 import { lazy, Suspense, useEffect, useMemo } from 'react'
 import { formatUnits } from 'viem'
-import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets'
-import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext'
-import useLocales from '../../../hooks/useLocales'
-import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { nFormatter, truncateEthAddress } from '../../../utils'
-import { logger } from '../../../utils/logger'
-import Avatar from '../../Common/Avatar'
-import Button from '../../Common/Button'
-import { TextLinkButton } from '../../Common/Button/styles'
-import Chain from '../../Common/Chain'
-import { CopyText } from '../../Common/CopyToClipboard/CopyText'
-import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
-import { defaultSendFormState, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { getAssetDecimals } from '../Send/utils'
-import { ConnectedPageLayout } from './ConnectedPageLayout'
-import { ActionButton, Balance, ChainSelectorContainer, LinkedProvidersToggle, Unsupported } from './styles'
+import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useEthereumWalletAssets } from '../../../ethereum/hooks/useEthereumWalletAssets.js'
+import { useEthereumBridge } from '../../../ethereum/OpenfortEthereumBridgeContext.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { useResolvedIdentity } from '../../../hooks/useResolvedIdentity.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { nFormatter, truncateEthAddress } from '../../../utils/index.js'
+import { logger } from '../../../utils/logger.js'
+import Avatar from '../../Common/Avatar/index.js'
+import Button from '../../Common/Button/index.js'
+import { TextLinkButton } from '../../Common/Button/styles.js'
+import Chain from '../../Common/Chain/index.js'
+import { CopyText } from '../../Common/CopyToClipboard/CopyText.js'
+import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import { defaultSendFormState, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { getAssetDecimals } from '../Send/utils.js'
+import { ConnectedPageLayout } from './ConnectedPageLayout.js'
+import { ActionButton, Balance, ChainSelectorContainer, LinkedProvidersToggle, Unsupported } from './styles.js'
 
-const LazyChainSelector = lazy(() => import('../../../wagmi/components/ChainSelect'))
+const LazyChainSelector = lazy(() => import('../../../wagmi/components/ChainSelect/index.js'))
 
 function getFirstBalanceAsset(
   assets: Awaited<ReturnType<typeof useEthereumWalletAssets>>['data']
@@ -50,7 +50,7 @@ const EthereumConnected: React.FC = () => {
   const bridge = useEthereumBridge()
 
   const wallet = useEthereumEmbeddedWallet()
-  const { embeddedAccounts } = useOpenfortCore()
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
   const hasEthereumWallets = (embeddedAccounts?.filter((a) => a.chainType === ChainTypeEnum.EVM) ?? []).length > 0
 
   // Use embedded wallet if available, otherwise fall back to bridge (external wallet)
@@ -64,7 +64,7 @@ const EthereumConnected: React.FC = () => {
       : undefined
   const chainId = embeddedConnected ? wallet.chainId : bridgeConnected ? bridge.chainId : undefined
 
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development' && chainType !== ChainTypeEnum.EVM) {
       logger.warn(
@@ -102,6 +102,7 @@ const EthereumConnected: React.FC = () => {
   // the post-paint pass, returning to this screen (assets already cached) measures
   // before layout settles and the modal keeps the shorter height, clipping the
   // actions below the fold.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `isLoading` and `totalBalanceUsd` are re-measure triggers, not inputs — see above
   useEffect(() => {
     context.triggerResize()
     const id = requestAnimationFrame(() => context.triggerResize())

@@ -75,12 +75,24 @@ export const validateApiEndpoint = createValidator({
   },
 });
 
+/**
+ * Checks that an encryption-session endpoint is reachable and refusing anonymous
+ * callers.
+ *
+ * A hardened endpoint answers 401 without a bearer token, and the CLI has no
+ * user token to offer, so a 401 is the healthy result. Treating it as failure
+ * made this check impossible to pass against the backend the CLI itself
+ * scaffolds. A 200 means the endpoint mints sessions for anyone who asks.
+ */
 export const testApiEndpoint = async (endpoint: string): Promise<boolean> => {
   try {
     const response = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
     });
+
+    if (response.status === 401 || response.status === 403) return true;
+
     const body = (await response.json()) as { session?: string };
     return !!body.session;
   } catch {

@@ -2,9 +2,9 @@
 
 import { motion } from 'framer-motion'
 import { useEffect, useMemo } from 'react'
-import styled from '../../styles/styled'
-import { useOpenfort } from '../Openfort/useOpenfort'
-import { getPasswordStrength, getPasswordStrengthLabel } from './password-utility'
+import styled from '../../styles/styled/index.js'
+import { useOpenfort } from '../Openfort/useOpenfort.js'
+import { getPasswordStrength, getPasswordStrengthLabel } from './password-utility.js'
 
 const Container = styled.div`
   display: flex;
@@ -39,11 +39,6 @@ const LabelColor = styled.span<{ color: string }>`
   color: ${({ color }) => color};
 `
 
-const _transition = {
-  duration: 0.4,
-  ease: [0.175, 0.885, 0.32, 0.98],
-}
-
 export const PasswordStrengthIndicator = ({
   password,
   showPasswordIsTooWeakError,
@@ -71,6 +66,7 @@ export const PasswordStrengthIndicator = ({
 
   const { triggerResize } = useOpenfort()
   // Grow/shrink the modal as the meter appears/disappears so it isn't clipped.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs
   useEffect(() => {
     triggerResize()
   }, [!!password, showPasswordIsTooWeakError, triggerResize])

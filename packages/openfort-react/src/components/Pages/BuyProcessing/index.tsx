@@ -2,18 +2,18 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import Logos from '../../../assets/logos'
-import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi'
-import { useOnramp } from '../../../hooks/openfort/useOnramp'
-import { isCompleteWalletPay, isWalletPayMethod } from '../../../hooks/openfort/walletPay'
-import styled from '../../../styles/styled'
-import Button from '../../Common/Button'
-import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles'
-import SquircleSpinner from '../../Common/SquircleSpinner'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox, StackedButtonWrapper } from '../Buy/styles'
+import Logos from '../../../assets/logos.js'
+import { backendMethodId } from '../../../hooks/openfort/onrampMethodsApi.js'
+import { useOnramp } from '../../../hooks/openfort/useOnramp.js'
+import { isCompleteWalletPay, isWalletPayMethod } from '../../../hooks/openfort/walletPay.js'
+import styled from '../../../styles/styled/index.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles.js'
+import SquircleSpinner from '../../Common/SquircleSpinner/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ContinueButtonWrapper, PendingContainer, SpinnerLogoBox, StackedButtonWrapper } from '../Buy/styles.js'
 
 // In-page mount for the Coinbase native Pay button (Apple/Google Pay). The
 // server returns Coinbase's hosted Pay-button URL; `allow="payment"` lets the
@@ -77,6 +77,7 @@ const BuyProcessing = () => {
   // Commit once per mount. A session takes a single payment method, so a retry
   // goes back to the amount screen, which mints a fresh session.
   const startedRef = useRef(false)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: commits once per mount (startedRef); the form fields listed are the order captured at that commit, and walletPayAngle is only read for the pre-commit guard
   useEffect(() => {
     if (startedRef.current) return
     if (!buyForm.session) {
@@ -119,6 +120,7 @@ const BuyProcessing = () => {
   }, [buyForm.session, buyForm.amount, buyForm.currency, buyForm.method, buyForm.walletPay, setRoute])
 
   // Re-measure the modal as the state machine advances.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: these are re-measure triggers, not inputs — each state swaps in a differently sized body
   useEffect(() => {
     triggerResize()
   }, [
@@ -149,6 +151,7 @@ const BuyProcessing = () => {
   // (onramp_api.load_* / commit_* / polling_*, per the headless onramp docs) —
   // the only signal a cross-origin frame gives us. Session polling stays the
   // source of truth for settlement; these just drive what's on screen.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the frame listener is registered once for the mount; setRoute is the provider's stable setter
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== 'https://pay.coinbase.com') return
@@ -213,7 +216,7 @@ const BuyProcessing = () => {
     }
     const timer = setTimeout(() => setShowContinueButton(true), 5_000)
     return () => clearTimeout(timer)
-  }, [onramp.status, onramp.angle, framePaid, onramp.checkoutClosed])
+  }, [onramp.status, onramp.angle, framePaid, onramp.checkoutClosed, frameSilent])
 
   const handleBack = () => {
     onramp.reset()

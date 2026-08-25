@@ -4,11 +4,12 @@ import type { ReactNode } from 'react'
 import type { CountryData, CountryIso2, CountrySelectorProps } from 'react-international-phone'
 import type { Hex } from 'viem'
 import type { getAssets } from 'viem/experimental/erc7811'
-import type { EthereumConfig } from '../../ethereum/types'
-import type { EthereumUserWallet, SolanaUserWallet } from '../../hooks/openfort/walletTypes'
-import type { SolanaConfig } from '../../solana/types'
+import type { OpenfortError } from '../../errors/base.js'
+import type { EthereumConfig } from '../../ethereum/types.js'
+import type { EthereumUserWallet, SolanaUserWallet } from '../../hooks/openfort/walletTypes.js'
+import type { SolanaConfig } from '../../solana/types.js'
 
-import type { CustomAvatarProps, CustomTheme, Languages, Mode, Theme } from '../../types'
+import type { CustomAvatarProps, CustomTheme, Languages, Mode, Theme } from '../../types.js'
 
 export const routes = {
   PROVIDERS: 'providers',
@@ -32,9 +33,6 @@ export const routes = {
   EMAIL_VERIFICATION: 'emailVerification',
   LINK_EMAIL: 'linkEmail',
 
-  ONBOARDING: 'onboarding',
-  ABOUT: 'about',
-
   CONNECTORS: 'connectors',
   MOBILECONNECTORS: 'mobileConnectors',
   CONNECT_WITH_MOBILE: 'connectWithMobile',
@@ -42,7 +40,6 @@ export const routes = {
   CONNECT: 'connect',
   DOWNLOAD: 'download',
   CONNECTED: 'connected',
-  SWITCHNETWORKS: 'switchNetworks',
   LINKED_PROVIDER: 'linkedProvider',
   LINKED_PROVIDERS: 'linkedProviders',
   REMOVE_LINKED_PROVIDER: 'removeLinkedProvider',
@@ -84,8 +81,6 @@ export const routes = {
   SOL_RECEIVE: 'sol:receive',
   SOL_ASSET_INVENTORY: 'sol:assetInventory',
   SOL_WALLETS: 'sol:wallets',
-
-  WALLET_OVERVIEW: 'walletOverview',
 } as const
 
 type AllRoutes = (typeof routes)[keyof typeof routes]
@@ -93,8 +88,6 @@ type AllRoutes = (typeof routes)[keyof typeof routes]
 export const notStoredInHistoryRoutes: AllRoutes[] = [
   routes.LOADING,
   routes.CONNECTED_SUCCESS,
-  routes.ONBOARDING,
-  routes.ABOUT,
   routes.LOAD_WALLETS,
   routes.CREATE_GUEST_USER,
 ]
@@ -269,64 +262,63 @@ type WalletRecoveryOptions = {
 
 export type PhoneConfig = {
   /**
-   * @description Default country value (iso2).
+   * Default country value (iso2).
    * @default "us"
    */
   defaultCountry?: CountryIso2
   /**
-   * @description Array of available countries for guessing.
+   * Array of available countries for guessing.
    * @default defaultCountries // full country list
    */
   countries?: CountryData[]
   /**
-   * @description Countries to display at the top of the list of dropdown options.
+   * Countries to display at the top of the list of dropdown options.
    * @default []
    */
   preferredCountries?: CountryIso2[]
   /**
-   * @description Disable country guess on value change.
+   * Disable country guess on value change.
    * @default false
    */
   disableCountryGuess?: boolean
   /**
-   * @description
    * Disable dial code prefill on initialization.
-   * Dial code prefill works only when "empty" phone value have been provided.
+   * Dial code prefill works only when an "empty" phone value has been provided.
    * @default false
    */
   disableDialCodePrefill?: boolean
   /**
-   * @description
    * Always display the dial code.
-   * Dial code can't be removed/changed by keyboard events, but it can be changed by pasting another country phone value.
+   * The dial code cannot be removed or changed by keyboard events, but it can be changed by
+   * pasting another country's phone value.
    * @default false
    */
   forceDialCode?: boolean
   /**
-   * @description Display phone value will not include passed *dialCode* and *prefix* if set to *true*.
-   * @ignore *forceDialCode* value will be ignored.
+   * Display phone value will not include the passed *dialCode* and *prefix* if set to *true*.
+   * When enabled, *forceDialCode* is ignored.
    * @default false
    */
   disableDialCodeAndPrefix?: boolean
   /**
-   * @description Disable phone value mask formatting. All formatting characters will not be displayed, but the mask length will be preserved.
+   * Disable phone value mask formatting. All formatting characters will not be displayed, but the
+   * mask length will be preserved.
    * @default false
    */
   disableFormatting?: boolean
   /**
-   * @description Hide the dropdown icon. Make country selection not accessible.
+   * Hide the dropdown icon. Makes country selection inaccessible.
    * @default false
    */
   hideDropdown?: CountrySelectorProps['hideDropdown']
   /**
-   * @description
-   * Show prefix and dial code between country selector and phone input.
-   * Works only when *disableDialCodeAndPrefix* is *true*
+   * Show prefix and dial code between the country selector and the phone input.
+   * Works only when *disableDialCodeAndPrefix* is *true*.
    * @default false
    */
   showDisabledDialCodeAndPrefix?: boolean
   /**
-   * @description Disable auto focus on input field after country select.
+   * Disable auto focus on the input field after country select.
    * @default false
    */
   disableFocusAfterCountrySelect?: boolean
@@ -346,9 +338,7 @@ export type ConnectUIOptions = {
   avoidLayoutShift?: boolean
   /** Automatically embeds the Google font of the current theme. Does not work with custom themes. */
   embedGoogleFonts?: boolean
-  truncateLongENSAddress?: boolean
   walletConnectName?: string
-  reducedMotion?: boolean
   disclaimer?: ReactNode | string
   /** Buffer polyfill, needed for bundlers that do not provide Node polyfills (e.g. CRA, Vite, etc.). */
   bufferPolyfill?: boolean
@@ -357,9 +347,6 @@ export type ConnectUIOptions = {
   /** Blur intensity applied to the background when the modal is open. */
   overlayBlur?: number
   walletRecovery?: WalletRecoveryOptions
-  buyWithCardUrl?: string
-  buyFromExchangeUrl?: string
-  buyTroubleshootingUrl?: string
   /**
    * Base URL of the funding JSON API serving `/v2/funding/*` (chains + sessions).
    * Defaults to the SDK's backend URL (`https://api.openfort.io`); set this only to
@@ -401,7 +388,7 @@ export enum FundingMethod {
 }
 
 /** Where Deposit-hub funding lands. Defaults to USDC on Base when omitted. */
-export type FundingUIOptions = {
+type FundingUIOptions = {
   /**
    * Destination CAIP-2 chain id for deposits.
    * @default "eip155:8453" (Base)
@@ -466,30 +453,20 @@ export type OpenfortUIOptionsExtended = {
   hideBalance?: boolean
   hideTooltips?: boolean
   hideQuestionMarkCTA?: boolean
-  hideNoWalletCTA?: boolean
   hideRecentBadge?: boolean
   walletConnectCTA?: 'link' | 'modal' | 'both'
   /** Avoids layout shift when the Openfort modal is open by adding padding to the body. */
   avoidLayoutShift?: boolean
   /** Automatically embeds the Google font of the current theme. Does not work with custom themes. */
   embedGoogleFonts?: boolean
-  truncateLongENSAddress?: boolean
   walletConnectName?: string
-  reducedMotion?: boolean
   disclaimer?: ReactNode | string
   /** Buffer polyfill, needed for bundlers that do not provide Node polyfills (e.g. CRA, Vite, etc.). */
   bufferPolyfill?: boolean
   customAvatar?: React.FC<CustomAvatarProps>
   enforceSupportedChains?: boolean
-  ethereumOnboardingUrl?: string
-  walletOnboardingUrl?: string
-  /** Disable redirect to the SIWE page after a wallet is connected. */
-  disableSiweRedirect?: boolean
   /** Blur intensity applied to the background when the modal is open. */
   overlayBlur?: number
-  buyWithCardUrl?: string
-  buyFromExchangeUrl?: string
-  buyTroubleshootingUrl?: string
   /** Base URL of the openfort-funding backend. See {@link ConnectUIOptions.fundingBaseUrl}. */
   fundingBaseUrl?: string
   /** Deposit-hub funding options. See {@link ConnectUIOptions.funding}. */
@@ -581,9 +558,7 @@ export type SignRequest = (
   | { kind: 'message'; message: string }
   | { kind: 'typedData'; typedData: SignTypedDataPayload }
 ) & {
-  // EVM returns a 0x-hex signature; Solana returns a base58 string — hence `string`.
-  resolve: (signature: string) => void
-  reject: (reason?: unknown) => void
+  settle: (result: { signature: string } | { error: OpenfortError }) => void
 }
 
 /**

@@ -2,8 +2,8 @@
 
 import { useContext } from 'react'
 import { useStore } from 'zustand'
-import { StoreContext } from './context'
-import type { OpenfortStore } from './store'
+import { StoreContext } from './context.js'
+import type { OpenfortStore } from './store.js'
 
 export function useOpenfortStore<T>(selector: (state: OpenfortStore) => T): T {
   const store = useContext(StoreContext)

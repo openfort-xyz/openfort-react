@@ -1,8 +1,8 @@
 import { renderHook } from '@testing-library/react'
 import type { ReactNode } from 'react'
 import { describe, expect, it, vi } from 'vitest'
-import { SolanaContextProvider, useSolanaContext } from '../../solana/SolanaContext'
-import type { SolanaConfig } from '../../solana/types'
+import { SolanaContextProvider, useSolanaContext } from '../../solana/SolanaContext.js'
+import type { SolanaConfig } from '../../solana/types.js'
 
 function makeWrapper(config: SolanaConfig) {
   return function Wrapper({ children }: { children: ReactNode }) {

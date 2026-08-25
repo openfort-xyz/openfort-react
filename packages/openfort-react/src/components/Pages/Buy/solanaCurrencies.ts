@@ -1,6 +1,6 @@
 import type { Hex } from 'viem'
-import { DEST_USDC_SOL } from '../../../hooks/openfort/fundingSources'
-import type { Asset } from '../../Openfort/types'
+import { DEST_USDC_SOL } from '../../../hooks/openfort/fundingSources.js'
+import type { Asset } from '../../Openfort/types.js'
 
 /**
  * Buyable Solana destination currencies for the fiat onramp. USDC is first so it
@@ -9,7 +9,7 @@ import type { Asset } from '../../Openfort/types'
  * feeds the onramp `destinationCurrency`. The USDC `address` is the SPL mint cast
  * to `Hex` to fit the shared `Asset` type; it's only read by `getAssetSymbol`.
  */
-export const SOLANA_BUY_CURRENCIES: Asset[] = [
+export const SOLANA_BUY_CURRENCIES: [Asset, ...Asset[]] = [
   {
     type: 'erc20',
     address: DEST_USDC_SOL as Hex,

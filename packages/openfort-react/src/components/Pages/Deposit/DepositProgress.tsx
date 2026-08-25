@@ -1,17 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import type { SessionStatus } from '../../../hooks/openfort/useFunding'
-import styled from '../../../styles/styled'
-import { logger } from '../../../utils/logger'
-import Button from '../../Common/Button'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { Spinner } from '../../Common/Spinner'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { DepositSuccess } from './DepositSuccess'
+import type { SessionStatus } from '../../../hooks/openfort/fundingClient.js'
+import styled from '../../../styles/styled/index.js'
+import { logger } from '../../../utils/logger.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { Spinner } from '../../Common/Spinner/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { DepositSuccess } from './DepositSuccess.js'
 
 /**
  * Statuses that take over the whole modal with the compact flow view: once a

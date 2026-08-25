@@ -1,4 +1,4 @@
-import { FundingMethod } from '../../Openfort/types'
+import { FundingMethod } from '../../Openfort/types.js'
 
 /**
  * What a row routes into:

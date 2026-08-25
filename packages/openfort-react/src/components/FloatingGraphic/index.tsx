@@ -1,5 +1,5 @@
 import type React from 'react'
-import wave from '../../assets/wave'
+import wave from '../../assets/wave.js'
 import {
   FloatWrapper,
   Graphic,
@@ -10,7 +10,7 @@ import {
   LogoInner,
   LogoPosition,
   RotateWrapper,
-} from './styles'
+} from './styles.js'
 
 type LogoGraphicProps = {
   size?: string

@@ -3,6 +3,9 @@ name: Release
 on:
   push:
     branches: [main]
+  workflow_dispatch:
+
+permissions: {} # each job declares only the permissions it needs
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,26 +21,37 @@ jobs:
       pull-requests: write  # To create and update PRs
       id-token: write       # For OIDC and provenance
       # packages: write       # To publish package to GHCR
+    outputs:
+      hasChangesets: ${{ steps.changesets.outputs.hasChangesets }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+      # changesets/action pushes the version branch and the release tags, so
+      # this checkout must keep its credentials.
+      - name: Checkout repository # zizmor: ignore[artipacked]
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          # Fetch full git history so Changesets can resolve the commits behind
+          # each changeset and generate changelog entries correctly.
+          fetch-depth: 0
 
       - name: Install pnpm
-        uses: pnpm/action-setup@f40ffcd9367d9f12939873eb1018b921a783ffaa # v4
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
 
       - name: Set up Node.js
-        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
         with:
-          node-version: 24
-          cache: pnpm
+          # Pin the minor so the runner image can't drift onto a Node build that
+          # breaks node-fetch's gzip handling in the changelog generator.
+          node-version: 24.5
           registry-url: https://registry.npmjs.org
+          # No dependency cache: avoid cache poisoning attacks on the publish path.
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Publish
-        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1
+        id: changesets
+        uses: changesets/action@6a0a831ff30acef54f2c6aa1cbbc1096b066edaf # v1.7.0
         with:
           publish: pnpm changeset:publish
           version: pnpm changeset:version
@@ -47,4 +61,50 @@ jobs:
           NPM_CONFIG_PROVENANCE: true # this works only with npmjs and public repos, not ghcr
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}    # we need this for PRs
           NPM_TOKEN: '' # bug in changesets/action - https://github.com/changesets/changesets/issues/1152#issuecomment-3190884868
-          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+
+  canary:
+    name: Publish canary release
+    needs: release
+    # Changesets are pending, so `main` is ahead of the last stable release.
+    # Ship that state as a snapshot so consumers can test it before the version
+    # pull request is merged.
+    if: needs.release.outputs.hasChangesets == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # A canary is a convenience build; a failure here must not mark the release
+    # run as failed.
+    continue-on-error: true
+    permissions:
+      contents: read  # To check out the repository
+      id-token: write # For OIDC trusted publishing and provenance
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@0e279bb959325dab635dd2c09392533439d90093 # v6.0.8
+
+      - name: Set up Node.js
+        uses: actions/setup-node@53b83947a5a98c8d113130e565377fae1a50d02f # v6.3.0
+        with:
+          node-version: 24.5
+          registry-url: https://registry.npmjs.org
+          # No dependency cache: avoid cache poisoning attacks on the publish path.
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Publish snapshot packages
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NPM_CONFIG_PROVENANCE: true
+        # `changeset version --snapshot` writes the snapshot version into each
+        # package.json; `changeset:prepublish` then builds, which is what copies
+        # that version into src/version.ts. Order matters.
+        run: |
+          pnpm changeset version --no-git-tag --snapshot canary
+          pnpm changeset:prepublish
+          pnpm changeset publish --no-git-tag --snapshot canary --tag canary

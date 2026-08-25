@@ -2,13 +2,13 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect } from 'react'
-import { getExplorerUrl } from '../../../shared/utils/explorer'
-import Button from '../../Common/Button'
-import Loader from '../../Common/Loading'
-import PoweredByFooter from '../../Common/PoweredByFooter'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { getExplorerUrl } from '../../../shared/utils/explorer.js'
+import Button from '../../Common/Button/index.js'
+import Loader from '../../Common/Loading/index.js'
+import PoweredByFooter from '../../Common/PoweredByFooter/index.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
 /**
  * Terminal success screen for a same-chain "transfer from address" deposit.

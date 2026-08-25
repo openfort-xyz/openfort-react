@@ -1,4 +1,3 @@
-import { useOpenfort } from '@openfort/react'
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useState } from 'react'
 import { createWalletClient, custom } from 'viem'
@@ -7,7 +6,6 @@ import { toError } from '@/lib/errors'
 import { SignaturesLayout } from './signatures-shared'
 
 export const SignaturesCardEVM = ({ hook, bare }: { hook?: string; bare?: boolean }) => {
-  const core = useOpenfort()
   const address = useDisplayEthereumAddress()
   const { status, activeWallet } = useEthereumEmbeddedWallet()
   const [data, setData] = useState<string | null>(null)
@@ -15,7 +13,7 @@ export const SignaturesCardEVM = ({ hook, bare }: { hook?: string; bare?: boolea
   const [error, setError] = useState<Error | null>(null)
 
   const handleSign = async (message: string) => {
-    if (!address) {
+    if (!address || status !== 'connected' || !activeWallet) {
       setError(new Error('Wallet not connected'))
       return
     }
@@ -25,10 +23,7 @@ export const SignaturesCardEVM = ({ hook, bare }: { hook?: string; bare?: boolea
     setData(null)
 
     try {
-      const provider =
-        status === 'connected' && activeWallet
-          ? await activeWallet.getProvider()
-          : await core.client.embeddedWallet.getEthereumProvider()
+      const provider = await activeWallet.getProvider()
 
       const walletClient = createWalletClient({
         account: address,
@@ -53,7 +48,7 @@ export const SignaturesCardEVM = ({ hook, bare }: { hook?: string; bare?: boolea
       bare={bare}
       hook={hook}
       isPending={isPending}
-      canSign={!!address}
+      canSign={!!address && status === 'connected' && !!activeWallet}
       signature={data ?? undefined}
       error={error}
       onSubmit={handleSign}

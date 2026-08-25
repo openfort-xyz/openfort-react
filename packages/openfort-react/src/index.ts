@@ -39,50 +39,85 @@
  * | Revoke session key permissions | `useRevokePermissions()` |
  */
 // ── SDK re-exports ──────────────────────────────────────────────────────────
-export {
-  AccountTypeEnum,
+export type {
   AuthInitPayload,
   AuthResponse,
-  ChainTypeEnum,
   EmbeddedAccount,
   OpenfortEventMap,
-  OpenfortEvents,
-  openfortEvents,
-  RecoveryMethod,
   RecoveryParams,
   SignedMessagePayload,
   User,
 } from '@openfort/openfort-js'
+export {
+  AccountTypeEnum,
+  ChainTypeEnum,
+  OpenfortEvents,
+  openfortEvents,
+  RecoveryMethod,
+} from '@openfort/openfort-js'
 export type { CountrySelectorProps } from 'react-international-phone'
 // ── Provider + UI components ─────────────────────────────────────────────────
-export { default as Avatar } from './components/Common/Avatar'
-export { default as ChainIcon } from './components/Common/Chain'
-export { OpenfortButton } from './components/ConnectButton'
-export { OpenfortProvider } from './components/Openfort/OpenfortProvider'
-export type { CustomizableRoutes, MultiChainAsset, SignTypedDataPayload } from './components/Openfort/types'
-export { FundingMethod, LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types'
-export { embeddedWalletId } from './constants/openfort'
+export { default as Avatar } from './components/Common/Avatar/index.js'
+export { default as ChainIcon } from './components/Common/Chain/index.js'
+export { OpenfortButton } from './components/ConnectButton/index.js'
+export { OpenfortProvider } from './components/Openfort/OpenfortProvider.js'
+export type {
+  ConnectUIOptions as OpenfortOptions,
+  CustomizableRoutes,
+  MultiChainAsset,
+  OpenfortWalletConfig,
+  PhoneConfig,
+  SignTypedDataPayload,
+} from './components/Openfort/types.js'
+export { FundingMethod, LinkWalletOnSignUpOption, UIAuthProvider as AuthProvider } from './components/Openfort/types.js'
+export { embeddedWalletId } from './constants/openfort.js'
 export {
+  ApiRequestError,
+  AuthenticationError,
+  ChainNotConfiguredError,
+  ClientNotInitializedError,
+  ConnectorNotFoundError,
+  ConnectorTypeMismatchError,
+  FundingError,
+  FundingNotConfiguredError,
+  InvalidEmailError,
+  MissingParameterError,
+  NotAuthenticatedError,
+  OpenfortConfigError,
   OpenfortError,
-  OpenfortReactErrorType,
-  OpenfortReactErrorType as OpenfortErrorType,
-} from './core/errors'
+  OtpRequiredError,
+  ProviderNotFoundError,
+  ProviderNotReadyError,
+  RecoveryError,
+  RpcUrlNotConfiguredError,
+  SetActiveWalletError,
+  SiweMessageError,
+  SolanaClusterNotSupportedError,
+  UnsupportedOperationError,
+  ValidationError,
+  WalletConfigNotFoundError,
+  WalletCreationError,
+  WalletError,
+  WalletImportError,
+  WalletNotConnectedError,
+  WalletNotFoundError,
+} from './errors/index.js'
 export type {
   ConnectedEmbeddedEthereumWallet,
   EthereumWalletState,
   SetActiveEthereumWalletOptions,
   UseEmbeddedEthereumWalletOptions,
-} from './ethereum/types'
-export { useAuthCallback } from './hooks/openfort/auth/useAuthCallback'
-export type { EmailVerificationResult } from './hooks/openfort/auth/useEmailAuth'
-export { useEmailAuth } from './hooks/openfort/auth/useEmailAuth'
-export { useEmailOtpAuth } from './hooks/openfort/auth/useEmailOtpAuth'
-export { useGuestAuth } from './hooks/openfort/auth/useGuestAuth'
-export type { StoreCredentialsResult } from './hooks/openfort/auth/useOAuth'
-export { useOAuth } from './hooks/openfort/auth/useOAuth'
-export { usePhoneOtpAuth } from './hooks/openfort/auth/usePhoneOtpAuth'
-export { useSignOut } from './hooks/openfort/auth/useSignOut'
-export type { StepUp } from './hooks/openfort/euIdentifiers'
+} from './ethereum/types.js'
+export { useAuthCallback } from './hooks/openfort/auth/useAuthCallback.js'
+export type { EmailVerificationResult } from './hooks/openfort/auth/useEmailAuth.js'
+export { useEmailAuth } from './hooks/openfort/auth/useEmailAuth.js'
+export { useEmailOtpAuth } from './hooks/openfort/auth/useEmailOtpAuth.js'
+export { useGuestAuth } from './hooks/openfort/auth/useGuestAuth.js'
+export type { StoreCredentialsResult } from './hooks/openfort/auth/useOAuth.js'
+export { useOAuth } from './hooks/openfort/auth/useOAuth.js'
+export { usePhoneOtpAuth } from './hooks/openfort/auth/usePhoneOtpAuth.js'
+export { useSignOut } from './hooks/openfort/auth/useSignOut.js'
+export type { StepUp } from './hooks/openfort/euIdentifiers.js'
 export {
   attestationRequired,
   carfIdentifierForCountry,
@@ -90,43 +125,19 @@ export {
   identifierLabel,
   pendingIdentifierTypes,
   stepUpFor,
-} from './hooks/openfort/euIdentifiers'
-export type { FundingClient, OnrampIdentity, OnrampLimits, OnrampLimitUpgrade } from './hooks/openfort/fundingClient'
-export type { ResolvedOnrampMethod } from './hooks/openfort/onrampMethodsApi'
-export { backendMethodId, fetchOnrampMethods } from './hooks/openfort/onrampMethodsApi'
-export type {
-  OnrampVerificationChannel,
-  OnrampVerificationRecord,
-  OnrampVerificationStart,
-} from './hooks/openfort/onrampVerificationsApi'
-export {
-  startOnrampVerification,
-  storedOnrampVerification,
-  storeOnrampVerification,
-  submitOnrampVerification,
-} from './hooks/openfort/onrampVerificationsApi'
-export type {
-  StripeAuthenticationResult,
-  StripeCollectPaymentMethodResult,
-  StripeIdentifierRequirements,
-  StripeKycInfo,
-  StripeOnrampCoordinator,
-  StripeWalletPreference,
-} from './hooks/openfort/stripeCryptoOnramp'
-export { createStripeOnrampCoordinator, stripeNetworkForChain } from './hooks/openfort/stripeCryptoOnramp'
-export {
-  type SignAuthorizationParameters,
-  type SignAuthorizationReturnType,
-  use7702Authorization,
-} from './hooks/openfort/use7702Authorization'
+} from './hooks/openfort/euIdentifiers.js'
 export type {
   CexGuidance,
   CryptoPaymentMethod,
+  FundingClient,
   FundingFee,
   FundingSession,
   FundingSource,
   FundingTarget,
   OnrampAngle,
+  OnrampIdentity,
+  OnrampLimits,
+  OnrampLimitUpgrade,
   OnrampMethodId,
   OnrampPaymentMethod,
   OnrampQuote,
@@ -136,71 +147,99 @@ export type {
   ResolvedFundingMethod,
   ResolvedFundingMethods,
   SessionStatus,
+  WalletDeeplink,
+} from './hooks/openfort/fundingClient.js'
+export { cryptoPaymentMethod } from './hooks/openfort/fundingClient.js'
+export type { ResolvedOnrampMethod } from './hooks/openfort/onrampMethodsApi.js'
+export { backendMethodId, fetchOnrampMethods } from './hooks/openfort/onrampMethodsApi.js'
+export type {
+  OnrampVerificationChannel,
+  OnrampVerificationRecord,
+  OnrampVerificationStart,
+} from './hooks/openfort/onrampVerificationsApi.js'
+export {
+  startOnrampVerification,
+  storedOnrampVerification,
+  storeOnrampVerification,
+  submitOnrampVerification,
+} from './hooks/openfort/onrampVerificationsApi.js'
+export type {
+  StripeAuthenticationResult,
+  StripeCollectPaymentMethodResult,
+  StripeIdentifierRequirements,
+  StripeKycInfo,
+  StripeOnrampCoordinator,
+  StripeWalletPreference,
+} from './hooks/openfort/stripeCryptoOnramp.js'
+export { createStripeOnrampCoordinator, stripeNetworkForChain } from './hooks/openfort/stripeCryptoOnramp.js'
+export {
+  type SignAuthorizationOptions,
+  type SignAuthorizationParameters,
+  type SignAuthorizationResult,
+  type SignAuthorizationReturnType,
+  type Use7702AuthorizationOptions,
+  use7702Authorization,
+} from './hooks/openfort/use7702Authorization.js'
+export type {
+  FundingPayLinkResult,
+  FundingSessionResult,
   UseFunding,
   UseFundingOptions,
-  WalletDeeplink,
-} from './hooks/openfort/useFunding'
-export { cryptoPaymentMethod, useFunding, useFundingClient } from './hooks/openfort/useFunding'
-export type { FundingChain, FundingCurrency } from './hooks/openfort/useFundingChains'
-export { curateChains, nominalUnits, useFundingChains } from './hooks/openfort/useFundingChains'
-export type { FundingSessionRef, UseFundingMethods, UseFundingMethodsOptions } from './hooks/openfort/useFundingMethods'
-export { useFundingMethods } from './hooks/openfort/useFundingMethods'
-export { useFundingTarget } from './hooks/openfort/useFundingTarget'
-export { useGrantPermissions } from './hooks/openfort/useGrantPermissions'
-export type { OnrampOpenParams, UseOnramp, UseOnrampOptions } from './hooks/openfort/useOnramp'
-export { useOnramp } from './hooks/openfort/useOnramp'
-export { totalFee, useOnrampQuote } from './hooks/openfort/useOnrampQuote'
-export { useResolvedFundingMethods } from './hooks/openfort/useResolvedFundingMethods'
-export { useRevokePermissions } from './hooks/openfort/useRevokePermissions'
-export { useSignMessage } from './hooks/openfort/useSignMessage'
-export { useUI } from './hooks/openfort/useUI'
-export { useUser } from './hooks/openfort/useUser'
-export type { UserWallet } from './hooks/openfort/walletTypes'
-export { invalidateBalance } from './hooks/useBalance'
-export { StoreContext } from './openfort/context'
-// ── Store / selectors ────────────────────────────────────────────────────────
-export {
-  selectActiveAddress,
-  selectChainType,
-  selectEmbeddedState,
-  selectIsAuthenticated,
-  selectIsLoading,
-  selectUser,
-  selectWalletStatus,
-} from './openfort/selectors'
-export type { OpenfortStore, OpenfortStoreState } from './openfort/store'
-export { useOpenfortCore as useOpenfort, useOpenfortCore } from './openfort/useOpenfort'
-export { getEmbeddedAccountsQueryOptions, getUserQueryOptions, openfortKeys } from './query'
+} from './hooks/openfort/useFunding.js'
+export { useFunding, useFundingClient } from './hooks/openfort/useFunding.js'
+export type { FundingChain, FundingCurrency } from './hooks/openfort/useFundingChains.js'
+export { curateChains, nominalUnits, useFundingChains } from './hooks/openfort/useFundingChains.js'
+export type {
+  FundingSessionRef,
+  UseFundingMethods,
+  UseFundingMethodsOptions,
+} from './hooks/openfort/useFundingMethods.js'
+export { useFundingMethods } from './hooks/openfort/useFundingMethods.js'
+export { useFundingTarget } from './hooks/openfort/useFundingTarget.js'
+export { useGrantPermissions } from './hooks/openfort/useGrantPermissions.js'
+export type { OnrampOpenParams, UseOnramp, UseOnrampOptions } from './hooks/openfort/useOnramp.js'
+export { useOnramp } from './hooks/openfort/useOnramp.js'
+export { totalFee, useOnrampQuote } from './hooks/openfort/useOnrampQuote.js'
+export { useResolvedFundingMethods } from './hooks/openfort/useResolvedFundingMethods.js'
+export { useRevokePermissions } from './hooks/openfort/useRevokePermissions.js'
+export type { SignMessageResult, UseSignMessageOptions } from './hooks/openfort/useSignMessage.js'
+export { useSignMessage } from './hooks/openfort/useSignMessage.js'
+export { useUI } from './hooks/openfort/useUI.js'
+export { useUser } from './hooks/openfort/useUser.js'
+export type { UserWallet } from './hooks/openfort/walletTypes.js'
+export { useInvalidateBalance } from './hooks/useBalance.js'
+export { useOpenfortCore as useOpenfort } from './openfort/useOpenfort.js'
+export type {
+  EmbeddedAccountsQueryKey,
+  EmbeddedAccountsQueryOptions,
+  UserQueryKey,
+  UserQueryOptions,
+} from './query/index.js'
+export { getEmbeddedAccountsQueryOptions, getUserQueryOptions, openfortKeys } from './query/index.js'
 export type {
   CreateEmbeddedWalletOptions,
   CreateEmbeddedWalletResult,
   SetRecoveryOptions,
-} from './shared/types'
+} from './shared/types.js'
 // ── Utilities ────────────────────────────────────────────────────────────────
-export { createSIWEMessage } from './siwe/create-siwe-message'
+export { createSIWEMessage } from './siwe/create-siwe-message.js'
 export type {
   ConnectedEmbeddedSolanaWallet,
   SetActiveSolanaWalletOptions,
   SolanaConfig,
   SolanaWalletState,
   UseEmbeddedSolanaWalletOptions,
-} from './solana/types'
-export type { CustomTheme } from './styles/customTheme'
+} from './solana/types.js'
+export type { CustomTheme } from './styles/customTheme.js'
 export type {
   CustomAvatarProps,
   Languages,
   Mode,
   OpenfortHookOptions,
-  OpenfortOptions,
-  OpenfortWalletConfig,
-  PhoneConfig,
-  Theme,
-} from './types'
-export {
-  OAuthProvider,
   SDKOverrides,
-  ThirdPartyOAuthProvider,
-} from './types'
-export { formatAddress } from './utils/format'
-export { getDefaultSolanaRpcUrl } from './utils/rpc'
-export { OPENFORT_VERSION } from './version'
+  Theme,
+} from './types.js'
+export { OAuthProvider, ThirdPartyOAuthProvider } from './types.js'
+export { formatAddress } from './utils/format.js'
+export { getDefaultSolanaRpcUrl } from './utils/rpc.js'
+export { OPENFORT_VERSION } from './version.js'

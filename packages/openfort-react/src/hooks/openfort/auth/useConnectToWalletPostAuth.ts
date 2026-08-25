@@ -2,18 +2,23 @@
 
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { useCallback } from 'react'
-import { useOpenfort } from '../../../components/Openfort/useOpenfort'
-import { DEFAULT_ACCOUNT_TYPE } from '../../../constants/openfort'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { buildRecoveryParams } from '../../../shared/utils/recovery'
-import { logger } from '../../../utils/logger'
+import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
+import { DEFAULT_ACCOUNT_TYPE } from '../../../constants/openfort.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import {
+  captureEmbeddedSignerSession,
+  isEmbeddedSignerOperationInvalidationError,
+  runEmbeddedSignerOperation,
+} from '../../../shared/utils/embeddedSignerOperationQueue.js'
+import { buildRecoveryParams } from '../../../shared/utils/recovery.js'
+import { logger } from '../../../utils/logger.js'
 import {
   type EthereumUserWallet,
   embeddedAccountToSolanaUserWallet,
   embeddedAccountToUserWallet,
   type SolanaUserWallet,
-} from '../walletTypes'
-import { useSignOut } from './useSignOut'
+} from '../walletTypes.js'
+import { useSignOut } from './useSignOut.js'
 
 /**
  * Options that control the behaviour of {@link useConnectToWalletPostAuth} when attempting to
@@ -52,8 +57,12 @@ export type CreateWalletPostAuthOptions = {
  * ```
  */
 export const useConnectToWalletPostAuth = () => {
-  const { chainType, setActiveEmbeddedAddress, embeddedState, client, activeEmbeddedAddress, updateEmbeddedAccounts } =
-    useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
+  const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
+  const embeddedState = useOpenfortCore((s) => s.embeddedState)
+  const client = useOpenfortCore((s) => s.client)
+  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
+  const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
   const { walletConfig } = useOpenfort()
   const chainId = walletConfig?.ethereum?.chainId ?? 84532
   const { signOut } = useSignOut()
@@ -75,8 +84,17 @@ export const useConnectToWalletPostAuth = () => {
         return {}
       }
 
+      const session = captureEmbeddedSignerSession(client)
+
       // Fetch + sync accounts directly via the store — no TanStack Query peer dep needed
-      const wallets = await updateEmbeddedAccounts()
+      let wallets: Awaited<ReturnType<typeof updateEmbeddedAccounts>>
+      try {
+        wallets = await updateEmbeddedAccounts()
+        session.assertCurrent()
+      } catch (error) {
+        if (isEmbeddedSignerOperationInvalidationError(error)) return {}
+        throw error
+      }
       if (!wallets) return {}
 
       const chainWallets = wallets.filter((w) => w.chainType === chainType)
@@ -95,15 +113,22 @@ export const useConnectToWalletPostAuth = () => {
               getUserId: async () => (await client.user.get())?.id,
             }
           )
+          session.assertCurrent()
           const accountType = walletConfig?.ethereum?.accountType ?? DEFAULT_ACCOUNT_TYPE
-          const account = await client.embeddedWallet.create({
-            chainType,
-            accountType: chainType === ChainTypeEnum.EVM ? accountType : DEFAULT_ACCOUNT_TYPE,
-            ...(chainType === ChainTypeEnum.EVM && accountType !== DEFAULT_ACCOUNT_TYPE && { chainId }),
-            recoveryParams,
+          const account = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+            session.assertCurrent()
+            const createdAccount = await client.embeddedWallet.create({
+              chainType,
+              accountType: chainType === ChainTypeEnum.EVM ? accountType : DEFAULT_ACCOUNT_TYPE,
+              ...(chainType === ChainTypeEnum.EVM && accountType !== DEFAULT_ACCOUNT_TYPE && { chainId }),
+              recoveryParams,
+            })
+            assertCurrent()
+            await updateEmbeddedAccounts({ silent: true })
+            assertCurrent()
+            setActiveEmbeddedAddress(createdAccount.address)
+            return createdAccount
           })
-          await updateEmbeddedAccounts({ silent: true })
-          setActiveEmbeddedAddress(account.address)
           return {
             wallet:
               chainType === ChainTypeEnum.SVM
@@ -112,7 +137,7 @@ export const useConnectToWalletPostAuth = () => {
           }
         } catch (err) {
           logger.error('Error creating wallet:', err)
-          if (signOutOnError) await signOut()
+          if (signOutOnError && !isEmbeddedSignerOperationInvalidationError(err)) await signOut()
           return {}
         }
       }
@@ -169,16 +194,22 @@ export const useConnectToWalletPostAuth = () => {
               getUserId: async () => (await client.user.get())?.id,
             }
           )
-          await client.embeddedWallet.recover({ account: autoRecoverableWallet.id, recoveryParams })
-          setActiveEmbeddedAddress(autoRecoverableWallet.address)
+          session.assertCurrent()
+          await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+            session.assertCurrent()
+            await client.embeddedWallet.recover({ account: autoRecoverableWallet.id, recoveryParams })
+            assertCurrent()
+            setActiveEmbeddedAddress(autoRecoverableWallet.address)
+          })
           return {
             wallet:
               chainType === ChainTypeEnum.SVM
                 ? embeddedAccountToSolanaUserWallet(autoRecoverableWallet)
                 : embeddedAccountToUserWallet(autoRecoverableWallet),
           }
-        } catch (_err) {
-          if (signOutOnError) await signOut()
+        } catch (error) {
+          logger.error('Error recovering wallet:', error)
+          if (signOutOnError && !isEmbeddedSignerOperationInvalidationError(error)) await signOut()
           return {}
         }
       }

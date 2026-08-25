@@ -1,0 +1,130 @@
+[
+  {
+    "name": "@openfort/react",
+    "path": "build/index.js",
+    "import": "*",
+    "limit": "550 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
+  },
+  {
+    "name": "@openfort/react/solana",
+    "path": "build/solana/index.js",
+    "import": "*",
+    "limit": "255 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
+  },
+  {
+    "name": "@openfort/react/ethereum",
+    "path": "build/ethereum/index.js",
+    "import": "*",
+    "limit": "260 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
+  },
+  {
+    "name": "@openfort/react/internal",
+    "path": "build/internal/index.js",
+    "import": "*",
+    "limit": "250 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
+  },
+  {
+    "name": "@openfort/react/wagmi",
+    "path": "build/wagmi/index.js",
+    "import": "*",
+    "limit": "260 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "@wagmi/connectors",
+      "@wagmi/core",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
+  },
+  {
+    "name": "@openfort/react (single named import \u2014 tree-shaking ratchet)",
+    "path": "build/index.js",
+    "import": "{ formatAddress }",
+    "limit": "250 kB",
+    "ignore": [
+      "@coinbase/wallet-sdk",
+      "@safe-global/safe-apps-provider",
+      "@safe-global/safe-apps-sdk",
+      "@solana-program/system",
+      "@solana-program/token",
+      "@solana/kit",
+      "@solana/kora",
+      "@tanstack/react-query",
+      "@walletconnect/ethereum-provider",
+      "react",
+      "react-dom",
+      "viem",
+      "wagmi"
+    ]
+  }
+]

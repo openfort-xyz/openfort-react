@@ -21,7 +21,7 @@
 # Openfort React SDK
 
 [![Downloads](https://img.shields.io/npm/dm/@openfort/react.svg)](https://www.npmjs.com/package/@openfort/react)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![License](https://img.shields.io/badge/license-BSD--2--Clause-green.svg)](LICENSE)
 [![Documentation](https://img.shields.io/badge/docs-openfort.io-blue)](https://www.openfort.io/docs/products/embedded-wallet/react/)
 [![Version](https://img.shields.io/npm/v/@openfort/react.svg)](https://www.npmjs.org/package/@openfort/react)
 
@@ -71,6 +71,15 @@ pnpm add @openfort/react @tanstack/react-query wagmi viem
 
 and much more...
 
+## Security
+
+Wallet applications are a frequent target for attacks on users' assets. A few things to get started:
+
+- Pin package versions, upgrade deliberately, and read lockfile diffs to reduce exposure to [supply-chain attacks](https://nodejs.org/en/guides/security/#supply-chain-attacks).
+- Delay the installation of freshly published packages with [pnpm](https://pnpm.io)'s [`minimumReleaseAge`](https://pnpm.io/settings#minimumreleaseage) and [`trustPolicy`](https://pnpm.io/settings#trustpolicy), or [npm](https://docs.npmjs.com)'s [`min-release-age`](https://docs.npmjs.com/cli/v11/using-npm/config#min-release-age). This repository sets `minimumReleaseAge: 1440` (24 hours) in `pnpm-workspace.yaml`.
+- Install the [Socket](https://socket.dev) [GitHub App](https://github.com/apps/socket-security) to flag and block supply-chain attacks in pull requests.
+- Add a [Content Security Policy](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html) so external scripts cannot run in your app.
+- Pin [GitHub Actions](https://github.com/actions) to commit SHAs rather than tags, since tags can be moved. [Actions Up](https://github.com/azat-io/actions-up) automates the conversion.
 
 ## Examples
 
@@ -82,7 +91,7 @@ Clone the project and install the necessary dependencies:
 
 ```sh
 git clone git@github.com:openfort-xyz/openfort-react.git
-cd openfort
+cd openfort-react
 pnpm install
 ```
 
@@ -106,4 +115,4 @@ See [LICENSE](https://github.com/openfort-xyz/openfort-react/blob/main/LICENSE) 
 
 ## Credits
 
-Openfort is a fork of [Connectkit](https://github.com/openfort-xyz/openfort-react) developed by [Family](https://family.co). We're grateful to them for making Connectkit fast, beautiful and open-source.
+Openfort is a fork of [Connectkit](https://github.com/family/connectkit) developed by [Family](https://family.co). We're grateful to them for making Connectkit fast, beautiful and open-source.

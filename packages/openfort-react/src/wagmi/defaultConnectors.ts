@@ -1,6 +1,6 @@
-import { type CoinbaseWalletParameters, coinbaseWallet, injected, safe, walletConnect } from '@wagmi/connectors'
 import type { CreateConnectorFn } from 'wagmi'
-import { embeddedWalletConnector } from './embeddedConnector'
+import { type CoinbaseWalletParameters, coinbaseWallet, injected, safe, walletConnect } from 'wagmi/connectors'
+import { embeddedWalletConnector } from './embeddedConnector.js'
 
 type DefaultConnectorsProps = {
   app: {
@@ -34,7 +34,7 @@ const defaultConnectors = ({
   // Targeted injected connectors so the browser-extension wallets surface as
   // their own entries (e.g. the deposit "transfer from wallet" list), instead of
   // a single generic "Injected" provider.
-  connectors.push(injected({ target: 'metaMask' }), injected({ target: 'phantom' }))
+  connectors.push(injected({ target: 'metaMask' }), injected({ target: 'phantom' }), injected({ target: 'rabby' }))
 
   connectors.push(
     coinbaseWallet({

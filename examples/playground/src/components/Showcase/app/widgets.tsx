@@ -1,4 +1,4 @@
-import type { SignTypedDataPayload } from '@openfort/react'
+import type { SignMessageResult, SignTypedDataPayload } from '@openfort/react'
 import { useSignMessage as useOpenfortSignMessage, useUI } from '@openfort/react'
 import { useState } from 'react'
 import { useChainId } from 'wagmi'
@@ -6,7 +6,6 @@ import { FundingCountryPresets } from '@/components/FundingScenarios'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Button } from '@/components/ui/button'
 import { useDisplayEthereumAddress } from '@/hooks/useConnectedEthereumAccount'
-import { toError } from '@/lib/errors'
 
 /**
  * The prebuilt-modal half of each action card. Every one of these is a
@@ -50,14 +49,12 @@ export const SignWidget = () => {
   const [signature, setSignature] = useState<string | null>(null)
   const [error, setError] = useState<Error | null>(null)
 
-  const run = async (fn: () => Promise<string>) => {
+  const run = async (fn: () => Promise<SignMessageResult>) => {
     setError(null)
     setSignature(null)
-    try {
-      setSignature(await fn())
-    } catch (err) {
-      setError(toError(err))
-    }
+    const result = await fn()
+    if ('error' in result) setError(result.error)
+    else setSignature(result.signature)
   }
 
   return (

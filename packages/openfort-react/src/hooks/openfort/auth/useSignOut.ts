@@ -1,11 +1,13 @@
 'use client'
 
 import { useCallback, useState } from 'react'
-import { OpenfortError, OpenfortReactErrorType } from '../../../core/errors'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import type { OpenfortHookOptions } from '../../../types'
-import { onError, onSuccess } from '../hookConsistency'
-import { type BaseFlowState, mapStatus } from './status'
+import { AuthenticationError } from '../../../errors/auth.js'
+import { toError } from '../../../errors/base.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import type { OpenfortHookOptions } from '../../../types.js'
+import { useLatest } from '../../useLatest.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from '../hookConsistency.js'
+import { type BaseFlowState, mapStatus } from './status.js'
 
 /**
  * Hook for user sign out operations
@@ -20,52 +22,23 @@ import { type BaseFlowState, mapStatus } from './status'
  *
  * @example
  * ```tsx
- * const signOutHook = useSignOut({
- *   onSignOutSuccess: () => console.log('User signed out successfully'),
- *   onSignOutError: (error) => console.error('Sign out failed:', error),
- * });
+ * import { useSignOut } from '@openfort/react'
  *
- * // Sign out user
- * const handleSignOut = async () => {
- *   try {
- *     await signOutHook.signOut();
- *     console.log('User has been signed out');
- *     // Redirect to login page or update UI
- *   } catch (error) {
- *     console.error('Sign out failed:', error);
+ * function SignOutButton() {
+ *   const { signOut, isLoading, error } = useSignOut()
+ *   const run = async () => {
+ *     const result = await signOut()
+ *     if (result.error) return
+ *     console.log('Signed out')
  *   }
- * };
- *
- * // Sign out with custom options
- * const handleCustomSignOut = async () => {
- *   await signOutHook.signOut({
- *     onSuccess: () => console.log('Custom success handler'),
- *     onError: (error) => console.error('Custom error handler:', error),
- *   });
- * };
- *
- * // Check sign out state
- * if (signOutHook.isLoading) {
- *   console.log('Signing out...');
- * } else if (signOutHook.isError) {
- *   console.error('Sign out error:', signOutHook.error);
- * } else if (signOutHook.isSuccess) {
- *   console.log('Sign out successful');
+ *   return <button onClick={run} disabled={isLoading}>{error ? error.shortMessage : 'Sign out'}</button>
  * }
- *
- * // Example usage in component
- * return (
- *   <button
- *     onClick={handleSignOut}
- *     disabled={signOutHook.isLoading}
- *   >
- *     {signOutHook.isLoading ? 'Signing out...' : 'Sign Out'}
- *   </button>
- * );
  * ```
  */
-export function useSignOut(hookOptions: OpenfortHookOptions = {}) {
-  const { logout } = useOpenfortCore()
+
+export function useSignOut(hookOptions: OpenfortHookOptions = NO_HOOK_OPTIONS) {
+  const logout = useOpenfortCore((s) => s.logout)
+  const hookOptionsRef = useLatest(hookOptions)
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
@@ -76,30 +49,30 @@ export function useSignOut(hookOptions: OpenfortHookOptions = {}) {
         status: 'loading',
       })
       try {
-        logout()
+        await logout()
         setStatus({
           status: 'success',
         })
 
         return onSuccess({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           data: {},
         })
-      } catch {
-        const error = new OpenfortError('Failed to sign out', OpenfortReactErrorType.AUTHENTICATION_ERROR)
+      } catch (cause) {
+        const error = new AuthenticationError('Failed to sign out.', { cause: toError(cause) })
         setStatus({
           status: 'error',
           error,
         })
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error,
         })
       }
     },
-    [logout, setStatus, hookOptions]
+    [logout]
   )
 
   return {

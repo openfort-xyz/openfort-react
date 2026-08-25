@@ -8,6 +8,9 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react(), tailwindcss()],
+    resolve: {
+      dedupe: ['react', 'react-dom', 'wagmi', 'viem', '@tanstack/react-query'],
+    },
     server: {
       proxy: {
         '/api/auth': {

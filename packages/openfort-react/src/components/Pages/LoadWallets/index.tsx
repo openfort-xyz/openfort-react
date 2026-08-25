@@ -2,25 +2,25 @@
 
 import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types'
-import { toSolanaUserWallet } from '../../../hooks/openfort/walletTypes'
-import { useTimedOut } from '../../../hooks/useTimedOut'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types'
-import { logger } from '../../../utils/logger'
-import Loader from '../../Common/Loading'
-import NotFoundFallback from '../../Common/NotFoundFallback'
-import { createRoute, recoverRoute } from '../../Openfort/routeHelpers'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import type { ConnectedEmbeddedEthereumWallet } from '../../../ethereum/types.js'
+import { toSolanaUserWallet } from '../../../hooks/openfort/walletTypes.js'
+import { useTimedOut } from '../../../hooks/useTimedOut.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import type { ConnectedEmbeddedSolanaWallet } from '../../../solana/types.js'
+import { logger } from '../../../utils/logger.js'
+import Loader from '../../Common/Loading/index.js'
+import NotFoundFallback from '../../Common/NotFoundFallback/index.js'
+import { createRoute, recoverRoute } from '../../Openfort/routeHelpers.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
 
-/** Pick the best wallet to auto-recover: automatic > passkey > first available */
+/** Pick the best wallet to auto-recover: automatic > passkey > first available. Undefined for an empty list. */
 function pickBestWallet(
   wallets: ReadonlyArray<ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet>
-): ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet {
+): ConnectedEmbeddedEthereumWallet | ConnectedEmbeddedSolanaWallet | undefined {
   return (
     wallets.find((w) => w.recoveryMethod === RecoveryMethod.AUTOMATIC) ??
     wallets.find((w) => w.recoveryMethod === RecoveryMethod.PASSKEY) ??
@@ -56,8 +56,10 @@ const errorForChainRegistry: Record<
 const LOADING_TIMEOUT_MS = 10_000
 
 const LoadWallets: React.FC = () => {
-  const { chainType, user, isLoadingAccounts } = useOpenfortCore()
-  const { triggerResize, setRoute, setConnector, walletConfig } = useOpenfort()
+  const chainType = useOpenfortCore((s) => s.chainType)
+  const user = useOpenfortCore((s) => s.user)
+  const isLoadingAccounts = useOpenfortCore((s) => s.isLoadingAccounts)
+  const { triggerResize, setRoute, walletConfig } = useOpenfort()
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const embeddedWallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
@@ -91,7 +93,7 @@ const LoadWallets: React.FC = () => {
     if (loadingUX) return
     if (isLoadingWallets) return
     if (!wallets) {
-      logger.error('Could not load wallets for user:', user)
+      logger.error('Could not load wallets for user:', user?.id)
       return
     }
     logger.log('User wallets loaded:', wallets.length)
@@ -119,12 +121,22 @@ const LoadWallets: React.FC = () => {
     if (connectOnLogin) {
       // Auto-connect: pick the best wallet (automatic > passkey > password) and recover it
       const best = pickBestWallet(wallets)
-      routeToRecover(best, chainType, setRoute)
+      if (best) routeToRecover(best, chainType, setRoute)
     } else {
       // Not auto-connecting: close modal (go to connected page which triggers auto-close)
       setRoute(chainType === ChainTypeEnum.SVM ? routes.SOL_CONNECTED : routes.ETH_CONNECTED)
     }
-  }, [loadingUX, isLoadingWallets, wallets, user, chainType, setRoute, setConnector, walletConfig, connectOnLogin])
+  }, [
+    loadingUX,
+    isLoadingWallets,
+    wallets,
+    user,
+    chainType,
+    setRoute,
+    connectOnLogin,
+    embeddedWallet.status,
+    embeddedWallet.address,
+  ])
 
   const { isError: isErrorFromChain, message: errorMessageFromChain } = errorForChainRegistry[chainType](errorWallets)
   const isError = !user || isErrorFromChain

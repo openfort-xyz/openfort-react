@@ -1,7 +1,7 @@
 'use client'
 
 import type React from 'react'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 const Track = styled.div`
   display: flex;

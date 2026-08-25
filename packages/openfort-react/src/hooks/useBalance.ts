@@ -1,28 +1,39 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useEffect } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
+import { useCallback } from 'react'
 import { createPublicClient, formatEther, http } from 'viem'
-import { useOpenfort } from '../components/Openfort/useOpenfort'
-import { DEFAULT_TESTNET_CHAIN_ID } from '../core/ConnectionStrategy'
-import { invalidateAsyncData, useAsyncData } from '../shared/hooks/useAsyncData'
-import { formatSol } from '../solana/hooks/utils'
-import type { SolanaCluster } from '../solana/types'
-import { getDefaultEthereumRpcUrl, getDefaultSolanaRpcUrl, getNativeCurrency } from '../utils/rpc'
+import { useOpenfort } from '../components/Openfort/useOpenfort.js'
+import { DEFAULT_TESTNET_CHAIN_ID } from '../core/ConnectionStrategy.js'
+import { useOpenfortCore } from '../openfort/useOpenfort.js'
+import { getOpenfortQueryScope, openfortKeys } from '../query/queryKeys.js'
+import { useQuery } from '../query/useQuery.js'
+import { formatSol } from '../solana/hooks/utils.js'
+import type { SolanaCluster } from '../solana/types.js'
+import { getDefaultEthereumRpcUrl, getDefaultSolanaRpcUrl, getNativeCurrency } from '../utils/rpc.js'
 
-/** Event name for balance invalidation. Call invalidateBalance() after balance-changing txs. */
-export const BALANCE_INVALIDATE_EVENT = 'openfort:balance-invalidate'
-
-/** Dispatches balance invalidation so all useBalance instances refetch. Call after mint/send. */
-export function invalidateBalance(): void {
-  // Token/asset balances come from useEthereumWalletAssets → useAsyncData, which
-  // doesn't listen to the event below. Drop their cache too so the next render
-  // (e.g. landing on the asset inventory after a deposit) refetches fresh.
-  invalidateAsyncData('walletAssets')
-  invalidateAsyncData('wallet-assets')
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent(BALANCE_INVALIDATE_EVENT))
-  }
+/**
+ * Returns a callback that marks every native balance and wallet-asset query
+ * stale, so anything showing a balance refetches. Call it after a transaction
+ * that moves funds (mint, send, deposit).
+ *
+ * @example
+ * ```tsx
+ * import { useInvalidateBalance } from '@openfort/react'
+ *
+ * function RefreshBalancesButton() {
+ *   const invalidateBalance = useInvalidateBalance()
+ *   return <button onClick={invalidateBalance}>Refresh balances</button>
+ * }
+ * ```
+ */
+export function useInvalidateBalance(): () => void {
+  const queryClient = useQueryClient()
+  return useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: openfortKeys.balance() })
+    queryClient.invalidateQueries({ queryKey: openfortKeys.walletAssets() })
+  }, [queryClient])
 }
 
 type BalanceState =
@@ -75,6 +86,7 @@ export async function fetchSolanaBalance(
 
 /** Hook for fetching native token balance. */
 export function useBalance(options: UseBalanceOptions): BalanceState {
+  const client = useOpenfortCore((state) => state.client)
   const {
     address,
     chainType,
@@ -93,8 +105,12 @@ export function useBalance(options: UseBalanceOptions): BalanceState {
 
   const isEnabled = enabled && !!address && address.length > 0
 
-  const { data, error, isLoading, refetch } = useAsyncData({
-    queryKey: ['balance', chainType, address, chainId, cluster],
+  const { data, error, isLoading, refetch } = useQuery({
+    queryKey: openfortKeys.balance(
+      chainType === ChainTypeEnum.EVM
+        ? { address, chainType, clientScope: getOpenfortQueryScope(client), chainId, rpcUrl }
+        : { address, chainType, clientScope: getOpenfortQueryScope(client), cluster, rpcUrl, commitment }
+    ),
     queryFn: () =>
       chainType === ChainTypeEnum.EVM
         ? fetchEvmBalance(address, rpcUrl, chainId)
@@ -104,31 +120,31 @@ export function useBalance(options: UseBalanceOptions): BalanceState {
     staleTime: 30_000,
   })
 
-  useEffect(() => {
-    if (!isEnabled) return
-    const handler = () => refetch().catch(() => {})
-    window.addEventListener(BALANCE_INVALIDATE_EVENT, handler)
-    return () => window.removeEventListener(BALANCE_INVALIDATE_EVENT, handler)
-  }, [isEnabled, refetch])
-
   if (!isEnabled) {
     return { status: 'idle', refetch }
   }
 
-  if (isLoading) {
-    return { status: 'loading', refetch }
+  // A failed background refetch must not discard a balance already known to be
+  // good. Reporting `error` over cached data blanks the figure and, worse,
+  // leaves callers computing an undefined balance — which is how the send
+  // screen stopped blocking an amount larger than the wallet holds.
+  if (error && !data) {
+    return { status: 'error', error, refetch }
   }
 
-  if (error) {
-    return { status: 'error', error, refetch }
+  // Report the absence of data as 'loading', never as a successful zero. A
+  // query paused offline is pending without fetching, so `isLoading` alone is
+  // false there and the defaults below would read as a real zero balance.
+  if (isLoading || !data) {
+    return { status: 'loading', refetch }
   }
 
   return {
     status: 'success',
-    value: data?.value ?? BigInt(0),
-    formatted: data?.formatted ?? '0',
-    symbol: data?.symbol ?? '',
-    decimals: data?.decimals ?? 18,
+    value: data.value,
+    formatted: data.formatted,
+    symbol: data.symbol,
+    decimals: data.decimals,
     refetch,
   }
 }

@@ -10,27 +10,28 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
 import { useEffect } from 'react'
-import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons'
-import { BALANCE_INVALIDATE_EVENT, fetchSolanaBalance } from '../../../hooks/useBalance'
-import useLocales from '../../../hooks/useLocales'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useAsyncData } from '../../../shared/hooks/useAsyncData'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import { formatSol } from '../../../solana/hooks/utils'
-import { useSolanaContext } from '../../../solana/SolanaContext'
-import { nFormatter, truncateSolanaAddress } from '../../../utils'
-import { logger } from '../../../utils/logger'
-import Avatar from '../../Common/Avatar'
-import Button from '../../Common/Button'
-import { TextLinkButton } from '../../Common/Button/styles'
-import { CopyText } from '../../Common/CopyToClipboard/CopyText'
-import SolanaChain from '../../Common/SolanaChain'
-import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ConnectedPageLayout } from './ConnectedPageLayout'
-import { ActionButton, Balance, ChainSelectorContainer, LinkedProvidersToggle } from './styles'
+import { ReceiveIcon, SendIcon, UserRoundIcon } from '../../../assets/icons.js'
+import { fetchSolanaBalance } from '../../../hooks/useBalance.js'
+import useLocales from '../../../hooks/useLocales.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { getOpenfortQueryScope, openfortKeys } from '../../../query/queryKeys.js'
+import { useQuery } from '../../../query/useQuery.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import { formatSol } from '../../../solana/hooks/utils.js'
+import { useSolanaContext } from '../../../solana/SolanaContext.js'
+import { nFormatter, truncateSolanaAddress } from '../../../utils/index.js'
+import { logger } from '../../../utils/logger.js'
+import Avatar from '../../Common/Avatar/index.js'
+import Button from '../../Common/Button/index.js'
+import { TextLinkButton } from '../../Common/Button/styles.js'
+import { CopyText } from '../../Common/CopyToClipboard/CopyText.js'
+import SolanaChain from '../../Common/SolanaChain/index.js'
+import { useThemeContext } from '../../ConnectKitThemeProvider/ConnectKitThemeProvider.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ConnectedPageLayout } from './ConnectedPageLayout.js'
+import { ActionButton, Balance, ChainSelectorContainer, LinkedProvidersToggle } from './styles.js'
 
 const SolanaConnected: React.FC = () => {
   const context = useOpenfort()
@@ -38,7 +39,8 @@ const SolanaConnected: React.FC = () => {
   const locales = useLocales()
 
   const wallet = useSolanaEmbeddedWallet()
-  const { embeddedAccounts } = useOpenfortCore()
+  const client = useOpenfortCore((state) => state.client)
+  const embeddedAccounts = useOpenfortCore((s) => s.embeddedAccounts)
   const { rpcUrl } = useSolanaContext()
   const hasSolanaWallets = (embeddedAccounts?.filter((a) => a.chainType === ChainTypeEnum.SVM) ?? []).length > 0
   const isAddressLoading = wallet.status === 'connected' && !wallet.address
@@ -51,8 +53,14 @@ const SolanaConnected: React.FC = () => {
     if (address) triggerResize()
   }, [address, triggerResize])
 
-  const balanceResult = useAsyncData({
-    queryKey: ['solana-balance', address, rpcUrl],
+  const balanceResult = useQuery({
+    queryKey: openfortKeys.balance({
+      address: address ?? '',
+      chainType: ChainTypeEnum.SVM,
+      clientScope: getOpenfortQueryScope(client),
+      rpcUrl,
+      commitment: 'confirmed',
+    }),
     queryFn: async () => {
       if (!address || !rpcUrl) return null
       try {
@@ -65,13 +73,6 @@ const SolanaConnected: React.FC = () => {
     },
     enabled: Boolean(address && rpcUrl),
   })
-
-  useEffect(() => {
-    if (!address || !rpcUrl) return
-    const handler = () => balanceResult.refetch().catch(() => {})
-    window.addEventListener(BALANCE_INVALIDATE_EVENT, handler)
-    return () => window.removeEventListener(BALANCE_INVALIDATE_EVENT, handler)
-  }, [address, rpcUrl, balanceResult.refetch])
 
   const lamports = balanceResult.data
   const isBalanceLoading = balanceResult.isLoading

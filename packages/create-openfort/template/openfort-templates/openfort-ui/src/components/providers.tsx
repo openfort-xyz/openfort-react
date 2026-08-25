@@ -9,7 +9,7 @@ const config = createConfig(
     appName: 'Openfort React demo',
     chains: [polygonAmoy, baseSepolia], // The chains you want to support
     walletConnectProjectId: import.meta.env.VITE_WALLET_CONNECT_PROJECT_ID, // The WalletConnect Project ID
-  }),
+  })
 )
 
 const queryClient = new QueryClient()
@@ -20,7 +20,7 @@ const walletConfig = {
     ethereumFeeSponsorshipId: import.meta.env.VITE_FEE_SPONSORSHIP_ID,
   },
   // If you want to use AUTOMATIC embedded wallet recovery, an encryption session is required.
-  // See: https://www.openfort.io/docs/products/embedded-wallet/react-native/quickstart/automatic
+  // See: https://www.openfort.io/docs/products/embedded-wallet/server/automatic-recovery-session
   // For backend setup, check: https://github.com/openfort-xyz/openfort-backend-quickstart
   createEncryptedSessionEndpoint: import.meta.env.VITE_CREATE_ENCRYPTED_SESSION_ENDPOINT,
   connectOnLogin: false, // We will manually call create/setActive wallet after auth
@@ -30,6 +30,11 @@ const uiConfig = {
   theme: import.meta.env.VITE_OPENFORT_THEME as Theme,
   // Point the Deposit hub's crypto/CEX rails at the local funding backend.
   fundingBaseUrl: import.meta.env.VITE_FUNDING_BASE_URL ?? 'https://api.openfort.io',
+  funding: {
+    // Destination where deposited funds land: Base mainnet USDC.
+    targetChain: 'eip155:8453',
+    targetCurrency: '0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913',
+  },
 }
 
 export function Providers({ children }: { children: React.ReactNode }) {

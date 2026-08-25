@@ -1,6 +1,6 @@
 import type { ChainTypeEnum, EmbeddedAccount } from '@openfort/openfort-js'
 import { RecoveryMethod } from '@openfort/openfort-js'
-import type { OpenfortWalletConfig } from '../components/Openfort/types'
+import type { OpenfortWalletConfig } from '../components/Openfort/types.js'
 
 export function firstEmbeddedAddress(
   accounts: EmbeddedAccount[] | undefined,
@@ -17,18 +17,18 @@ export function firstEmbeddedAddress(
   const passkey = forChain.find((a) => a.recoveryMethod === RecoveryMethod.PASSKEY)
   if (passkey) return passkey.address
 
-  return forChain[0].address
+  return forChain[0]?.address
 }
 
 export function resolveEthereumFeeSponsorship(
   config: OpenfortWalletConfig | undefined,
   chainId: number
-): { policy: string } | undefined {
+): string | undefined {
   const feeSponsorship = config?.ethereum?.ethereumFeeSponsorshipId
   if (!feeSponsorship) return undefined
-  if (typeof feeSponsorship === 'string') return { policy: feeSponsorship }
-  if (typeof feeSponsorship === 'object' && chainId in feeSponsorship) {
-    return { policy: (feeSponsorship as Record<number, string>)[chainId] }
+  if (typeof feeSponsorship === 'string') return feeSponsorship
+  if (typeof feeSponsorship === 'object') {
+    return (feeSponsorship as Record<number, string | undefined>)[chainId] || undefined
   }
   return undefined
 }

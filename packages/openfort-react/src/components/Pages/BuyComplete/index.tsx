@@ -3,21 +3,21 @@
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect } from 'react'
 
-import { ExternalLinkIcon } from '../../../assets/icons'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { getExplorerUrl } from '../../../shared/utils/explorer'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import Button from '../../Common/Button'
-import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles'
-import { routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper, Section } from '../Buy/styles'
+import { ExternalLinkIcon } from '../../../assets/icons.js'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { getExplorerUrl } from '../../../shared/utils/explorer.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import Button from '../../Common/Button/index.js'
+import { ModalBody, ModalContent, ModalH1 } from '../../Common/Modal/styles.js'
+import { routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ContinueButtonWrapper, Section } from '../Buy/styles.js'
 
 const BuyComplete = () => {
   const { setRoute, triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
 
   // Use chain-specific hooks
   const ethereumWallet = useEthereumEmbeddedWallet()

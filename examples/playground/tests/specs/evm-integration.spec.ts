@@ -16,8 +16,6 @@
 import { expect, test } from '../fixtures/test'
 import { EVM_TX_HASH_REGEX } from '../utils/mode'
 
-const STEP_PAUSE = 1_500 // ms between actions to avoid rate limiting
-
 test.describe('EVM integration', () => {
   test.skip(({ mode }) => mode !== 'evm', 'EVM only')
   test.describe.configure({ retries: 1 })
@@ -28,18 +26,14 @@ test.describe('EVM integration', () => {
     // ── Navigate (authenticated via storageState, wallet not connected) ──
     await dashboardPage.goto()
     await expect(dashboardPage.signOutButton()).toBeVisible({ timeout: 90_000 })
-    await page.waitForTimeout(STEP_PAUSE)
 
     // ── Step 1: Create wallet (Smart Account, Automatic) ────────────────
     await test.step('create wallet (automatic)', async () => {
       const walletsCard = await dashboardPage.getCardByTitle(/wallets/i)
 
       await walletsCard.getByRole('button', { name: /create new wallet/i }).click()
-      await page.waitForTimeout(STEP_PAUSE)
       await walletsCard.getByRole('button', { name: /smart account/i }).click()
-      await page.waitForTimeout(STEP_PAUSE)
       await walletsCard.getByRole('button', { name: /^automatic$/i }).click()
-      await page.waitForTimeout(STEP_PAUSE)
 
       await expect(walletsCard.getByText(/creating wallet.*automatic/i)).toBeVisible({ timeout: 30_000 })
 
@@ -50,15 +44,14 @@ test.describe('EVM integration', () => {
       // Wait for full connection and the Openfort UI card to be ready
       await expect(page.getByText(/Connected with 0x/i)).toBeVisible({ timeout: 60_000 })
       const uiCard = await dashboardPage.getCardByTitle(/openfort ui/i)
-      await expect(uiCard.getByRole('button', { name: /^sign message$/i })).toBeEnabled({ timeout: 60_000 })
-      await page.waitForTimeout(STEP_PAUSE)
+      const signButton = uiCard.getByRole('button', { name: /^sign message$/i })
+      await expect(signButton).toBeEnabled({ timeout: 60_000 })
     })
 
     // ── Step 2: Sign message ────────────────────────────────────────────
     await test.step('sign message', async () => {
       const msg = `Sign-test ${Date.now()}`
       await dashboardPage.signMessage(msg, mode)
-      await page.waitForTimeout(STEP_PAUSE)
     })
 
     // ── Step 3: Switch chain -> sign -> verify chain persisted ──────────
@@ -71,22 +64,41 @@ test.describe('EVM integration', () => {
         .first()
       await expect(currentChain).toBeVisible({ timeout: 30_000 })
 
-      const switchBtn = chainCard.getByRole('button', { name: /switch to base sepolia/i })
-      await expect(switchBtn).toBeEnabled({ timeout: 60_000 })
-      await page.waitForTimeout(STEP_PAUSE)
-      await switchBtn.click()
+      // The wallet is created on whichever chain the Openfort project configures,
+      // not on wagmi's default, so the starting chain is not known up front. The
+      // card disables the button for the active chain, so the enabled buttons are
+      // exactly the chains worth switching to. The heading reads "Current chain:
+      // Base Sepolia (84532)" while the buttons carry the bare name.
+      const readChainName = async () =>
+        ((await currentChain.textContent()) ?? '')
+          .replace(/^current chain:\s*/i, '')
+          .replace(/\s*\(\d+\)\s*$/, '')
+          .trim()
+      const startingChain = await readChainName()
+      expect(startingChain).toBeTruthy()
 
-      await expect(chainCard.getByText(/switched to chain\s+base sepolia/i)).toBeVisible({ timeout: 90_000 })
-      await expect(currentChain).toContainText(/base sepolia/i, { timeout: 90_000 })
-      await page.waitForTimeout(STEP_PAUSE)
+      const switchBtn = chainCard.locator('button:enabled').filter({ hasText: /^switch to /i })
+      await expect(switchBtn.first()).toBeEnabled({ timeout: 60_000 })
+      const targetLabel = ((await switchBtn.first().textContent()) ?? '').replace(/^switch to\s*/i, '').trim()
+      expect(targetLabel).toBeTruthy()
+      expect(targetLabel).not.toBe(startingChain)
+      await switchBtn.first().click()
+
+      await expect(currentChain).toContainText(targetLabel, { timeout: 90_000 })
 
       // Sign after chain switch
       const msg = `Chain-sign ${Date.now()}`
       await dashboardPage.signMessage(msg, mode)
-      await page.waitForTimeout(STEP_PAUSE)
 
       // Verify chain stayed
-      await expect(currentChain).toContainText(/base sepolia/i, { timeout: 30_000 })
+      await expect(currentChain).toContainText(targetLabel, { timeout: 30_000 })
+
+      // Return to the wallet's own chain so the mint below runs where the wallet
+      // was deployed rather than on whichever chain this step happened to pick.
+      const backBtn = chainCard.getByRole('button', { name: new RegExp(`^switch to ${startingChain}$`, 'i') })
+      await expect(backBtn).toBeEnabled({ timeout: 60_000 })
+      await backBtn.click()
+      await expect(currentChain).toContainText(startingChain, { timeout: 90_000 })
     })
 
     // ── Step 4: Write contract (mint) ───────────────────────────────────
@@ -95,19 +107,16 @@ test.describe('EVM integration', () => {
       await expect(writeCard).toBeVisible({ timeout: 60_000 })
 
       await expect(writeCard.getByText(/balance:\s*\d+/i)).toBeVisible({ timeout: 60_000 })
-      await page.waitForTimeout(STEP_PAUSE)
 
       const amountInput = writeCard.getByPlaceholder(/enter amount to mint/i)
       await expect(amountInput).toBeVisible({ timeout: 30_000 })
       await amountInput.fill('7')
-      await page.waitForTimeout(STEP_PAUSE)
 
       const mintBtn = writeCard.getByRole('button', { name: /mint tokens/i })
       await expect(mintBtn).toBeEnabled({ timeout: 30_000 })
       await mintBtn.click()
 
       await expect(page.getByText(EVM_TX_HASH_REGEX)).toBeVisible({ timeout: 120_000 })
-      await page.waitForTimeout(STEP_PAUSE)
     })
 
     // ── Step 5: Create wallet (Password) — tests creation UI ────────────
@@ -117,15 +126,11 @@ test.describe('EVM integration', () => {
       const initialCount = await walletRow.count()
 
       await walletsCard.getByRole('button', { name: /create new wallet/i }).click()
-      await page.waitForTimeout(STEP_PAUSE)
       await walletsCard.getByRole('button', { name: /smart account/i }).click()
-      await page.waitForTimeout(STEP_PAUSE)
       await walletsCard.getByRole('button', { name: /^password$/i }).click()
-      await page.waitForTimeout(STEP_PAUSE)
 
       await expect(walletsCard.getByText(/creating wallet with password recovery/i)).toBeVisible({ timeout: 30_000 })
       await expect.poll(() => walletRow.count(), { timeout: 120_000 }).toBeGreaterThan(initialCount)
-      await page.waitForTimeout(STEP_PAUSE)
     })
 
     // ── Step 6: Session keys (create, revoke, delete) ───────────────────
@@ -141,14 +146,13 @@ test.describe('EVM integration', () => {
       // Ensure at least 2 session keys
       while ((await keySpans.count()) < 2) {
         const before = await keySpans.count()
-        await page.waitForTimeout(STEP_PAUSE)
+        await expect(createBtn).toBeEnabled({ timeout: 30_000 })
         await createBtn.click()
         await expect.poll(() => keySpans.count(), { timeout: 120_000 }).toBeGreaterThan(before)
       }
 
       const initialCount = await keySpans.count()
       expect(initialCount).toBeGreaterThanOrEqual(2)
-      await page.waitForTimeout(STEP_PAUSE)
 
       // Select the 2nd key
       const targetKeySpan = keySpans.nth(1)
@@ -161,18 +165,15 @@ test.describe('EVM integration', () => {
       // Revoke (X button)
       const rowButtons = targetRow.locator('button')
       await expect(rowButtons).toHaveCount(1, { timeout: 30_000 })
-      await page.waitForTimeout(STEP_PAUSE)
       await rowButtons.first().click()
 
       const struck = targetRow.locator('.line-through')
       await expect(struck).toBeVisible({ timeout: 60_000 })
-      await page.waitForTimeout(STEP_PAUSE)
 
       // Delete (trash button appears after revoke)
       const trashBtn = targetRow.locator('button:has(svg.lucide-trash)').or(targetRow.locator('button').last())
       await expect(trashBtn.first()).toBeVisible({ timeout: 60_000 })
       await trashBtn.first().click()
-      await page.waitForTimeout(STEP_PAUSE)
 
       // Confirm key is removed
       await expect

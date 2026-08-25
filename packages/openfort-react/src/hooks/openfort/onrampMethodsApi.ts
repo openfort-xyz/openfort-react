@@ -1,6 +1,6 @@
-import { SDKConfiguration } from '@openfort/openfort-js'
-import { FundingMethod } from '../../components/Openfort/types'
-import type { OnrampMethodId, ResolvedFundingMethod } from './useFunding'
+import { FundingMethod } from '../../components/Openfort/types.js'
+import { getOpenfortBackendUrl } from '../../openfort/core/client.js'
+import type { OnrampMethodId, ResolvedFundingMethod } from './fundingClient.js'
 
 /**
  * Base path for the fiat-onramp API. The onramp is consolidated under the v2
@@ -9,10 +9,7 @@ import type { OnrampMethodId, ResolvedFundingMethod } from './useFunding'
  */
 const ONRAMP_API_BASE = '/v2/funding/onramp'
 
-export const getBackendUrl = (): string => {
-  const sdkConfig = SDKConfiguration.getInstance()
-  return sdkConfig?.backendUrl || 'https://api.openfort.io'
-}
+export const getBackendUrl = (): string => getOpenfortBackendUrl()
 
 /** The stateless preview returns the same rows as the session-scoped methods endpoint. */
 export type ResolvedOnrampMethod = ResolvedFundingMethod

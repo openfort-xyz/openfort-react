@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { FundingMethod } from '../components/Openfort/types'
-import { isCompleteWalletPay, isWalletPayMethod } from '../hooks/openfort/walletPay'
+import { FundingMethod } from '../components/Openfort/types.js'
+import { isCompleteWalletPay, isWalletPayMethod } from '../hooks/openfort/walletPay.js'
 
 describe('isWalletPayMethod', () => {
   it('is true only for Apple/Google Pay (the native-angle methods)', () => {

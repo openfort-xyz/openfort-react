@@ -1,7 +1,7 @@
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { routes } from '../../components/Openfort/types'
+import { routes } from '../../components/Openfort/types.js'
 
 /**
  * Regression guard for gotoAndOpen (openWallets infinite-loading bug).
@@ -27,9 +27,13 @@ const setOpen = vi.fn((value: boolean) => {
   state.open = value
 })
 const setConnector = vi.fn()
+const settleSignRequest = vi.fn()
+const setSignRequest = vi.fn()
+const pendingSignRequest = { settle: settleSignRequest }
 
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../../components/Openfort/useOpenfort.js', () => ({
+  useOpenfortSignRequest: () => ({ signRequest: pendingSignRequest, setSignRequest }),
+  useOpenfortRouting: () => ({
     open: state.open,
     setOpen,
     setRoute,
@@ -37,27 +41,26 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     connector: { id: '' },
     chainType: ChainTypeEnum.EVM,
   }),
+  useOpenfortForms: () => ({ setSendForm: vi.fn() }),
 }))
-vi.mock('../../openfort/useOpenfort', () => ({
-  useOpenfortCore: () => ({
+vi.mock('../../openfort/useOpenfort.js', () => {
+  const getState = () => ({
     isLoading: false,
     user: null,
     needsRecovery: false,
     embeddedAccounts: undefined,
     activeEmbeddedAddress: undefined,
     embeddedState: EmbeddedState.UNAUTHENTICATED,
-  }),
+  })
+  return { useOpenfortCore: (selector: (s: ReturnType<typeof getState>) => unknown) => selector(getState()) }
+})
+// The active chain's strategy decides what counts as connected.
+vi.mock('../../core/ConnectionStrategyContext.js', () => ({
+  useConnectionStrategy: () => ({ kind: 'embedded', isConnected: () => state.connected }),
 }))
-vi.mock('../../core/ConnectionStrategyContext', () => ({ useConnectionStrategy: () => null }))
-vi.mock('../../ethereum/OpenfortEthereumBridgeContext', () => ({ useEthereumBridge: () => null }))
-vi.mock('../../ethereum/hooks/useEthereumEmbeddedWallet', () => ({
-  useEthereumEmbeddedWallet: () => ({ status: state.connected ? 'connected' : 'disconnected' }),
-}))
-vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
-  useSolanaEmbeddedWallet: () => ({ status: state.connected ? 'connected' : 'disconnected' }),
-}))
+vi.mock('../../ethereum/OpenfortEthereumBridgeContext.js', () => ({ useEthereumBridge: () => null }))
 
-const { useUI } = await import('../../hooks/openfort/useUI')
+const { useUI } = await import('../../hooks/openfort/useUI.js')
 
 describe('useUI gotoAndOpen', () => {
   beforeEach(() => {
@@ -122,5 +125,31 @@ describe('useUI gotoAndOpen', () => {
       expect(state.open).toBe(true)
       expect(state.route).toMatchObject({ route })
     }
+  })
+
+  it('settles a pending signature when setIsOpen closes the modal', () => {
+    const { result } = renderHook(() => useUI())
+
+    act(() => result.current.setIsOpen(false))
+
+    expect(settleSignRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ name: 'WalletError' }) })
+    )
+    const clearRequest = setSignRequest.mock.calls.at(-1)?.[0]
+    expect(clearRequest).toBeTypeOf('function')
+    expect(clearRequest?.(pendingSignRequest)).toBeNull()
+    expect(setOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('settles a pending signature before a public navigation routes away', () => {
+    state.connected = true
+    const { result } = renderHook(() => useUI())
+
+    act(() => result.current.openProfile())
+
+    expect(settleSignRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ error: expect.objectContaining({ name: 'WalletError' }) })
+    )
+    expect(state.route).toMatchObject({ route: routes.CONNECTED })
   })
 })

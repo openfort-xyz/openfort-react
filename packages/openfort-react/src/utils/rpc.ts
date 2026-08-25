@@ -7,18 +7,55 @@
 
 import type { Chain } from 'viem'
 import { defineChain } from 'viem'
-import { arbitrumSepolia, baseSepolia, beamTestnet, optimismSepolia, polygonAmoy, sepolia } from 'viem/chains'
-import type { SolanaCluster } from '../solana/types'
-import { logger } from './logger'
+import {
+  arbitrum,
+  arbitrumSepolia,
+  base,
+  baseSepolia,
+  beam,
+  beamTestnet,
+  bsc,
+  mainnet,
+  optimism,
+  optimismSepolia,
+  polygon,
+  polygonAmoy,
+  sepolia,
+} from 'viem/chains'
+import { RpcUrlNotConfiguredError } from '../errors/config.js'
+import type { SolanaCluster } from '../solana/types.js'
+import { logger } from './logger.js'
 
 /** Known chains sourced from viem/chains — authoritative metadata (name, nativeCurrency, rpcUrls, blockExplorers). */
 const KNOWN_CHAINS: Record<number, Chain> = {
+  // Testnets
   [polygonAmoy.id]: polygonAmoy,
   [baseSepolia.id]: baseSepolia,
   [beamTestnet.id]: beamTestnet,
   [sepolia.id]: sepolia,
   [optimismSepolia.id]: optimismSepolia,
   [arbitrumSepolia.id]: arbitrumSepolia,
+  // Mainnets — the public default RPCs make apps work out of the box, but they
+  // are rate-limited; production apps should set walletConfig.ethereum.rpcUrls
+  // (a warning nudges them, see warnPublicRpcIfMainnet).
+  [mainnet.id]: mainnet,
+  [base.id]: base,
+  [polygon.id]: polygon,
+  [optimism.id]: optimism,
+  [arbitrum.id]: arbitrum,
+  [bsc.id]: bsc,
+  [beam.id]: beam,
+}
+
+const warnedPublicRpcChainIds = new Set<number>()
+
+/** Warn once per mainnet chain when the app is running on a public default RPC. */
+function warnPublicRpcIfMainnet(chain: Chain): void {
+  if (chain.testnet === true || warnedPublicRpcChainIds.has(chain.id)) return
+  warnedPublicRpcChainIds.add(chain.id)
+  logger.warn(
+    `Using the public default RPC for ${chain.name} (${chain.id}). Public endpoints are rate-limited — provide walletConfig.ethereum.rpcUrls[${chain.id}] in production.`
+  )
 }
 
 /** Testnets not in {@link KNOWN_CHAINS} but still worth recognizing (deprecated/uncommon). */
@@ -100,12 +137,13 @@ export function buildChainFromConfig(chainId: number, rpcUrls?: Record<number, s
   const knownChain = KNOWN_CHAINS[chainId]
 
   if (knownChain && !customRpcUrl) {
+    warnPublicRpcIfMainnet(knownChain)
     return knownChain
   }
 
   const rpcUrl = customRpcUrl ?? knownChain?.rpcUrls.default.http[0]
   if (!rpcUrl) {
-    throw new Error(`No RPC URL configured for chain ${chainId}. Provide walletConfig.ethereum.rpcUrls[${chainId}].`)
+    throw new RpcUrlNotConfiguredError({ chainId })
   }
 
   const native = knownChain?.nativeCurrency ?? { name: 'Ether', symbol: 'ETH', decimals: 18 }

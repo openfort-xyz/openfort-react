@@ -2,12 +2,12 @@
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
 import { useEffect, useState } from 'react'
-import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useOpenfortCore } from '../../../openfort/useOpenfort'
-import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet'
-import styled from '../../../styles/styled'
-import { isTestnetChainId } from '../../../utils/rpc'
-import { useOpenfort } from '../../Openfort/useOpenfort'
+import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
+import styled from '../../../styles/styled/index.js'
+import { isTestnetChainId } from '../../../utils/rpc.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
 
 /** Relay's own testnet guide — the authoritative explanation of the limitation. */
 const RELAY_TESTNET_DOCS = 'https://docs.relay.link/references/api/api_guides/testnet#testnet-support'
@@ -144,12 +144,13 @@ const DocsLink = styled.a`
  */
 export function TestnetNotice() {
   const { triggerResize } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const solanaWallet = useSolanaEmbeddedWallet()
   const [open, setOpen] = useState(false)
 
   // Re-measure the modal when the details expand/collapse so it grows/shrinks to fit.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `open` is the trigger, not an input
   useEffect(() => {
     triggerResize()
   }, [open, triggerResize])

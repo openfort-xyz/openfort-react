@@ -1,14 +1,314 @@
-import { logger } from '../../utils/logger'
-import type {
-  FundingSession,
-  FundingTarget,
-  OnrampAngle,
-  OnrampMethodId,
-  OnrampQuote,
-  PayLinkParams,
-  PaymentMethodInput,
-  ResolvedFundingMethods,
-} from './useFunding'
+import { ApiRequestError } from '../../errors/operation.js'
+import { logger } from '../../utils/logger.js'
+
+/**
+ * Where funds should land, identified by CAIP-2 chain, asset, and wallet.
+ *
+ * @example
+ * ```ts
+ * import type { FundingTarget } from '@openfort/react'
+ *
+ * const target: FundingTarget = {
+ *   chain: 'eip155:8453',
+ *   currency: '0x0000000000000000000000000000000000000000',
+ *   address: '0x1111111111111111111111111111111111111111',
+ * }
+ * ```
+ */
+export type FundingTarget = {
+  /** CAIP-2 chain id, e.g. "eip155:8453" for Base. */
+  chain: string
+  /** Token contract address, or the zero address for the chain's native asset. */
+  currency: string
+  /** Destination wallet that receives the bridged funds. */
+  address: string
+}
+
+/** The route the user commits to sending from. */
+export type FundingSource = {
+  /** CAIP-2 chain id the user sends from, e.g. "eip155:137". */
+  chain: string
+  /** Token contract the user sends, or the zero address for native. */
+  currency: string
+  /** Amount in the source token's smallest unit (wei, lamports, base units). */
+  amount: string
+}
+
+/** Session lifecycle. */
+export type SessionStatus =
+  | 'requires_payment_method'
+  | 'waiting_payment'
+  | 'processing'
+  | 'succeeded'
+  | 'bounced'
+  | 'expired'
+
+export type FundingFee = {
+  kind: 'gas' | 'relayerGas' | 'relayerService' | 'app'
+  amount: string
+  currency: string
+}
+
+/**
+ * Fiat web2 funding methods — the rail the user sees, never the provider.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampMethodId } from '@openfort/react'
+ *
+ * const method: OnrampMethodId = 'card'
+ * ```
+ */
+export type OnrampMethodId = 'apple_pay' | 'google_pay' | 'card' | 'bank_transfer'
+
+/**
+ * How a resolved onramp executes: open a hosted `url`, an in-page provider SDK,
+ * or Stripe's Link element flow.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampAngle } from '@openfort/react'
+ *
+ * const angle: OnrampAngle = 'popup'
+ * ```
+ */
+export type OnrampAngle = 'popup' | 'native' | 'embedded'
+
+/**
+ * The source and rail selected for a funding session.
+ * `evm` and `solana` routes are self-custody wallet sends (they get wallet
+ * deeplinks); `cex` is an exchange withdrawal (no deeplink — exchanges can't be
+ * deeplinked into); `onramp` is a fiat purchase — the server resolves the
+ * provider (buyer region + destination + project config) and the session
+ * advances through the same lifecycle, driven by provider settlement webhooks
+ * and server-side polls.
+ *
+ * @example
+ * ```ts
+ * import type { PaymentMethodInput } from '@openfort/react'
+ *
+ * const paymentMethod: PaymentMethodInput = {
+ *   type: 'evm',
+ *   source: { chain: 'eip155:1', currency: 'native', amount: '1000000000000000' },
+ * }
+ * ```
+ */
+export type PaymentMethodInput =
+  | { type: 'evm'; source: FundingSource }
+  | { type: 'solana'; source: FundingSource }
+  | { type: 'cex'; cex: string; source: FundingSource }
+  | {
+      type: 'onramp'
+      /** The fiat method the user picked (from `useFundingMethods`). */
+      method: OnrampMethodId
+      /** Fiat amount to prefill in the checkout, human units (e.g. "100.00"). */
+      sourceAmount?: string
+      /** ISO-4217 fiat currency for `sourceAmount`. */
+      sourceCurrency?: string
+      /** Buyer-country override (ISO-3166 alpha-2); defaults to the request IP. */
+      country?: string
+      /**
+       * Integration angles this client can execute; omit for no restriction.
+       * A client that can't run a flow (React Native has no DOM for `embedded`
+       * elements) sends `['popup']` — routing then skips providers whose flow
+       * resolves to an excluded angle, falling back to the hosted popup.
+       */
+      angles?: OnrampAngle[]
+      /** URL the provider redirects back to after checkout. */
+      redirectUrl?: string
+      /** OTP-verified buyer email — wallet pay (`apple_pay`/`google_pay`) only. */
+      email?: string
+      /** OTP-verified US mobile in E.164 — wallet pay only. */
+      phoneNumber?: string
+      /** ISO-8601 time the phone OTP was verified — wallet pay only. */
+      phoneNumberVerifiedAt?: string
+      /** ISO-8601 time the buyer accepted the checkout terms — wallet pay only. */
+      agreementAcceptedAt?: string
+      /** Verification record ids from the OTP endpoints — wallet pay only. */
+      smsVerificationId?: string
+      emailVerificationId?: string
+      /**
+       * Embedded (headless) element flow: present after the client
+       * authenticated the buyer with the provider's embedded auth element and
+       * collected a payment method. The commit then creates a HEADLESS
+       * provider session; redeem its secret via `sessions.onrampCheckout` for
+       * performCheckout.
+       */
+      embedded?: {
+        authIntentId: string
+        customerRef: string
+        paymentToken: string
+      }
+    }
+
+/** A prefilled deeplink into a source wallet app (e.g. Trust Wallet). */
+export type WalletDeeplink = { app: string; label: string; url: string }
+
+/** Per-exchange guidance for the guided CEX flow. */
+export type CexGuidance = {
+  exchange: string
+  network: string
+  minWithdrawal: string | null
+  requiresMemo: boolean
+}
+
+/**
+ * A resolved crypto funding route with receiver details, fees, and wallet links.
+ *
+ * @example
+ * ```ts
+ * import type { CryptoPaymentMethod } from '@openfort/react'
+ *
+ * function receiverFor(method: CryptoPaymentMethod) {
+ *   return method.receiverAddress
+ * }
+ * ```
+ */
+export type CryptoPaymentMethod = {
+  type: 'evm' | 'solana' | 'cex'
+  source: FundingSource
+  /** Address the user (or their CEX/wallet) sends to. */
+  receiverAddress: string
+  /** Provider-side id used to track settlement. */
+  providerRequestId: string
+  /** BIP-21 / EIP-681 URI for QR. Scanner support for amount/token varies. */
+  addressUri: string
+  /** Prefilled deeplinks for source wallet apps, when available. */
+  deeplinks: WalletDeeplink[]
+  /** Guidance for the "cex" type; null otherwise. */
+  cex: CexGuidance | null
+  fees: FundingFee[]
+  /** Minimum to send for this route (source base units), or null. */
+  minAmount: string | null
+}
+
+/**
+ * A committed fiat onramp. The executing provider was resolved server-side and
+ * is never part of the response — render per `angle` and watch the session
+ * status; the server advances it from settlement webhooks and provider polls.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampPaymentMethod } from '@openfort/react'
+ *
+ * function checkoutUrl(method: OnrampPaymentMethod) {
+ *   return method.angle === 'popup' ? method.url : null
+ * }
+ * ```
+ */
+export type OnrampPaymentMethod = {
+  type: 'onramp'
+  method: OnrampMethodId
+  angle: OnrampAngle
+  /** Hosted checkout URL to open, or null. */
+  url: string | null
+  /**
+   * The provider's own session id for this commit — the Stripe Link (v2) flow
+   * passes it to the coordinator's `performCheckout`.
+   */
+  providerSessionId?: string | null
+  fees: FundingFee[]
+  minAmount: string | null
+}
+
+/**
+ * The payment method set on a funding session: a crypto route or a fiat onramp.
+ *
+ * @example
+ * ```ts
+ * import type { PaymentMethod } from '@openfort/react'
+ *
+ * function isFiat(method: PaymentMethod) {
+ *   return method.type === 'onramp'
+ * }
+ * ```
+ */
+export type PaymentMethod = CryptoPaymentMethod | OnrampPaymentMethod
+
+/**
+ * The crypto payment method of a session, or null (none set, or fiat).
+ *
+ * @example
+ * ```ts
+ * import { cryptoPaymentMethod } from '@openfort/react'
+ *
+ * const receiver = cryptoPaymentMethod(session.paymentMethod)?.receiverAddress
+ * ```
+ */
+export function cryptoPaymentMethod(pm: PaymentMethod | null | undefined): CryptoPaymentMethod | null {
+  return pm && pm.type !== 'onramp' ? pm : null
+}
+
+/**
+ * One fiat method row to render, resolved by the server for the session's
+ * destination and the buyer's region. `provider` is telemetry — never shown.
+ *
+ * @example
+ * ```ts
+ * import type { ResolvedFundingMethod } from '@openfort/react'
+ *
+ * function rowLabel(row: ResolvedFundingMethod) {
+ *   return row.label
+ * }
+ * ```
+ */
+export type ResolvedFundingMethod = {
+  method: OnrampMethodId
+  provider: string
+  angle: OnrampAngle
+  /** Server-resolved display label; bank_transfer shows the regional rail. */
+  label: string
+  /** The regional bank rail behind `label`, for bank_transfer. */
+  rail?: 'ach' | 'sepa' | 'interac'
+  /** Gate the row on device capability client-side (e.g. Apple Pay on Safari). */
+  requiresDeviceCheck?: boolean
+  /**
+   * Provider PUBLISHABLE key for `embedded` rows — the pre-commit elements
+   * (Stripe's Link auth) initialize with it. Public by design.
+   */
+  providerPublishableKey?: string
+}
+
+/**
+ * The fiat methods resolved for a session + region.
+ *
+ * @example
+ * ```ts
+ * import type { ResolvedFundingMethods } from '@openfort/react'
+ *
+ * function hasFiat(resolved: ResolvedFundingMethods) {
+ *   return resolved.methods.length > 0
+ * }
+ * ```
+ */
+export type ResolvedFundingMethods = {
+  /** Resolved ISO-3166 alpha-2 country, or null for rest-of-world. */
+  country: string | null
+  methods: ResolvedFundingMethod[]
+}
+
+/**
+ * A priced onramp route: what the entered fiat buys after fees.
+ *
+ * @example
+ * ```ts
+ * import type { OnrampQuote } from '@openfort/react'
+ *
+ * function receives(quote: OnrampQuote) {
+ *   return `${quote.destinationAmount} ${quote.destinationCurrency}`
+ * }
+ * ```
+ */
+export type OnrampQuote = {
+  provider: string
+  sourceAmount: string
+  sourceCurrency: string
+  destinationAmount: string
+  destinationCurrency: string
+  destinationNetwork: string
+  fees: Array<{ type: string; amount: string; currency: string }>
+  exchangeRate: string
+}
 
 /**
  * Where a buyer stands with the onramp provider's identity checks.
@@ -46,8 +346,45 @@ export type OnrampLimits = {
 }
 
 /**
- * The funding client surface, mirroring the `openfort.funding.*` namespace in
- * `@openfort/openfort-js`:
+ * A single deposit attempt and its current settlement state.
+ *
+ * @example
+ * ```ts
+ * import type { FundingSession } from '@openfort/react'
+ *
+ * function hasSettled(session: FundingSession) {
+ *   return session.status === 'succeeded'
+ * }
+ * ```
+ */
+export type FundingSession = {
+  id: string
+  clientSecret: string
+  target: FundingTarget
+  status: SessionStatus
+  amountUnits: string | null
+  metadata: Record<string, string> | null
+  externalId: string | null
+  createdAt: number
+  expiresAt: number
+  paymentMethod: PaymentMethod | null
+}
+
+/** Parameters for a Coinbase pay-link request. The session binds the destination server-side. */
+export type PayLinkParams = {
+  /** Session the pay-link settles into — pins the destination so it can't be redirected. */
+  sessionId: string
+  /** Secret returned when the session was created; authorizes this pay-link. */
+  clientSecret: string
+  /** Amount in the destination asset's units (≈ USD for USDC). Coinbase enforces its own minimum. */
+  amount: string
+  /** Destination asset ticker. Optional — the backend defaults to USDC. */
+  asset?: string
+}
+
+/**
+ * Client interface used by the funding hooks, mirroring the `openfort.funding.*`
+ * namespace in `@openfort/openfort-js`:
  *
  *   openfort.funding.sessions.create({ target })
  *   openfort.funding.sessions.setPaymentMethod(id, { clientSecret, paymentMethod })
@@ -56,9 +393,17 @@ export type OnrampLimits = {
  *   openfort.funding.sessions.quote(id, { clientSecret, method, sourceAmount, sourceCurrency })
  *   openfort.funding.payLink(params)
  *
- * The hooks depend only on this interface. Today it's backed by the fetch
- * adapter below; once the SDK's namespace covers all calls, the adapter is
- * swapped for `coreClient.funding` with no hook change.
+ * The hooks depend only on this interface, allowing callers to supply any
+ * transport that implements the session and pay-link operations.
+ *
+ * @example
+ * ```ts
+ * import type { FundingClient } from '@openfort/react'
+ *
+ * async function loadSession(client: FundingClient, id: string, clientSecret: string) {
+ *   return client.sessions.get(id, { clientSecret })
+ * }
+ * ```
  */
 export type FundingClient = {
   /**
@@ -238,24 +583,21 @@ export function adoptSdkFundingClient(candidate: unknown): FundingClient | null 
 
 async function readJson<T>(res: Response): Promise<T> {
   if (!res.ok) {
-    // The API returns { error: { type, message } }; the standalone prototype
-    // returned a flat { error: string }. Handle both so the real rail message
-    // surfaces instead of "[object Object]".
+    // Funding endpoints may return either a structured error or a message string.
+    // Both shapes are normalized so the provider's explanation remains readable.
     const body = (await res.json().catch(() => ({}))) as { error?: { message?: string } | string }
     const message = typeof body.error === 'string' ? body.error : body.error?.message
     logger.error('[funding:client] request failed', { status: res.status, message })
-    throw new Error(message ?? `Funding request failed (${res.status})`)
+    throw new ApiRequestError({ operation: 'Funding request', status: res.status, body: message })
   }
   return res.json() as Promise<T>
 }
 
 /**
- * Fetch-backed funding client against the standalone funding service at
- * `baseUrl`. Temporary: replaced by the SDK's `funding` namespace at cutover.
+ * Creates a fetch-backed funding client for the service at `baseUrl`.
  */
 export function createFetchFundingClient(baseUrl: string, publishableKey?: string): FundingClient {
-  // The /v2/funding session API is publishable-key authenticated. The standalone
-  // prototype accepted no auth, so the key is optional and only attached when set.
+  // A configured publishable key authenticates every funding session request.
   const authHeaders = (): Record<string, string> =>
     publishableKey ? { authorization: `Bearer ${publishableKey}` } : {}
   return {

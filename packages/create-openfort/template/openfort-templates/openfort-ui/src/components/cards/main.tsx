@@ -1,10 +1,4 @@
-import {
-  BanknotesIcon,
-  HomeIcon,
-  PencilIcon,
-  PlayIcon,
-  WalletIcon,
-} from '@heroicons/react/24/outline'
+import { BanknotesIcon, HomeIcon, PencilIcon, PlayIcon, WalletIcon } from '@heroicons/react/24/outline'
 import { useUser } from '@openfort/react'
 import { useEffect, useState } from 'react'
 import { useAccount } from 'wagmi'
@@ -25,23 +19,11 @@ interface LayoutProps {
   showTabs?: boolean
 }
 
-const Layout = ({
-  children,
-  step,
-  tabs,
-  currentTab,
-  setCurrentTab,
-  showTabs,
-}: LayoutProps) => {
+const Layout = ({ children, step, tabs, currentTab, setCurrentTab, showTabs }: LayoutProps) => {
   return (
     <div className="min-h-screen min-w-screen bg-zinc-900 flex flex-col items-center justify-center">
       <div className="relative">
-        <DesktopTabGroup
-          tabs={tabs || []}
-          currentTab={currentTab}
-          setCurrentTab={setCurrentTab}
-          showTabs={showTabs}
-        />
+        <DesktopTabGroup tabs={tabs || []} currentTab={currentTab} setCurrentTab={setCurrentTab} showTabs={showTabs} />
         <div className="w-(--card-group-width) layout-card-group">
           <div
             className="h-(--card-group-height) grid grid-flow-col auto-cols-max transition-transform duration-500"
@@ -122,11 +104,7 @@ export const Main = () => {
       <div className="block relative overflow-y-auto overflow-x-hidden">
         <div className="card flex-col min-h-full">
           <div className="w-full flex-1 flex">{currentTab.component}</div>
-          <MobileTabGroup
-            tabs={tabs}
-            currentTab={currentTab}
-            setCurrentTab={setCurrentTab}
-          />
+          <MobileTabGroup tabs={tabs} currentTab={currentTab} setCurrentTab={setCurrentTab} />
         </div>
       </div>
       <div className="card relative" />

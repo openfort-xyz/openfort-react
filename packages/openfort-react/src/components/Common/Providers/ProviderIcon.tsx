@@ -1,17 +1,17 @@
 'use client'
 
 import { useMemo } from 'react'
-import { EmailIcon, PhoneIcon, WalletIcon } from '../../../assets/icons'
-import Logos, { providersLogos } from '../../../assets/logos'
-import { useExternalConnectors } from '../../../wallets/useExternalConnectors'
-import FitText from '../../Common/FitText'
-import type { LinkedAccount } from '../../Openfort/types'
+import { EmailIcon, PhoneIcon, WalletIcon } from '../../../assets/icons.js'
+import Logos, { providersLogos } from '../../../assets/logos.js'
+import { useExternalConnectors } from '../../../wallets/useExternalConnectors.js'
+import FitText from '../../Common/FitText/index.js'
+import type { LinkedAccount } from '../../Openfort/types.js'
 
 const WalletIconWrapper: React.FC<{ account: LinkedAccount }> = ({ account }) => {
   const wallets = useExternalConnectors()
   const wallet = useMemo(() => {
     return wallets.find((w) => w.id?.toLowerCase() === account.walletClientType)
-  }, [account])
+  }, [account, wallets])
 
   if (account.walletClientType === 'walletconnect') return <Logos.WalletConnect />
 
@@ -25,7 +25,7 @@ export const ProviderIcon: React.FC<{ account: LinkedAccount }> = ({ account }) 
     case 'email':
     case 'credential':
       return <EmailIcon />
-    // OTP_TODO: Wallet icon
+    // TODO: Show the SIWE provider's own icon instead of the generic wallet icon.
     case 'wallet':
     case 'siwe':
       return <WalletIconWrapper account={account} />

@@ -1,4 +1,4 @@
-import type { StripeIdentifierRequirements } from './stripeCryptoOnramp'
+import type { StripeIdentifierRequirements } from './stripeCryptoOnramp.js'
 
 /**
  * National identifiers Stripe collects from EU buyers, under two regimes:

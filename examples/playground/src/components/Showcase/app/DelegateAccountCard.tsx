@@ -74,11 +74,13 @@ export const DelegateAccountCard = () => {
     setResult(null)
     try {
       const nonce = await publicClient.getTransactionCount({ address })
-      const authorization = await signAuthorization({
+      const signed = await signAuthorization({
         contractAddress: SIMPLE_7702_IMPLEMENTATION,
         chainId,
         nonce,
       })
+      if (signed.status === 'error') throw signed.error
+      const authorization = signed.authorization
 
       const transport = http(`https://api.openfort.io/rpc/${chainId}`, {
         fetchOptions: {

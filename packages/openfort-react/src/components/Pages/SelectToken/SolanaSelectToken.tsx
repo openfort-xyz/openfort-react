@@ -10,12 +10,12 @@
 
 import { useEffect } from 'react'
 import { formatUnits } from 'viem'
-import { currencyLogoUrl } from '../../../constants/logos'
-import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets'
-import { ModalHeading } from '../../Common/Modal/styles'
-import { type Asset, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { AssetChainLogo } from '../Deposit/AssetChainLogo'
+import { currencyLogoUrl } from '../../../constants/logos.js'
+import { useSolanaWalletAssets } from '../../../solana/hooks/useSolanaWalletAssets.js'
+import { ModalHeading } from '../../Common/Modal/styles.js'
+import { type Asset, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { AssetChainLogo } from '../Deposit/AssetChainLogo.js'
 import {
   EmptyState,
   SelectTokenContent,
@@ -27,7 +27,7 @@ import {
   TokenLogoArea,
   TokenName,
   TokenSymbol,
-} from './styles'
+} from './styles.js'
 
 const ZERO = BigInt(0)
 

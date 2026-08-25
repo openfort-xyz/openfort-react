@@ -1,19 +1,25 @@
 'use client'
 
 import type { RevokePermissionsRequestParams, SessionResponse } from '@openfort/openfort-js'
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { Hex } from 'viem'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { DEFAULT_TESTNET_CHAIN_ID } from '../../core/ConnectionStrategy'
-import { OpenfortError, OpenfortReactErrorType } from '../../core/errors'
-import { getEmbeddedWalletClient } from '../../ethereum/hooks/getEmbeddedWalletClient'
-import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
-import type { OpenfortEmbeddedEthereumWalletProvider } from '../../ethereum/types'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import type { OpenfortHookOptions } from '../../types'
-import { logger } from '../../utils/logger'
-import { type BaseFlowState, mapStatus } from './auth/status'
-import { onError, onSuccess } from './hookConsistency'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { DEFAULT_TESTNET_CHAIN_ID } from '../../core/ConnectionStrategy.js'
+import { type OpenfortError, toError } from '../../errors/base.js'
+import { ChainNotConfiguredError } from '../../errors/config.js'
+import { ValidationError } from '../../errors/validation.js'
+import { WalletError, WalletNotConnectedError } from '../../errors/wallet.js'
+import { getEmbeddedWalletClient } from '../../ethereum/hooks/getEmbeddedWalletClient.js'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import type { OpenfortEmbeddedEthereumWalletProvider } from '../../ethereum/types.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { assertEmbeddedEthereumAccount } from '../../shared/utils/assertEmbeddedEthereumAccount.js'
+import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
+import type { OpenfortHookOptions } from '../../types.js'
+import { logger } from '../../utils/logger.js'
+import { useLatest } from '../useLatest.js'
+import { type BaseFlowState, mapStatus } from './auth/status.js'
+import { NO_HOOK_OPTIONS, onError, onSuccess } from './hookConsistency.js'
 
 type RevokePermissionsRequest = {
   sessionKey: Hex
@@ -30,61 +36,70 @@ type RevokePermissionsHookOptions = OpenfortHookOptions<RevokePermissionsHookRes
 /**
  * Hook for revoking permissions to session keys (EIP-7715)
  *
- * This hook manages the creation and authorization of session keys, allowing users to
- * delegate permissions to specific accounts for a limited time. This enables use cases
- * like session-based authentication and gasless transactions within defined scopes.
- * The hook leverages EIP-7715 for permission revocation.
+ * Revokes a previously granted EIP-7715 permission using its permission context.
  *
  * @param hookOptions - Optional configuration with callback functions
  * @returns Current revoke permissions state and actions
  *
  * @example
  * ```tsx
- * import { generatePrivateKey, privateKeyToAccount } from 'viem/accounts';
- * import { useRevokePermissions } from '@openfort/openfort-react';
+ * import { useRevokePermissions } from '@openfort/react';
  *
  * const { revokePermissions, isLoading, isError, error } = useRevokePermissions({
  *   onSuccess: (result) => console.log('Permissions revoked:', result),
  *   onError: (error) => console.error('Permission revoke failed:', error),
  * });
  *
- * // Revoke Permissions to a session key
+ * // Revoke the permission represented by a session-key permission context.
  * const handleRevokePermissions = async () => {
- *   try {
- *     const sessionKey = '0x...'; // The session key to revoke permissions for
- *
- *     const result = await revokePermissions({
- *       sessionKey,
- *     });
- *
- *     console.log('Revoke result:', result);
- *   } catch (error) {
- *     console.error('Error revoking permissions:', error);
- *   }
+ *   const result = await revokePermissions({ sessionKey: '0x...' });
+ *   if (result.error) console.error(result.error);
  * };
  * ```
  */
-export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = {}) => {
+
+export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions = NO_HOOK_OPTIONS) => {
+  const hookOptionsRef = useLatest(hookOptions)
   const { chains } = useOpenfort()
-  const { client } = useOpenfortCore()
+  const client = useOpenfortCore((s) => s.client)
   const ethereum = useEthereumEmbeddedWallet()
   const chainId = ethereum.chainId ?? DEFAULT_TESTNET_CHAIN_ID
+  // The embedded-wallet hook returns a fresh object every render, so depend on
+  // the one value read from it rather than on the whole result.
+  const connectedEmbeddedAddress = ethereum.status === 'connected' ? ethereum.address : undefined
   const [status, setStatus] = useState<BaseFlowState>({
     status: 'idle',
   })
   const [data, setData] = useState<RevokePermissionsResult | null>(null)
+  // A second click before the first settles would fire a second revoke against
+  // a key the first call is already retiring. The button's disabled state is
+  // not enough: the click can land before React re-renders.
+  const inFlightRef = useRef(false)
+
   const revokePermissions = useCallback(
     async (
       { sessionKey }: RevokePermissionsRequest,
       options: RevokePermissionsHookOptions = {}
     ): Promise<RevokePermissionsHookResult> => {
+      const intendedEmbeddedAddress = connectedEmbeddedAddress
+      if (inFlightRef.current) {
+        // Routed through onError like every other failure: a consumer driving
+        // its UI from callbacks alone would otherwise never learn the call was
+        // refused. The first call's status is left untouched.
+        return onError({
+          hookOptions: hookOptionsRef.current,
+          options,
+          error: new ValidationError('A revoke is already in progress.'),
+        })
+      }
+      inFlightRef.current = true
       try {
         const chain = chains.find((c) => c.id === chainId)
         if (!chain) {
-          throw new OpenfortError('No chain configured', OpenfortReactErrorType.CONFIGURATION_ERROR)
+          throw new ChainNotConfiguredError({ chainId })
         }
 
-        logger.log('Revoking permissions for session key:', sessionKey)
+        logger.log('Revoking permissions')
         setStatus({
           status: 'loading',
         })
@@ -95,24 +110,36 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
           },
         ] as [RevokePermissionsRequestParams]
 
-        let provider: OpenfortEmbeddedEthereumWalletProvider
-        if (ethereum.status === 'connected') {
-          provider = await ethereum.activeWallet.getProvider()
-        } else {
-          provider = (await client.embeddedWallet.getEthereumProvider()) as OpenfortEmbeddedEthereumWalletProvider
-          await provider.request({ method: 'eth_requestAccounts' })
-        }
-        const walletClient = await getEmbeddedWalletClient(provider, chain)
-        const revokePermissionsResult: SessionResponse = await walletClient.request<{
-          Method: 'wallet_revokePermissions'
-          Parameters: [RevokePermissionsRequestParams]
-          ReturnType: SessionResponse
-        }>({
-          method: 'wallet_revokePermissions',
-          params: revokeParams,
+        const revokePermissionsResult = await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
+          const provider = (await client.embeddedWallet.getEthereumProvider({
+            announceProvider: false,
+          })) as OpenfortEmbeddedEthereumWalletProvider
+          assertCurrent()
+          let intendedAddress = intendedEmbeddedAddress
+          if (!intendedAddress) {
+            assertCurrent()
+            const requestedAccounts = (await provider.request({ method: 'eth_requestAccounts' })) as
+              | `0x${string}`[]
+              | undefined
+            assertCurrent()
+            intendedAddress = requestedAccounts?.[0]
+          }
+          if (!intendedAddress) throw new WalletNotConnectedError('No account on wallet client.')
+          await assertEmbeddedEthereumAccount(provider, intendedAddress, chain.id)
+          assertCurrent()
+          const walletClient = await getEmbeddedWalletClient(provider, chain)
+          assertCurrent()
+          return walletClient.request<{
+            Method: 'wallet_revokePermissions'
+            Parameters: [RevokePermissionsRequestParams]
+            ReturnType: SessionResponse
+          }>({
+            method: 'wallet_revokePermissions',
+            params: revokeParams,
+          })
         })
 
-        logger.log('Revoke permissions result:', revokePermissionsResult)
+        logger.log('Permissions revoked')
 
         const data: RevokePermissionsResult = revokePermissionsResult
 
@@ -122,14 +149,17 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
         })
 
         return onSuccess({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           data,
         })
       } catch (error) {
-        const openfortError = new OpenfortError('Failed to revoke permissions', OpenfortReactErrorType.WALLET_ERROR, {
-          error,
-        })
+        // Wrapped for context, except the in-flight refusal above, whose class
+        // is what a consumer branches on. See useGrantPermissions.
+        const openfortError =
+          error instanceof ValidationError
+            ? error
+            : new WalletError('Failed to revoke permissions.', { cause: toError(error) })
 
         setStatus({
           status: 'error',
@@ -137,22 +167,26 @@ export const useRevokePermissions = (hookOptions: RevokePermissionsHookOptions =
         })
 
         return onError({
-          hookOptions,
+          hookOptions: hookOptionsRef.current,
           options,
           error: openfortError,
         })
+      } finally {
+        inFlightRef.current = false
       }
     },
-    [chains, chainId, client, ethereum, hookOptions]
+    [chains, chainId, client, connectedEmbeddedAddress]
   )
+
+  const reset = useCallback(() => {
+    setStatus({ status: 'idle' })
+    setData(null)
+  }, [])
 
   return {
     revokePermissions,
     data,
-    reset: () => {
-      setStatus({ status: 'idle' })
-      setData(null)
-    },
+    reset,
     ...mapStatus(status),
   }
 }

@@ -14,3 +14,11 @@ const AUTH_STATE_DIR = path.join(TEST_RESULTS_DIR, '.auth')
 /** Mode-specific auth state paths. */
 export const AUTH_STATE_EVM = path.join(AUTH_STATE_DIR, 'state-evm.json')
 export const AUTH_STATE_SOLANA = path.join(AUTH_STATE_DIR, 'state-solana.json')
+/**
+ * A second EVM guest, used by the refresh suite.
+ *
+ * Wallet recovery after a reload picks an account from the API list, so a suite
+ * that creates wallets changes what a concurrently running suite recovers — and
+ * with it the chain that suite lands on. Separate guests keep the two independent.
+ */
+export const AUTH_STATE_EVM_REFRESH = path.join(AUTH_STATE_DIR, 'state-evm-refresh.json')

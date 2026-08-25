@@ -1,4 +1,4 @@
-import { getBackendUrl } from './onrampMethodsApi'
+import { getBackendUrl } from './onrampMethodsApi.js'
 
 /**
  * Coinbase-issued OTP verification for native wallet pay (Apple/Google Pay),
@@ -61,15 +61,18 @@ export function submitOnrampVerification(params: {
 }
 
 // ---------------------------------------------------------------------------
-// 60-day reuse store — completed verifications are keyed by channel +
-// destination in localStorage so a repeat buyer doesn't re-verify on every
-// purchase within Coinbase's validity window.
+// 60-day reuse store — completed verifications are kept in localStorage so a
+// repeat buyer doesn't re-verify on every purchase within Coinbase's validity
+// window. The phone number / email is never written: an entry is keyed by the
+// SHA-256 of `channel:destination`, so the store reveals nothing about the
+// buyer if the storage is read, and a lookup for a different destination
+// simply misses.
 // ---------------------------------------------------------------------------
 
 const STORE_KEY = 'openfort-onramp-verifications'
 
 type StoredVerifications = Partial<
-  Record<OnrampVerificationChannel, { destination: string; verificationId: string; verificationExpiresAt?: string }>
+  Record<OnrampVerificationChannel, { destinationHash: string; verificationId: string; verificationExpiresAt?: string }>
 >
 
 function readStore(): StoredVerifications {
@@ -81,16 +84,30 @@ function readStore(): StoredVerifications {
   }
 }
 
+/** Hex SHA-256 of `channel:destination`, or null where WebCrypto is unavailable. */
+async function destinationHash(channel: OnrampVerificationChannel, destination: string): Promise<string | null> {
+  const subtle = globalThis.crypto?.subtle
+  if (!subtle) return null
+  const digest = await subtle.digest('SHA-256', new TextEncoder().encode(`${channel}:${destination}`))
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('')
+}
+
 /** Persist a completed verification for reuse within its validity window. */
-export function storeOnrampVerification(
+export async function storeOnrampVerification(
   channel: OnrampVerificationChannel,
   destination: string,
   record: OnrampVerificationRecord
-): void {
+): Promise<void> {
   if (typeof window === 'undefined') return
   try {
+    const hash = await destinationHash(channel, destination)
+    if (!hash) return
     const store = readStore()
-    store[channel] = { destination, ...record }
+    store[channel] = {
+      destinationHash: hash,
+      verificationId: record.verificationId,
+      verificationExpiresAt: record.verificationExpiresAt,
+    }
     window.localStorage.setItem(STORE_KEY, JSON.stringify(store))
   } catch {
     // Storage unavailable (private mode) — the buyer just re-verifies next time.
@@ -98,9 +115,14 @@ export function storeOnrampVerification(
 }
 
 /** An unexpired stored verification id for this exact destination, or null. */
-export function storedOnrampVerification(channel: OnrampVerificationChannel, destination: string): string | null {
+export async function storedOnrampVerification(
+  channel: OnrampVerificationChannel,
+  destination: string
+): Promise<string | null> {
   const entry = readStore()[channel]
-  if (!entry || entry.destination !== destination) return null
+  if (!entry) return null
   if (entry.verificationExpiresAt && Date.parse(entry.verificationExpiresAt) <= Date.now()) return null
+  const hash = await destinationHash(channel, destination)
+  if (!hash || entry.destinationHash !== hash) return null
   return entry.verificationId
 }

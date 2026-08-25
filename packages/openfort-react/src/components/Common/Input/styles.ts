@@ -1,4 +1,4 @@
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 export const InputContainer = styled.div`
   position: relative;
@@ -14,7 +14,7 @@ export const Input = styled.input`
   background: var(--ck-input-background);
   font-size: 1rem;
   color: var(--ck-body-color);
-  transition: all 0.2s;
+  transition: background 200ms ease, box-shadow 200ms ease;
   width: 100%;
   height: 100%;
 
@@ -39,7 +39,7 @@ export const IconButton = styled.button`
   align-items: center;
   justify-content: center;
   color: var(--ck-body-color-muted);
-  transition: all 0.2s;
+  transition: color 200ms ease;
 
   > svg {
     height: 24px;

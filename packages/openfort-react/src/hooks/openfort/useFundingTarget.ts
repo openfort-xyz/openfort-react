@@ -1,10 +1,10 @@
 'use client'
 
 import { ChainTypeEnum } from '@openfort/openfort-js'
-import { useOpenfort } from '../../components/Openfort/useOpenfort'
-import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet'
-import { useOpenfortCore } from '../../openfort/useOpenfort'
-import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL, NATIVE_TOKEN_ADDRESS } from './fundingSources'
+import { useOpenfort } from '../../components/Openfort/useOpenfort.js'
+import { useEthereumEmbeddedWallet } from '../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useOpenfortCore } from '../../openfort/useOpenfort.js'
+import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL, NATIVE_TOKEN_ADDRESS } from './fundingSources.js'
 
 /**
  * The destination route Deposit-hub funding settles into. Integrators override the
@@ -17,7 +17,7 @@ import { DEST_CHAIN, DEST_CHAIN_SOL, DEST_USDC, DEST_USDC_SOL, NATIVE_TOKEN_ADDR
  */
 export function useFundingTarget(): { chain: string; currency: string } {
   const { uiConfig } = useOpenfort()
-  const { chainType } = useOpenfortCore()
+  const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
   const isSolana = chainType === ChainTypeEnum.SVM
 

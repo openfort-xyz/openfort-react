@@ -40,19 +40,19 @@ export type StripeKycInfo = {
 export type StripeWalletPreference = 'auto' | 'never' | 'always'
 
 /** The EU regimes that make Stripe ask for more than basic identity. */
-export type StripeRegulationType = 'eu_carf' | 'eu_mica'
+type StripeRegulationType = 'eu_carf' | 'eu_mica'
 
 /** One national identifier, e.g. `{ type: 'de_stn', value: '…' }`. */
-export type StripeIdentifier = { type: string; value: string }
+type StripeIdentifier = { type: string; value: string }
 
-export type StripeIdentifierRequirement = { type: string; regulation: StripeRegulationType }
+type StripeIdentifierRequirement = { type: string; regulation: StripeRegulationType }
 
 /**
  * A requirement Stripe will accept in more than one form — e.g. Malta takes an
  * identity card OR a passport. Satisfying any member of the alternative set
  * clears the originals.
  */
-export type StripeAlternativeGroup = {
+type StripeAlternativeGroup = {
   original_missing_identifiers: string[]
   alternative_missing_identifiers: string[]
 }
@@ -64,19 +64,19 @@ export type StripeIdentifierRequirements = {
 }
 
 /** updateKycInfo's verdict: `completed` ends the loop, anything listed repeats it. */
-export type StripeUpdateKycResult = StripeIdentifierRequirements & {
+type StripeUpdateKycResult = StripeIdentifierRequirements & {
   completed: boolean
   invalid_identifiers: string[]
 }
 
 /** The destination wallet as Link holds it; unverified ones need a signature. */
-export type StripeConsumerWallet = {
+type StripeConsumerWallet = {
   id: string
   verified_ownership?: boolean
 }
 
 /** A message the buyer's wallet must sign to prove ownership (EU travel rule). */
-export type StripeWalletOwnershipChallenge = {
+type StripeWalletOwnershipChallenge = {
   challengeId: string
   message: string
   walletAddress?: string
@@ -84,7 +84,7 @@ export type StripeWalletOwnershipChallenge = {
   expiresAt?: string
 }
 
-export type StripeAttestationResult = { result: 'confirmed' | 'abandoned' }
+type StripeAttestationResult = { result: 'confirmed' | 'abandoned' }
 
 /**
  * The subset of Stripe's OnrampCoordinator the widget uses. `authenticate` and

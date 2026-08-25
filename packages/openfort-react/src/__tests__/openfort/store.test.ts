@@ -1,8 +1,8 @@
 import type { Openfort } from '@openfort/openfort-js'
 import { ChainTypeEnum, EmbeddedState } from '@openfort/openfort-js'
 import { describe, expect, it } from 'vitest'
-import { createOpenfortStore } from '../../openfort/store'
-import { createMockOpenfortClient } from '../mocks/openfortClient'
+import { createOpenfortStore } from '../../openfort/store.js'
+import { createMockOpenfortClient } from '../mocks/openfortClient.js'
 
 function makeStore(hasBridge = false, bridgeAddress?: string) {
   return createOpenfortStore(ChainTypeEnum.EVM, createMockOpenfortClient() as unknown as Openfort, () => ({

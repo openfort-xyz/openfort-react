@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 export const Container = styled(motion.div)<{
   $variant?: string
@@ -15,8 +15,8 @@ export const Container = styled(motion.div)<{
   font-size: var(--ck-connectbutton-font-size, 16px);
   font-weight: var(--ck-connectbutton-font-weight, 500);
   text-align: center;
-  transition: 100ms ease;
-  transition-property: color, background, box-shadow, border-radius;
+  transition: 120ms ease-out;
+  transition-property: color, background, box-shadow, border-radius, transform;
 
   color: var(--color);
   background: var(--background);
@@ -144,6 +144,8 @@ export const ThemeContainer = styled.button`
         --active-border-radius,
         var(--hover-border-radius, var(--border-radius))
       );
+      /* Press feedback — the primary CTA must feel like it heard the tap. */
+      transform: scale(var(--ck-press-scale, 0.97));
     }
   }
   &:focus-visible {

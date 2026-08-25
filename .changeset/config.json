@@ -21,5 +21,9 @@
   ],
   "commit": false,
   "access": "public",
+  "privatePackages": {
+    "version": false,
+    "tag": false
+  },
   "baseBranch": "main"
 }

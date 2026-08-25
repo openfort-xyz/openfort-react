@@ -5,8 +5,7 @@ import { commonVariables } from '@/components/Variable/commonVariables'
 import { getFunctionSignature } from '@/components/Variable/getFunctionSignature'
 import { getValueColor } from '@/components/Variable/getValueColor'
 import { VariableTooltip } from '@/components/Variable/VariableTooltip'
-import { cn } from '@/lib/cn'
-import { alertFn, logFn } from '@/lib/utils'
+import { alertFn, cn, logFn } from '@/lib/utils'
 import { Form, type FunctionInputType, type FunctionInputTypeType } from '../Form/Form'
 
 type HookFunctions = {
@@ -318,6 +317,7 @@ export const BaseVariable = ({
     // Non-expandable values (primitives, etc.)
     return (
       <div
+        data-variable-name={name}
         className={cn(
           'flex items-center gap-2 font-mono text-sm group/parent',
           focusedVariable === name ? 'animate-focus' : '',

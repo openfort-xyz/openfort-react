@@ -5,7 +5,6 @@ import { HookBadge } from '@/components/HookBadge'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { toError } from '@/lib/errors'
 
 /**
  * Solana showcase of the SDK's prebuilt modal UI: the sign-message confirmation
@@ -23,11 +22,9 @@ export const SolanaOpenfortUICard = ({ hook }: { hook?: string }) => {
   const handleSign = async () => {
     setError(null)
     setSignature(null)
-    try {
-      setSignature(await signMessage('Hello from Openfort!'))
-    } catch (err) {
-      setError(toError(err))
-    }
+    const result = await signMessage('Hello from Openfort!')
+    if ('error' in result) setError(result.error)
+    else setSignature(result.signature)
   }
 
   return (

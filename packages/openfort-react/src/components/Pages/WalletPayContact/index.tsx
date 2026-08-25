@@ -7,24 +7,24 @@ import {
   storedOnrampVerification,
   storeOnrampVerification,
   submitOnrampVerification,
-} from '../../../hooks/openfort/onrampVerificationsApi'
-import { useFundingClient } from '../../../hooks/openfort/useFunding'
-import { useUser } from '../../../hooks/openfort/useUser'
-import styled from '../../../styles/styled'
-import { logger } from '../../../utils/logger'
-import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation'
-import Button from '../../Common/Button'
-import Checkbox from '../../Common/Checkbox'
-import EmailField from '../../Common/EmailField'
-import { ErrorText } from '../../Common/ErrorText'
-import { ModalBody, ModalHeading } from '../../Common/Modal/styles'
-import { OtpInputStandalone } from '../../Common/OTPInput'
-import PhoneField from '../../Common/PhoneField'
-import { FundingMethod, routes } from '../../Openfort/types'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { PageContent } from '../../PageContent'
-import { ContinueButtonWrapper } from '../Buy/styles'
-import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles'
+} from '../../../hooks/openfort/onrampVerificationsApi.js'
+import { useFundingClient } from '../../../hooks/openfort/useFunding.js'
+import { useUser } from '../../../hooks/openfort/useUser.js'
+import styled from '../../../styles/styled/index.js'
+import { logger } from '../../../utils/logger.js'
+import { getPublishableKeyEnvironment, isValidEmail } from '../../../utils/validation.js'
+import Button from '../../Common/Button/index.js'
+import Checkbox from '../../Common/Checkbox/index.js'
+import EmailField from '../../Common/EmailField/index.js'
+import { ErrorText } from '../../Common/ErrorText/index.js'
+import { ModalBody, ModalHeading } from '../../Common/Modal/styles.js'
+import { OtpInputStandalone } from '../../Common/OTPInput/index.js'
+import PhoneField from '../../Common/PhoneField/index.js'
+import { FundingMethod, routes } from '../../Openfort/types.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { PageContent } from '../../PageContent/index.js'
+import { ContinueButtonWrapper } from '../Buy/styles.js'
+import { FooterButtonText, FooterTextButton } from '../EmailOTP/styles.js'
 
 // US mobile in E.164 — mirrors the server guard (`/^\+1[2-9]\d{9}$/`).
 const US_E164 = /^\+1[2-9]\d{9}$/
@@ -65,13 +65,9 @@ const WalletPayContact: React.FC = () => {
 
   const [email, setEmail] = useState(user?.email ?? '')
   const [phone, setPhone] = useState(user?.phoneNumber ?? '')
-  const [emailVerificationId, setEmailVerificationId] = useState<string | null>(() =>
-    user?.email ? storedOnrampVerification('email', user.email) : null
-  )
+  const [emailVerificationId, setEmailVerificationId] = useState<string | null>(null)
   const [pendingVerificationId, setPendingVerificationId] = useState<string | null>(null)
-  const [step, setStep] = useState<Step>(() =>
-    user?.email && storedOnrampVerification('email', user.email) ? 'phone' : 'email'
-  )
+  const [step, setStep] = useState<Step>('email')
   const [consented, setConsented] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -86,11 +82,38 @@ const WalletPayContact: React.FC = () => {
   }, [phone, isTestMode])
   // A stored (60-day) phone verification means no code will be sent — the
   // button completes directly, so it reads "Continue" instead of "Send code".
-  const storedSmsId = useMemo(
-    () => (phoneValid ? storedOnrampVerification('sms', phone.trim()) : null),
-    [phone, phoneValid]
-  )
+  const [storedSmsId, setStoredSmsId] = useState<string | null>(null)
+  useEffect(() => {
+    if (!phoneValid) {
+      setStoredSmsId(null)
+      return
+    }
+    let active = true
+    void storedOnrampVerification('sms', phone.trim()).then((stored) => {
+      if (active) setStoredSmsId(stored)
+    })
+    return () => {
+      active = false
+    }
+  }, [phone, phoneValid])
 
+  // The signed-in email may already be verified within Coinbase's 60-day window:
+  // skip straight to the phone step once the store confirms it.
+  const userEmail = user?.email
+  useEffect(() => {
+    if (!userEmail) return
+    let active = true
+    void storedOnrampVerification('email', userEmail).then((stored) => {
+      if (!active || !stored) return
+      setEmailVerificationId(stored)
+      setStep((current) => (current === 'email' ? 'phone' : current))
+    })
+    return () => {
+      active = false
+    }
+  }, [userEmail])
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: step and error are re-measure triggers, not inputs — each swaps in a differently sized body
   useEffect(() => {
     triggerResize()
   }, [triggerResize, step, error])
@@ -122,7 +145,7 @@ const WalletPayContact: React.FC = () => {
     }
     const trimmed = email.trim()
     // Already verified within Coinbase's 60-day window — no code needed.
-    const stored = storedOnrampVerification('email', trimmed)
+    const stored = await storedOnrampVerification('email', trimmed)
     if (stored) {
       setEmail(trimmed)
       setEmailVerificationId(stored)
@@ -143,7 +166,7 @@ const WalletPayContact: React.FC = () => {
         otpCode: otp,
         publishableKey,
       })
-      storeOnrampVerification('email', email, record)
+      await storeOnrampVerification('email', email, record)
       setEmailVerificationId(record.verificationId)
       setPendingVerificationId(null)
       setStep('phone')
@@ -164,7 +187,7 @@ const WalletPayContact: React.FC = () => {
       return
     }
     const trimmed = phone.trim()
-    const stored = storedOnrampVerification('sms', trimmed)
+    const stored = await storedOnrampVerification('sms', trimmed)
     if (stored) {
       void completeWith(stored)
       return
@@ -183,7 +206,7 @@ const WalletPayContact: React.FC = () => {
         otpCode: otp,
         publishableKey,
       })
-      storeOnrampVerification('sms', phone.trim(), record)
+      await storeOnrampVerification('sms', phone.trim(), record)
       setVerified(true)
       void completeWith(record.verificationId)
     } catch (e) {

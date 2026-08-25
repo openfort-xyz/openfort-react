@@ -1,15 +1,15 @@
 'use client'
 
 import type React from 'react'
-import styled from '../../../styles/styled'
-import type { InputProps } from '../Input/types'
+import styled from '../../../styles/styled/index.js'
+import type { InputProps } from '../Input/types.js'
 
-export const FieldWrap = styled.div`
+const FieldWrap = styled.div`
   margin-top: 10px;
   text-align: left;
 `
 
-export const FieldLabel = styled.label`
+const FieldLabel = styled.label`
   display: block;
   margin: 0 0 4px 2px;
   font-size: 13px;

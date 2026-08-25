@@ -9,8 +9,8 @@ import {
 } from '@heroicons/react/24/outline'
 import {
   AccountTypeEnum,
-  RecoveryMethod,
   type ConnectedEmbeddedEthereumWallet,
+  RecoveryMethod,
   useSignOut,
   useUser,
 } from '@openfort/react'
@@ -100,20 +100,13 @@ const WalletItem = ({
 )
 
 export const Wallets = () => {
-  const {
-    wallets,
-    status,
-    activeWallet,
-    setActive,
-    exportPrivateKey,
-  } = useEthereumEmbeddedWallet()
+  const { wallets, status, activeWallet, setActive, exportPrivateKey } = useEthereumEmbeddedWallet()
   const isLoadingWallets = status === 'fetching-wallets'
   const isConnecting = status === 'connecting'
   const { user, isAuthenticated } = useUser()
   const { isConnected } = useAccount()
   const [createWalletSheetOpen, setCreateWalletSheetOpen] = useState(false)
-  const [walletToRecover, setWalletToRecover] =
-    useState<ConnectedEmbeddedEthereumWallet | null>(null)
+  const [walletToRecover, setWalletToRecover] = useState<ConnectedEmbeddedEthereumWallet | null>(null)
   const [showAllWallets, setShowAllWallets] = useState(false)
   const [exportedKey, setExportedKey] = useState<string | null>(null)
   const [isExporting, setIsExporting] = useState(false)
@@ -146,10 +139,12 @@ export const Wallets = () => {
     setExportError(null)
     setExportedKey(null)
     try {
-      const key = await exportPrivateKey()
-      setExportedKey(key)
-    } catch {
-      setExportError('Cannot export private key for this wallet.')
+      const result = await exportPrivateKey()
+      if (result.error) {
+        setExportError(result.error.message)
+      } else {
+        setExportedKey(result.privateKey)
+      }
     } finally {
       setIsExporting(false)
     }
@@ -179,22 +174,17 @@ export const Wallets = () => {
     )
   }
 
-  const visibleTopLevel = showAllWallets
-    ? topLevel
-    : topLevel.slice(0, VISIBLE_WALLET_COUNT)
+  const visibleTopLevel = showAllWallets ? topLevel : topLevel.slice(0, VISIBLE_WALLET_COUNT)
 
   return (
     <div className="flex flex-col w-full">
       <h1>Wallets</h1>
-      <p className="mb-4 text-sm text-zinc-400">
-        Select a wallet to connect to your account.
-      </p>
+      <p className="mb-4 text-sm text-zinc-400">Select a wallet to connect to your account.</p>
       <div className="space-y-4 pb-4">
         <h2>Your Wallets</h2>
         <div className="flex flex-col space-y-2">
           {visibleTopLevel.map((wallet) => {
-            const isActive =
-              activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
+            const isActive = activeWallet?.address.toLowerCase() === wallet.address.toLowerCase()
             const children = childrenByOwner.get(wallet.address.toLowerCase())
 
             return (
@@ -206,8 +196,7 @@ export const Wallets = () => {
                   onClick={() => handleWalletClick(wallet)}
                 />
                 {children?.map((child) => {
-                  const isChildActive =
-                    activeWallet?.address.toLowerCase() === child.address.toLowerCase()
+                  const isChildActive = activeWallet?.address.toLowerCase() === child.address.toLowerCase()
                   return (
                     <WalletItem
                       key={child.id}
@@ -235,8 +224,7 @@ export const Wallets = () => {
                 </>
               ) : (
                 <>
-                  Show {topLevel.length - VISIBLE_WALLET_COUNT} more{' '}
-                  <ChevronDownIcon className="h-4 w-4" />
+                  Show {topLevel.length - VISIBLE_WALLET_COUNT} more <ChevronDownIcon className="h-4 w-4" />
                 </>
               )}
             </button>
@@ -262,9 +250,7 @@ export const Wallets = () => {
               <KeyIcon className="h-4 w-4" />
               {isExporting ? 'Exporting...' : 'Export Private Key'}
             </button>
-            {exportError && (
-              <p className="text-red-400 text-xs">{exportError}</p>
-            )}
+            {exportError && <p className="text-red-400 text-xs">{exportError}</p>}
             {exportedKey && (
               <div className="flex items-center gap-2 p-3 border border-zinc-700 rounded bg-zinc-800 text-xs break-all font-mono">
                 <span className="flex-1">{exportedKey}</span>
@@ -293,10 +279,7 @@ export const Wallets = () => {
         open={!!walletToRecover}
         onClose={() => setWalletToRecover(null)}
       />
-      <CreateWalletSheet
-        open={createWalletSheetOpen}
-        onClose={() => setCreateWalletSheetOpen(false)}
-      />
+      <CreateWalletSheet open={createWalletSheetOpen} onClose={() => setCreateWalletSheetOpen(false)} />
 
       {!isConnected && (
         <button

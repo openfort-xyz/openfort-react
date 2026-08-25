@@ -1,13 +1,13 @@
 import { vi } from 'vitest'
 
-// Suppress logger output during tests
+// Suppress logger output during tests. `src/__tests__/utils/logger.test.ts` opts out via vi.unmock.
 vi.mock('../utils/logger', () => ({
   logger: {
-    enabled: false,
     log: vi.fn(),
     error: vi.fn(),
     warn: vi.fn(),
   },
+  setDebugLogsEnabled: vi.fn(),
 }))
 
 // Under this vitest + jsdom combination, `localStorage`/`sessionStorage` land as
@@ -34,6 +34,21 @@ class MemoryStorage {
   setItem(key: string, value: string): void {
     this.store.set(key, String(value))
   }
+}
+
+// jsdom ships no ResizeObserver. The SDK uses the browser global rather than a
+// polyfill, so tests need an inert stand-in; a test that cares about observer
+// behaviour installs its own over this one.
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  Object.defineProperty(globalThis, 'ResizeObserver', {
+    value: class {
+      observe(): void {}
+      unobserve(): void {}
+      disconnect(): void {}
+    },
+    configurable: true,
+    writable: true,
+  })
 }
 
 for (const name of ['localStorage', 'sessionStorage'] as const) {

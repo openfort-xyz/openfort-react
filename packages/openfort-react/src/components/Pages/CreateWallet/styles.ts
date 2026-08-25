@@ -1,4 +1,4 @@
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 export const OtherMethodButton = styled.button`
   width: 100%;

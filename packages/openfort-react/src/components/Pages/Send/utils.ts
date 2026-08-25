@@ -1,12 +1,14 @@
 import { formatUnits } from 'viem'
-import type { Asset } from '../../Openfort/types'
+import type { Asset } from '../../Openfort/types.js'
 
 export function sanitizeAmountInput(value: string): string {
   const normalized = value.replace(/,/g, '.')
   const trimmed = normalized.trim()
   if (trimmed === '' || trimmed === '.') return trimmed
   const match = trimmed.match(/^([0-9]*)(\.?)([0-9]*)$/)
-  return match ? match[1] + match[2] + match[3] : ''
+  if (!match) return ''
+  const [, whole = '', dot = '', fraction = ''] = match
+  return whole + dot + fraction
 }
 
 export const sanitizeForParsing = (value: string) => {

@@ -1,7 +1,7 @@
 'use client'
 
 import type React from 'react'
-import styled from '../../../styles/styled'
+import styled from '../../../styles/styled/index.js'
 
 const Row = styled.div`
   display: flex;
@@ -56,7 +56,7 @@ const CheckIcon = () => (
   </svg>
 )
 
-export type CheckboxProps = {
+type CheckboxProps = {
   checked: boolean
   onChange: (checked: boolean) => void
   disabled?: boolean
@@ -67,7 +67,7 @@ export type CheckboxProps = {
  * A themed consent checkbox — the package ships no checkbox primitive. Only the
  * box toggles, so links inside the label stay independently clickable.
  */
-export const Checkbox: React.FC<CheckboxProps> = ({ checked, onChange, disabled, children }) => (
+const Checkbox: React.FC<CheckboxProps> = ({ checked, onChange, disabled, children }) => (
   <Row>
     <Box
       type="button"

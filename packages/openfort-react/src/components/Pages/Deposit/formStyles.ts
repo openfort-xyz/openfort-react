@@ -38,11 +38,6 @@ export const addressBox: CSSProperties = {
   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.06)',
 }
 
-/** "──  or  ──" separator between the scan/copy path and the open-wallet path. */
-export const orRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 10, margin: '16px 0 4px' }
-export const orLine: CSSProperties = { flex: 1, height: 1, background: 'var(--ck-body-divider, #ededed)' }
-export const orText: CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--ck-body-color-muted, #6b7280)' }
-
 /** Chain + token selectors side by side. */
 export const twoCol: CSSProperties = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginTop: 12 }
 

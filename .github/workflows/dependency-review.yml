@@ -10,10 +10,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout Repository'
-        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - name: 'Dependency Review'
-        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
         with:
           comment-summary-in-pr: on-failure
           fail-on-severity: moderate
           license-check: false
+          # The fixed Hono release was published on 2026-08-03 and remains
+          # inside the seven-day cooldown. Remove this on 2026-08-10.
+          allow-ghsas: GHSA-8j4g-w8fx-2239

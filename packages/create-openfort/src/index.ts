@@ -1,12 +1,16 @@
 #!/usr/bin/env node
+import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import fs from "fs-extra";
 import type { PackageJson } from "type-fest";
 import { runCli } from "~/cli/index.js";
 import { createProject } from "~/helpers/createProject.js";
 import { initializeGit } from "~/helpers/git.js";
 import { logNextSteps } from "~/helpers/logNextSteps.js";
 import { logger } from "~/utils/logger.js";
+import {
+  assertSupportedNode,
+  UnsupportedNodeError,
+} from "~/utils/nodeVersion.js";
 import { parseNameAndPath } from "~/utils/parseNameAndPath.js";
 import { renderTitle } from "~/utils/renderTitle.js";
 import { getVersion } from "./utils/getVersion.js";
@@ -24,6 +28,7 @@ type OpenfortPackageJSON = PackageJson & {
 };
 
 const main = async () => {
+  assertSupportedNode();
   const npmVersion = await getNpmVersion();
 
   await renderTitle();
@@ -75,17 +80,17 @@ const main = async () => {
     ? path.join(projectDir, "frontend", "package.json")
     : path.join(projectDir, "package.json");
 
-  if (fs.existsSync(pkgJsonPath)) {
-    const pkgJson = fs.readJSONSync(pkgJsonPath) as OpenfortPackageJSON;
+  if (existsSync(pkgJsonPath)) {
+    const pkgJson = JSON.parse(
+      readFileSync(pkgJsonPath, "utf8"),
+    ) as OpenfortPackageJSON;
     pkgJson.name = scopedAppName;
     pkgJson.openfortMetadata = {
       initVersion: getVersion(),
       template,
     };
 
-    fs.writeJSONSync(pkgJsonPath, pkgJson, {
-      spaces: 2,
-    });
+    writeFileSync(pkgJsonPath, `${JSON.stringify(pkgJson, null, 2)}\n`);
   }
 
   if (!noGit) {
@@ -114,13 +119,16 @@ main().catch((err) => {
     );
   }
 
-  // Send error telemetry
-  telemetry.send({
-    status: "error",
-    properties: {
-      error: err instanceof Error ? err.message : String(err),
-    },
-  });
+  // An unsupported-runtime abort reports nothing: the version check runs first
+  // so that this path touches neither the network nor the filesystem.
+  if (!(err instanceof UnsupportedNodeError)) {
+    telemetry.send({
+      status: "error",
+      properties: {
+        error: err instanceof Error ? err.message : String(err),
+      },
+    });
+  }
 
   process.exit(1);
 });

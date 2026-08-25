@@ -1,6 +1,6 @@
-import styled from '../../../styles/styled'
-import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles'
-import { ProviderInputInner } from '../../Pages/Providers/styles'
+import styled from '../../../styles/styled/index.js'
+import { ButtonContainer, ButtonContainerInner, InnerContainer } from '../../Common/Button/styles.js'
+import { ProviderInputInner } from '../../Pages/Providers/styles.js'
 
 export const LargeButtonStyle = styled.div`
   ${ButtonContainer} {

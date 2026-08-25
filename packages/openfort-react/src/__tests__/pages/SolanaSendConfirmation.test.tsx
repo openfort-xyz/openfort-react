@@ -1,4 +1,5 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render as rtlRender, screen, waitFor } from '@testing-library/react'
+import type { ReactElement } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 /**
@@ -9,7 +10,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
  *    amount is scaled to base units by the token's decimals.
  */
 
-import type { Asset } from '../../components/Openfort/types'
+import type { Asset } from '../../components/Openfort/types.js'
 
 const FROM = '7xKXtg2CW87d97TXJSDpbD5jBkheTqA83TZRuJosgAsU'
 const RECIPIENT = '9aE476sH92Vz7DMPyq5WLPkrKWivxeuTKEFKd2sZZcde'
@@ -28,6 +29,7 @@ const USDC_ASSET: Asset = {
 }
 
 const h = vi.hoisted(() => ({
+  client: {},
   asset: null as unknown,
   sponsorFees: false,
   sendSol: vi.fn<(...args: unknown[]) => Promise<string>>(),
@@ -36,8 +38,12 @@ const h = vi.hoisted(() => ({
   sendSplTokenGasless: vi.fn<(...args: unknown[]) => Promise<string>>(),
 }))
 
-vi.mock('../../components/Openfort/useOpenfort', () => ({
-  useOpenfort: () => ({
+vi.mock('../../openfort/useOpenfort', () => ({
+  useOpenfortCore: (selector: (state: { client: object }) => unknown) => selector({ client: h.client }),
+}))
+
+vi.mock('../../components/Openfort/useOpenfort', () => {
+  const hook = () => ({
     sendForm: { recipient: RECIPIENT, amount: '1', asset: h.asset },
     setRoute: vi.fn(),
     triggerResize: vi.fn(),
@@ -47,8 +53,9 @@ vi.mock('../../components/Openfort/useOpenfort', () => ({
     setOnBack: vi.fn(),
     setPreviousRoute: vi.fn(),
     setRouteHistory: vi.fn(),
-  }),
-}))
+  })
+  return { useOpenfort: hook, useOpenfortConfig: hook, useOpenfortRouting: hook, useOpenfortForms: hook }
+})
 vi.mock('../../hooks/openfort/auth/useSignOut', () => ({ useSignOut: () => ({ signOut: vi.fn() }) }))
 vi.mock('../../solana/hooks/useSolanaEmbeddedWallet', () => ({
   useSolanaEmbeddedWallet: () => ({
@@ -66,7 +73,11 @@ vi.mock('../../solana/transfer', () => ({
   sendSplTokenGasless: h.sendSplTokenGasless,
 }))
 
-const { SolanaSendConfirmation } = await import('../../components/Pages/SendConfirmation/SolanaSendConfirmation')
+const { SolanaSendConfirmation } = await import('../../components/Pages/SendConfirmation/SolanaSendConfirmation.js')
+const { createQueryWrapper } = await import('../mocks/TestWrapper.js')
+
+/** The page reads its fee quote through a query, so it needs a QueryClient in scope. */
+const render = (ui: ReactElement) => rtlRender(ui, { wrapper: createQueryWrapper() })
 
 describe('SolanaSendConfirmation', () => {
   beforeEach(() => {

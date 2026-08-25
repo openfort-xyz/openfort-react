@@ -2,15 +2,15 @@ import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { HookBadge } from '@/components/HookBadge'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { cn } from '@/lib/cn'
-import type { FileRoutesByFullPath } from '@/routeTree.gen'
+import { cn } from '@/lib/utils'
+import type { FileRoutesByTo } from '@/routeTree.gen'
 
 /** One way of performing an action: with your own UI, or with Openfort's widget. */
 export type ActionVariant = {
   /** Hook or API the variant demonstrates, shown as a chip. */
   hook?: string
   /** Links the chip to that hook's inspector page. */
-  href?: keyof FileRoutesByFullPath
+  href?: keyof FileRoutesByTo
   content: ReactNode
 }
 

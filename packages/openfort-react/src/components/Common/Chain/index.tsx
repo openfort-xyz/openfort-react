@@ -1,11 +1,13 @@
+'use client'
+
 import { AnimatePresence } from 'framer-motion'
 import type React from 'react'
 import { useId } from 'react'
-import Chains from '../../../assets/chains'
-import { chainConfigs } from '../../../constants/chainConfigs'
-import useIsMounted from '../../../hooks/useIsMounted'
-import { useOpenfort } from '../../Openfort/useOpenfort'
-import { ChainContainer, LoadingContainer, LogoContainer, Unsupported } from './styles'
+import Chains from '../../../assets/chains.js'
+import { chainConfigs } from '../../../constants/chainConfigs.js'
+import useIsMounted from '../../../hooks/useIsMounted.js'
+import { useOpenfort } from '../../Openfort/useOpenfort.js'
+import { ChainContainer, LoadingContainer, LogoContainer, Unsupported } from './styles.js'
 
 const Spinner = () => {
   const id = useId()

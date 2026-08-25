@@ -1,6 +1,8 @@
-import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard'
-import styled from '../../../styles/styled'
-import { CopyIcon } from './CopyIcon'
+'use client'
+
+import { useCopyToClipboard } from '../../../hooks/useCopyToClipboard.js'
+import styled from '../../../styles/styled/index.js'
+import { CopyIcon } from './CopyIcon.js'
 
 const StyledButton = styled.button<{ $size: number }>`
   width: ${(p) => p.$size}px;
@@ -10,7 +12,7 @@ const StyledButton = styled.button<{ $size: number }>`
   border-radius: var(--ck-secondary-button-border-radius);
   background: var(--ck-accent-color, rgba(26, 136, 248, 0.1));
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 200ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
