@@ -8,7 +8,7 @@ import { BALANCE_ABI, getMintContractConfig } from '@/lib/contracts'
 import { toError } from '@/lib/errors'
 import { WriteContractLayout } from './write-contract-shared'
 
-export const WriteContractCard = ({ hook }: { hook?: string }) => {
+export const WriteContractCard = ({ hook, bare }: { hook?: string; bare?: boolean }) => {
   const { address, chainId } = useConnectedEthereumAccount()
   const { isConnected, connector } = useAccount()
   const config = getMintContractConfig(chainId)
@@ -111,6 +111,7 @@ export const WriteContractCard = ({ hook }: { hook?: string }) => {
 
   return (
     <WriteContractLayout
+      bare={bare}
       hook={hook}
       config={config}
       address={address}

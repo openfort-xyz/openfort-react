@@ -2,11 +2,10 @@ import { ChainTypeEnum, useOpenfort, useSignOut, useUser } from '@openfort/react
 import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { FundingScenarios } from '@/components/FundingScenarios'
-import { ConnectExternalWalletCard } from '@/components/Showcase/app/ConnectExternalWalletCard'
-import { OpenfortUICard } from '@/components/Showcase/app/OpenfortUICard'
+import { ActionCard } from '@/components/Showcase/ActionCard'
+import { DelegateAccountCard } from '@/components/Showcase/app/DelegateAccountCard'
 import { SendTransactionCardSolana } from '@/components/Showcase/app/SendTransactionCardSolana'
 import { SessionKeysCard } from '@/components/Showcase/app/SessionKeys'
-import { SessionKeysCardEVM } from '@/components/Showcase/app/SessionKeysCardEVM'
 import { SetActiveWalletsCardEthereum } from '@/components/Showcase/app/SetActiveWallets'
 import { SetActiveWalletsCardSolana } from '@/components/Showcase/app/SetActiveWalletsCardSolana'
 import { SignaturesCardEVM } from '@/components/Showcase/app/SignaturesCardEVM'
@@ -16,12 +15,24 @@ import { SolanaOpenfortUICard } from '@/components/Showcase/app/SolanaOpenfortUI
 import { SwitchChainCardEVM } from '@/components/Showcase/app/SwitchChainCardEVM'
 import { TransactionHistoryCardSolana } from '@/components/Showcase/app/TransactionHistoryCardSolana'
 import { WriteContractCard } from '@/components/Showcase/app/WriteContract'
-import { WriteContractCardEVM } from '@/components/Showcase/app/WriteContractCardEVM'
+import {
+  ExportKeyWidget,
+  FundWidget,
+  NetworkWidget,
+  SendWidget,
+  SignWidget,
+  WalletsWidget,
+} from '@/components/Showcase/app/widgets'
 import { TruncatedText } from '@/components/TruncatedText'
 import { Button } from '@/components/ui/button'
 import { useDisplayEthereumAddress } from '@/hooks/useConnectedEthereumAccount'
 import { usePlaygroundMode } from '@/providers'
 
+/**
+ * The showcase is organised by **action** — sign, transact, fund, switch network,
+ * manage wallets — and each action offers the two ways of shipping it: drive the
+ * SDK hooks behind your own UI, or hand off to Openfort's prebuilt widget.
+ */
 export const App = () => {
   const { user } = useUser()
   const { chainType } = useOpenfort()
@@ -39,7 +50,6 @@ export const App = () => {
   const { signOut } = useSignOut()
   const { mode } = usePlaygroundMode()
   const isSVM = mode === 'svm'
-  const hasWagmi = mode === 'evm'
 
   return (
     <div className="h-full w-full p-4 ">
@@ -63,26 +73,57 @@ export const App = () => {
             <TransactionHistoryCardSolana hook="getTransactionHistory" />
             <SetActiveWalletsCardSolana />
           </>
-        ) : hasWagmi ? (
-          <>
-            <OpenfortUICard hook="useUI (Openfort UI)" />
-            <SiweCard hook="createSIWEMessage · useSignMessage" />
-            <WriteContractCard hook="useWriteContract" />
-            <SwitchChainCardEVM hook="useSwitchChain" />
-            <SessionKeysCard hook="useGrantPermissions" />
-            <ConnectExternalWalletCard />
-          </>
         ) : (
           <>
-            <OpenfortUICard hook="useUI (Openfort UI)" />
-            <SignaturesCardEVM hook="viem signMessage" />
-            <WriteContractCardEVM hook="viem readContract / writeContract" />
-            <SwitchChainCardEVM hook="wallet_switchEthereumChain" />
-            <SessionKeysCardEVM hook="useGrantPermissions" />
+            <ActionCard
+              title="Sign"
+              description="Prove ownership of the wallet by signing a message or typed data."
+              headless={{ hook: 'useSignMessage (wagmi)', content: <SignaturesCardEVM bare /> }}
+              widget={{ hook: 'useSignMessage (Openfort)', content: <SignWidget /> }}
+            />
+
+            <ActionCard
+              title="Transact"
+              description="Send value or call a contract from the connected wallet."
+              headless={{ hook: 'useWriteContract', content: <WriteContractCard bare /> }}
+              widget={{ hook: 'useUI().openSend', content: <SendWidget /> }}
+            />
+
+            <ActionCard
+              title="Fund"
+              description="Move money in — from another wallet, an exchange, or a card."
+              headless={{ hook: 'useFunding', content: <FundingScenarios bare /> }}
+              widget={{ hook: 'useUI().openFunding', content: <FundWidget /> }}
+            />
+
+            <ActionCard
+              title="Network"
+              description="Move the wallet between the chains your project supports."
+              headless={{ hook: 'useSwitchChain', content: <SwitchChainCardEVM bare /> }}
+              widget={{ hook: 'useUI().openSwitchNetworks', content: <NetworkWidget /> }}
+            />
+
+            <ActionCard
+              title="Wallets"
+              description="Create embedded wallets and switch the active one."
+              headless={{
+                hook: 'useEthereumEmbeddedWallet',
+                content: <SetActiveWalletsCardEthereum bare />,
+              }}
+              widget={{ hook: 'useUI().openWallets', content: <WalletsWidget /> }}
+            />
+
+            <ActionCard
+              title="Keys & recovery"
+              description="Export the private key or change how the wallet is recovered."
+              widget={{ hook: 'useUI().openExportKey', content: <ExportKeyWidget /> }}
+            />
+
+            <DelegateAccountCard />
+            <SessionKeysCard hook="useGrantPermissions" />
+            <SiweCard hook="createSIWEMessage · useSignMessage" />
           </>
         )}
-        {!isSVM && !hasWagmi && <SetActiveWalletsCardEthereum />}
-        <FundingScenarios />
       </div>
     </div>
   )

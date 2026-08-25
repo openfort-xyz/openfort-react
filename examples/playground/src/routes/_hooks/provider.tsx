@@ -1,6 +1,5 @@
 import type { RecoveryMethod, Theme } from '@openfort/react'
 import { createFileRoute } from '@tanstack/react-router'
-import { FundingScenarios } from '@/components/FundingScenarios'
 import { Layout } from '../../components/Layout'
 import { Variable } from '../../components/Variable/Variable'
 import { useAppStore } from '../../lib/useAppStore'
@@ -14,9 +13,6 @@ function RouteComponent() {
 
   return (
     <Layout>
-      <div className="mb-6">
-        <FundingScenarios />
-      </div>
       <Variable
         name="providerOptions"
         values={providerOptions}
