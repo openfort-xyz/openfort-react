@@ -85,8 +85,7 @@ export class DashboardPage {
    * demo, so the argument is unused.)
    */
   async signMessage(_message: string, mode: PlaygroundMode) {
-    const card =
-      mode === 'svm' ? await this.getCardByTitle(/openfort ui/i) : await this.openWidgetTab(/^sign$/i)
+    const card = mode === 'svm' ? await this.getCardByTitle(/openfort ui/i) : await this.openWidgetTab(/^sign$/i)
     const signBtn = card.getByRole('button', { name: /^sign message$/i })
     await expect(signBtn).toBeEnabled({ timeout: 90_000 })
     await signBtn.click()

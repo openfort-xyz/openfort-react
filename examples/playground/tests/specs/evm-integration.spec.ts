@@ -144,12 +144,24 @@ test.describe('EVM integration', () => {
 
       const keySpans = sessionCard.locator('span.truncate.font-mono')
 
-      // Ensure at least 2 session keys
-      while ((await keySpans.count()) < 2) {
+      // Ensure at least 2 session keys. A grant submitted while the userop
+      // that deployed the account is still settling is rejected with "AA10
+      // sender already constructed"; the card surfaces the error and keeps
+      // the button enabled, so wait out the settlement and retry instead of
+      // failing on the first transient rejection.
+      for (let attempt = 0; (await keySpans.count()) < 2; attempt++) {
+        expect(attempt, 'session key creation kept failing after 4 attempts').toBeLessThan(4)
         const before = await keySpans.count()
         await expect(createBtn).toBeEnabled({ timeout: 30_000 })
         await createBtn.click()
-        await expect.poll(() => keySpans.count(), { timeout: 120_000 }).toBeGreaterThan(before)
+        const grew = await expect
+          .poll(() => keySpans.count(), { timeout: 60_000 })
+          .toBeGreaterThan(before)
+          .then(
+            () => true,
+            () => false
+          )
+        if (!grew) await page.waitForTimeout(15_000)
       }
 
       const initialCount = await keySpans.count()
