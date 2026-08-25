@@ -50,13 +50,35 @@ const SCENARIOS = [
 ] as const
 
 /** Extra geographies worth poking at by hand; the presets cover the three outcomes. */
-const OTHER_COUNTRIES = ['ES', 'FR', 'GB']
 
 /**
  * Funding scenario switcher — presets for the three routing outcomes, plus the
  * raw simulation fields for ad-hoc cases. Rendered both on the provider settings
  * page and in the showcase app, so the widget can be re-aimed without leaving it.
  */
+/** Buyer-region presets. Shown by both funding variants, since the region decides
+ *  which rails appear whether you build the screen or open the widget. */
+export function FundingCountryPresets() {
+  const simulation = useAppStore((s) => s.fundingSimulation)
+  const setSimulation = useAppStore((s) => s.setFundingSimulation)
+  const active = SCENARIOS.find((s) => s.country === simulation.country)
+
+  return (
+    <div className="grid grid-cols-3 gap-2">
+      {SCENARIOS.map((scenario) => (
+        <Button
+          key={scenario.country}
+          variant={active?.country === scenario.country ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setSimulation({ country: scenario.country, mainnetTarget: true, fakeApplePay: true })}
+        >
+          {scenario.label}
+        </Button>
+      ))}
+    </div>
+  )
+}
+
 export function FundingScenarios({ bare }: { bare?: boolean } = {}) {
   const simulation = useAppStore((s) => s.fundingSimulation)
   const setSimulation = useAppStore((s) => s.setFundingSimulation)
@@ -64,18 +86,7 @@ export function FundingScenarios({ bare }: { bare?: boolean } = {}) {
 
   const body = (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-2">
-        {SCENARIOS.map((scenario) => (
-          <Button
-            key={scenario.country}
-            variant={active?.country === scenario.country ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setSimulation({ country: scenario.country, mainnetTarget: true, fakeApplePay: true })}
-          >
-            {scenario.label}
-          </Button>
-        ))}
-      </div>
+      <FundingCountryPresets />
 
       {active ? (
         <dl className="rounded-md border p-3 text-xs">
@@ -93,21 +104,6 @@ export function FundingScenarios({ bare }: { bare?: boolean } = {}) {
       )}
 
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t pt-3 text-sm">
-        <label className="flex items-center gap-2">
-          Country
-          <select
-            className="rounded-md border bg-transparent px-2 py-1 text-sm"
-            value={simulation.country ?? ''}
-            onChange={(e) => setSimulation({ ...simulation, country: e.target.value || undefined })}
-          >
-            <option value="">Detect by IP</option>
-            {[...SCENARIOS.map((s) => s.country), ...OTHER_COUNTRIES].map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </label>
         <label className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -132,14 +128,6 @@ export function FundingScenarios({ bare }: { bare?: boolean } = {}) {
             </select>
           </label>
         )}
-        <label className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            checked={simulation.fakeApplePay === true}
-            onChange={(e) => setSimulation({ ...simulation, fakeApplePay: e.target.checked })}
-          />
-          Apple Pay–capable device
-        </label>
       </div>
     </div>
   )

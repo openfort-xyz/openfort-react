@@ -73,12 +73,6 @@ export const DelegateAccountCard = () => {
     setError(null)
     setResult(null)
     try {
-      if (!FEE_SPONSORSHIP_ID) {
-        throw new Error(
-          'Set VITE_FEE_SPONSORSHIP_ID to a gas-sponsorship policy so the delegation can be submitted without funding the account.'
-        )
-      }
-
       const nonce = await publicClient.getTransactionCount({ address })
       const authorization = await signAuthorization({
         contractAddress: SIMPLE_7702_IMPLEMENTATION,
@@ -121,7 +115,9 @@ export const DelegateAccountCard = () => {
         account,
         client: publicClient,
         paymaster: createPaymasterClient({ transport }),
-        paymasterContext: { policyId: FEE_SPONSORSHIP_ID },
+        // Only pin a policy when one is configured; otherwise let the project's
+        // own sponsorship settings decide, so delegating needs no extra setup.
+        ...(FEE_SPONSORSHIP_ID ? { paymasterContext: { policyId: FEE_SPONSORSHIP_ID } } : {}),
         transport,
       })
 

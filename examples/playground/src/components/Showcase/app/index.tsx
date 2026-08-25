@@ -3,7 +3,6 @@ import { useEthereumEmbeddedWallet } from '@openfort/react/ethereum'
 import { useSolanaEmbeddedWallet } from '@openfort/react/solana'
 import { FundingScenarios } from '@/components/FundingScenarios'
 import { ActionCard } from '@/components/Showcase/ActionCard'
-import { ConnectExternalWalletCard } from '@/components/Showcase/app/ConnectExternalWalletCard'
 import { DelegateAccountCard } from '@/components/Showcase/app/DelegateAccountCard'
 import { SendTransactionCardSolana } from '@/components/Showcase/app/SendTransactionCardSolana'
 import { SessionKeysCard } from '@/components/Showcase/app/SessionKeys'
@@ -106,7 +105,7 @@ export const App = () => {
 
             <ActionCard
               title="Wallets"
-              description="Create embedded wallets, switch the active one, or link an external one."
+              description="Create embedded wallets and switch the active one."
               headless={{
                 hook: 'useEthereumEmbeddedWallet',
                 content: <SetActiveWalletsCardEthereum bare />,
@@ -123,7 +122,6 @@ export const App = () => {
             <DelegateAccountCard />
             <SessionKeysCard hook="useGrantPermissions" />
             <SiweCard hook="createSIWEMessage · useSignMessage" />
-            <ConnectExternalWalletCard />
           </>
         )}
       </div>

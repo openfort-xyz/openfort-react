@@ -2,6 +2,7 @@ import type { SignTypedDataPayload } from '@openfort/react'
 import { useSignMessage as useOpenfortSignMessage, useUI } from '@openfort/react'
 import { useState } from 'react'
 import { useChainId } from 'wagmi'
+import { FundingCountryPresets } from '@/components/FundingScenarios'
 import { InputMessage } from '@/components/Showcase/ui/InputMessage'
 import { Button } from '@/components/ui/button'
 import { useDisplayEthereumAddress } from '@/hooks/useConnectedEthereumAccount'
@@ -99,17 +100,19 @@ export const SendWidget = () => {
 export const FundWidget = () => {
   const ui = useUI()
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <Button variant="outline" onClick={() => ui.openFunding()}>
-        Add funds (hub)
-      </Button>
-      <Button variant="outline" onClick={() => ui.openBuy()}>
-        Buy with fiat
-      </Button>
-      <Button variant="outline" onClick={() => ui.openReceive()}>
-        Receive
-      </Button>
-    </div>
+    <>
+      {/* The buyer's region decides which rails the hub offers, so the presets
+          matter just as much here as they do on the headless side. */}
+      <FundingCountryPresets />
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" onClick={() => ui.openFunding()}>
+          Add funds (hub)
+        </Button>
+        <Button variant="outline" onClick={() => ui.openBuy()}>
+          Buy with fiat
+        </Button>
+      </div>
+    </>
   )
 }
 
