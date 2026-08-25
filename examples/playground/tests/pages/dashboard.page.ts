@@ -79,11 +79,14 @@ export class DashboardPage {
 
   /**
    * Sign a message through the Openfort UI widget: open the modal from the
-   * "Openfort UI" card, confirm, wait for the success screen, then close it.
-   * (The message content is fixed by the widget demo, so the argument is unused.)
+   * sign widget, confirm, wait for the success screen, then close it. On EVM
+   * the widget lives behind the "Sign" card's UI-widget tab; on SVM it keeps
+   * its own "Openfort UI" card. (The message content is fixed by the widget
+   * demo, so the argument is unused.)
    */
-  async signMessage(_message: string, _mode: PlaygroundMode) {
-    const card = await this.getCardByTitle(/openfort ui/i)
+  async signMessage(_message: string, mode: PlaygroundMode) {
+    const card =
+      mode === 'svm' ? await this.getCardByTitle(/openfort ui/i) : await this.openWidgetTab(/^sign$/i)
     const signBtn = card.getByRole('button', { name: /^sign message$/i })
     await expect(signBtn).toBeEnabled({ timeout: 90_000 })
     await signBtn.click()
@@ -110,6 +113,17 @@ export class DashboardPage {
 
     // Close the success screen so the dashboard is interactive again.
     await this.page.getByRole('button', { name: /^done$/i }).click()
+  }
+
+  /**
+   * EVM action cards carry a Headless / UI-widget toggle and default to
+   * headless; select the widget tab so the prebuilt-modal variant is rendered.
+   * A no-op when the widget tab is already active.
+   */
+  async openWidgetTab(title: string | RegExp) {
+    const card = await this.getCardByTitle(title)
+    await card.getByRole('tab', { name: /ui widget/i }).click()
+    return card
   }
 
   async getCardByTitle(title: string | RegExp) {

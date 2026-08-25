@@ -41,9 +41,10 @@ test.describe('EVM integration', () => {
       const walletRow = walletsCard.locator('button').filter({ hasText: /0x[a-f0-9]{4,}\.\.\.[a-f0-9]{4,}/i })
       await expect.poll(() => walletRow.count(), { timeout: 120_000 }).toBeGreaterThanOrEqual(1)
 
-      // Wait for full connection and the Openfort UI card to be ready
+      // Wait for full connection and the sign widget (UI-widget tab of the
+      // "Sign" action card) to be ready
       await expect(page.getByText(/Connected with 0x/i)).toBeVisible({ timeout: 60_000 })
-      const uiCard = await dashboardPage.getCardByTitle(/openfort ui/i)
+      const uiCard = await dashboardPage.openWidgetTab(/^sign$/i)
       const signButton = uiCard.getByRole('button', { name: /^sign message$/i })
       await expect(signButton).toBeEnabled({ timeout: 60_000 })
     })
@@ -56,7 +57,7 @@ test.describe('EVM integration', () => {
 
     // ── Step 3: Switch chain -> sign -> verify chain persisted ──────────
     await test.step('switch chain and sign', async () => {
-      const chainCard = await dashboardPage.getCardByTitle(/switch chain/i)
+      const chainCard = await dashboardPage.getCardByTitle(/^network$/i)
 
       const currentChain = chainCard
         .locator('p')
@@ -103,10 +104,10 @@ test.describe('EVM integration', () => {
 
     // ── Step 4: Write contract (mint) ───────────────────────────────────
     await test.step('mint tokens', async () => {
-      const writeCard = await dashboardPage.getCardByTitle(/write contract/i)
+      const writeCard = await dashboardPage.getCardByTitle(/^transact$/i)
       await expect(writeCard).toBeVisible({ timeout: 60_000 })
 
-      await expect(writeCard.getByText(/balance:\s*\d+/i)).toBeVisible({ timeout: 60_000 })
+      await expect(writeCard.getByText(/balance:?\s*\d+/i)).toBeVisible({ timeout: 60_000 })
 
       const amountInput = writeCard.getByPlaceholder(/enter amount to mint/i)
       await expect(amountInput).toBeVisible({ timeout: 30_000 })

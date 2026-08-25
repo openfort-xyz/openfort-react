@@ -6,7 +6,7 @@ test.describe('Dashboard regression - refresh persistence', () => {
     const m = mode
     await dashboardPage.ensureReady(m)
 
-    const chainCard = await dashboardPage.getCardByTitle(/switch chain/i)
+    const chainCard = await dashboardPage.getCardByTitle(/^network$/i)
 
     const currentChain = chainCard
       .locator('p')
@@ -39,8 +39,9 @@ test.describe('Dashboard regression - refresh persistence', () => {
     await dashboardPage.expectLoaded(m)
     await expect(currentChain).toContainText(target, { timeout: 90_000 })
 
-    // Sanity: the Openfort UI card still renders (dashboard not broken)
-    await expect(page.getByRole('button', { name: /^sign message$/i }).first()).toBeVisible({ timeout: 60_000 })
+    // Sanity: the Sign action card still renders (dashboard not broken). The
+    // headless variant is the default tab after a reload.
+    await expect(page.getByRole('button', { name: /^sign a message$/i }).first()).toBeVisible({ timeout: 60_000 })
   })
 })
 
