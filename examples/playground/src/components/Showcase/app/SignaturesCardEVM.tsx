@@ -6,7 +6,7 @@ import { useDisplayEthereumAddress } from '@/hooks/useConnectedEthereumAccount'
 import { toError } from '@/lib/errors'
 import { SignaturesLayout } from './signatures-shared'
 
-export const SignaturesCardEVM = ({ hook }: { hook?: string }) => {
+export const SignaturesCardEVM = ({ hook, bare }: { hook?: string; bare?: boolean }) => {
   const core = useOpenfort()
   const address = useDisplayEthereumAddress()
   const { status, activeWallet } = useEthereumEmbeddedWallet()
@@ -50,6 +50,7 @@ export const SignaturesCardEVM = ({ hook }: { hook?: string }) => {
 
   return (
     <SignaturesLayout
+      bare={bare}
       hook={hook}
       isPending={isPending}
       canSign={!!address}

@@ -3,11 +3,22 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useActiveEthereumEmbeddedWallet } from '@/hooks/useActiveEthereumEmbeddedWallet'
 import { EmbeddedWalletsList } from './EmbeddedWalletsList'
 
-export const SetActiveWalletsCardEthereum = () => {
+export const SetActiveWalletsCardEthereum = ({ bare }: { bare?: boolean } = {}) => {
   const { ethereum, activeWallet, connectingAddress } = useActiveEthereumEmbeddedWallet()
   const setActive = async (opts: { address: `0x${string}`; password?: string; recoveryMethod?: RecoveryMethod }) => {
     await ethereum.setActive(opts)
   }
+
+  const body = (
+    <EmbeddedWalletsList
+      ethereum={ethereum}
+      activeWallet={activeWallet}
+      connectingAddress={connectingAddress}
+      setActive={setActive}
+    />
+  )
+
+  if (bare) return body
 
   return (
     <Card>
@@ -15,14 +26,7 @@ export const SetActiveWalletsCardEthereum = () => {
         <CardTitle>Wallets</CardTitle>
         <CardDescription>Create and switch embedded wallets (useEthereumEmbeddedWallet).</CardDescription>
       </CardHeader>
-      <CardContent>
-        <EmbeddedWalletsList
-          ethereum={ethereum}
-          activeWallet={activeWallet}
-          connectingAddress={connectingAddress}
-          setActive={setActive}
-        />
-      </CardContent>
+      <CardContent>{body}</CardContent>
     </Card>
   )
 }

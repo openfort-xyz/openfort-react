@@ -11,7 +11,7 @@ import { getEvmChainsForKey, PLAYGROUND_EVM_CHAINS } from '@/lib/chains'
 import { delegatedImplLabel, isDelegatedAccountUsableOnChain } from '@/lib/delegation'
 import { toError } from '@/lib/errors'
 
-export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
+export const SwitchChainCardEVM = ({ hook, bare }: { hook?: string; bare?: boolean }) => {
   const embedded = useEthereumEmbeddedWallet()
   const core = useOpenfort()
   const { isConnected: wagmiConnected, connector } = useAccount()
@@ -79,6 +79,48 @@ export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
     PLAYGROUND_EVM_CHAINS.find((chain) => chain.id === currentChainId)?.name ||
     (currentChainId != null ? `Chain ${currentChainId}` : 'Unknown')
 
+  const body = (
+    <div className="space-y-2">
+      {visibleChains.map((chain) => {
+        const usableOnChain = isDelegatedAccountUsableOnChain(activeImplType, chain.id)
+        return (
+          <div key={chain.id}>
+            <Button
+              onClick={() => switchChain(chain.id)}
+              disabled={currentChainId === chain.id || isPending || !canSwitch}
+            >
+              Switch to {chain.name}
+            </Button>
+            <InputMessage
+              message={`Heads up: this wallet (${delegatedImplLabel(activeImplType)}) can't transact on ${chain.name}. You can still switch, but to mint here create a new wallet — new wallets work on every chain.`}
+              show={!usableOnChain}
+              variant="warning"
+            />
+          </div>
+        )
+      })}
+
+      <InputMessage message={`Switched to chain ${data?.name}`} show={!!data} variant="success" />
+      <InputMessage
+        message={error?.message || 'An error occurred while switching chains.'}
+        show={!!error}
+        variant="error"
+      />
+    </div>
+  )
+
+  if (bare) {
+    return (
+      <>
+        <p className="text-xs text-muted-foreground">
+          Current chain: {chainName}
+          {currentChainId != null && ` (${currentChainId})`}
+        </p>
+        {body}
+      </>
+    )
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -90,35 +132,7 @@ export const SwitchChainCardEVM = ({ hook }: { hook?: string }) => {
         </p>
         {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
-      <CardContent>
-        <div className="space-y-2">
-          {visibleChains.map((chain) => {
-            const usableOnChain = isDelegatedAccountUsableOnChain(activeImplType, chain.id)
-            return (
-              <div key={chain.id}>
-                <Button
-                  onClick={() => switchChain(chain.id)}
-                  disabled={currentChainId === chain.id || isPending || !canSwitch}
-                >
-                  Switch to {chain.name}
-                </Button>
-                <InputMessage
-                  message={`Heads up: this wallet (${delegatedImplLabel(activeImplType)}) can't transact on ${chain.name}. You can still switch, but to mint here create a new wallet — new wallets work on every chain.`}
-                  show={!usableOnChain}
-                  variant="warning"
-                />
-              </div>
-            )
-          })}
-
-          <InputMessage message={`Switched to chain ${data?.name}`} show={!!data} variant="success" />
-          <InputMessage
-            message={error?.message || 'An error occurred while switching chains.'}
-            show={!!error}
-            variant="error"
-          />
-        </div>
-      </CardContent>
+      <CardContent>{body}</CardContent>
     </Card>
   )
 }
