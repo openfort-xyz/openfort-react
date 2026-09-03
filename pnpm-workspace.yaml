@@ -32,6 +32,7 @@ overrides:
   cross-spawn: '>=6.0.6'
   got: '>=11.8.5'
   esbuild: '>=0.28.1'
+  browserslist@<4.28.7: '>=4.28.7'
   glob@>=10.3.7 <=11.0.3: '>=11.1.0'
   body-parser@>=2.2.0 <2.2.1: '>=2.2.1'
   '@modelcontextprotocol/sdk@<1.25.2': 1.25.2
@@ -172,6 +173,12 @@ auditConfig:
     # body-parser <1.20.6 — request parsing DoS. Reached via a nested Express in
     # the betterauth quickstart server, which is an example, not a deployed service.
     - GHSA-v422-hmwv-36x6
+    # qs <6.16.0 — array-limit bypass and isBuffer DoS. Reached only via Express
+    # in the betterauth quickstart server. The fixed qs 6.16.0 was published on
+    # 2026-08-29 and remains inside the seven-day cooldown. Remove these two
+    # exceptions and change the qs override to `qs@<6.16.0: '>=6.16.0'` on 2026-09-05.
+    - GHSA-x5fp-wj9c-mxmx
+    - GHSA-4mjr-xmp4-gh2g
     # @hono/node-server — request smuggling surface. Reached via
     # `better-auth > prisma > @prisma/dev` in the betterauth quickstart.
     - GHSA-frvp-7c67-39w9
