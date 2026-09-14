@@ -182,6 +182,7 @@ export type {
   ConnectedEmbeddedSolanaWallet,
   SetActiveSolanaWalletOptions,
   SolanaConfig,
+  SolanaFeeSponsorship,
   SolanaWalletState,
   UseEmbeddedSolanaWalletOptions,
 } from './solana/types.js'

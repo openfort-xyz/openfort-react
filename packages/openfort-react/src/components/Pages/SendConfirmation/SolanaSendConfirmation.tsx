@@ -62,7 +62,10 @@ export const SolanaSendConfirmation = () => {
   const decimals = asset.type === 'spl' ? asset.metadata.decimals : SOL_DECIMALS
 
   // Fees are sponsored from config (the SVM counterpart of ethereumFeeSponsorshipId).
-  const isSponsored = Boolean(walletConfig?.solana?.sponsorFees)
+  // An object form also names the SPL mint the user pays the fee in.
+  const sponsorFees = walletConfig?.solana?.sponsorFees
+  const isSponsored = Boolean(sponsorFees)
+  const feeToken = typeof sponsorFees === 'object' ? sponsorFees.feeToken : undefined
 
   // Real network fee from the RPC (getFeeForMessage). Null while loading or on failure.
   const feeQuery = useQuery({
@@ -118,9 +121,11 @@ export const SolanaSendConfirmation = () => {
               to: recipient,
               mint: asset.address,
               amount: baseUnits,
+              decimals,
               provider,
               cluster,
               publishableKey,
+              feeToken,
               rpcUrl: rpcUrl ?? undefined,
               commitment,
             })
@@ -143,6 +148,7 @@ export const SolanaSendConfirmation = () => {
               provider,
               cluster,
               publishableKey,
+              feeToken,
               rpcUrl: rpcUrl ?? undefined,
               commitment,
             })

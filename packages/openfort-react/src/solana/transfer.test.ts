@@ -3,7 +3,7 @@ import { ValidationError } from '../errors/validation.js'
 import { WalletError } from '../errors/wallet.js'
 import { getOpenfortBackendUrl } from '../openfort/core/client.js'
 import {
-  assertKoraInstructionsAreExpected,
+  assertKoraPaymentIsExpected,
   assertTransferableRecipient,
   koraRpcUrl,
   resolveTokenProgram,
@@ -131,6 +131,7 @@ describe('sendSplTokenGasless', () => {
         to: 'token-account',
         mint: 'mint-address',
         amount: 1_000n,
+        decimals: 6,
         provider: {} as never,
         cluster: 'devnet',
         publishableKey: 'pk_test',
@@ -144,50 +145,202 @@ describe('sendSplTokenGasless', () => {
   })
 })
 
-describe('assertKoraInstructionsAreExpected', () => {
+describe('assertKoraPaymentIsExpected', () => {
+  const FEE_TOKEN = 'fee-token-mint'
+  const SOURCE_ATA = 'user-fee-token-account'
+  const DESTINATION_ATA = 'kora-fee-token-account'
+  const FROM = 'sender-wallet'
+  const EXPECTED = [FROM, SOURCE_ATA, DESTINATION_ATA, FEE_TOKEN, 'token-program']
+  const ix = (...addresses: string[]) => ({ accounts: addresses.map((address) => ({ address })) })
+  const payment = (overrides: Record<string, unknown> = {}) => ({
+    payment_token: FEE_TOKEN,
+    payment_amount: 1_500,
+    payment_instruction: ix(SOURCE_ATA, DESTINATION_ATA, FROM),
+    ...overrides,
+  })
+
+  it('accepts a payment that only touches the fee transfer', () => {
+    expect(() =>
+      assertKoraPaymentIsExpected(payment(), { feeToken: FEE_TOKEN, expectedAccounts: EXPECTED })
+    ).not.toThrow()
+  })
+
+  it('accepts a zero fee, which is what free paymaster pricing quotes', () => {
+    expect(() =>
+      assertKoraPaymentIsExpected(payment({ payment_amount: 0 }), { feeToken: FEE_TOKEN, expectedAccounts: EXPECTED })
+    ).not.toThrow()
+  })
+
+  it('rejects a payment quoted in a different token', () => {
+    expect(() =>
+      assertKoraPaymentIsExpected(payment({ payment_token: 'other-mint' }), {
+        feeToken: FEE_TOKEN,
+        expectedAccounts: EXPECTED,
+      })
+    ).toThrow(WalletError)
+  })
+
+  it.each([
+    undefined,
+    -1,
+    1.5,
+    Number.NaN,
+    Number.MAX_SAFE_INTEGER + 2,
+  ])('rejects the unusable fee amount %s', (amount) => {
+    expect(() =>
+      assertKoraPaymentIsExpected(payment({ payment_amount: amount }), {
+        feeToken: FEE_TOKEN,
+        expectedAccounts: EXPECTED,
+      })
+    ).toThrow(WalletError)
+  })
+
+  it('rejects a payment that debits an account outside the fee transfer', () => {
+    expect(() =>
+      assertKoraPaymentIsExpected(payment({ payment_instruction: ix(SOURCE_ATA, 'attacker-ata', FROM) }), {
+        feeToken: FEE_TOKEN,
+        expectedAccounts: EXPECTED,
+      })
+    ).toThrow(WalletError)
+  })
+})
+
+describe('sendSolGasless', () => {
   const FROM = 'sender-wallet'
   const RECIPIENT = 'recipient-wallet'
-  const RECIPIENT_ATA = 'recipient-associated-token-account'
-  const ix = (...addresses: string[]) => ({ accounts: addresses.map((address) => ({ address })) })
+  const KORA_SIGNER = 'kora-fee-payer'
+  const FEE_TOKEN = 'fee-token-mint'
+  const SPL_TOKEN_PROGRAM = 'TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'
 
   /**
-   * The common sponsored SPL send: the recipient already holds the token, so
-   * Kora returns a lone `transferChecked` naming the destination *token
-   * account* and never the wallet.
+   * Enough of `@solana/kit` to build and encode a message. The fakes carry the
+   * instruction list through unchanged so a test can assert on what was built.
    */
-  it('accepts a transfer that names the destination token account', () => {
-    expect(() =>
-      assertKoraInstructionsAreExpected([ix('source-ata', 'mint', RECIPIENT_ATA, FROM)], {
-        from: FROM,
-        acceptableDestinations: [RECIPIENT, RECIPIENT_ATA],
-      })
-    ).not.toThrow()
+  const mockKit = () => ({
+    createSolanaRpc: () => ({
+      getAccountInfo: () => ({ send: async () => ({ value: { owner: '11111111111111111111111111111111' } }) }),
+    }),
+    address: (value: string) => value,
+    lamports: (value: bigint) => value,
+    createNoopSigner: (address: string) => ({ address }),
+    pipe: (value: unknown, ...fns: ((input: unknown) => unknown)[]) => fns.reduce((acc, fn) => fn(acc), value),
+    createTransactionMessage: () => ({ instructions: [] as unknown[] }),
+    setTransactionMessageFeePayerSigner: (feePayer: unknown, tx: object) => ({ ...tx, feePayer }),
+    setTransactionMessageLifetimeUsingBlockhash: (lifetime: unknown, tx: object) => ({ ...tx, lifetime }),
+    appendTransactionMessageInstructions: (instructions: unknown[], tx: { instructions: unknown[] }) => ({
+      ...tx,
+      instructions: [...tx.instructions, ...instructions],
+    }),
+    appendTransactionMessageInstruction: (instruction: unknown, tx: { instructions: unknown[] }) => ({
+      ...tx,
+      instructions: [...tx.instructions, instruction],
+    }),
+    partiallySignTransactionMessageWithSigners: async (tx: object) => ({
+      ...tx,
+      messageBytes: new Uint8Array([1]),
+      signatures: {},
+    }),
+    getBase64EncodedWireTransaction: () => 'base64-wire',
+    getBase58Encoder: () => ({ encode: () => new Uint8Array(64) }),
+    getBase58Decoder: () => ({ decode: () => 'decoded-signature' }),
   })
 
-  it('accepts a transfer that names the recipient wallet, as a first send does', () => {
-    expect(() =>
-      assertKoraInstructionsAreExpected([ix(FROM, RECIPIENT)], {
-        from: FROM,
-        acceptableDestinations: [RECIPIENT],
-      })
-    ).not.toThrow()
+  const setup = (koraOverrides: Record<string, unknown> = {}) => {
+    const kora = {
+      getPayerSigner: vi.fn(async () => ({ signer_address: KORA_SIGNER })),
+      getBlockhash: vi.fn(async () => ({ blockhash: 'blockhash' })),
+      signAndSendTransaction: vi.fn(async () => ({ signature: 'tx-signature' })),
+      transferTransaction: vi.fn(),
+      ...koraOverrides,
+    }
+    vi.doMock('@solana/kit', () => mockKit())
+    vi.doMock('@solana/kora', () => ({
+      KoraClient: function KoraClient() {
+        return kora
+      },
+    }))
+    vi.doMock('@solana-program/system', () => ({
+      getTransferSolInstruction: vi.fn((input: unknown) => ({ kind: 'transferSol', input })),
+    }))
+    vi.doMock('@solana-program/token', () => ({
+      TOKEN_PROGRAM_ADDRESS: SPL_TOKEN_PROGRAM,
+      findAssociatedTokenPda: async ({ owner }: { owner: string }) => [`${owner}-ata`],
+    }))
+    return kora
+  }
+
+  const unmock = () => {
+    for (const id of ['@solana/kit', '@solana/kora', '@solana-program/system', '@solana-program/token']) {
+      vi.doUnmock(id)
+    }
+    vi.resetModules()
+  }
+
+  const send = async (overrides: Record<string, unknown> = {}) => {
+    const { sendSolGasless: send } = await import('./transfer.js')
+    return send({
+      from: FROM,
+      to: RECIPIENT,
+      amountSol: 1,
+      provider: { signTransaction: async () => ({ signature: 'user-signature' }) } as never,
+      cluster: 'devnet',
+      publishableKey: 'pk_test',
+      ...overrides,
+    } as never)
+  }
+
+  /**
+   * The hosted Openfort endpoint does not route `transferTransaction`, so a
+   * sponsored send that reaches for it fails before broadcast.
+   */
+  it('builds the transfer locally instead of asking the paymaster for one', async () => {
+    const kora = setup()
+    await expect(send()).resolves.toBe('tx-signature')
+
+    expect(kora.transferTransaction).not.toHaveBeenCalled()
+    expect(kora.getPayerSigner).toHaveBeenCalledTimes(1)
+    expect(kora.signAndSendTransaction).toHaveBeenCalledWith(
+      expect.objectContaining({ transaction: 'base64-wire', signer_key: KORA_SIGNER })
+    )
+    unmock()
   })
 
-  it('rejects a transaction that redirects to somewhere never requested', () => {
-    expect(() =>
-      assertKoraInstructionsAreExpected([ix('source-ata', 'mint', 'attacker-ata', FROM)], {
-        from: FROM,
-        acceptableDestinations: [RECIPIENT, RECIPIENT_ATA],
-      })
-    ).toThrow(WalletError)
+  it('appends the paymaster fee payment when the user pays in a token', async () => {
+    const getPaymentInstruction = vi.fn(async () => ({
+      payment_token: FEE_TOKEN,
+      payment_amount: 2_500,
+      payment_address: KORA_SIGNER,
+      payment_instruction: { accounts: [{ address: `${FROM}-ata` }, { address: `${KORA_SIGNER}-ata` }] },
+    }))
+    const kora = setup({ getPaymentInstruction })
+
+    await expect(send({ feeToken: FEE_TOKEN })).resolves.toBe('tx-signature')
+
+    expect(getPaymentInstruction).toHaveBeenCalledWith(
+      expect.objectContaining({ fee_token: FEE_TOKEN, source_wallet: FROM, signer_key: KORA_SIGNER })
+    )
+    expect(kora.signAndSendTransaction).toHaveBeenCalledTimes(1)
+    unmock()
   })
 
-  it('rejects a transaction that debits a different sender', () => {
-    expect(() =>
-      assertKoraInstructionsAreExpected([ix('other-wallet', RECIPIENT_ATA)], {
-        from: FROM,
-        acceptableDestinations: [RECIPIENT, RECIPIENT_ATA],
-      })
-    ).toThrow(WalletError)
+  it('does not pay a fee the paymaster routed to somebody else', async () => {
+    setup({
+      getPaymentInstruction: async () => ({
+        payment_token: FEE_TOKEN,
+        payment_amount: 2_500,
+        payment_address: KORA_SIGNER,
+        payment_instruction: { accounts: [{ address: 'attacker-ata' }] },
+      }),
+    })
+
+    await expect(send({ feeToken: FEE_TOKEN })).rejects.toThrow('fee payment for a different account')
+    unmock()
+  })
+
+  it('reports an @solana/kora too old to build a fee payment', async () => {
+    setup({ getPaymentInstruction: undefined })
+
+    await expect(send({ feeToken: FEE_TOKEN })).rejects.toThrow('getPaymentInstruction')
+    unmock()
   })
 })

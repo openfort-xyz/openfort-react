@@ -55,6 +55,15 @@ type SolanaUIOptions = {
  * >
  * ```
  */
+/**
+ * Fee sponsorship that charges the end user in an SPL token rather than paying
+ * the fee for them.
+ */
+export type SolanaFeeSponsorship = {
+  /** SPL mint the user pays the network fee in. Must be accepted by the project's sponsorship. */
+  feeToken: string
+}
+
 export type SolanaConfig = {
   /** Solana cluster to connect to */
   cluster: SolanaCluster
@@ -64,12 +73,26 @@ export type SolanaConfig = {
   commitment?: SolanaCommitment
   /**
    * Sponsor network fees for Solana sends through the Openfort paymaster (Kora).
-   * The SVM counterpart of `ethereum.ethereumFeeSponsorshipId`: when `true`, sends
-   * are routed gaslessly and the confirm screen marks the network fee as sponsored.
-   * Requires a `sponsorSolTransaction` policy on the project (resolved server-side
-   * from the publishable key). Defaults to `false` (user pays the fee).
+   * The SVM counterpart of `ethereum.ethereumFeeSponsorshipId`: when set, sends
+   * are routed through the paymaster and the confirm screen marks the network fee
+   * as sponsored. Requires a `sponsorSolTransaction` policy on the project
+   * (resolved server-side from the publishable key). Defaults to `false`, where
+   * the wallet pays the fee in SOL.
+   *
+   * `true` matches a sponsorship that pays on the user's behalf. Pass
+   * `{ feeToken }` instead for one that charges the user in an SPL token — the
+   * mint must be one the project's sponsorship accepts.
+   *
+   * @example
+   * ```ts
+   * solana: { cluster: 'mainnet-beta', sponsorFees: true }
+   * solana: {
+   *   cluster: 'mainnet-beta',
+   *   sponsorFees: { feeToken: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v' },
+   * }
+   * ```
    */
-  sponsorFees?: boolean
+  sponsorFees?: boolean | SolanaFeeSponsorship
   /** UI options for Solana-connected screens */
   ui?: SolanaUIOptions
 }
