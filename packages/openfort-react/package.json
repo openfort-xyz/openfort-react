@@ -133,7 +133,7 @@
     "@types/react": "^18.0.6",
     "@types/react-dom": "^18.0.2",
     "@types/styled-components": "^5.1.25",
-    "@vitest/coverage-v8": "4.1.8",
+    "@vitest/coverage-v8": "4.1.11",
     "@wagmi/connectors": "^8.0.15",
     "@wagmi/core": "^3.5.0",
     "@walletconnect/ethereum-provider": "^2.23.9",
