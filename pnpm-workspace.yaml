@@ -15,7 +15,7 @@ packages:
 overrides:
   bn.js: '>=5.2.3'
   axios: '>=1.18.1'
-  hono: '>=4.12.34'
+  hono: '>=4.13.5'
   react: 18.3.1
   react-dom: 18.3.1
   '@types/react': 18.3.1
@@ -53,7 +53,7 @@ overrides:
   picomatch@<2.3.2: '>=2.3.2 <3.0.0'
   picomatch@>=4.0.0 <4.0.4: '>=4.0.4'
   yaml@>=2.0.0 <2.8.3: '>=2.8.3'
-  smol-toml@<1.6.1: '>=1.6.1'
+  smol-toml@<1.7.1: '>=1.7.1'
   brace-expansion@<5.0.9: '>=5.0.9'
   path-to-regexp@<0.1.13: 0.1.13
   drizzle-orm: '>=0.45.2'
@@ -61,15 +61,17 @@ overrides:
   uuid@<14.0.0: '>=14.0.0'
   postcss@<8.5.23: '>=8.5.23'
   ws: '>=8.21.0'
-  vitest@<4.1.0: '>=4.1.0'
+  vitest@<4.1.11: '>=4.1.11 <5'
+  '@vitest/mocker@<4.1.11': '>=4.1.11 <5'
+  fflate@<0.4.9: '>=0.4.9'
   shell-quote@>=1.1.0 <=1.8.4: '>=1.9.0'
   '@grpc/grpc-js@<1.9.16': '>=1.9.16'
   form-data@>=4.0.0 <4.0.6: '>=4.0.6'
   vite@<6.4.3: '>=6.4.3'
-  js-yaml@>=4.0.0 <4.3.1: '>=4.3.1 <5'
+  js-yaml@>=4.0.0 <4.3.2: '>=4.3.2 <5'
   # read-yaml-file 1.1 calls the js-yaml 3 safeLoad API, which 4.x removed, so
-  # this path stays on the 3.x line. 3.15.1 carries the merge-key backport.
-  'read-yaml-file@1.1.0>js-yaml': 3.15.1
+  # this path stays on the 3.x line. 3.15.2 carries the merge-key backport.
+  'read-yaml-file@1.1.0>js-yaml': 3.15.2
   dompurify@<3.4.13: '>=3.4.13'
   '@opentelemetry/core@<2.8.0': '>=2.8.0'
   '@babel/core@<7.29.6': '>=7.29.6 <8'
@@ -150,9 +152,6 @@ auditConfig:
     # Remove this exception when the core SDK drops the ethers v5 dependency.
     - CVE-2025-14505
   ignoreGhsas:
-    # The fixed Hono release was published on 2026-08-03 and remains inside the
-    # seven-day cooldown. Remove this exception and override Hono on 2026-08-10.
-    - GHSA-8j4g-w8fx-2239
     # websocket-driver <0.7.5 — message corruption and compression resource
     # limits. Reached only via `firebase > @firebase/database > faye-websocket`
     # in the firebase quickstart, which has no release on a patched driver.
