@@ -908,6 +908,67 @@ describe('CoreOpenfortProvider', () => {
     expect(storeValue.user?.id).toBe('new-user')
   })
 
+  it('keeps an account list in flight when the same principal is published beside it', async () => {
+    let storeValue: any = null
+    let resolveAccounts!: (accounts: any[]) => void
+    mockClient.embeddedWallet.list.mockReturnValueOnce(new Promise((resolve) => (resolveAccounts = resolve)))
+
+    await act(async () => {
+      render(
+        createElement(
+          CoreOpenfortProvider,
+          { openfortConfig },
+          createElement(StoreReader, { onValue: (value: any) => (storeValue = value) })
+        )
+      )
+    })
+
+    const pendingAccounts = storeValue.updateEmbeddedAccounts()
+    await act(async () => {
+      await storeValue.updateUser({ id: 'usr_same-principal', linkedAccounts: [] })
+    })
+
+    // The list has not answered yet, so the wallet UI must keep waiting rather
+    // than conclude this user owns no wallets.
+    expect(storeValue.isLoadingAccounts).toBe(true)
+
+    await act(async () => {
+      resolveAccounts([{ id: 'embedded-account' }])
+      await pendingAccounts
+    })
+
+    expect(storeValue.user?.id).toBe('usr_same-principal')
+    expect(storeValue.embeddedAccounts).toEqual([{ id: 'embedded-account' }])
+  })
+
+  it('discards an account list in flight when the authenticated principal changes', async () => {
+    let storeValue: any = null
+    let resolveAccounts!: (accounts: any[]) => void
+
+    await act(async () => {
+      render(
+        createElement(
+          CoreOpenfortProvider,
+          { openfortConfig },
+          createElement(StoreReader, { onValue: (value: any) => (storeValue = value) })
+        )
+      )
+    })
+
+    await act(async () => storeValue.updateUser({ id: 'principal-a', linkedAccounts: [] }))
+    mockClient.embeddedWallet.list.mockReturnValueOnce(new Promise((resolve) => (resolveAccounts = resolve)))
+    const pendingAccounts = storeValue.updateEmbeddedAccounts()
+    await act(async () => storeValue.updateUser({ id: 'principal-b', linkedAccounts: [] }))
+
+    await act(async () => {
+      resolveAccounts([{ id: 'principal-a-account' }])
+      await pendingAccounts
+    })
+
+    expect(storeValue.user?.id).toBe('principal-b')
+    expect(storeValue.embeddedAccounts).toBeUndefined()
+  })
+
   it('store contains correct initial state and chainType', async () => {
     let storeValue: any = null
 

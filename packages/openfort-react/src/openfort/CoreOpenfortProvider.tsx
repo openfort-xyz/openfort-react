@@ -356,12 +356,15 @@ const CoreOpenfortProviderInner: React.FC<CoreOpenfortProviderProps> = ({
   const publishAuthenticatedUser = useCallback(
     (user: User): User => {
       const state = store.getState()
-      // Any publication supersedes an older user fetch still in flight.
-      invalidateSessionWork()
+      // Any publication supersedes an older user fetch still in flight. Only that
+      // fetch: the account list loading beside it belongs to this same session,
+      // answers later than `/me` does, and is what the wallet UI routes on.
+      userFetchSeqRef.current += 1
       // Only a genuine change of principal discards the wallet: the first
       // publication merely learns who the user is, and cancelling there would
       // abort the provider initialisation already running for this session.
       if (state.user !== null && state.user.id !== user.id) {
+        invalidateSessionWork()
         invalidateEmbeddedSignerOperations(openfort)
         state.setLinkedAccounts([])
         state.setActiveEmbeddedAddress(undefined)
