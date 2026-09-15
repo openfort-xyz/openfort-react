@@ -30,6 +30,7 @@ export type {
   SolanaCluster,
   SolanaCommitment,
   SolanaConfig,
+  SolanaFeeSponsorship,
   SolanaSignAllTransactionsRequest,
   SolanaSignMessageRequest,
   SolanaSignTransactionRequest,

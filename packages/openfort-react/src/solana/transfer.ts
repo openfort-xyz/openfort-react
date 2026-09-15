@@ -22,6 +22,17 @@ import { getDefaultSolanaRpcUrl } from '../utils/rpc.js'
 import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster, SolanaCommitment } from './types.js'
 
 type Kit = typeof import('@solana/kit')
+type KitInstructions = Parameters<Kit['appendTransactionMessageInstructions']>[0]
+/** A transaction message carrying everything needed to sign it. */
+type KitSignableMessage = Parameters<Kit['partiallySignTransactionMessageWithSigners']>[0]
+/**
+ * Kora's fee-payment call. `@solana/kora` is an optional peer on
+ * `^0.1.1 || ^0.2.0` and the method only exists from 0.2, so it is optional
+ * here and checked before use.
+ */
+type KoraPaymentClient = Partial<
+  Pick<InstanceType<typeof import('@solana/kora')['KoraClient']>, 'getPaymentInstruction'>
+>
 
 /** The System program id — the "token" for a native SOL transfer through Kora. */
 const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
@@ -362,9 +373,13 @@ type KoraTransferParams = {
   amountBaseUnits: bigint
   /** System program id for native SOL, or the SPL mint address. */
   tokenMint: string
+  /** Decimals of `tokenMint`. Required for an SPL transfer, ignored for native SOL. */
+  decimals?: number
   provider: OpenfortEmbeddedSolanaWalletProvider
   cluster: SolanaCluster
   publishableKey: string
+  /** SPL mint the user pays the network fee in. Omitted when the project pays. */
+  feeToken?: string
   /** Openfort API base URL. Defaults to the SDK configuration. */
   backendUrl?: string
   /** Read endpoint used to confirm the broadcast transaction. */
@@ -373,77 +388,213 @@ type KoraTransferParams = {
 }
 
 /**
- * Sponsor a transfer through the Openfort Solana paymaster (Kora): Kora is the
- * fee payer, the user signs their part with the embedded wallet, and Kora
- * co-signs + broadcasts. Requires a `sponsorSolTransaction` policy on the
- * project. Returns the transaction signature (base58).
- */
-/**
- * Refuses a sponsored transaction whose instructions mention an account the
- * caller never asked about.
+ * Refuses a fee payment that touches an account the caller never asked about.
  *
- * Kora is the fee payer through a noop signer, so the user's signature is the
- * transaction's only authority — whatever comes back is what gets signed. The
- * accounts a legitimate transfer touches are all derivable from the request, so
- * an unexpected one means the response does not describe the transfer that was
- * asked for.
+ * The amount and the payment destination are the paymaster's to decide, and the
+ * user's signature is the only authority on the transaction — so a payment
+ * instruction naming an account outside the fee transfer is debiting something
+ * other than the fee.
  */
-export function assertKoraInstructionsAreExpected(
-  instructions: readonly { accounts?: readonly { address?: string }[] }[],
-  request: { from: string; acceptableDestinations: readonly string[] }
+/** @internal Exported for focused validation tests; not part of a package entry point. */
+export function assertKoraPaymentIsExpected(
+  payment: {
+    payment_token?: string
+    payment_amount?: number
+    payment_instruction?: { accounts?: readonly { address?: string }[] }
+  },
+  request: { feeToken: string; expectedAccounts: readonly string[] }
 ): void {
-  const mentioned = new Set<string>()
-  for (const instruction of instructions) {
-    for (const account of instruction.accounts ?? []) {
-      if (account.address) mentioned.add(account.address)
+  if (payment.payment_token && payment.payment_token !== request.feeToken) {
+    throw new WalletError('The paymaster asked to be paid in a different token.', {
+      details: `Requested ${request.feeToken}, got ${payment.payment_token}.`,
+    })
+  }
+
+  const amount = payment.payment_amount
+  if (amount == null || !Number.isSafeInteger(amount) || amount < 0) {
+    throw new WalletError('The paymaster returned an unusable fee amount.', {
+      details: `Expected a non-negative integer in ${request.feeToken} base units, got ${String(amount)}.`,
+    })
+  }
+
+  const allowed = new Set(request.expectedAccounts)
+  for (const account of payment.payment_instruction?.accounts ?? []) {
+    if (account.address && !allowed.has(account.address)) {
+      throw new WalletError('The paymaster returned a fee payment for a different account.', {
+        details: `Payment instruction names ${account.address}, which is not part of the fee transfer.`,
+      })
     }
-  }
-  if (mentioned.size === 0) return
-
-  // An SPL `transferChecked` names the destination *token account*, not the
-  // wallet — the wallet address only appears when Kora also has to create the
-  // ATA. Both spellings of the destination are therefore acceptable, and
-  // requiring the wallet alone rejects every send to a recipient who already
-  // holds the token.
-  if (!request.acceptableDestinations.some((destination) => mentioned.has(destination))) {
-    throw new WalletError('The paymaster returned a transaction for a different recipient.', {
-      details: `Expected one of ${request.acceptableDestinations.join(', ')} among the transaction accounts.`,
-    })
-  }
-
-  if (!mentioned.has(request.from)) {
-    throw new WalletError('The paymaster returned a transaction for a different sender.', {
-      details: `Expected ${request.from} among the transaction accounts.`,
-    })
   }
 }
 
+/**
+ * Builds the transfer instructions for a sponsored send. Kora signs as fee
+ * payer, so it also funds the recipient's associated token account when the
+ * SPL branch has to create one.
+ */
+async function buildSponsoredTransferInstructions(
+  kit: Kit,
+  {
+    from,
+    to,
+    amountBaseUnits,
+    tokenMint,
+    decimals,
+    feePayer,
+    readRpc,
+    commitment,
+  }: {
+    from: Address
+    to: string
+    amountBaseUnits: bigint
+    tokenMint: string
+    decimals: number | undefined
+    feePayer: TransactionSigner
+    readRpc: ReturnType<Kit['createSolanaRpc']>
+    commitment: SolanaCommitment
+  }
+): Promise<KitInstructions> {
+  // The user authorises with a signature injected after the message is built,
+  // so every position they occupy is a noop signer here.
+  const source = kit.createNoopSigner(from)
+
+  if (tokenMint === SYSTEM_PROGRAM_ID) {
+    const { getTransferSolInstruction } = await import('@solana-program/system')
+    return [
+      getTransferSolInstruction({
+        source,
+        destination: kit.address(to),
+        amount: kit.lamports(amountBaseUnits),
+      }),
+    ]
+  }
+
+  if (decimals == null) {
+    throw new ValidationError('An SPL transfer needs the mint decimals.')
+  }
+
+  const token = await import('@solana-program/token')
+  const toAddress = kit.address(to)
+  const mintAddress = kit.address(tokenMint)
+  const tokenProgram = kit.address(
+    await resolveTokenProgram(readRpc, tokenMint, token.TOKEN_PROGRAM_ADDRESS, commitment)
+  )
+
+  const [sourceAta] = await token.findAssociatedTokenPda({ owner: from, tokenProgram, mint: mintAddress })
+  const [destinationAta] = await token.findAssociatedTokenPda({ owner: toAddress, tokenProgram, mint: mintAddress })
+
+  return [
+    token.getCreateAssociatedTokenIdempotentInstruction({
+      payer: feePayer,
+      ata: destinationAta,
+      owner: toAddress,
+      mint: mintAddress,
+      tokenProgram,
+    }),
+    token.getTransferCheckedInstruction(
+      {
+        source: sourceAta,
+        mint: mintAddress,
+        destination: destinationAta,
+        authority: source,
+        amount: amountBaseUnits,
+        decimals,
+      },
+      { programAddress: tokenProgram }
+    ),
+  ]
+}
+
+/**
+ * Appends the SPL instruction paying Kora's fee, for a project whose
+ * sponsorship charges the user in a token rather than paying on their behalf.
+ */
+async function appendKoraFeePayment(
+  kit: Kit,
+  client: KoraPaymentClient,
+  {
+    message,
+    from,
+    feeToken,
+    signerAddress,
+    readRpc,
+    commitment,
+  }: {
+    message: KitSignableMessage
+    from: Address
+    feeToken: string
+    signerAddress: string
+    readRpc: ReturnType<Kit['createSolanaRpc']>
+    commitment: SolanaCommitment
+  }
+): Promise<KitSignableMessage> {
+  if (typeof client.getPaymentInstruction !== 'function') {
+    throw new WalletError('This version of @solana/kora cannot build a fee payment.', {
+      details: 'Upgrade @solana/kora to a release that exposes getPaymentInstruction.',
+    })
+  }
+
+  const token = await import('@solana-program/token')
+  const feeTokenProgram = kit.address(
+    await resolveTokenProgram(readRpc, feeToken, token.TOKEN_PROGRAM_ADDRESS, commitment)
+  )
+  const mint = kit.address(feeToken)
+
+  // The fee is quoted against the transaction it will be attached to, so the
+  // quote is taken from an unsigned encoding of the message as it stands.
+  const unsigned = await kit.partiallySignTransactionMessageWithSigners(message)
+  const payment = await client.getPaymentInstruction({
+    transaction: kit.getBase64EncodedWireTransaction(unsigned),
+    fee_token: feeToken,
+    source_wallet: from,
+    token_program_id: feeTokenProgram,
+    signer_key: signerAddress,
+  })
+
+  const [sourceAta] = await token.findAssociatedTokenPda({ owner: from, tokenProgram: feeTokenProgram, mint })
+  const expectedAccounts = [from as string, sourceAta as string, mint as string, feeTokenProgram as string]
+  if (payment.payment_address) {
+    const [destinationAta] = await token.findAssociatedTokenPda({
+      owner: kit.address(payment.payment_address),
+      tokenProgram: feeTokenProgram,
+      mint,
+    })
+    expectedAccounts.push(payment.payment_address, destinationAta as string)
+  }
+  assertKoraPaymentIsExpected(payment, { feeToken, expectedAccounts })
+
+  return kit.appendTransactionMessageInstruction(payment.payment_instruction, message)
+}
+
+/**
+ * Sponsor a transfer through the Openfort Solana paymaster (Kora): Kora is the
+ * fee payer, the user signs their part with the embedded wallet, and Kora
+ * co-signs + broadcasts. Requires a `sponsorSolTransaction` policy on the
+ * project. When `feeToken` is set the user pays the fee in that SPL mint;
+ * otherwise the project's sponsorship covers it. Returns the transaction
+ * signature (base58).
+ */
 async function sendViaKora({
   from,
   to,
   amountBaseUnits,
   tokenMint,
+  decimals,
   provider,
   cluster,
   publishableKey,
+  feeToken,
   backendUrl,
   rpcUrl,
   commitment = 'confirmed',
 }: KoraTransferParams): Promise<string> {
-  // Kora's request takes a JS number; fail loudly rather than silently corrupt
-  // an amount that can't be represented exactly.
-  if (amountBaseUnits > BigInt(Number.MAX_SAFE_INTEGER)) {
-    throw new WalletError('Amount is too large to sponsor through the paymaster.')
-  }
-
   const kit = await import('@solana/kit')
   const { KoraClient } = await import('@solana/kora')
 
-  // Kora derives the destination's associated token account server-side, so a
-  // token-account recipient is just as unrecoverable here as on the unsponsored
-  // path — and sponsored native SOL is no different. Fall back to the cluster's
-  // public endpoint rather than skip the check: an app that never configured an
-  // RPC still deserves the guard.
+  // A token-account recipient owns no key anybody can sign with, so a transfer
+  // to one confirms and leaves the funds unspendable. Fall back to the
+  // cluster's public endpoint rather than skip the check: an app that never
+  // configured an RPC still deserves the guard.
   const readRpc = kit.createSolanaRpc(rpcUrl || getDefaultSolanaRpcUrl(cluster))
   await assertTransferableRecipient(readRpc, to, commitment)
 
@@ -452,36 +603,23 @@ async function sendViaKora({
   // 1. Kora's fee-payer signer.
   const { signer_address } = await client.getPayerSigner()
   const feePayer = kit.createNoopSigner(signer_address as Address)
+  const fromAddress = kit.address(from)
 
-  // 2. A sponsored transfer (native or SPL), with Kora as the fee payer.
-  const { instructions } = await client.transferTransaction({
-    amount: Number(amountBaseUnits),
-    token: tokenMint,
-    source: from,
-    destination: to,
-    signer_key: signer_address,
+  // 2. The transfer itself, with Kora as the fee payer.
+  const instructions = await buildSponsoredTransferInstructions(kit, {
+    from: fromAddress,
+    to,
+    amountBaseUnits,
+    tokenMint,
+    decimals,
+    feePayer,
+    readRpc,
+    commitment,
   })
-
-  // For SPL the transfer names the destination ATA; the wallet address appears
-  // only when Kora also creates it. Accept either.
-  const acceptableDestinations = [to]
-  if (tokenMint !== SYSTEM_PROGRAM_ID) {
-    const token = await import('@solana-program/token')
-    const tokenProgram = kit.address(
-      await resolveTokenProgram(readRpc, tokenMint, token.TOKEN_PROGRAM_ADDRESS, commitment)
-    )
-    const [destinationAta] = await token.findAssociatedTokenPda({
-      owner: kit.address(to),
-      tokenProgram,
-      mint: kit.address(tokenMint),
-    })
-    acceptableDestinations.push(destinationAta)
-  }
-  assertKoraInstructionsAreExpected(instructions, { from, acceptableDestinations })
 
   // 3. Build the message with Kora as fee payer.
   const { blockhash } = await client.getBlockhash()
-  const message = kit.pipe(
+  let message: KitSignableMessage = kit.pipe(
     kit.createTransactionMessage({ version: 0 }),
     (tx) => kit.setTransactionMessageFeePayerSigner(feePayer, tx),
     (tx) =>
@@ -494,6 +632,17 @@ async function sendViaKora({
       ),
     (tx) => kit.appendTransactionMessageInstructions(instructions, tx)
   )
+
+  if (feeToken) {
+    message = await appendKoraFeePayment(kit, client, {
+      message,
+      from: fromAddress,
+      feeToken,
+      signerAddress: signer_address,
+      readRpc,
+      commitment,
+    })
+  }
 
   // 4. Inject the user's Ed25519 signature alongside Kora's placeholder.
   const partiallySigned = await kit.partiallySignTransactionMessageWithSigners(message)
@@ -574,6 +723,8 @@ type SendSolGaslessParams = {
   cluster: SolanaCluster
   /** Project publishable key; sent to the Openfort Solana paymaster (Kora) as a Bearer token. */
   publishableKey: string
+  /** SPL mint the user pays the network fee in. Omitted when the project pays. */
+  feeToken?: string
   /** Openfort API base URL. Defaults to the SDK configuration. */
   backendUrl?: string
   /** Read endpoint used to confirm the broadcast transaction. */
@@ -589,6 +740,7 @@ export async function sendSolGasless({
   provider,
   cluster,
   publishableKey,
+  feeToken,
   backendUrl,
   rpcUrl,
   commitment,
@@ -601,6 +753,7 @@ export async function sendSolGasless({
     provider,
     cluster,
     publishableKey,
+    feeToken,
     backendUrl,
     rpcUrl,
     commitment,
@@ -614,10 +767,14 @@ type SendSplTokenGaslessParams = {
   mint: string
   /** Amount in token base units (already scaled by `decimals`). */
   amount: bigint
+  /** Decimals of `mint`, carried into the `transferChecked` instruction. */
+  decimals: number
   provider: OpenfortEmbeddedSolanaWalletProvider
   cluster: SolanaCluster
   /** Project publishable key; sent to the Openfort Solana paymaster (Kora) as a Bearer token. */
   publishableKey: string
+  /** SPL mint the user pays the network fee in. Omitted when the project pays. */
+  feeToken?: string
   /** Openfort API base URL. Defaults to the SDK configuration. */
   backendUrl?: string
   /** Read endpoint used to confirm the broadcast transaction. */
@@ -631,9 +788,11 @@ export async function sendSplTokenGasless({
   to,
   mint,
   amount,
+  decimals,
   provider,
   cluster,
   publishableKey,
+  feeToken,
   backendUrl,
   rpcUrl,
   commitment,
@@ -643,9 +802,11 @@ export async function sendSplTokenGasless({
     to,
     amountBaseUnits: amount,
     tokenMint: mint,
+    decimals,
     provider,
     cluster,
     publishableKey,
+    feeToken,
     backendUrl,
     rpcUrl,
     commitment,
