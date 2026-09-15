@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.2
+
+### Patch Changes
+
+- [#342](https://github.com/openfort-xyz/openfort-react/pull/342) [`ded4137`](https://github.com/openfort-xyz/openfort-react/commit/ded41370fd0df8e7744602a863678eadecb21614) Thanks [@condor-agent](https://github.com/condor-agent)! - Fixed the embedded wallet list being discarded when the user is published beside it, which made a returning user look like they owned no wallets and routed the modal to wallet creation.
+
+- [#341](https://github.com/openfort-xyz/openfort-react/pull/341) [`31b9a58`](https://github.com/openfort-xyz/openfort-react/commit/31b9a58b0f3bdc1ca0c8c41c32bf3e3d9856d9a1) Thanks [@condor-agent](https://github.com/condor-agent)! - Fixed Solana sponsored sends, which failed with `Unknown method: transferTransaction` before broadcast. The paymaster method the send flow relied on is no longer routed by the Openfort Solana RPC endpoint, so `walletConfig.solana.sponsorFees` could not complete a transfer. The transfer instructions are now built client-side and submitted through `signAndSendTransaction`, which is the supported path.
+
+  Added `{ feeToken }` as a value for `walletConfig.solana.sponsorFees`, for projects whose gas sponsorship charges the end user in an SPL token instead of paying the fee for them. The fee payment instruction is quoted from the paymaster and appended to the transfer, and is rejected if it names an account outside that fee transfer.
+
 ## 2.1.1
 
 ### Patch Changes
