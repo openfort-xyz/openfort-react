@@ -17,4 +17,8 @@ regexes = [
   # anvil's first prefunded development account. The key is printed by anvil on
   # every start and controls funds only inside a local fork.
   '''0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80''',
+  # USDC's mainnet SPL mint. A mint address is a public on-chain identifier, but
+  # it is high-entropy base58 next to the word "token", which is what the
+  # generic-api-key rule looks for.
+  '''EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v''',
 ]

@@ -23,6 +23,16 @@ import type { OpenfortEmbeddedSolanaWalletProvider, SolanaCluster, SolanaCommitm
 
 type Kit = typeof import('@solana/kit')
 type KitInstructions = Parameters<Kit['appendTransactionMessageInstructions']>[0]
+/** A transaction message carrying everything needed to sign it. */
+type KitSignableMessage = Parameters<Kit['partiallySignTransactionMessageWithSigners']>[0]
+/**
+ * Kora's fee-payment call. `@solana/kora` is an optional peer on
+ * `^0.1.1 || ^0.2.0` and the method only exists from 0.2, so it is optional
+ * here and checked before use.
+ */
+type KoraPaymentClient = Partial<
+  Pick<InstanceType<typeof import('@solana/kora')['KoraClient']>, 'getPaymentInstruction'>
+>
 
 /** The System program id — the "token" for a native SOL transfer through Kora. */
 const SYSTEM_PROGRAM_ID = '11111111111111111111111111111111'
@@ -501,7 +511,7 @@ async function buildSponsoredTransferInstructions(
  */
 async function appendKoraFeePayment(
   kit: Kit,
-  client: { getPaymentInstruction?: (request: unknown) => Promise<unknown> },
+  client: KoraPaymentClient,
   {
     message,
     from,
@@ -510,14 +520,14 @@ async function appendKoraFeePayment(
     readRpc,
     commitment,
   }: {
-    message: unknown
+    message: KitSignableMessage
     from: Address
     feeToken: string
     signerAddress: string
     readRpc: ReturnType<Kit['createSolanaRpc']>
     commitment: SolanaCommitment
   }
-): Promise<unknown> {
+): Promise<KitSignableMessage> {
   if (typeof client.getPaymentInstruction !== 'function') {
     throw new WalletError('This version of @solana/kora cannot build a fee payment.', {
       details: 'Upgrade @solana/kora to a release that exposes getPaymentInstruction.',
@@ -532,21 +542,14 @@ async function appendKoraFeePayment(
 
   // The fee is quoted against the transaction it will be attached to, so the
   // quote is taken from an unsigned encoding of the message as it stands.
-  const unsigned = await kit.partiallySignTransactionMessageWithSigners(
-    message as Parameters<Kit['partiallySignTransactionMessageWithSigners']>[0]
-  )
-  const payment = (await client.getPaymentInstruction({
+  const unsigned = await kit.partiallySignTransactionMessageWithSigners(message)
+  const payment = await client.getPaymentInstruction({
     transaction: kit.getBase64EncodedWireTransaction(unsigned),
     fee_token: feeToken,
     source_wallet: from,
     token_program_id: feeTokenProgram,
     signer_key: signerAddress,
-  })) as {
-    payment_token?: string
-    payment_amount?: number
-    payment_address?: string
-    payment_instruction?: { accounts?: readonly { address?: string }[] }
-  }
+  })
 
   const [sourceAta] = await token.findAssociatedTokenPda({ owner: from, tokenProgram: feeTokenProgram, mint })
   const expectedAccounts = [from as string, sourceAta as string, mint as string, feeTokenProgram as string]
@@ -560,10 +563,7 @@ async function appendKoraFeePayment(
   }
   assertKoraPaymentIsExpected(payment, { feeToken, expectedAccounts })
 
-  return kit.appendTransactionMessageInstruction(
-    payment.payment_instruction as Parameters<Kit['appendTransactionMessageInstruction']>[0],
-    message as Parameters<Kit['appendTransactionMessageInstruction']>[1]
-  )
+  return kit.appendTransactionMessageInstruction(payment.payment_instruction, message)
 }
 
 /**
@@ -619,7 +619,7 @@ async function sendViaKora({
 
   // 3. Build the message with Kora as fee payer.
   const { blockhash } = await client.getBlockhash()
-  let message: unknown = kit.pipe(
+  let message: KitSignableMessage = kit.pipe(
     kit.createTransactionMessage({ version: 0 }),
     (tx) => kit.setTransactionMessageFeePayerSigner(feePayer, tx),
     (tx) =>
@@ -634,7 +634,7 @@ async function sendViaKora({
   )
 
   if (feeToken) {
-    message = await appendKoraFeePayment(kit, client as never, {
+    message = await appendKoraFeePayment(kit, client, {
       message,
       from: fromAddress,
       feeToken,
@@ -645,9 +645,7 @@ async function sendViaKora({
   }
 
   // 4. Inject the user's Ed25519 signature alongside Kora's placeholder.
-  const partiallySigned = await kit.partiallySignTransactionMessageWithSigners(
-    message as Parameters<Kit['partiallySignTransactionMessageWithSigners']>[0]
-  )
+  const partiallySigned = await kit.partiallySignTransactionMessageWithSigners(message)
   const { signature } = await provider.signTransaction(new Uint8Array(partiallySigned.messageBytes))
   const userSigned = {
     ...partiallySigned,

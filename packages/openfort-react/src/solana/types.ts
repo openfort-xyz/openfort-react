@@ -39,6 +39,23 @@ type SolanaUIOptions = {
 }
 
 /**
+ * Fee sponsorship that charges the end user in an SPL token rather than paying
+ * the fee for them.
+ *
+ * @example
+ * ```ts
+ * const sponsorFees: SolanaFeeSponsorship = {
+ *   // USDC on mainnet-beta.
+ *   feeToken: 'EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v',
+ * }
+ * ```
+ */
+export type SolanaFeeSponsorship = {
+  /** SPL mint the user pays the network fee in. Must be accepted by the project's sponsorship. */
+  feeToken: string
+}
+
+/**
  * Configuration for Solana support in OpenfortProvider
  *
  * @example
@@ -55,15 +72,6 @@ type SolanaUIOptions = {
  * >
  * ```
  */
-/**
- * Fee sponsorship that charges the end user in an SPL token rather than paying
- * the fee for them.
- */
-export type SolanaFeeSponsorship = {
-  /** SPL mint the user pays the network fee in. Must be accepted by the project's sponsorship. */
-  feeToken: string
-}
-
 export type SolanaConfig = {
   /** Solana cluster to connect to */
   cluster: SolanaCluster
