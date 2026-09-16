@@ -124,7 +124,9 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
     vi.clearAllMocks()
     mockActiveEmbeddedAddress = null
     mockEmbeddedState = EmbeddedState.READY
-    mockClient.embeddedWallet.get.mockResolvedValue(automaticAccount)
+    // Nothing has configured a signer yet, which is the state every setActive
+    // below starts from. Tests that model an already-configured signer say so.
+    mockClient.embeddedWallet.get.mockRejectedValue(new Error('No signer configured'))
     stubFetchEncryptionSession()
   })
 
@@ -271,6 +273,8 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
     ['signMessage', 1],
     ['signTransaction', 1],
   ] as const)('serializes provider %s with other client signer operations', async (method, signatureCount) => {
+    // The signer is already configured for this account.
+    mockClient.embeddedWallet.get.mockResolvedValue(automaticAccount)
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
     await act(async () => {
       await result.current.setActive({ address: MOCK_SOLANA_ADDRESS })
@@ -296,6 +300,8 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   })
 
   it('signs every transaction in a batch sequentially within one queued operation', async () => {
+    // The signer is already configured for this account.
+    mockClient.embeddedWallet.get.mockResolvedValue(automaticAccount)
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
     await act(async () => {
       await result.current.setActive({ address: MOCK_SOLANA_ADDRESS })
@@ -323,6 +329,8 @@ describe('useSolanaEmbeddedWallet – setActive', () => {
   })
 
   it('does not sign the next batch item after the wallet session is invalidated', async () => {
+    // The signer is already configured for this account.
+    mockClient.embeddedWallet.get.mockResolvedValue(automaticAccount)
     const { result } = renderHook(() => useSolanaEmbeddedWallet(), { wrapper: createQueryWrapper() })
     await act(async () => {
       await result.current.setActive({ address: MOCK_SOLANA_ADDRESS })

@@ -4,6 +4,7 @@ import { EmbeddedState, type Openfort, RecoveryMethod } from '@openfort/openfort
 import { useEffect, useRef } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
 import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import { isEmbeddedSignerConfiguredFor } from '../../shared/utils/embeddedSignerAccount.js'
 import {
   captureEmbeddedSignerSession,
   isEmbeddedSignerOperationInvalidationError,
@@ -104,6 +105,11 @@ export function useAutoRecovery({
         await runEmbeddedSignerOperation(openfort, async ({ assertCurrent }) => {
           if (!isCurrentAttempt()) return
           signerSession.assertCurrent()
+          assertCurrent()
+          // The modal's recover page may have configured this account while this
+          // attempt waited its turn. Recovering it again would ask a passkey user
+          // for a second WebAuthn ceremony to reach the state they are already in.
+          if (await isEmbeddedSignerConfiguredFor(openfort, account.id)) return
           assertCurrent()
           await openfort.embeddedWallet.recover({ account: account.id, recoveryParams })
         })

@@ -12,6 +12,7 @@ export type TestClient = {
     create: Mock
     import: Mock
     recover: Mock
+    get: Mock
     setRecoveryMethod: Mock
     exportPrivateKey: Mock
   }
@@ -40,6 +41,9 @@ export function testClient(account: EmbeddedAccount = testAccount()): TestClient
       create: vi.fn().mockResolvedValue(account),
       import: vi.fn().mockResolvedValue(account),
       recover: vi.fn().mockResolvedValue(account),
+      // No signer is configured until something recovers one; tests that model an
+      // already-configured signer resolve this with the account themselves.
+      get: vi.fn().mockRejectedValue(new Error('No signer configured')),
       setRecoveryMethod: vi.fn().mockResolvedValue(undefined),
       exportPrivateKey: vi.fn().mockResolvedValue('0xprivatekey'),
     },

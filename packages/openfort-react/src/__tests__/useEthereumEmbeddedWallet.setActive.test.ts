@@ -111,7 +111,9 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
     vi.clearAllMocks()
     mockActiveEmbeddedAddress = null
     mockEmbeddedState = EmbeddedState.READY
-    mockClient.embeddedWallet.get.mockResolvedValue(automaticAccount)
+    // Nothing has configured a signer yet, which is the state every setActive
+    // below starts from. Tests that model an already-configured signer say so.
+    mockClient.embeddedWallet.get.mockRejectedValue(new Error('No signer configured'))
     stubFetchEncryptionSession()
   })
 
@@ -413,6 +415,8 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
   })
 
   it('does not expose a private key that settles after the wallet session is invalidated', async () => {
+    // The signer is already configured for this account.
+    mockClient.embeddedWallet.get.mockResolvedValue(automaticAccount)
     mockActiveEmbeddedAddress = automaticAccount.address
     mockEmbeddedState = EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED
     const privateKey = deferred<string>()
@@ -467,6 +471,8 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
   })
 
   it('serializes every signer action across hook instances through provider settlement', async () => {
+    // The signer is already configured for this account.
+    mockClient.embeddedWallet.get.mockResolvedValue(automaticAccount)
     mockActiveEmbeddedAddress = automaticAccount.address
     const createdAccount = createMockEmbeddedAccount({
       id: 'emb_created',
@@ -502,7 +508,8 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
         newRecovery: { recoveryMethod: RecoveryMethod.AUTOMATIC, encryptionSession: 'new-session' },
       })
       exportPromise = result.current.second.exportPrivateKey()
-      setActivePromise = result.current.second.setActive({ address: automaticAccount.address })
+      // A different account than the configured one, so this genuinely recovers.
+      setActivePromise = result.current.second.setActive({ address: passkeyAccount.address })
     })
 
     await Promise.resolve()
