@@ -110,6 +110,24 @@ function RouteComponent() {
               })
             },
           },
+          defaultMethod: {
+            description:
+              'Recovery method the wallet flows default to. Switch to "passkey" to exercise the WebAuthn recovery path.',
+            type: 'select',
+            options: ['automatic', 'password', 'passkey'],
+            onEdit: (value) => {
+              setProviderOptions({
+                ...providerOptions,
+                uiConfig: {
+                  ...providerOptions.uiConfig,
+                  walletRecovery: {
+                    ...providerOptions.uiConfig?.walletRecovery,
+                    defaultMethod: value as RecoveryMethod,
+                  },
+                },
+              })
+            },
+          },
           termsOfServiceUrl: {
             type: 'text',
             onEdit: (value) => {

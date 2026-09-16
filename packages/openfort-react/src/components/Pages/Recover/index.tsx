@@ -1,6 +1,6 @@
 'use client'
 
-import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
+import { ChainTypeEnum, RecoveryMethod } from '@openfort/openfort-js'
 import { motion } from 'framer-motion'
 import type React from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -341,7 +341,6 @@ const RecoverAutomaticWallet = ({
   onBack: SetOnBackFunction
   logoutOnBack?: boolean
 }) => {
-  const embeddedState = useOpenfortCore((s) => s.embeddedState)
   const { setRoute } = useOpenfort()
   const chainType = useOpenfortCore((s) => s.chainType)
   const ethereumWallet = useEthereumEmbeddedWallet()
@@ -439,7 +438,6 @@ const RecoverAutomaticWallet = ({
   )
 
   const recoverWallet = useCallback(async () => {
-    if (chainType !== ChainTypeEnum.SVM && embeddedState !== EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED) return
     const attempt = beginAttempt()
     logger.log('Automatically recovering wallet', wallet.address)
     const operation = automaticRecoveryRef.current ?? createAutomaticOperation(automaticOperationKey)
@@ -457,17 +455,7 @@ const RecoverAutomaticWallet = ({
     } else if (outcome.status === 'error') {
       clearPersistentOperation(client, automaticOperationKey)
     }
-  }, [
-    wallet,
-    embeddedState,
-    chainType,
-    beginAttempt,
-    createAutomaticOperation,
-    isCurrentAttempt,
-    setRoute,
-    automaticOperationKey,
-    client,
-  ])
+  }, [wallet, beginAttempt, createAutomaticOperation, isCurrentAttempt, setRoute, automaticOperationKey, client])
 
   const shouldRecoverWalletRef = useRef(false)
   useEffect(() => {

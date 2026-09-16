@@ -2,6 +2,7 @@
 
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { useCallback } from 'react'
+import { ensureEmbeddedSignerHolds } from '../../../actions/ensureEmbeddedSignerHolds.js'
 import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
 import { DEFAULT_ACCOUNT_TYPE } from '../../../constants/openfort.js'
 import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
@@ -61,7 +62,6 @@ export const useConnectToWalletPostAuth = () => {
   const setActiveEmbeddedAddress = useOpenfortCore((s) => s.setActiveEmbeddedAddress)
   const embeddedState = useOpenfortCore((s) => s.embeddedState)
   const client = useOpenfortCore((s) => s.client)
-  const activeEmbeddedAddress = useOpenfortCore((s) => s.activeEmbeddedAddress)
   const updateEmbeddedAccounts = useOpenfortCore((s) => s.updateEmbeddedAccounts)
   const { walletConfig } = useOpenfort()
   const chainId = walletConfig?.ethereum?.chainId ?? 84532
@@ -162,42 +162,35 @@ export const useConnectToWalletPostAuth = () => {
           }
         }
 
-        // Check already-active using store state — no chain-specific wallet hook needed
-        const alreadyActive =
-          activeEmbeddedAddress != null &&
-          (chainType === ChainTypeEnum.SVM
-            ? activeEmbeddedAddress === autoRecoverableWallet.address
-            : activeEmbeddedAddress.toLowerCase() === autoRecoverableWallet.address.toLowerCase())
-        if (alreadyActive) {
-          return {
-            wallet:
-              chainType === ChainTypeEnum.SVM
-                ? embeddedAccountToSolanaUserWallet(autoRecoverableWallet)
-                : embeddedAccountToUserWallet(autoRecoverableWallet),
-          }
-        }
-
         try {
-          // Configure signer directly — no chain-specific wallet hook import needed
-          const recoveryParams = await buildRecoveryParams(
-            {
-              recoveryMethod:
-                autoRecoverableWallet.recoveryMethod === RecoveryMethod.PASSKEY ? RecoveryMethod.PASSKEY : undefined,
-              passkeyId:
-                autoRecoverableWallet.recoveryMethod === RecoveryMethod.PASSKEY
-                  ? autoRecoverableWallet.recoveryMethodDetails?.passkeyId
-                  : undefined,
-            },
-            {
-              walletConfig,
-              getAccessToken: () => client.getAccessToken(),
-              getUserId: async () => (await client.user.get())?.id,
-            }
-          )
-          session.assertCurrent()
           await runEmbeddedSignerOperation(client, async ({ assertCurrent }) => {
-            session.assertCurrent()
-            await client.embeddedWallet.recover({ account: autoRecoverableWallet.id, recoveryParams })
+            const assertRequestCurrent = () => {
+              session.assertCurrent()
+              assertCurrent()
+            }
+            await ensureEmbeddedSignerHolds({
+              client,
+              accountId: autoRecoverableWallet.id,
+              assertCurrent: assertRequestCurrent,
+              buildRecoveryParams: () =>
+                buildRecoveryParams(
+                  {
+                    recoveryMethod:
+                      autoRecoverableWallet.recoveryMethod === RecoveryMethod.PASSKEY
+                        ? RecoveryMethod.PASSKEY
+                        : undefined,
+                    passkeyId:
+                      autoRecoverableWallet.recoveryMethod === RecoveryMethod.PASSKEY
+                        ? autoRecoverableWallet.recoveryMethodDetails?.passkeyId
+                        : undefined,
+                  },
+                  {
+                    walletConfig,
+                    getAccessToken: () => client.getAccessToken(),
+                    getUserId: async () => (await client.user.get())?.id,
+                  }
+                ),
+            })
             assertCurrent()
             setActiveEmbeddedAddress(autoRecoverableWallet.address)
           })
@@ -228,17 +221,7 @@ export const useConnectToWalletPostAuth = () => {
           : undefined,
       }
     },
-    [
-      chainType,
-      client,
-      walletConfig,
-      chainId,
-      signOut,
-      embeddedState,
-      setActiveEmbeddedAddress,
-      updateEmbeddedAccounts,
-      activeEmbeddedAddress,
-    ]
+    [chainType, client, walletConfig, chainId, signOut, embeddedState, setActiveEmbeddedAddress, updateEmbeddedAccounts]
   )
 
   return {

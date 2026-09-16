@@ -1,5 +1,5 @@
 import { ChainTypeEnum, EmbeddedState, type Openfort, RecoveryMethod } from '@openfort/openfort-js'
-import { renderHook, waitFor } from '@testing-library/react'
+import { act, renderHook, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StoreApi } from 'zustand/vanilla'
 import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
@@ -26,19 +26,26 @@ function account(address: string, recoveryMethod = RecoveryMethod.AUTOMATIC) {
   }
 }
 
-function setup(accounts: ReturnType<typeof account>[]) {
+/**
+ * @param accounts - Accounts the store reports.
+ * @param heldAccountId - Account the signer already holds, if any.
+ */
+function setup(accounts: ReturnType<typeof account>[], heldAccountId?: string) {
   const setEmbeddedState = vi.fn()
   const setRecoveryError = vi.fn()
   const store = {
     getState: () => ({ embeddedAccounts: accounts, setEmbeddedState, setRecoveryError }),
   } as unknown as StoreApi<OpenfortStore>
   const recover = vi.fn().mockResolvedValue(accounts[0])
+  const get = heldAccountId
+    ? vi.fn().mockResolvedValue({ id: heldAccountId })
+    : vi.fn().mockRejectedValue(new Error('No signer configured'))
   const openfort = {
-    embeddedWallet: { recover },
+    embeddedWallet: { recover, get },
     getAccessToken: vi.fn().mockResolvedValue('test-access-token'),
     user: { get: vi.fn().mockResolvedValue({ id: 'usr_test_123' }) },
   } as unknown as Openfort
-  return { setEmbeddedState, setRecoveryError, store, recover, openfort }
+  return { setEmbeddedState, setRecoveryError, store, recover, get, openfort }
 }
 
 describe('useAutoRecovery', () => {
@@ -221,7 +228,11 @@ describe('useAutoRecovery', () => {
       { initialProps: { address: first.address } }
     )
 
-    await waitFor(() => expect(mockBuildRecoveryParams).toHaveBeenCalledOnce())
+    // The attempt reaches the queue before it builds anything, so let it park
+    // behind the blocker rather than waiting on a credential that is not built yet.
+    await act(async () => {
+      await Promise.resolve()
+    })
     rerender({ address: second.address })
     releaseQueue()
     await blocker
@@ -229,5 +240,43 @@ describe('useAutoRecovery', () => {
     await waitFor(() => expect(context.recover).toHaveBeenCalledOnce())
     expect(context.recover).toHaveBeenCalledWith(expect.objectContaining({ account: second.id }))
     expect(context.recover).not.toHaveBeenCalledWith(expect.objectContaining({ account: first.id }))
+  })
+
+  it('does not recover an account the signer already holds', async () => {
+    const target = account('0x1234567890abcdef1234567890abcdef12345678')
+    const context = setup([target], target.id)
+
+    renderHook(() =>
+      useAutoRecovery({
+        storeEmbeddedState: EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED,
+        storeActiveEmbeddedAddress: target.address,
+        openfort: context.openfort,
+        walletConfig: {} as OpenfortWalletConfig,
+        store: context.store,
+      })
+    )
+
+    await waitFor(() => expect(context.setEmbeddedState).toHaveBeenCalledWith(EmbeddedState.READY))
+    expect(context.recover).not.toHaveBeenCalled()
+    // No credential is built for a request that turns out to be unnecessary.
+    expect(mockBuildRecoveryParams).not.toHaveBeenCalled()
+  })
+
+  it('recovers when the signer holds a different account', async () => {
+    const target = account('0x1234567890abcdef1234567890abcdef12345678')
+    const context = setup([target], 'emb_someone_else')
+
+    renderHook(() =>
+      useAutoRecovery({
+        storeEmbeddedState: EmbeddedState.EMBEDDED_SIGNER_NOT_CONFIGURED,
+        storeActiveEmbeddedAddress: target.address,
+        openfort: context.openfort,
+        walletConfig: {} as OpenfortWalletConfig,
+        store: context.store,
+      })
+    )
+
+    await waitFor(() => expect(context.recover).toHaveBeenCalledOnce())
+    expect(context.recover).toHaveBeenCalledWith(expect.objectContaining({ account: target.id }))
   })
 })

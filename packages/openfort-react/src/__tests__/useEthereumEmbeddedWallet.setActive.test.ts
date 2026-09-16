@@ -111,9 +111,6 @@ describe('useEthereumEmbeddedWallet – setActive', () => {
     vi.clearAllMocks()
     mockActiveEmbeddedAddress = null
     mockEmbeddedState = EmbeddedState.READY
-    // Nothing has configured a signer yet, which is the state every setActive
-    // below starts from. Tests that model an already-configured signer say so.
-    mockClient.embeddedWallet.get.mockRejectedValue(new Error('No signer configured'))
     stubFetchEncryptionSession()
   })
 

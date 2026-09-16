@@ -3,8 +3,8 @@ import type { OpenfortWalletConfig } from '../components/Openfort/types.js'
 import { asOpenfortError } from '../errors/base.js'
 import { SetActiveWalletError } from '../errors/wallet.js'
 import type { SetActiveEmbeddedWalletOptionsBase } from '../shared/types.js'
-import { isEmbeddedSignerConfiguredFor } from '../shared/utils/embeddedSignerAccount.js'
 import { buildClientRecoveryConfig } from './buildClientRecoveryConfig.js'
+import { ensureEmbeddedSignerHolds } from './ensureEmbeddedSignerHolds.js'
 import { resolveSetActiveRecovery } from './resolveSetActiveRecovery.js'
 
 type SetActiveWalletParameters = {
@@ -36,24 +36,21 @@ export async function setActiveWallet(parameters: SetActiveWalletParameters): Pr
   const { client, walletConfig, account, options, assertCurrent } = parameters
 
   try {
-    const resolved = await resolveSetActiveRecovery(account, options, buildClientRecoveryConfig(client, walletConfig))
+    const outcome = await ensureEmbeddedSignerHolds({
+      client,
+      accountId: account.id,
+      assertCurrent,
+      buildRecoveryParams: async () => {
+        const resolved = await resolveSetActiveRecovery(
+          account,
+          options,
+          buildClientRecoveryConfig(client, walletConfig)
+        )
+        return resolved.needsRecovery ? null : resolved.recoveryParams
+      },
+    })
 
-    if (resolved.needsRecovery) {
-      return { needsRecovery: true }
-    }
-
-    assertCurrent()
-    // Another recovery may have configured this exact account while this call
-    // waited its turn in the signer queue. Recovering it again only re-derives
-    // the credential, which costs a passkey account a second WebAuthn prompt.
-    if (await isEmbeddedSignerConfiguredFor(client, account.id)) {
-      return { needsRecovery: false }
-    }
-
-    assertCurrent()
-    await client.embeddedWallet.recover({ account: account.id, recoveryParams: resolved.recoveryParams })
-
-    return { needsRecovery: false }
+    return { needsRecovery: outcome === 'needs-credential' }
   } catch (error) {
     throw asOpenfortError(
       error,

@@ -68,7 +68,9 @@ export function createMockClient(): MockClient {
       create: vi.fn().mockResolvedValue(createMockEmbeddedAccount()),
       list: vi.fn().mockResolvedValue([createMockEmbeddedAccount()]),
       recover: vi.fn().mockResolvedValue(createMockEmbeddedAccount()),
-      get: vi.fn().mockResolvedValue(createMockEmbeddedAccount()),
+      // Nothing has configured a signer on a freshly built client. Tests that
+      // model one resolve this with the account the signer holds.
+      get: vi.fn().mockRejectedValue(new Error('No signer configured')),
       getEmbeddedState: vi.fn().mockResolvedValue(EmbeddedState.READY),
       getEthereumProvider: vi.fn().mockResolvedValue({ request: vi.fn().mockResolvedValue([]) }),
       signMessage: vi.fn().mockResolvedValue('mock-signature'),
