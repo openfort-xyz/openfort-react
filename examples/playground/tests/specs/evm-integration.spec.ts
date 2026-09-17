@@ -10,7 +10,6 @@
  *   2. Sign message
  *   3. Switch chain -> sign -> verify chain persisted
  *   4. Write contract (mint)
- *   5. Session keys (create, revoke, delete)
  */
 
 import { expect, test } from '../fixtures/test'
@@ -20,7 +19,7 @@ test.describe('EVM integration', () => {
   test.skip(({ mode }) => mode !== 'evm', 'EVM only')
   test.describe.configure({ retries: 1 })
 
-  test('full flow: wallet, signatures, chain switch, mint, session keys', async ({ page, dashboardPage, mode }) => {
+  test('full flow: wallet, signatures, chain switch, mint', async ({ page, dashboardPage, mode }) => {
     test.setTimeout(300_000)
 
     // ── Navigate (authenticated via storageState, wallet not connected) ──
@@ -131,60 +130,6 @@ test.describe('EVM integration', () => {
 
       await expect(walletsCard.getByText(/creating wallet with password recovery/i)).toBeVisible({ timeout: 30_000 })
       await expect.poll(() => walletRow.count(), { timeout: 120_000 }).toBeGreaterThan(initialCount)
-    })
-
-    // ── Step 6: Session keys (create, revoke, delete) ───────────────────
-    await test.step('session keys', async () => {
-      const sessionCard = await dashboardPage.getCardByTitle(/session keys/i)
-      await expect(sessionCard).toBeVisible({ timeout: 60_000 })
-
-      const createBtn = sessionCard.getByRole('button', { name: /create session key/i })
-      await expect(createBtn).toBeEnabled({ timeout: 30_000 })
-
-      const keySpans = sessionCard.locator('span.truncate.font-mono')
-
-      // Ensure at least 2 session keys
-      while ((await keySpans.count()) < 2) {
-        const before = await keySpans.count()
-        await expect(createBtn).toBeEnabled({ timeout: 30_000 })
-        await createBtn.click()
-        await expect.poll(() => keySpans.count(), { timeout: 120_000 }).toBeGreaterThan(before)
-      }
-
-      const initialCount = await keySpans.count()
-      expect(initialCount).toBeGreaterThanOrEqual(2)
-
-      // Select the 2nd key
-      const targetKeySpan = keySpans.nth(1)
-      const targetKeyText = (await targetKeySpan.textContent())?.trim()
-      expect(targetKeyText).toBeTruthy()
-
-      const targetRow = targetKeySpan.locator('xpath=ancestor::div[@data-slot="tooltip-trigger"][1]')
-      await expect(targetRow).toBeVisible({ timeout: 30_000 })
-
-      // Revoke (X button)
-      const rowButtons = targetRow.locator('button')
-      await expect(rowButtons).toHaveCount(1, { timeout: 30_000 })
-      await rowButtons.first().click()
-
-      const struck = targetRow.locator('.line-through')
-      await expect(struck).toBeVisible({ timeout: 60_000 })
-
-      // Delete (trash button appears after revoke)
-      const trashBtn = targetRow.locator('button:has(svg.lucide-trash)').or(targetRow.locator('button').last())
-      await expect(trashBtn.first()).toBeVisible({ timeout: 60_000 })
-      await trashBtn.first().click()
-
-      // Confirm key is removed
-      await expect
-        .poll(
-          async () => {
-            const all = (await keySpans.allTextContents()).map((t) => t.trim())
-            return all.includes(targetKeyText!)
-          },
-          { timeout: 120_000 }
-        )
-        .toBeFalsy()
     })
   })
 })

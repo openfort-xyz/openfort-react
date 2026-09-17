@@ -5,8 +5,6 @@ import { FundingScenarios } from '@/components/FundingScenarios'
 import { ConnectExternalWalletCard } from '@/components/Showcase/app/ConnectExternalWalletCard'
 import { OpenfortUICard } from '@/components/Showcase/app/OpenfortUICard'
 import { SendTransactionCardSolana } from '@/components/Showcase/app/SendTransactionCardSolana'
-import { SessionKeysCard } from '@/components/Showcase/app/SessionKeys'
-import { SessionKeysCardEVM } from '@/components/Showcase/app/SessionKeysCardEVM'
 import { SetActiveWalletsCardEthereum } from '@/components/Showcase/app/SetActiveWallets'
 import { SetActiveWalletsCardSolana } from '@/components/Showcase/app/SetActiveWalletsCardSolana'
 import { SignaturesCardEVM } from '@/components/Showcase/app/SignaturesCardEVM'
@@ -14,7 +12,6 @@ import { SignaturesCardSolana } from '@/components/Showcase/app/SignaturesCardSo
 import { SiweCard } from '@/components/Showcase/app/SiweCard'
 import { SolanaOpenfortUICard } from '@/components/Showcase/app/SolanaOpenfortUICard'
 import { SwitchChainCardEVM } from '@/components/Showcase/app/SwitchChainCardEVM'
-import { TransactionHistoryCardSolana } from '@/components/Showcase/app/TransactionHistoryCardSolana'
 import { WriteContractCard } from '@/components/Showcase/app/WriteContract'
 import { WriteContractCardEVM } from '@/components/Showcase/app/WriteContractCardEVM'
 import { TruncatedText } from '@/components/TruncatedText'
@@ -60,7 +57,6 @@ export const App = () => {
             <SolanaOpenfortUICard hook="useUI (Openfort UI)" />
             <SignaturesCardSolana hook="useSolanaMessageSigner" />
             <SendTransactionCardSolana hook="sendSolTransaction" />
-            <TransactionHistoryCardSolana hook="getTransactionHistory" />
             <SetActiveWalletsCardSolana />
           </>
         ) : hasWagmi ? (
@@ -69,7 +65,6 @@ export const App = () => {
             <SiweCard hook="createSIWEMessage · useSignMessage" />
             <WriteContractCard hook="useWriteContract" />
             <SwitchChainCardEVM hook="useSwitchChain" />
-            <SessionKeysCard hook="useGrantPermissions" />
             <ConnectExternalWalletCard />
           </>
         ) : (
@@ -78,7 +73,6 @@ export const App = () => {
             <SignaturesCardEVM hook="viem signMessage" />
             <WriteContractCardEVM hook="viem readContract / writeContract" />
             <SwitchChainCardEVM hook="wallet_switchEthereumChain" />
-            <SessionKeysCardEVM hook="useGrantPermissions" />
           </>
         )}
         {!isSVM && !hasWagmi && <SetActiveWalletsCardEthereum />}
