@@ -8,8 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 /**
  * Solana showcase of the SDK's prebuilt modal UI: the sign-message confirmation
- * screen (now chain-aware — signs via the Solana embedded wallet) plus the
- * Send/Receive wallet flows, all via the SDK instead of headless calls.
+ * screen (chain-aware — signs via the Solana embedded wallet) plus the
+ * Send/Receive and export-key wallet flows, all via the SDK instead of headless
+ * calls.
  */
 export const SolanaOpenfortUICard = ({ hook }: { hook?: string }) => {
   const { signMessage, isPending } = useOpenfortSignMessage()
@@ -32,7 +33,7 @@ export const SolanaOpenfortUICard = ({ hook }: { hook?: string }) => {
       <CardHeader>
         <CardTitle>Openfort UI</CardTitle>
         <CardDescription>
-          Prebuilt modal screens — sign, send, receive, add funds — instead of headless calls.
+          Prebuilt modal screens — sign, send, receive, add funds, export key — instead of headless calls.
         </CardDescription>
         {hook && <HookBadge hook={hook} className="mt-1" />}
       </CardHeader>
@@ -52,6 +53,9 @@ export const SolanaOpenfortUICard = ({ hook }: { hook?: string }) => {
           </Button>
           <Button variant="outline" onClick={() => ui.openBuy()}>
             Buy with fiat
+          </Button>
+          <Button variant="outline" onClick={() => ui.openExportKey()}>
+            Export key
           </Button>
         </div>
         <InputMessage
