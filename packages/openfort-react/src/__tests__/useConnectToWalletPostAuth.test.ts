@@ -450,17 +450,17 @@ describe('useConnectToWalletPostAuth — tryUseWallet', () => {
     expect(mockClient.embeddedWallet.recover).not.toHaveBeenCalled()
   })
 
-  it('returns wallet without calling recover when wallet address is already active', async () => {
+  it('returns wallet without calling recover when the signer already holds it', async () => {
     const autoAccount = createMockEmbeddedAccount({
       recoveryMethod: RecoveryMethod.AUTOMATIC,
       chainType: ChainTypeEnum.EVM,
     })
     mockUpdateEmbeddedAccounts.mockResolvedValue([autoAccount])
+    mockClient.embeddedWallet.get.mockResolvedValue(autoAccount)
     mockUseOpenfortCore.mockReturnValue({
       client: mockClient,
       chainType: ChainTypeEnum.EVM,
       embeddedState: EmbeddedState.READY,
-      activeEmbeddedAddress: autoAccount.address,
       updateEmbeddedAccounts: mockUpdateEmbeddedAccounts,
       setActiveEmbeddedAddress: mockSetActiveEmbeddedAddress,
     })

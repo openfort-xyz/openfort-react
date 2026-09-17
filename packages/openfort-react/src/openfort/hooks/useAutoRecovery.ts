@@ -3,7 +3,9 @@
 import { EmbeddedState, type Openfort, RecoveryMethod } from '@openfort/openfort-js'
 import { useEffect, useRef } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
+import { ensureEmbeddedSignerHolds } from '../../actions/ensureEmbeddedSignerHolds.js'
 import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
+import { WalletNotConnectedError } from '../../errors/wallet.js'
 import {
   captureEmbeddedSignerSession,
   isEmbeddedSignerOperationInvalidationError,
@@ -70,42 +72,47 @@ export function useAutoRecovery({
     const run = async () => {
       if (!isCurrentAttempt()) return
       const signerSession = captureEmbeddedSignerSession(openfort)
-      // Stage 1: build recovery params (may trigger a passkey prompt for PASSKEY method).
-      logger.log('[auto-recover] building recovery params...')
-      let recoveryParams: Awaited<ReturnType<typeof buildRecoveryParams>>
-      try {
-        recoveryParams = await buildRecoveryParams(
-          {
-            recoveryMethod: account.recoveryMethod === RecoveryMethod.PASSKEY ? RecoveryMethod.PASSKEY : undefined,
-            passkeyId:
-              account.recoveryMethod === RecoveryMethod.PASSKEY ? account.recoveryMethodDetails?.passkeyId : undefined,
-          },
-          {
-            walletConfig,
-            getAccessToken: () => openfort.getAccessToken(),
-            getUserId: async () => (await openfort.user.get())?.id,
-          }
-        )
-        signerSession.assertCurrent()
-      } catch (err) {
-        if (!isCurrentAttempt()) return
-        if (isEmbeddedSignerOperationInvalidationError(err)) return
-        const error = err instanceof Error ? err : new Error(String(err))
-        logger.error('[auto-recover] failed to build recovery params', error)
-        store.getState().setRecoveryError(error)
-        return
-      }
-
-      if (!isCurrentAttempt()) return
-
-      // Stage 2: configure the embedded signer.
       logger.log('[auto-recover] configuring signer...')
       try {
         await runEmbeddedSignerOperation(openfort, async ({ assertCurrent }) => {
           if (!isCurrentAttempt()) return
-          signerSession.assertCurrent()
-          assertCurrent()
-          await openfort.embeddedWallet.recover({ account: account.id, recoveryParams })
+          const assertAttemptCurrent = () => {
+            // Re-checked after every await inside the request, so a target that
+            // changed while the credential was being built cannot recover the
+            // address the user has already moved off. The catch below treats a
+            // superseded attempt as silent rather than as a recovery failure.
+            if (!isCurrentAttempt()) {
+              throw new WalletNotConnectedError('The recovery target changed before the account could be recovered.')
+            }
+            signerSession.assertCurrent()
+            assertCurrent()
+          }
+          assertAttemptCurrent()
+          await ensureEmbeddedSignerHolds({
+            client: openfort,
+            accountId: account.id,
+            assertCurrent: assertAttemptCurrent,
+            // Only runs when this attempt is the one that recovers, so another
+            // path getting there first costs no credential.
+            buildRecoveryParams: async () => {
+              logger.log('[auto-recover] building recovery params...')
+              return await buildRecoveryParams(
+                {
+                  recoveryMethod:
+                    account.recoveryMethod === RecoveryMethod.PASSKEY ? RecoveryMethod.PASSKEY : undefined,
+                  passkeyId:
+                    account.recoveryMethod === RecoveryMethod.PASSKEY
+                      ? account.recoveryMethodDetails?.passkeyId
+                      : undefined,
+                },
+                {
+                  walletConfig,
+                  getAccessToken: () => openfort.getAccessToken(),
+                  getUserId: async () => (await openfort.user.get())?.id,
+                }
+              )
+            },
+          })
         })
         if (!isCurrentAttempt()) return
         store.getState().setEmbeddedState(EmbeddedState.READY)
@@ -115,7 +122,7 @@ export function useAutoRecovery({
         if (isEmbeddedSignerOperationInvalidationError(err)) return
         const error = err instanceof Error ? err : new Error(String(err))
         logger.error(
-          '[auto-recover] recover() failed — signer could not be configured. ' +
+          '[auto-recover] the signer could not be configured. ' +
             'This typically happens on a new device or after local storage was cleared. ' +
             'Read `recoveryError` from useOpenfort() and prompt the user to create a new wallet.',
           error

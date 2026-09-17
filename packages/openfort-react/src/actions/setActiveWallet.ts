@@ -4,6 +4,7 @@ import { asOpenfortError } from '../errors/base.js'
 import { SetActiveWalletError } from '../errors/wallet.js'
 import type { SetActiveEmbeddedWalletOptionsBase } from '../shared/types.js'
 import { buildClientRecoveryConfig } from './buildClientRecoveryConfig.js'
+import { ensureEmbeddedSignerHolds } from './ensureEmbeddedSignerHolds.js'
 import { resolveSetActiveRecovery } from './resolveSetActiveRecovery.js'
 
 type SetActiveWalletParameters = {
@@ -35,16 +36,21 @@ export async function setActiveWallet(parameters: SetActiveWalletParameters): Pr
   const { client, walletConfig, account, options, assertCurrent } = parameters
 
   try {
-    const resolved = await resolveSetActiveRecovery(account, options, buildClientRecoveryConfig(client, walletConfig))
+    const outcome = await ensureEmbeddedSignerHolds({
+      client,
+      accountId: account.id,
+      assertCurrent,
+      buildRecoveryParams: async () => {
+        const resolved = await resolveSetActiveRecovery(
+          account,
+          options,
+          buildClientRecoveryConfig(client, walletConfig)
+        )
+        return resolved.needsRecovery ? null : resolved.recoveryParams
+      },
+    })
 
-    if (resolved.needsRecovery) {
-      return { needsRecovery: true }
-    }
-
-    assertCurrent()
-    await client.embeddedWallet.recover({ account: account.id, recoveryParams: resolved.recoveryParams })
-
-    return { needsRecovery: false }
+    return { needsRecovery: outcome === 'needs-credential' }
   } catch (error) {
     throw asOpenfortError(
       error,

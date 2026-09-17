@@ -122,6 +122,28 @@ describe('setActiveWallet', () => {
     expect(client.embeddedWallet.recover).not.toHaveBeenCalled()
   })
 
+  it('does not recover an account the signer already holds', async () => {
+    const account = testAccount({
+      recoveryMethod: RecoveryMethod.PASSKEY,
+      recoveryMethodDetails: { passkeyId: 'pk_stored' },
+    } as never)
+    client.embeddedWallet.get.mockResolvedValue(account)
+
+    const result = await run(account)
+
+    expect(result).toEqual({ needsRecovery: false })
+    expect(client.embeddedWallet.recover).not.toHaveBeenCalled()
+  })
+
+  it('recovers when the signer holds a different account', async () => {
+    client.embeddedWallet.get.mockResolvedValue(testAccount({ id: 'emb_other_456' }))
+
+    const result = await run()
+
+    expect(result).toEqual({ needsRecovery: false })
+    expect(client.embeddedWallet.recover).toHaveBeenCalledOnce()
+  })
+
   it('propagates a rejected recover call', async () => {
     client.embeddedWallet.recover.mockRejectedValue(new Error('recover failed'))
 
