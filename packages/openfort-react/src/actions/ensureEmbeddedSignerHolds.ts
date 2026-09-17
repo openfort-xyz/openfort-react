@@ -19,32 +19,32 @@ type EnsureEmbeddedSignerParameters = {
    * redundant request costs no encryption session and no WebAuthn ceremony.
    */
   buildRecoveryParams: () => Promise<RecoveryParams | null>
-  /** Rejects work reserved by a wallet session that is no longer current. */
-  assertCurrent?: () => void
+  /**
+   * Rejects work reserved by a wallet session that is no longer current. Called
+   * after every await that precedes the recovery, so a target that changed while
+   * the credential was being built cannot recover an account the user moved off.
+   */
+  assertCurrent: () => void
 }
 
 /**
  * Brings the embedded signer to the point where it holds `accountId`.
  *
- * This is the only place that calls `embeddedWallet.recover()`. Recovery is
- * requested from three independent places on a single login — the provider's
- * auto-recovery effect, the modal's recover page through `setActive`, and the
- * post-authentication connect path — and each one used to decide for itself
- * whether a recovery was still needed. They decided at different moments (one
- * during render, one when scheduling, one while running), so they disagreed,
- * and a passkey account answered one WebAuthn ceremony per caller that got it
- * wrong.
- *
- * Callers declare the account they want held and let this decide. Asking for an
- * account the signer already holds is a no-op rather than a second credential
- * prompt.
+ * This is the only place that calls `embeddedWallet.recover()`, and
+ * `recoveryOwner.test.ts` holds it to that. Recovery is requested from three
+ * places on a single login — the provider's auto-recovery effect, the modal's
+ * recover page through `setActive`, and the post-authentication connect path.
+ * Each declares the account it wants held and this decides whether a recovery
+ * is needed, so asking for an account the signer already holds is a no-op
+ * rather than a second credential prompt. Every call derives its own
+ * credential, which on a passkey account is a WebAuthn ceremony the user has to
+ * answer.
  *
  * Callers must already hold the embedded-signer operation queue: this reads and
  * replaces the signer, and the queue is what keeps that ordered against other
  * signer work. Because that queue is strictly serial, two requests for the same
- * account can never overlap — the second one runs after the first has settled
- * and sees the account already held. If recovery ever moves off the queue, this
- * is where concurrent requests would have to collapse onto one promise.
+ * account cannot overlap — the second runs after the first has settled and sees
+ * the account already held.
  *
  * @param parameters - Client, target account, and how to build its credential.
  * @returns Whether the account was already held, recovered, or still needs a credential.
@@ -56,11 +56,11 @@ export async function ensureEmbeddedSignerHolds(
 
   if (await signerHolds(client, accountId)) return 'already-held'
 
-  assertCurrent?.()
+  assertCurrent()
   const recoveryParams = await buildRecoveryParams()
   if (!recoveryParams) return 'needs-credential'
 
-  assertCurrent?.()
+  assertCurrent()
   await client.embeddedWallet.recover({ account: accountId, recoveryParams })
   return 'recovered'
 }
