@@ -3,6 +3,7 @@
 import { EmbeddedState, type Openfort, RecoveryMethod } from '@openfort/openfort-js'
 import { useEffect, useRef } from 'react'
 import type { StoreApi } from 'zustand/vanilla'
+import { buildClientRecoveryConfig } from '../../actions/buildClientRecoveryConfig.js'
 import { ensureEmbeddedSignerHolds } from '../../actions/ensureEmbeddedSignerHolds.js'
 import type { OpenfortWalletConfig } from '../../components/Openfort/types.js'
 import { WalletNotConnectedError } from '../../errors/wallet.js'
@@ -105,11 +106,7 @@ export function useAutoRecovery({
                       ? account.recoveryMethodDetails?.passkeyId
                       : undefined,
                 },
-                {
-                  walletConfig,
-                  getAccessToken: () => openfort.getAccessToken(),
-                  getUserId: async () => (await openfort.user.get())?.id,
-                }
+                buildClientRecoveryConfig(openfort, walletConfig)
               )
             },
           })

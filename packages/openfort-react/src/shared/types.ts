@@ -60,6 +60,12 @@ export type CreateEmbeddedWalletSuccess = {
 export type CreateEmbeddedWalletResult = CreateEmbeddedWalletSuccess | (ActionFailure & { account?: never })
 
 export type SetActiveEmbeddedWalletSuccess = {
+  /**
+   * `true` when activating the wallet needs a credential the caller has to collect
+   * first — a password — and `false` once the signer holds the wallet. A wallet the
+   * signer already holds reports `false` without any credential being collected or
+   * validated, so `setActive` is not a way to verify a user's password.
+   */
   needsRecovery: boolean
   error?: never
 }
