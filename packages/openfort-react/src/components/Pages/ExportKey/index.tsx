@@ -1,9 +1,13 @@
 'use client'
 
+import { ChainTypeEnum } from '@openfort/openfort-js'
 import type React from 'react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { KeyIcon } from '../../../assets/icons.js'
+import { OpenfortError } from '../../../errors/base.js'
 import { useEthereumEmbeddedWallet } from '../../../ethereum/hooks/useEthereumEmbeddedWallet.js'
+import { useOpenfortCore } from '../../../openfort/useOpenfort.js'
+import { useSolanaEmbeddedWallet } from '../../../solana/hooks/useSolanaEmbeddedWallet.js'
 import { CopyIconButton } from '../../Common/CopyToClipboard/CopyIconButton.js'
 import { ModalBody, ModalContent, ModalHeading } from '../../Common/Modal/styles.js'
 import { FloatingGraphic } from '../../FloatingGraphic/index.js'
@@ -15,16 +19,27 @@ import { HoldButton, HoldFill, HoldLabel, KeyReveal } from './styles.js'
 
 const HOLD_MS = 5000
 
+const GENERIC_EXPORT_ERROR = 'You cannot export the private key for this wallet.'
+
 const ExportKey: React.FC = () => {
-  const wallet = useEthereumEmbeddedWallet()
+  const chainType = useOpenfortCore((s) => s.chainType)
+  const ethereumWallet = useEthereumEmbeddedWallet()
+  const solanaWallet = useSolanaEmbeddedWallet()
+  // The page follows the configured chain: the Ethereum hook resolves no account
+  // on a Solana project, so reading it there fails every export.
+  const wallet = chainType === ChainTypeEnum.EVM ? ethereumWallet : solanaWallet
   const { exportPrivateKey } = wallet
   // A smart account is a contract (no private key); the exportable key is its
   // owner/signer EOA — a different address that won't show the account's funds
-  // when imported into another wallet.
+  // when imported into another wallet. Solana accounts are keypairs, so the
+  // distinction only exists on Ethereum.
   const accountAddress = wallet.activeWallet?.address
-  const ownerAddress = wallet.activeWallet?.ownerAddress
+  const ownerAddress = ethereumWallet.activeWallet?.ownerAddress
   const isSmartAccount = Boolean(
-    ownerAddress && accountAddress && ownerAddress.toLowerCase() !== accountAddress.toLowerCase()
+    chainType === ChainTypeEnum.EVM &&
+      ownerAddress &&
+      accountAddress &&
+      ownerAddress.toLowerCase() !== accountAddress.toLowerCase()
   )
 
   const [exportedKey, setExportedKey] = useState<string | null>(null)
@@ -76,13 +91,13 @@ const ExportKey: React.FC = () => {
       try {
         const result = await exportPrivateKey()
         if (result.error) {
-          setExportError('You cannot export the private key for this wallet.')
+          setExportError(result.error.shortMessage || GENERIC_EXPORT_ERROR)
           setExportedKey(null)
           return
         }
         setExportedKey(result.privateKey)
-      } catch {
-        setExportError('You cannot export the private key for this wallet.')
+      } catch (err) {
+        setExportError(err instanceof OpenfortError ? err.shortMessage : GENERIC_EXPORT_ERROR)
         setExportedKey(null)
       }
     }
