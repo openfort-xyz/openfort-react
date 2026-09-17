@@ -1,5 +1,15 @@
 # Changelog
 
+## 2.1.3
+
+### Patch Changes
+
+- [#350](https://github.com/openfort-xyz/openfort-react/pull/350) [`290df5a`](https://github.com/openfort-xyz/openfort-react/commit/290df5a0e58765e3261af7176f241853276f9d45) Thanks [@joalavedra](https://github.com/joalavedra)! - Fixed the modal's export-key page reading the Ethereum wallet on a Solana project, which refused every Solana export with "You cannot export the private key for this wallet." The page now follows the configured chain and reports the underlying reason when an export does fail.
+
+- [#347](https://github.com/openfort-xyz/openfort-react/pull/347) [`9476b0c`](https://github.com/openfort-xyz/openfort-react/commit/9476b0c9fbcd93a8b687e124fad0d67d91a9c179) Thanks [@condor-agent](https://github.com/condor-agent)! - Fixed a login asking for the passkey twice. Recovery was requested from three independent places — the provider's auto-recovery effect, the modal's recover page, and the post-authentication connect path — and each decided for itself whether a recovery was still needed, at a different moment. `embeddedWallet.recover()` now has one owner that answers that question from the signer, so asking for an account the signer already holds is a no-op instead of a second WebAuthn ceremony, and no credential is built for a request that turns out to be unnecessary.
+
+  Two behaviour changes follow from that owner. On Ethereum, the modal's recover page now completes and routes to the success page when the signer already holds the account; it previously returned without routing, leaving the modal on the recovery loader. And `setActive` on an account the signer already holds now resolves successfully without collecting or validating a credential, so passing a password for such an account no longer verifies it.
+
 ## 2.1.2
 
 ### Patch Changes
