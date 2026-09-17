@@ -2,6 +2,7 @@
 
 import { ChainTypeEnum, EmbeddedState, RecoveryMethod } from '@openfort/openfort-js'
 import { useCallback } from 'react'
+import { buildClientRecoveryConfig } from '../../../actions/buildClientRecoveryConfig.js'
 import { ensureEmbeddedSignerHolds } from '../../../actions/ensureEmbeddedSignerHolds.js'
 import { useOpenfort } from '../../../components/Openfort/useOpenfort.js'
 import { DEFAULT_ACCOUNT_TYPE } from '../../../constants/openfort.js'
@@ -107,11 +108,7 @@ export const useConnectToWalletPostAuth = () => {
         try {
           const recoveryParams = await buildRecoveryParams(
             { recoveryMethod: undefined },
-            {
-              walletConfig,
-              getAccessToken: () => client.getAccessToken(),
-              getUserId: async () => (await client.user.get())?.id,
-            }
+            buildClientRecoveryConfig(client, walletConfig)
           )
           session.assertCurrent()
           const accountType = walletConfig?.ethereum?.accountType ?? DEFAULT_ACCOUNT_TYPE
@@ -148,11 +145,13 @@ export const useConnectToWalletPostAuth = () => {
         chainWallets.find((w) => w.recoveryMethod === RecoveryMethod.PASSKEY)
 
       if (autoRecoverableWallet) {
-        // If the embedded signer isn't READY yet, skip recover() — the state machine in
-        // CoreOpenfortProvider will handle wallet connection once READY is reached.
-        // Calling recover() before READY races against the state machine's own recovery.
+        // `embeddedState` is captured at render through the useCallback deps, so on a fresh
+        // login it is not READY. Store the intended address and let the provider's auto-recovery
+        // effect recover it: a failure there surfaces as `recoveryError`, which the CreateWallet
+        // and Recover pages read to offer a new wallet on a new device, whereas a failure in the
+        // catch below signs the user out. It also keeps the login promise from blocking on a
+        // passkey ceremony or an encryption-session fetch; the modal shows progress instead.
         if (embeddedState !== EmbeddedState.READY) {
-          // Store the intended address so the state machine activates it when READY
           setActiveEmbeddedAddress(autoRecoverableWallet.address)
           return {
             wallet:
@@ -184,11 +183,7 @@ export const useConnectToWalletPostAuth = () => {
                         ? autoRecoverableWallet.recoveryMethodDetails?.passkeyId
                         : undefined,
                   },
-                  {
-                    walletConfig,
-                    getAccessToken: () => client.getAccessToken(),
-                    getUserId: async () => (await client.user.get())?.id,
-                  }
+                  buildClientRecoveryConfig(client, walletConfig)
                 ),
             })
             assertCurrent()

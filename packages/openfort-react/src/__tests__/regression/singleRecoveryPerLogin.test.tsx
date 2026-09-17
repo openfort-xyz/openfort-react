@@ -9,8 +9,9 @@ import type { OpenfortStore } from '../../openfort/store.js'
 import { runEmbeddedSignerOperation } from '../../shared/utils/embeddedSignerOperationQueue.js'
 
 /**
- * Recovery is requested from two places on a single login: the provider's
- * auto-recovery effect and the modal's recover page through `setActive`. Each
+ * Recovery is requested from three places on a single login: the provider's
+ * auto-recovery effect, the modal's recover page through `setActive`, and the
+ * post-authentication connect path (`useConnectToWalletPostAuth`). Each
  * `embeddedWallet.recover()` derives its own credential, so on a passkey account
  * a second call is a second WebAuthn ceremony the user has to answer — the same
  * saved passkey, twice, to reach one signer.
