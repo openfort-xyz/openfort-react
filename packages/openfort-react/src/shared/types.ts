@@ -95,7 +95,7 @@ export type SetActiveEmbeddedWalletOptionsBase = {
   otpCode?: string
 } & OpenfortHookOptions<SetActiveEmbeddedWalletSuccess>
 
-/** Options for creating an embedded wallet (EVM and Solana; EOA and gas sponsorship). */
+/** Options for creating an embedded wallet (EVM and Solana). */
 export type CreateEmbeddedWalletOptions = {
   /** Target chain ID for deployment (EVM) */
   chainId?: number
@@ -109,8 +109,6 @@ export type CreateEmbeddedWalletOptions = {
   otpCode?: string
   /** Account type (EOA, Smart Account, or Delegated Account) */
   accountType?: AccountTypeEnum
-  /** Fee sponsorship ID for gas sponsorship */
-  feeSponsorshipId?: string
 } & OpenfortHookOptions<CreateEmbeddedWalletSuccess>
 
 /**
