@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1
+
+### Patch Changes
+
+- [#357](https://github.com/openfort-xyz/openfort-react/pull/357) [`0fab8ab`](https://github.com/openfort-xyz/openfort-react/commit/0fab8ab479cf7490951d7e4cc93c488d9d400d02) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Ship the updated backend template lockfile. New projects now resolve axios 1.20.0, proxy-addr 2.0.8 and patched express transitive dependencies instead of axios 1.12.2 and proxy-addr 2.0.7 (GHSA advisories for axios, proxy-addr, body-parser, path-to-regexp, qs, ws, form-data and follow-redirects).
+
 ## 2.0.0
 
 ### Major Changes
