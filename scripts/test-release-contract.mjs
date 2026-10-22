@@ -88,8 +88,14 @@ try {
   }
   if (statusAvailable) {
     const status = JSON.parse(readFileSync(statusPath, "utf8"));
-    // `changeset status` lists every workspace, so the invariant is not absence
-    // from the plan: it is that these workspaces never take a version bump.
+    // `changeset status` lists only workspaces the plan touches (the templates
+    // appear when `@openfort/react` is bumped), so absence means no bump. The
+    // workspace list guards against a rename silently dropping a name here.
+    const workspaceNames = new Set(
+      JSON.parse(
+        execFileSync("pnpm", ["ls", "-r", "--depth", "-1", "--json"], { encoding: "utf8" }),
+      ).map((workspace) => workspace.name),
+    );
     const privateWorkspaces = [
       "create-openfort-template-firebase",
       "create-openfort-template-headless",
@@ -98,11 +104,12 @@ try {
       "quickstart-solana-headless",
     ];
     for (const name of privateWorkspaces) {
-      const release = status.releases.find((entry) => entry.name === name);
       assert.ok(
-        release,
-        `${name} is missing from the release plan, so this gate no longer covers it.`,
+        workspaceNames.has(name),
+        `${name} is no longer a workspace, so this gate no longer covers it.`,
       );
+      const release = status.releases.find((entry) => entry.name === name);
+      if (!release) continue;
       assert.equal(
         release.type,
         "none",
