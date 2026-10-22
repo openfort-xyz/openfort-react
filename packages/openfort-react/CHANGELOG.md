@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.5
+
+### Patch Changes
+
+- [#355](https://github.com/openfort-xyz/openfort-react/pull/355) [`e21fcd0`](https://github.com/openfort-xyz/openfort-react/commit/e21fcd0b96d22cec28a2b1e21be5f73ec7d36c05) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Require `@openfort/openfort-js` ^2.6.3. That release pulls axios 1.20.0 and `@openfort/shield-js` 0.2.1, which fix the axios advisories GHSA-3pq3-5fj3-cg6v, GHSA-m8m8-qj5v-23w3, GHSA-r4gj-5m52-g5wh and GHSA-x97p-jq2g-jp4f. No API changes.
+
 ## 2.1.4
 
 ### Patch Changes
