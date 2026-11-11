@@ -27,7 +27,7 @@ overrides:
   use-sync-external-store: ^1.6.0
   typescript: ^5.9.3
   protobufjs: '>=8.6.6'
-  follow-redirects: '>=1.16.1'
+  follow-redirects@<1.16.2: 1.16.2
   '@hono/node-server': '>=2.0.10'
   cross-spawn: '>=6.0.6'
   got: '>=11.8.5'
@@ -43,7 +43,7 @@ overrides:
   kysely: '>=0.28.17'
   effect@<3.20.0: '>=3.20.0'
   lodash@>=4.0.0 <=4.17.23: '>=4.18.0'
-  markdown-it: '>=14.3.2 <15'
+  markdown-it: '>=14.3.3 <15'
   minimatch: '>=10.2.3'
   bn.js@<4.12.3: '>=4.12.3'
   rollup@>=4.0.0 <4.59.0: '>=4.59.0'
@@ -76,15 +76,14 @@ overrides:
   dompurify@<3.4.16: '>=3.4.16'
   '@opentelemetry/core@<2.8.0': '>=2.8.0'
   '@babel/core@<7.29.6': '>=7.29.6 <8'
-  body-parser@<1.20.6: '>=1.20.6 <2'
+  body-parser@<1.20.9: 1.20.9
   nanoid@<3.3.18: '>=3.3.18 <4'
-  seroval@<1.6.3: '>=1.6.3 <2'
+  seroval@<1.6.11: 1.6.12
   valibot@<1.4.2: '>=1.4.2'
   websocket-driver@<0.7.5: '>=0.7.5'
   proxy-addr@<2.0.8: '>=2.0.8 <3'
   source-map-js@<1.2.2: '>=1.2.2 <2'
   deepmerge-ts@<8.0.0: '>=8.0.0'
-  better-auth@<1.6.22: '>=1.6.22'
 
 # Seven days. A compromised publish is usually caught and unpublished within
 # hours to days, so waiting a week means the registry has almost always sorted
@@ -162,10 +161,14 @@ auditConfig:
     # `@changesets/cli > read-yaml-file > js-yaml 3 > argparse`, which formats
     # only CLI help text at release time.
     - GHSA-hp3w-g68c-fv3c
-    # markdown-it <14.3.3 — inline HTML parsing DoS. Reached via `typedoc`, which
-    # renders this repo's own doc comments at build time. The fixed 14.3.3 was
-    # published on 2026-10-16 and remains inside the seven-day cooldown. Remove
-    # these two exceptions and change the markdown-it override to
-    # `markdown-it: '>=14.3.3 <15'` on 2026-10-23.
-    - GHSA-vfgh-jcmw-g37q
-    - GHSA-gfr2-rv44-r23c
+    # minimatch <11.0.1 — globparts amplification. Reached via `typedoc`, which
+    # matches this repo's own entry-point globs at docs build time. typedoc
+    # 0.28.20 (latest) depends on minimatch ^10.2.5 and calls `matchOne` and
+    # `set`, which minimatch 11 removed, so it cannot be overridden.
+    - GHSA-g3hv-75wg-m249
+    # zod <4.6.6 — memory exhaustion on oversized constrained collections. No
+    # patched 3.x release exists. zod 4 copies resolve to a patched version;
+    # zod 3 is pinned by wallet dependencies (`@reown/appkit-wallet` pins
+    # 3.22.4, `@coinbase/cdp-sdk` and `@tanstack/router-*` need ^3), whose
+    # latest releases are still on zod 3. Remove when they move to zod 4.
+    - GHSA-mrhx-c7xc-m3w5
