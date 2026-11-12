@@ -137,7 +137,7 @@
     "@wagmi/connectors": "^8.0.15",
     "@wagmi/core": "^3.5.0",
     "@walletconnect/ethereum-provider": "^2.23.9",
-    "happy-dom": "^20.10.2",
+    "happy-dom": "^21.0.4",
     "jsdom": "^29.1.1",
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-typescript2": "^0.37.0",
