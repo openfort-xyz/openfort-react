@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo } from 'react'
+import type { Chain } from 'viem'
 // wagmi is an optional peer; see useEmbeddedWalletWagmiSync.ts for why this is a
 // namespace import rather than named bindings.
 import * as wagmi from 'wagmi'
@@ -25,7 +26,9 @@ import { getPublishableKeyEnvironment } from '../utils/validation.js'
  * matches the environment, the developer's full chain list is returned
  * unchanged to avoid an empty selector.
  */
-export const useSwitchChainFiltered = () => {
+export const useSwitchChainFiltered = (): Omit<wagmi.UseSwitchChainReturnType, 'chains'> & {
+  chains: readonly Chain[]
+} => {
   const result = wagmi.useSwitchChain()
   const { publishableKey } = useOpenfort()
   const activeChainId = wagmi.useChainId()
