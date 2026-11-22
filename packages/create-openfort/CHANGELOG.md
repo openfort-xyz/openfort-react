@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.2
+
+### Patch Changes
+
+- [#364](https://github.com/openfort-xyz/openfort-react/pull/364) [`7e21386`](https://github.com/openfort-xyz/openfort-react/commit/7e213868b38299901137de81d4ac963c653cf231) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Updated the backend template's lockfile to body-parser 1.20.9 and follow-redirects 1.16.3, which fix GHSA-27r3-jxmh-p828 and GHSA-mrwp-f3q8-3g9p.
+
 ## 2.0.1
 
 ### Patch Changes

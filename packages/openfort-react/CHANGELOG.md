@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.1.6
+
+### Patch Changes
+
+- [#361](https://github.com/openfort-xyz/openfort-react/pull/361) [`d960547`](https://github.com/openfort-xyz/openfort-react/commit/d9605475ea86f231cf48f129eaa3d3d2b4ffc04d) Thanks [@jamalavedra](https://github.com/jamalavedra)! - Fixed the package build against viem 2.57 and later. The internal `useSwitchChainFiltered` hook now declares its return type, so declaration emit no longer needs to name types that viem keeps private. Runtime behaviour is unchanged.
+
 ## 2.1.5
 
 ### Patch Changes
